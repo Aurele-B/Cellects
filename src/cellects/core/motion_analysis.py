@@ -1,0 +1,2064 @@
+#!/usr/bin/env python3
+"""
+This script contains the MotionAnalysis class
+It loads a video, check origin shape, get the average covering duration of a pixel,
+ perform a rough segmentation (detection), improves it through post-processing, compute all wanted descriptors
+ and save them with validation images and videos.
+"""
+
+import logging
+import os
+import pickle
+
+import numpy as np
+# from scipy.stats import linregress
+# from scipy import signal as si
+from cv2 import (
+    connectedComponents, connectedComponentsWithStats, MORPH_CROSS,
+    getStructuringElement, CV_16U, erode, dilate, morphologyEx, MORPH_OPEN,
+    MORPH_CLOSE, MORPH_GRADIENT, BORDER_CONSTANT, resize, imshow, waitKey,
+    FONT_HERSHEY_SIMPLEX, putText)
+from numba.typed import Dict as TDict
+from numpy import (
+    c_, char, floor, pad, append, round, ceil, uint64, float32, absolute, sum,
+    mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
+    ones, empty, array, arange, nonzero, min, max, argmin, argmax, unique,
+    isin, repeat, tile, stack, concatenate, logical_and, logical_or,
+    logical_xor, logical_not, less, greater, any, sign, uint8, int8, int16,
+    uint32, float64, expand_dims, min, max, all, any)
+from pandas import DataFrame as df
+from pandas import read_csv, concat
+from psutil import virtual_memory
+from cellects.image_analysis.morphological_operations import Ellipse
+from cellects.image_analysis.network_detection import NetworkDetection
+from cellects.image_analysis.fractal_analysis import FractalAnalysis
+from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
+from cellects.image_analysis.morphological_operations import (
+    CompareNeighborsWithValue, image_borders, draw_me_a_sun,
+    make_gravity_field, cc, expand_to_fill_holes)
+from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
+from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.image_analysis.morphological_operations import find_major_incline
+from cellects.utils.formulas import (bracket_to_uint8_image_contrast, eudist, moving_average)
+from cellects.image_analysis.image_segmentation import segment_with_lum_value
+from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
+from cellects.utils.utilitarian import PercentAndTimeTracker
+from cellects.utils.load_display_save import write_video, video2numpy
+
+
+class MotionAnalysis:
+
+    def __init__(self, l):
+
+        """
+        :param video_name: The name of the video to read
+        :param convert_for_motion: The dict specifying the linear combination
+                                   of color channels (rgb_hsv_lab) to use
+        """
+        self.statistics = {}
+        self.statistics['arena'] = l[1]
+        vars = l[2]
+        detect_shape = l[3]
+        analyse_shape = l[4]
+        show_seg = l[5]
+        videos_already_in_ram = l[6]
+        self.visu = None
+        self.binary = None
+        self.smoothing_flag: bool = False
+        logging.info(f"Start the motion analysis of the arena n°{self.statistics['arena']}")
+
+        self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
+        self.vars = vars
+        # self.origin = self.vars['first_image'][self.vars['top'][l[0]]:(
+        #    self.vars['bot'][l[0]] + 1),
+        #               self.vars['left'][l[0]]:(self.vars['right'][l[0]] + 1)]
+        self.load_images_and_videos(videos_already_in_ram, l[0])
+
+        self.dims = self.converted_video.shape
+        self.segmentation = zeros(self.dims, dtype=uint8)
+
+        self.covering_intensity = zeros(self.dims[1:], dtype=float64)
+        self.mean_intensity_per_frame = mean(self.converted_video, (1, 2))
+        if self.vars['arena_shape'] == "circle":
+            self.borders = Ellipse(self.dims[1:]).create()
+            img_contours = image_borders(self.dims[1:])
+            self.borders = self.borders * img_contours
+        else:
+            self.borders = image_borders(self.dims[1:])
+        self.pixel_ring_depth = 9
+        self.step = 10
+        self.lost_frames = 10
+        self.update_ring_width()
+
+        self.start = None
+        if detect_shape:
+            #self=self.motion
+            #self.drift_correction()
+            self.start = None
+            # Here to conditional layers allow to detect if an expansion/exploration occured
+            self.get_origin_shape()
+            # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
+            # substantial image: if any of them is not detected, the program considers there is not exp.
+            step = self.dims[0] // 20
+            if self.start >= (self.dims[0] - step - 1):
+                self.start = None
+            else:
+                self.get_covering_duration(step)
+                if self.start is not None:
+                    # self.vars['fading'] = -0.5
+                    # self.vars['do_value_segmentation']: bool = False
+                    # self.vars['do_slope_segmentation'] = True
+                    # self.vars['true_if_use_light_AND_slope_else_OR']: bool = False
+                    self.detection()
+                    self.initialize_post_processing()
+                    self.t = self.start
+                    # print_progress = ForLoopCounter(self.start)
+                    # self.binary = self.segmentation # HERE
+                    while self.t < self.binary.shape[0]:
+                        self.update_shape(show_seg)
+                #
+            if self.start is None:
+                self.binary = repeat(expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
+
+            """
+            height = screen_height * 2 // 3
+            width = int(height * (self.dims[2] / self.dims[1]))
+            video_list = [self.converted_video, self.converted_video]
+            dimensions = [height, width, 0, (self.binary.shape[0])]
+            contours = self.binary
+            viewing(video_list, dimensions, contours)
+            """
+            if analyse_shape:
+                self.get_descriptors_from_binary()
+                self.detect_growth_transitions()
+                self.network_detection(show_seg)
+                self.study_cytoscillations(show_seg)
+                self.fractal_analysis()
+                self.get_descriptors_summary()
+                if videos_already_in_ram is None:
+                    self.save_results()
+
+    def load_images_and_videos(self, videos_already_in_ram, i):
+        logging.info(f"Arena n°{self.statistics['arena']}. Load images and videos")
+        # pickle_rick = PickleRick()
+        # data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
+        # try:
+        #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
+        #         data_to_run_cellects_quickly = pickle.load(fileopen)
+        # except pickle.UnpicklingError:
+        #     try:
+        #         with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
+        #             data_to_run_cellects_quickly = pickle.load(fileopen)
+        #     except pickle.UnpicklingError:
+        #         logging.info(f"Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
+
+        # if data_to_run_cellects_quickly is None or not 'background_and_origin_list' in data_to_run_cellects_quickly:
+        #     logging.info(f"Arena n°{self.statistics['arena']}. Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
+        # self.origin = data_to_run_cellects_quickly['background_and_origin_list'][0][i]# self.vars['origins_list'][i]
+        self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
+        if videos_already_in_ram is None:
+            true_frame_width = self.origin.shape[1]
+            vid_name = f"ind_{self.statistics['arena']}.npy"
+            if len(self.vars['background_list']) == 0:
+                self.background = None
+            else:
+                self.background = self.vars['background_list'][i]
+            if len(self.vars['background_list2']) == 0:
+                self.background2 = None
+            else:
+                self.background2 = self.vars['background_list2'][i]
+            # self.background2 = None
+            # if len(data_to_run_cellects_quickly['background_and_origin_list'][1]) == 0: # len(self.vars['background_list']) == 0:
+            #     self.background = None
+            # else:
+            #     self.background = data_to_run_cellects_quickly['background_and_origin_list'][1][i]# self.vars['background_list'][i]
+            #     if self.vars['convert_for_motion']['logical'] != 'None':
+            #         self.background2 = data_to_run_cellects_quickly['background_and_origin_list'][2][i]# self.vars['background_list2'][i]
+            if self.vars['already_greyscale']:
+                self.converted_video = video2numpy(
+                    vid_name, None, self.background, true_frame_width)
+                if len(self.converted_video.shape) == 4:
+                    self.converted_video = self.converted_video[:, :, :, 0]
+            else:
+                self.visu = video2numpy(
+                    vid_name, None, self.background, true_frame_width)
+                self.get_converted_video()
+        else:
+            if self.vars['already_greyscale']:
+                self.converted_video = videos_already_in_ram
+            else:
+                if self.vars['convert_for_motion']['logical'] == 'None':
+                    self.visu, self.converted_video = videos_already_in_ram
+                else:
+                    (self.visu,
+                        self.converted_video,
+                        self.converted_video2) = videos_already_in_ram
+
+    def get_converted_video(self):
+        if not self.vars['already_greyscale']:
+            logging.info(f"Arena n°{self.statistics['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
+            first_dict = TDict()
+            second_dict = TDict()
+            c_spaces = []
+            for k, v in self.vars['convert_for_motion'].items():
+                if k != 'logical' and v.sum() > 0:
+                    if k[-1] != '2':
+                        first_dict[k] = v
+                        c_spaces.append(k)
+                    else:
+                        second_dict[k[:-1]] = v
+                        c_spaces.append(k[:-1])
+            if self.vars['lose_accuracy_to_save_memory']:
+                self.converted_video = zeros(self.visu.shape[:3], dtype=uint8)
+            else:
+                self.converted_video = zeros(self.visu.shape[:3], dtype=float64)
+            # self.converted_video = zeros(self.dims, dtype=uint8)
+            if self.vars['convert_for_motion']['logical'] != 'None':
+                if self.vars['lose_accuracy_to_save_memory']:
+                    self.converted_video2 = zeros(self.visu.shape[:3], dtype=uint8)
+                else:
+                    self.converted_video2 = zeros(self.visu.shape[:3], dtype=float64)
+                # self.converted_video2 = zeros(self.dims, dtype=uint8)
+
+            # Trying to subtract the first image to the first image is a nonsense so,
+            # when doing background subtraction, the first and the second image are equal
+            for counter in arange(self.visu.shape[0]):
+                if self.vars['subtract_background'] and counter == 0:
+                    csc = self.visu[1, ...]
+                else:
+                    csc = self.visu[counter, ...]
+                csc = OneImageAnalysis(csc)
+                if self.vars['subtract_background']:
+                    csc.generate_color_space_combination(c_spaces, first_dict, second_dict, self.background, self.background2)
+                else:
+                    csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
+                if self.vars['lose_accuracy_to_save_memory']:
+                    self.converted_video[counter, ...] = bracket_to_uint8_image_contrast(csc.image)
+                else:
+                    self.converted_video[counter, ...] = csc.image
+                if self.vars['convert_for_motion']['logical'] != 'None':
+                    if self.vars['lose_accuracy_to_save_memory']:
+                        self.converted_video2[counter, ...] = bracket_to_uint8_image_contrast(csc.image2)
+                    else:
+                        self.converted_video2[counter, ...] = csc.image2
+
+    def drift_correction(self):
+        """
+        DO NOT WORK
+            Sample the video with a large interval to detect when there is a drift.
+            To do so, segment a set of frames, and subtract one with another.
+            If there are a (high and) comparable number of 1 and -1 : there is a drift.
+            When a drift is detected, progressively reduce the interval to find if it occurs
+            between only two frames.
+            Otherwise, make a vector of speed telling the number of drifting pixels per unit of time
+            Roll frames accordingly
+        """
+        step = 100
+        sampled_frames = arange(0, self.dims[0], step)
+        drift_matrix = zeros((self.dims[0], self.dims[1], self.dims[2]), uint8)
+        frame_i = OneImageAnalysis(self.visu[0, ...])
+        frame_i.conversion(self.vars['convert_for_drift'])
+        frame_i.thresholding()
+        drift_matrix[0, :, :] = frame_i.binary_image
+        for frame in sampled_frames:
+            frame_i = OneImageAnalysis(self.visu[frame, ...])
+            frame_i.conversion(self.vars['convert_for_drift'])
+            luminosity_thresh = median(frame_i.image)
+            init_lum_thresh = luminosity_thresh
+            frame_i.thresholding(luminosity_thresh, self.vars['lighter_background'])
+            while logical_and(frame_i.binary_image.sum() > 1.05 * drift_matrix[0, :, :].sum(),
+                                 luminosity_thresh > 0.6 * init_lum_thresh):
+                luminosity_thresh -= 5
+                frame_i.thresholding(luminosity_thresh, self.vars['lighter_background'])
+            if luminosity_thresh <= 0.6 * init_lum_thresh:
+                luminosity_thresh = init_lum_thresh
+                while logical_and(frame_i.binary_image.sum() < 0.95 * drift_matrix[0, :, :].sum(),
+                                     luminosity_thresh < 1.4 * init_lum_thresh):
+                    luminosity_thresh += 5
+                    frame_i.thresholding(luminosity_thresh, self.vars['lighter_background'])
+                if luminosity_thresh >= 1.4 * init_lum_thresh:
+                    logging.error("Drift correction failed when studying the frame " + str(frame))
+                else:
+                    drift_matrix[frame, :, :] = frame_i.binary_image
+            else:
+                drift_matrix[frame, :, :] = frame_i.binary_image
+
+    def get_origin_shape(self):
+        logging.info(f"Arena n°{self.statistics['arena']}. Make sure of origin shape")
+        if self.vars['origin_state'] == "invisible":
+            # Use simple thresholding to detect when invisible biomatter becomes visible.
+            # When it covers 20 pixels at least
+            self.start = 2
+            while logical_and(sum(frame_i.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
+                frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
+                frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
+                self.start += 1
+            # Use connected components to find which shape is the nearest from the image center.
+            if self.vars['several_blob_per_arena']:
+                self.origin = frame_i.binary_image
+            else:
+                nb_components, output, stats, centroids = connectedComponentsWithStats(frame_i.binary_image,
+                                                                                           connectivity=8)
+                if self.vars['first_detection_method'] == 'most_central':
+                    center = array((self.dims[2] // 2, self.dims[1] // 2))
+                    stats = zeros(nb_components - 1)
+                    for shape_i in arange(1, nb_components):
+                        stats[shape_i - 1] = eudist(center, centroids[shape_i, :])
+                    # The shape having the minimal euclidean distance from the center will be the original shape
+                    self.origin[output == (argmin(stats) + 1)] = 1
+                elif self.vars['first_detection_method'] == 'largest':
+                    self.origin[output == argmax(stats[1:, 4])] = 1
+            self.origin_idx = nonzero(self.origin)
+            self.substantial_growth = self.origin.sum() + 250
+        else:
+            self.start = 2
+
+            """
+            ori_sum = self.origin.sum()
+            self.origin_idx = nonzero(self.origin)
+            sum_i = ori_sum
+            frame_list = []
+            # Loop until the shape grow above user defined threshold
+            while logical_and((ori_sum + self.vars['first_move_threshold']) > sum_i, t < self.dims[0] - 1):
+                t += 1
+                frame_i = self.converted_video[t, :, :].copy()
+                #ori_mean = mean(frame_i[self.origin_idx[0], self.origin_idx[1]])
+                #if self.vars['lighter_background']:
+                #    frame_i[self.origin_idx[0], self.origin_idx[1]] = 0
+                #    int_sample = frame_i[frame_i >= quantile(frame_i, 0.75)]
+                #else:  # Take typical dark pixels otherwise
+                #    frame_i[self.origin_idx[0], self.origin_idx[1]] = 255
+                #    int_sample = frame_i[frame_i <= quantile(frame_i, 0.25)]
+                #frame_i[self.origin_idx[0], self.origin_idx[1]] = int_sample[:len(self.origin_idx[0])]
+
+                frame_i = OneImageAnalysis(frame_i)
+                #luminosity_threshold = round(absolute((mean(int_sample) - ori_mean) // 2))
+                frame_i.thresholding()
+                frame_list.append(frame_i.binary_image)
+                sum_i = frame_i.binary_image.sum()
+
+            self.start = t - 1
+            if len(frame_list) > 1:
+                self.origin, stats, centroids = cc(frame_list[-2])
+                self.origin[self.origin > 1] = 0
+            """
+            # Initialize the covering_intensity matrix as a reference for pixel fading
+            self.origin_idx = nonzero(self.origin)
+            if self.vars['origin_state'] == "fluctuating":
+                self.covering_intensity = self.origin * self.converted_video[0, :, :]
+            if self.vars['origin_state'] == "constant":
+                if self.vars['lighter_background']:
+                    self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
+            self.substantial_growth = 1.2 * self.origin.sum()
+        ##
+
+    def get_covering_duration(self, step):
+        logging.info(f"Arena n°{self.statistics['arena']}. Find a frame with a significant growth/motion and determine the number of frames necessary for a pixel to get covered")
+        ## Find the time at which growth reached a substantial growth.
+        self.substantial_time = self.start
+        # To avoid noisy images to have deleterious effects, make sure that area area reaches the threshold thrice.
+        occurrence = 0
+        while logical_and(occurrence < 3, self.substantial_time < (self.dims[0] - step - 1)):
+            self.substantial_time += step
+            growth_vision = OneImageAnalysis(self.converted_video[self.substantial_time, :, :])
+            # growth_vision.thresholding()
+            if self.vars['convert_for_motion']['logical'] != 'None':
+                growth_vision.image2 = self.converted_video2[self.substantial_time, ...]
+            growth_vision.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
+            surfarea = sum(growth_vision.binary_image * self.borders)
+            if surfarea > self.substantial_growth:
+                occurrence += 1
+        # get a rough idea of the area covered during this time
+        if (self.substantial_time - self.start) > 20:
+            if self.vars['lighter_background']:
+                growth = (sum(self.converted_video[self.start:(self.start + 10), :, :], 0) / 10) - (sum(self.converted_video[(self.substantial_time - 10):self.substantial_time, :, :], 0) / 10)
+            else:
+                growth = (sum(self.converted_video[(self.substantial_time - 10):self.substantial_time, :, :], 0) / 10) - (
+                            sum(self.converted_video[self.start:(self.start + 10), :, :], 0) / 10)
+        else:
+            if self.vars['lighter_background']:
+                growth = self.converted_video[self.start, ...] - self.converted_video[self.substantial_time, ...]
+            else:
+                growth = self.converted_video[self.substantial_time, ...] - self.converted_video[self.start, ...]
+        intensity_extent = ptp(self.converted_video[self.start:self.substantial_time, :, :], axis=0)
+        growth[logical_or(growth < 0, intensity_extent < median(intensity_extent))] = 0
+        growth = bracket_to_uint8_image_contrast(growth) # round(255 * (growth / ptp(growth))).astype(uint8)
+        growth *= self.borders
+        growth_vision = OneImageAnalysis(growth)
+        growth_vision.thresholding()
+        # self.substantial_image = erode(growth, self.cross_33, iterations=2)
+        self.substantial_image = erode(growth_vision.binary_image, self.cross_33, iterations=2)
+
+        # New stuff: (removed because was too stringent and impeded a lot of analyses)
+        # already_in_origin = self.substantial_image * self.origin
+        # not_only_change_from_origin = logical_xor(self.substantial_image, already_in_origin).sum() > 0.1 * self.origin.sum()
+
+
+        # if any(self.substantial_image) and not_only_change_from_origin:
+        if any(self.substantial_image):
+            natural_noise = nonzero(intensity_extent == min(intensity_extent))
+            natural_noise = self.converted_video[self.start:self.substantial_time, natural_noise[0][0], natural_noise[1][0]]
+            natural_noise = moving_average(natural_noise, 5)
+            natural_noise = ptp(natural_noise)
+            subst_idx = nonzero(self.substantial_image)
+            cover_lengths = zeros(len(subst_idx[0]), dtype=uint32)
+            for index in arange(len(subst_idx[0])):
+                vector = self.converted_video[self.start:self.substantial_time, subst_idx[0][index], subst_idx[1][index]]
+                left, right = find_major_incline(vector, natural_noise)
+                # If find_major_incline did find a major incline: (otherwise it put 0 to left and 1 to right)
+                if not logical_and(left == 0, right == 1):
+                    cover_lengths[index] = len(vector[left:-right])
+            # If this analysis fails put a deterministic step
+            if len(cover_lengths[cover_lengths > 0]) > 0:
+                self.step = (round(mean(cover_lengths[cover_lengths > 0])).astype(uint32) // 2) + 1
+                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
+            else:
+                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value = 10")
+
+            # Make sure to avoid a step overestimation
+            if self.step > self.dims[0] // 20:
+                self.step = self.dims[0] // 20
+        # When the first_move_threshold is not stringent enough the program may detect a movement due to noise
+        # In that case, the substantial_image is empty and there is no reason to proceed further
+        else:
+            self.start = None
+        ##
+
+    def detection(self, compute_all_possibilities=False):
+        # self.lost_frames = (self.step - 1) * self.vars['iterate_smoothing'] # relevant when smoothing did not use padding.
+        self.lost_frames = self.step
+        # I/ Image by image segmentation algorithms
+        # If images contain a drift correction (zeros at borders of the image,
+        # Replace these 0 by normal background values before segmenting
+        if self.vars['drift_already_corrected'] or self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
+            logging.info(f"Arena n°{self.statistics['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
+            if self.vars['drift_already_corrected']:
+                logging.info(f"Arena n°{self.statistics['arena']}. Adjust each image to drift correction")
+            self.segmentation = zeros(self.dims, dtype=uint8)
+            # but a background value instead of zeros at the border of the image
+            for frame_i in arange(self.dims[0]):
+                image_i = self.converted_video[frame_i, ...]
+                image_i = OneImageAnalysis(image_i)
+                image_i.bio_label = self.vars["bio_label"]
+                if self.vars['convert_for_motion']['logical'] != 'None':
+                    image_i.image2 = self.converted_video2[frame_i, ...]
+                if frame_i == 0:
+                    image_i.previous_binary_image = self.origin
+                else:
+                    image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
+                image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
+                                     bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
+                if self.vars['drift_already_corrected']:
+                    image_i.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
+                    # image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
+                    #                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
+                # self.segmentation[frame_i, ...] = image_i.binary_image
+                # See(frame.binary_image)
+                if self.vars['lose_accuracy_to_save_memory']:
+                    self.converted_video[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image)
+                else:
+                    self.converted_video[frame_i, ...] = image_i.image
+                if self.vars['convert_for_motion']['logical'] != 'None':
+                    if self.vars['lose_accuracy_to_save_memory']:
+                        self.converted_video2[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image2)
+                    else:
+                        self.converted_video2[frame_i, ...] = image_i.image2
+
+                # if self.vars['convert_for_motion']['logical'] != 'None':
+                #     image_i2 = OneImageAnalysis(self.converted_video2[frame_i, ...])
+                #     image_i2.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label2"])
+                #     if self.vars['convert_for_motion']['logical'] == 'Or':
+                #         image_i.binary_image = logical_or(image_i.binary_image, image_i2.binary_image)
+                #     elif self.vars['convert_for_motion']['logical'] == 'And':
+                #         image_i.binary_image = logical_and(image_i.binary_image, image_i2.binary_image)
+                #     elif self.vars['convert_for_motion']['logical'] == 'Xor':
+                #         image_i.binary_image = logical_xor(image_i.binary_image, image_i2.binary_image)
+                self.segmentation[frame_i, ...] = image_i.binary_image
+
+        # if self.vars['color_number'] > 2:
+        #     self.segmentation = zeros(self.dims, dtype=uint8)
+        #     for frame_i in arange(self.dims[0]):
+        #         image_i = OneImageAnalysis(self.converted_video[frame_i, ...])
+        #         image_i.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label"])
+        #         if self.vars['convert_for_motion']['logical'] != 'None':
+        #             image_i2 = OneImageAnalysis(self.converted_video2[frame_i, ...])
+        #             image_i2.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label2"])
+        #             if self.vars['convert_for_motion']['logical'] == 'Or':
+        #                 image_i.binary_image = logical_or(image_i.binary_image, image_i2.binary_image)
+        #             elif self.vars['convert_for_motion']['logical'] == 'And':
+        #                 image_i.binary_image = logical_and(image_i.binary_image, image_i2.binary_image)
+        #             elif self.vars['convert_for_motion']['logical'] == 'Xor':
+        #                 image_i.binary_image = logical_xor(image_i.binary_image, image_i2.binary_image)
+        #         self.segmentation[frame_i, ...] = image_i.binary_image
+        if self.vars['color_number'] == 2:
+            luminosity_segmentation, l_threshold_over_time = self.lum_value_segmentation(self.converted_video, do_value_segmentation=self.vars['do_value_segmentation'] or compute_all_possibilities)
+            self.converted_video = self.smooth_pixel_slopes(self.converted_video)
+            if self.vars['do_slope_segmentation'] or compute_all_possibilities:
+                gradient_segmentation = self.lum_slope_segmentation(self.converted_video)
+                gradient_segmentation[-self.lost_frames:, ...] = repeat(gradient_segmentation[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
+            if self.vars['convert_for_motion']['logical'] != 'None':
+                if self.vars['do_value_segmentation'] or compute_all_possibilities:
+                    luminosity_segmentation2, l_threshold_over_time2 = self.lum_value_segmentation(self.converted_video2, do_value_segmentation=True)
+                    if self.vars['convert_for_motion']['logical'] == 'Or':
+                        luminosity_segmentation = logical_or(luminosity_segmentation, luminosity_segmentation2)
+                    elif self.vars['convert_for_motion']['logical'] == 'And':
+                        luminosity_segmentation = logical_and(luminosity_segmentation, luminosity_segmentation2)
+                    elif self.vars['convert_for_motion']['logical'] == 'Xor':
+                        luminosity_segmentation = logical_xor(luminosity_segmentation, luminosity_segmentation2)
+                self.converted_video2 = self.smooth_pixel_slopes(self.converted_video2)
+                if self.vars['do_slope_segmentation'] or compute_all_possibilities:
+                    gradient_segmentation2 = self.lum_slope_segmentation(self.converted_video2)
+                    gradient_segmentation2[-self.lost_frames:, ...] = repeat(gradient_segmentation2[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
+                    if self.vars['convert_for_motion']['logical'] == 'Or':
+                        gradient_segmentation = logical_or(gradient_segmentation, gradient_segmentation2)
+                    elif self.vars['convert_for_motion']['logical'] == 'And':
+                        gradient_segmentation = logical_and(gradient_segmentation, gradient_segmentation2)
+                    elif self.vars['convert_for_motion']['logical'] == 'Xor':
+                        gradient_segmentation = logical_xor(gradient_segmentation, gradient_segmentation2)
+
+            if compute_all_possibilities:
+                logging.info(f"Arena n°{self.statistics['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['max_growth_per_frame']}")
+                self.luminosity_segmentation = nonzero(luminosity_segmentation)
+                self.gradient_segmentation = nonzero(gradient_segmentation)
+                self.logical_and = nonzero(logical_and(luminosity_segmentation, gradient_segmentation))
+                self.logical_or = nonzero(logical_or(luminosity_segmentation, gradient_segmentation))
+            elif not self.vars['frame_by_frame_segmentation']:
+                if self.vars['do_value_segmentation'] and not self.vars['do_slope_segmentation']:
+                    logging.info(f"Arena n°{self.statistics['arena']}. Detect with luminosity threshold segmentation algorithm")
+                    self.segmentation = luminosity_segmentation
+                if self.vars['do_slope_segmentation']:# and not self.vars['do_value_segmentation']: NEW
+                    logging.info(f"Arena n°{self.statistics['arena']}. Detect with luminosity slope segmentation algorithm")
+                    # gradient_segmentation[:(self.lost_frames + 1), ...] = luminosity_segmentation[:(self.lost_frames + 1), ...]
+                    if not self.vars['do_value_segmentation']:# NEW
+                        self.segmentation = gradient_segmentation
+                if logical_and(self.vars['do_value_segmentation'], self.vars['do_slope_segmentation']):
+                    if self.vars['true_if_use_light_AND_slope_else_OR']:
+                        logging.info(f"Arena n°{self.statistics['arena']}. Detection resuts from threshold AND slope segmentation algorithms")
+                        self.segmentation = logical_and(luminosity_segmentation, gradient_segmentation)
+                    else:
+                        logging.info(f"Arena n°{self.statistics['arena']}. Detection resuts from threshold OR slope segmentation algorithms")
+                        self.segmentation = logical_or(luminosity_segmentation, gradient_segmentation)
+                self.segmentation = self.segmentation.astype(uint8)
+        self.converted_video2 = None
+
+    def lum_value_segmentation(self, converted_video, do_value_segmentation):
+        shape_motion_failed: bool = False
+        if self.vars['lighter_background']:
+            covering_l_values = min(converted_video[:self.substantial_time, :, :],
+                                             0) * self.substantial_image
+        else:
+            covering_l_values = max(converted_video[:self.substantial_time, :, :],
+                                             0) * self.substantial_image
+        # Avoid errors by checking whether the covering values are nonzero
+        covering_l_values = covering_l_values[covering_l_values != 0]
+        if len(covering_l_values) == 0:
+            shape_motion_failed = True
+        if not shape_motion_failed:
+            # do_value_segmentation = 0.8
+            # i = arange(17)
+            # l_values_thresholds = np.power(-1, i) * (0.8 - 0.1 * (i // 2))
+            value_segmentation_thresholds = arange(0.8, -0.7, -0.1)
+            validated_thresholds = zeros(value_segmentation_thresholds.shape, dtype=bool)
+            counter = 0
+            while_condition = True
+            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['max_growth_per_frame'] * 2
+            if self.vars['lighter_background']:
+                basic_bckgrnd_values = quantile(converted_video[:(self.lost_frames + 1), ...], 0.9, axis=(1, 2))
+            else:
+                basic_bckgrnd_values = quantile(converted_video[:(self.lost_frames + 1), ...], 0.1, axis=(1, 2))
+            # Try different values of do_value_segmentation and keep the one that does not
+            # segment more than x percent of the image
+            while counter <= 14:
+                value_threshold = value_segmentation_thresholds[counter]
+                if self.vars['lighter_background']:
+                    l_threshold = (1 + value_threshold) * max(covering_l_values)
+                else:
+                    l_threshold = (1 - value_threshold) * min(covering_l_values)
+                starting_segmentation, l_threshold_over_time = segment_with_lum_value(converted_video[:(self.lost_frames + 1), ...],
+                                                               basic_bckgrnd_values, l_threshold,
+                                                               self.vars['lighter_background'])
+
+                changing_pixel_number = sum(absolute(diff(starting_segmentation.astype(int8), 1, 0)), (1, 2))
+                validation = max(sum(starting_segmentation, (1, 2))) < max_motion_per_frame and (
+                        max(changing_pixel_number) < max_motion_per_frame)
+                validated_thresholds[counter] = validation
+                if any(validated_thresholds):
+                    if not validation:
+                        break
+                counter += 1
+            # If any threshold is accepted, use their average to proceed the final thresholding
+            valid_number = validated_thresholds.sum()
+            if valid_number > 0:
+                if valid_number > 2:
+                    index_to_keep = 2
+                else:
+                    index_to_keep = valid_number - 1
+                value_threshold = value_segmentation_thresholds[
+                    uint8(floor(mean(nonzero(validated_thresholds)[0][index_to_keep])))]
+            else:
+                value_threshold = 0
+
+            if self.vars['lighter_background']:
+                l_threshold = (1 + value_threshold) * max(covering_l_values)
+            else:
+                l_threshold = (1 - value_threshold) * min(covering_l_values)
+            if do_value_segmentation:
+                if self.vars['lighter_background']:
+                    basic_bckgrnd_values = quantile(converted_video, 0.9, axis=(1, 2))
+                else:
+                    basic_bckgrnd_values = quantile(converted_video, 0.1, axis=(1, 2))
+                luminosity_segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
+                                                                 l_threshold, self.vars['lighter_background'])
+            else:
+                luminosity_segmentation, l_threshold_over_time = segment_with_lum_value(converted_video[:(self.lost_frames + 1), ...],
+                                                               basic_bckgrnd_values, l_threshold,
+                                                               self.vars['lighter_background'])
+        else:
+            luminosity_segmentation = None
+
+        return luminosity_segmentation, l_threshold_over_time
+
+    def smooth_pixel_slopes(self, converted_video):
+        # smoothed_video = zeros(
+        #     (self.dims[0] - self.lost_frames, self.dims[1], self.dims[2]),
+        #     dtype=float64)
+        try:
+            smoothed_video = zeros(self.dims, dtype=float64)
+            smooth_kernel = ones(self.step) / self.step
+            for i in arange(converted_video.shape[1]):
+                for j in arange(converted_video.shape[2]):
+                    padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
+                                 (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                    moving_average = convolve(padded, smooth_kernel, mode='valid')
+                    if self.vars['iterate_smoothing'] > 1:
+                        for it in arange(1, self.vars['iterate_smoothing']):
+                            padded = pad(moving_average,
+                                         (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                            moving_average = convolve(padded, smooth_kernel, mode='valid')
+                            # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
+                    smoothed_video[:, i, j] = moving_average
+            if self.vars['lose_accuracy_to_save_memory']:
+                smoothed_video = bracket_to_uint8_image_contrast(smoothed_video)
+                # smoothed_video = to_uint8(smoothed_video)
+            return smoothed_video
+
+        except MemoryError:
+            logging.error("Not enough RAM available to smooth pixel curves. Detection may fail.")
+            smoothed_video = converted_video
+            return smoothed_video
+
+    def lum_slope_segmentation(self, converted_video):
+        shape_motion_failed : bool = False
+        gradient_segmentation = zeros(self.dims, uint8)
+        # 2) Contrast increase
+        oridx = nonzero(self.origin)
+        notoridx = nonzero(1 - self.origin)
+        do_increase_contrast = mean(converted_video[0, oridx[0], oridx[1]]) * 10 > mean(
+                converted_video[0, notoridx[0], notoridx[1]])
+        necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 2 * 1.16415e-10
+        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        derive = converted_video
+        if necessary_memory > available_memory:
+            converted_video = None
+
+        if do_increase_contrast:
+            derive = square(derive)
+
+        # 3) Get the gradient
+        necessary_memory = derive.size * 64 * 4 * 1.16415e-10
+        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        if necessary_memory > available_memory:
+            for cy in arange(self.dims[1]):
+                for cx in arange(self.dims[2]):
+                    if self.vars['lose_accuracy_to_save_memory']:
+                        derive[:, cy, cx] = bracket_to_uint8_image_contrast(gradient(derive[:, cy, cx], self.step))
+                    else:
+                        derive[:, cy, cx] = gradient(derive[:, cy, cx], self.step)
+        else:
+            if self.vars['lose_accuracy_to_save_memory']:
+                derive = bracket_to_uint8_image_contrast(gradient(derive, self.step, axis=0))
+            else:
+                derive = gradient(derive, self.step, axis=0)
+
+        # 4) Segment
+        if self.vars['lighter_background']:
+            covering_slopes = min(derive[:self.substantial_time, :, :], 0) * self.substantial_image
+        else:
+            covering_slopes = max(derive[:self.substantial_time, :, :], 0) * self.substantial_image
+        covering_slopes = covering_slopes[covering_slopes != 0]
+        if len(covering_slopes) == 0:
+            shape_motion_failed = True
+
+        if not shape_motion_failed:
+            ####
+            # ease_slope_segmentation = 0.8
+            value_segmentation_thresholds = arange(0.8, -0.7, -0.1)
+            validated_thresholds = zeros(value_segmentation_thresholds.shape, dtype=bool)
+            counter = 0
+            while_condition = True
+            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['max_growth_per_frame']
+            # Try different values of do_slope_segmentation and keep the one that does not
+            # segment more than x percent of the image
+            while counter <= 14:
+                ease_slope_segmentation = value_segmentation_thresholds[counter]
+                if self.vars['lighter_background']:
+                    gradient_threshold = (1 + ease_slope_segmentation) * max(covering_slopes)
+                    sample = less(derive[:self.substantial_time], gradient_threshold)
+                else:
+                    gradient_threshold = (1 - ease_slope_segmentation) * min(covering_slopes)
+                    sample = greater(derive[:self.substantial_time], gradient_threshold)
+                changing_pixel_number = sum(absolute(diff(sample.astype(int8), 1, 0)), (1, 2))
+                validation = max(sum(sample, (1, 2))) < max_motion_per_frame and (
+                        max(changing_pixel_number) < max_motion_per_frame)
+                validated_thresholds[counter] = validation
+                if any(validated_thresholds):
+                    if not validation:
+                        break
+                counter += 1
+                # If any threshold is accepted, use their average to proceed the final thresholding
+            valid_number = validated_thresholds.sum()
+            if valid_number > 0:
+                if valid_number > 2:
+                    index_to_keep = 2
+                else:
+                    index_to_keep = valid_number - 1
+                ease_slope_segmentation = value_segmentation_thresholds[
+                    uint8(floor(mean(nonzero(validated_thresholds)[0][index_to_keep])))]
+            else:
+                ease_slope_segmentation = 0
+
+            if self.vars['lighter_background']:
+                gradient_threshold = (1 - ease_slope_segmentation) * max(covering_slopes)
+                # gradient_segmentation = less(derive, gradient_threshold)#New
+                gradient_segmentation[:-self.lost_frames, :, :] = less(derive, gradient_threshold)[self.lost_frames:, :, :]
+            else:
+                gradient_threshold = (1 - ease_slope_segmentation) * min(covering_slopes)
+                # gradient_segmentation = greater(derive, gradient_threshold)#New
+                gradient_segmentation[:-self.lost_frames, :, :] = greater(derive, gradient_threshold)[self.lost_frames:, :, :]
+        else:
+            gradient_segmentation = None
+        return gradient_segmentation
+
+    def update_ring_width(self):
+        # Make sure that self.pixels_depths are odd and greater than 3
+        if self.pixel_ring_depth <= 3:
+            self.pixel_ring_depth = 3
+        if self.pixel_ring_depth % 2 == 0:
+            self.pixel_ring_depth = self.pixel_ring_depth + 1
+        self.erodila_disk = Ellipse((self.pixel_ring_depth, self.pixel_ring_depth)).create().astype(uint8)
+
+    def initialize_post_processing(self):
+        ## Initialization
+        logging.info(f"Arena n°{self.statistics['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['ring_correction']}, Connect distant shapes: {self.vars['ease_distant_shape_integration'] > 0}, How to select appearing cell(s): {self.vars['first_detection_method']}")
+
+        self.max_distance = self.pixel_ring_depth * self.vars['ease_distant_shape_integration']
+        self.binary = zeros(self.dims[:3], dtype=uint8)
+        if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
+            logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .npy videos and Data to run Cellects quickly.pkl and re-run")
+
+        if self.vars['origin_state'] == "invisible":
+            self.binary[self.start - 1, :, :] = self.origin.copy()
+            self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = self.converted_video[self.start, self.origin_idx[0], self.origin_idx[1]]
+        else:
+            if self.vars['origin_state'] == "fluctuating":
+                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = median(self.converted_video[:self.start, self.origin_idx[0], self.origin_idx[1]], axis=0)
+
+            self.binary[:self.start, :, :] = repeat(expand_dims(self.origin, 0), self.start, axis=0)
+            if self.start < self.step:
+                frames_to_assess = self.step
+                self.segmentation[self.start - 1, ...] = self.binary[self.start - 1, :, :]
+                for t in arange(self.start, self.lost_frames):
+                    # Only keep pixels that are always detected
+                    always_found = sum(self.segmentation[t:(t + frames_to_assess), ...], 0)
+                    always_found = always_found == frames_to_assess
+                    # Remove too small shapes
+                    without_small, stats, centro = cc(always_found.astype(uint8))
+                    large_enough = nonzero(stats[1:, 4] > ((self.vars['first_move_threshold'] + 1) // 2))[0]
+                    if len(large_enough) > 0:
+                        always_found *= isin(always_found, large_enough + 1)
+                        always_found = logical_or(always_found, self.segmentation[t - 1, ...])
+                        self.segmentation[t, ...] *= always_found
+                    else:
+                        self.segmentation[t, ...] = 0
+                    self.segmentation[t, ...] = logical_or(self.segmentation[t - 1, ...], self.segmentation[t, ...])
+        self.mean_distance_per_frame = None
+        self.surfarea = zeros(self.dims[0], dtype=uint64)
+        self.surfarea[:self.start] = sum(self.binary[:self.start, :, :], (1, 2))
+        self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
+                                           sqrt(sum(self.binary[(self.start - 1), :, :])))
+        if self.vars['ring_correction']:
+            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], self.cross_33,
+                                      ray_length_coef=1.25)  # plt.imshow(sun)
+            self.holes = zeros(self.dims[1:], dtype=uint8)
+            # cannot_fading = self.holes.copy()
+            self.pixel_ring_depth += 2
+            self.update_ring_width()
+        if self.vars['do_fading']:
+            self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
+            self.already_explored_area = self.origin.copy()
+
+    def update_shape(self, show_seg):
+        ## Build the new shape state from the t-1 one
+        new_shape = self.binary[self.t - 1, :, :].copy()
+
+        # Get from gradients, a 2D matrix of potentially covered pixels
+        # I/ dilate the shape made with covered pixels to assess for covering
+
+        # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
+        if self.dims[0] < 100:
+            new_potentials = self.segmentation[self.t, :, :]
+        else:
+            new_potentials = sum(self.segmentation[(self.t - 2): (self.t + 1), :, :], 0, dtype=uint8)
+            new_potentials[new_potentials == 1] = 0
+            new_potentials[new_potentials > 1] = 1
+
+        # I/ 2) If an image displays more new potential pixels than 50% of image pixels,
+        # one of these images is considered noisy and we try taking only one.
+        frame_counter = -1
+        maximal_size = 0.5 * new_potentials.size
+        # NEW: Uncomment the two next lines for futures updates:
+        if (self.vars["do_value_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > (self.start + self.step):
+           maximal_size = min((max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['max_growth_per_frame']), self.borders.sum()))
+        while logical_and(sum(new_potentials) > maximal_size,
+                             frame_counter <= 5):  # logical_and(sum(new_potentials > 0) > 5 * sum(dila_ring), frame_counter <= 5):
+            frame_counter += 1
+            if frame_counter < 5:
+                new_potentials = self.segmentation[self.t - frame_counter, :, :]
+            else:
+            # If taking only one image is not enough, use the inverse of the fadinged matrix as new_potentials
+            # Given it haven't been processed by any slope calculation, it should be less noisy
+                new_potentials = sum(self.segmentation[(self.t - 5): (self.t + 1), :, :], 0, dtype=uint8)
+                new_potentials[new_potentials < 6] = 0
+                new_potentials[new_potentials == 6] = 1
+
+        # Remove noise by opening and by keeping the shape within borders
+        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, self.cross_33) * self.borders
+
+        # Add distant shapes within a radius, score every added pixels according to their distance
+        if self.vars['several_blob_per_arena']:
+            new_shape = logical_or(new_potentials, new_shape).astype(uint8)
+        else:
+            if new_shape.sum() == 0:
+                new_shape = new_potentials
+            else:
+                pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance, self.cross_33)
+                # If max_distance is non nul look for distant shapes
+                pads.consider_shapes_sizes(self.vars['min_distant_shape_size'],
+                                                     self.vars['max_distant_shape_size'])
+                pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
+
+                new_shape = pads.expanded_shape.copy()
+                new_shape[new_shape > 1] = 1
+                if logical_and(self.t > self.step, self.t < self.dims[0]):
+                    if any(pads.expanded_shape > 5):
+                        # Add distant shapes back in time at the covering speed of neighbors
+                        self.binary[self.t][nonzero(new_shape)] = 1
+                        self.binary[(self.step):(self.t + 1), :, :] = \
+                            pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
+                                                      self.segmentation[(self.step):(self.t + 1), :, :])
+                        new_shape = self.binary[self.t, :, :].copy()
+                pads = None
+
+        # Fill holes
+        new_shape = morphologyEx(new_shape, MORPH_CLOSE, self.cross_33)
+
+        if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
+            # Shape Erosion
+            # I/ After a substantial growth, erode the shape made with covered pixels to assess for fading
+            # Use the newly covered pixels to calculate their mean covering intensity
+            new_idx = nonzero(logical_xor(new_shape, self.binary[self.t - 1, :, :]))
+            start_intensity_monitoring = self.t - self.lost_frames - self.step
+            end_intensity_monitoring = self.t - self.lost_frames
+            self.covering_intensity[new_idx[0], new_idx[1]] = median(self.converted_video[start_intensity_monitoring:end_intensity_monitoring, new_idx[0], new_idx[1]], axis=0)
+            # To look for fading pixels, only consider the internal contour of the shape at t-1
+            fading = erode(self.binary[self.t - 1, :, :], self.erodila_disk)
+            # fading = logical_xor(self.binary[self.t - 1, :, :], fading)
+            fading = self.binary[self.t - 1, :, :] - fading
+            # If the origin state is considered constant: origin pixels will never be fading
+            if self.vars['origin_state'] == 'constant':
+                fading *= (1 - self.origin)
+            # With a lighter background, fading them if their intensity gets higher than the covering intensity
+            if self.vars['lighter_background']:
+                #self.covering_intensity[new_idx[0], new_idx[1]] = ref[-round(self.vars['fading'] * 100), :]
+                fading = fading * greater((self.converted_video[self.t - self.lost_frames, :, :]),
+                                                     (1 - self.vars['fading']) * self.covering_intensity).astype(
+                    uint8)
+            else:
+                #self.covering_intensity[new_idx[0], new_idx[1]] = ref[round(self.vars['fading'] * 100), :]
+                fading = fading * less((self.converted_video[self.t - self.lost_frames, :, :]),
+                                                  (1 + self.vars['fading']) * self.covering_intensity).astype(
+                    uint8)
+
+            if any(fading):
+                fading = morphologyEx(fading, MORPH_CLOSE, self.cross_33, iterations=1)
+                if not self.vars['several_blob_per_arena']:
+                    # Check if uncov_potentials does not break the shape into several components
+                    uncov_nb, uncov_shapes = connectedComponents(fading, ltype=CV_16U)
+                    nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
+                    i = 0
+                    while i <= uncov_nb:
+                        i += 1
+                        prev_nb = nb
+                        new_shape[nonzero(uncov_shapes == i)] = 0
+                        nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
+                        if nb > prev_nb:
+                            new_shape[nonzero(uncov_shapes == i)] = 1
+                            nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
+                    uncov_shapes = None
+                else:
+                    new_shape[nonzero(fading)] = 0
+                new_shape = morphologyEx(new_shape, MORPH_OPEN, self.cross_33, iterations=0)
+                new_shape = morphologyEx(new_shape, MORPH_CLOSE, self.cross_33)
+        self.covering_intensity *= new_shape
+        self.binary[self.t, :, :] = new_shape * self.borders
+        self.surfarea[self.t] = sum(self.binary[self.t, :, :])
+
+        # Calculate the mean distance covered per frame and correct for a ring of not really fadinged pixels
+        if self.mean_distance_per_frame is None:
+            if self.vars['ring_correction']:
+                if logical_and((self.t % 20) == 0,
+                                  logical_and(self.surfarea[self.t] > self.substantial_growth,
+                                                 self.surfarea[self.t] < self.substantial_growth * 2)):
+                    shape = self.binary[self.t, :, :] * self.sun
+                    back = (1 - self.binary[self.t, :, :]) * self.sun
+                    for ray in self.rays:
+                        # For each sun's ray, see how they cross the shape/back and
+                        # store the gravity_field value of these pixels (distance to the original shape).
+                        ray_through_shape = (shape == ray) * self.gravity_field
+                        ray_through_back = (back == ray) * self.gravity_field
+                        if any(ray_through_shape):
+                            if any(ray_through_back):
+                                # If at least one back pixel is nearer to the original shape than a shape pixel,
+                                # there is a hole to fill.
+                                if any(ray_through_back > min(ray_through_shape[ray_through_shape > 0])):
+                                    # Check if the nearest pixels are shape, if so, supress them until the nearest pixel
+                                    # becomes back
+                                    while max(ray_through_back) <= max(ray_through_shape):
+                                        ray_through_shape[ray_through_shape == max(ray_through_shape)] = 0
+                                    # Now, all back pixels that are nearer than the closest shape pixel should get filled
+                                    # To do so, replace back pixels further than the nearest shape pixel by 0
+                                    ray_through_back[ray_through_back < max(ray_through_shape)] = 0
+                                    self.holes[nonzero(ray_through_back)] = 1
+                            else:
+                                self.rays = concatenate((self.rays[:(ray - 2)], self.rays[(ray - 1):]))
+                        ray_through_shape = None
+                        ray_through_back = None
+            if any(self.surfarea[:self.t] > self.substantial_growth * 2):
+
+                if self.vars['ring_correction']:
+                    # Apply the hole correction
+                    self.holes = morphologyEx(self.holes, MORPH_CLOSE, self.cross_33, iterations=10)
+                    if any(self.holes * (1 - self.binary[self.t, :, :])):  # if any(self.holes > 0):
+                        self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
+                            expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes, self.cross_33)
+                        if holes_time_end is not None:
+                            self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
+                            self.binary[holes_time_end:(self.t + 1), :, :][
+                                self.binary[holes_time_end:(self.t + 1), :, :] > 1] = 1
+                            self.surfarea[:(self.t + 1)] = sum(self.binary[:(self.t + 1), :, :], (1, 2))
+
+                    else:
+                        distance_against_time = [1, 2]
+                else:
+                    distance_against_time = [1, 2]
+                distance_against_time = diff(distance_against_time)
+                if len(distance_against_time) > 0:
+                    self.mean_distance_per_frame = mean(- distance_against_time)
+                else:
+                    self.mean_distance_per_frame = 1
+        if self.vars['do_fading']:
+            self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
+            self.already_explored_area = logical_or(self.already_explored_area, self.binary[self.t, :, :])
+
+        # Display
+
+        if show_seg:
+            if self.visu is not None:
+                im_to_display = self.visu[self.t, ...].copy()
+                contours = nonzero(morphologyEx(self.binary[self.t, :, :], MORPH_GRADIENT, self.cross_33))
+                im_to_display[contours[0], contours[1]] = 0
+            else:
+                im_to_display = self.binary[self.t, :, :] * 255
+            imtoshow = resize(im_to_display, (540, 540))
+            imshow("shape_motion", imtoshow)
+            waitKey(1)
+        self.t += 1
+        ##
+
+    def get_descriptors_from_binary(self):
+        ##
+        self.substantial_image = None
+        self.covering_intensity = None
+        self.segmentation = None
+        self.gravity_field = None
+        self.sun = None
+        self.rays = None
+        self.holes = None
+        self.surfarea = self.binary.sum((1, 2))
+        timings = self.vars['exif']
+        if len(timings) < self.dims[0]:
+            timings = arange(self.dims[0])
+        if any(timings > 0):
+            self.time_interval = mean(diff(timings))
+        timings = timings[:self.dims[0]]
+        available_descriptors_in_sd = list(from_shape_descriptors_class.keys())
+        # ["area", "perimeter", "circularity", "rectangularity", "total_hole_area", "solidity",
+        #                          "convexity", "eccentricity", "euler_number", "standard_deviation_y",
+        #                          "standard_deviation_x", "skewness_y", "skewness_x", "kurtosis_y", "kurtosis_x",
+        #                          "major_axis_len", "minor_axis_len", "axes_orientation"]
+        all_descriptors = []
+        to_compute_from_sd = []
+        for name, do_compute in self.vars['descriptors'].items():
+            if do_compute:# and
+                all_descriptors.append(name)
+                if isin(name, available_descriptors_in_sd):
+                    to_compute_from_sd.append(name)
+        self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not isin("solidity", to_compute_from_sd)
+        if self.compute_solidity_separately:
+            self.solidity = zeros(self.dims[0], dtype=float64)
+        if not self.vars['several_blob_per_arena']:
+            self.whole_shape_descriptors = df(zeros((self.dims[0], 2 + len(all_descriptors))),
+                                              columns=['arena', 'time'] + all_descriptors)
+            self.whole_shape_descriptors['arena'] = [self.statistics['arena']] * self.dims[0]
+            self.whole_shape_descriptors['time'] = timings
+            # solidity must be added if detect growth transition is computed
+            origin = self.binary[0, :, :]
+            self.statistics["first_move"] = 'NA'
+
+            for t in arange(self.dims[0]):
+                SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
+
+
+                # NEW
+                for descriptor in to_compute_from_sd:
+                    self.whole_shape_descriptors.loc[t, descriptor] = SD.descriptors[descriptor]
+                # Old
+                # self.whole_shape_descriptors.iloc[t, 2: 2 + len(descriptors)] = SD.descriptors.values()
+
+
+                if self.compute_solidity_separately:
+                    solidity = ShapeDescriptors(self.binary[t, :, :], ["solidity"])
+                    self.solidity[t] = solidity.descriptors["solidity"]
+                    # self.solidity[t] = list(solidity.descriptors.values())[0]
+                # I) Find a first pseudopod [aim: time]
+                if self.statistics["first_move"] == 'NA':
+                    if self.surfarea[t] >= (origin.sum() + self.vars['first_move_threshold']):
+                        self.statistics["first_move"] = t
+
+            # Apply the scale to the variables
+            if self.vars['output_in_mm']:
+                if isin('area', to_compute_from_sd):
+                    self.whole_shape_descriptors['area'] *= self.vars['average_pixel_size']
+                if isin('total_hole_area', to_compute_from_sd):
+                    self.whole_shape_descriptors['total_hole_area'] *= self.vars['average_pixel_size']
+                if isin('perimeter', to_compute_from_sd):
+                    self.whole_shape_descriptors['perimeter'] *= sqrt(self.vars['average_pixel_size'])
+                if isin('major_axis_len', to_compute_from_sd):
+                    self.whole_shape_descriptors['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                if isin('minor_axis_len', to_compute_from_sd):
+                    self.whole_shape_descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+        else:
+            # # I/ Create a dataset, to test this script
+            # self.binary = zeros((8, 20, 20), dtype=uint8)
+            # self.dims = self.binary.shape
+            # self.binary[0, 4:8, 4:8] = 1
+            # self.binary[1, 4:14, 4:12] = 1
+            # self.binary[2, 7:14, 7:12] = 1
+            # # one new colony appear
+            # self.binary[3, 7:14, 7:12] = 1
+            # self.binary[3, 15:17, 14:17] = 1
+            # self.binary[4, 7:14, 7:12] = 1
+            # self.binary[4, 15:18, 14:18] = 1
+            # # The two colonies fuse
+            # self.binary[5, 8:18, 8:18] = 1
+            # self.binary[6, 4:18, 4:18] = 1
+            # # The big colony divide into 2 colonies
+            # self.binary[7, 4:10, 4:10] = 1
+            # self.binary[7, 14:18, 14:18] = 1
+
+            # II/ Test the script
+
+            self.statistics["first_move"] = 1
+            colony_id_matrix = zeros(self.dims[1:], dtype=uint64)
+            # updated_colony_id_matrix = zeros(self.dims[1:], dtype=uint32)
+            # colony_dictionary = {}
+            # colony_dictionary['arena'] = [self.statistics['arena']] * self.dims[0]
+            # colony_dictionary['time'] = timings
+            # colony_dictionary['area_total'] = self.surfarea.astype(float64)
+            time_descriptor_colony = zeros((self.dims[0], len(to_compute_from_sd), 100), dtype=float64)
+            # if self.vars['output_in_mm']:
+            #     colony_dictionary['area_total'] *= self.vars['average_pixel_size']
+            colony_number = 0
+            # time_descriptor_colony[27:(t+1), 0, :5]
+            pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
+            for t in arange(self.dims[0]):#31):#
+                # t+=1
+                """ for each time step, compare each colony with the previously known picture of colonies. """
+                # nb, shapes = connectedComponents(self.binary[t, :, :])
+                # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
+                # keeps the previous colony name.
+                shapes, stats, centers = cc(self.binary[t, :, :])
+                # Consider that shapes bellow 3 pixels are noise. Given they are ranked by decreasing order,
+                # the loop will stop at nb and not compute them
+                nb = stats[stats[:, 4] >= self.vars["first_move_threshold"]].shape[0]
+                current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
+                logging.info(f"Arena n°{self.statistics['arena']}, Colony descriptors computation: {current_percentage}%, ETA {eta}")
+                # logging.info(nb)
+                updated_colony_names = zeros(1, dtype=uint64)
+                for colony in (arange(nb - 1) + 1):#120)):# #92
+                    # colony+=1
+                    # logging.info(f'Colony number {colony}')
+                    current_colony_img = (shapes == colony).astype(uint8)
+                    # if current_colony_img.sum() > 3:
+                    # nb, shapes, stats, centro = connectedComponentsWithStats(self.binary[t, :, :])
+                    # logging.info(nb)
+                    # if nb > 2:
+                    #     break
+                    # I/ Find out which names the current colony had at t-1
+                    colony_previous_names = unique(current_colony_img * colony_id_matrix)
+                    colony_previous_names = colony_previous_names[colony_previous_names != 0]
+                    # II/ Find out if the current colony names had already been analyzed at t
+
+                    # If there no match with the saved colony_id_matrix, its a new colony, lets add it
+                    if len(colony_previous_names) == 0:
+                        # logging.info("here is a new colony")
+                        colony_number += 1
+                        colony_names = array(colony_number)
+                        colony_id_matrix[nonzero(current_colony_img)] = colony_names
+                        # for descriptor in descriptors:
+                        #     colony_dictionary[descriptor + "_colony" + str(colony_number)] = zeros(self.dims[0], dtype=float64)
+                        if colony_number > time_descriptor_colony.shape[2]:
+                            time_descriptor_colony = concatenate((time_descriptor_colony, zeros((self.dims[0], len(to_compute_from_sd), 100), dtype=float64)), axis=2)
+                        self.statistics["appear_time_colony" + str(colony_number)] = t
+                        nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
+                        self.statistics["appear_pos_colony" + str(colony_number)] = str(centroids[1, 0]) + " " + str(centroids[1, 1])
+
+                    # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_names
+                    elif len(colony_previous_names) > 0:
+                        # logging.info("This colony already existed")
+                        # The colony_previous_names becomes the current colony_names
+                        colony_names = colony_previous_names
+                        # logging.info(f'Do this colony was 3 or 4: {isin([3,4], colony_names)}')
+                        # If any of the current colony names already are in updated_colony_names, it means that a
+                        # consistent colony from t-1 split into several (at least 2) colonies at t.
+                        result_from_colony_division: bool = False
+                        for name in colony_names:
+                            if isin(name, updated_colony_names):
+                                result_from_colony_division = True
+                            if result_from_colony_division:
+                                break
+                        if result_from_colony_division:
+                            # logging.info("This colony emerged from the division of a parent colony")
+                            # We must add it as a new colony
+                            colony_number += 1
+                            colony_names = array(colony_number)
+                            colony_id_matrix[nonzero(current_colony_img)] = colony_names
+                            # for descriptor in descriptors:
+                            #     colony_dictionary[descriptor + "_colony" + str(colony_number)] = zeros(self.dims[0], dtype=float64)
+                            if colony_number > time_descriptor_colony.shape[2]:
+                                time_descriptor_colony = concatenate((time_descriptor_colony,
+                                                                      zeros((self.dims[0], len(to_compute_from_sd), 100),
+                                                                            dtype=float64)), axis=2)
+                            self.statistics["division_time_colony" + str(colony_number)] = t
+                            nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
+                            self.statistics["division_pos_colony" + str(colony_number)] = str(
+                                centroids[1, 0]) + " " + str(centroids[1, 1])
+                        else:
+                            # for col_name in colony_names:
+                            #     colony_id_matrix[colony_id_matrix == col_name] = 0
+                            colony_id_matrix[nonzero(current_colony_img)] = colony_names[0]
+
+                        # and we will update the descriptors of that(these) colony(ies) using that(these) name(s).
+                        # If there is more than 1 match, all these saved colonies merged together
+                        if len(colony_previous_names) > 1:
+                            # logging.info("This colony emerged from the fusion of several parent colonies")
+                            # If there is more than one match: two colonies fused.
+                            # -> Update all these colonies and store when they fused
+                            if colony_names.size == 1:
+                                col_names = [colony_names]
+                            else:
+                                col_names = colony_names
+                            for colony_name in col_names:
+                                self.statistics["fusion_time_colony" + str(colony_name)] = t
+                                nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
+                                self.statistics["fusion_pos_colony" + str(colony_number)] = str(
+                                    centroids[1, 0]) + " " + str(centroids[1, 1])
+                    updated_colony_names = append(updated_colony_names, colony_names)
+                    # Compute the current colony descriptors
+                    SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
+                    if self.vars['output_in_mm']:
+                        if isin('area', to_compute_from_sd):
+                            SD.descriptors['area'] *= self.vars['average_pixel_size']
+                        if isin('total_hole_area', to_compute_from_sd):
+                            SD.descriptors['total_hole_area'] *= self.vars['average_pixel_size']
+                        if isin('perimeter', to_compute_from_sd):
+                            SD.descriptors['perimeter'] *= sqrt(self.vars['average_pixel_size'])
+                        if isin('major_axis_len', to_compute_from_sd):
+                            SD.descriptors['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                        if isin('minor_axis_len', to_compute_from_sd):
+                            SD.descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                    # Save all colony descriptors in the time_descriptor_colony array:
+                    # if the current_colony has several colony names, repeat descriptors in each colony column
+                    time_descriptor_colony[t, :, (colony_names - 1)] = tile(list(SD.descriptors.values()), (colony_names.size, 1))
+                # if any(colony_id_matrix == 3) | any(colony_id_matrix==4):
+                #     logging.info(f'here t = {t} and c = {colony}')
+                colony_id_matrix *= self.binary[t, :, :]
+                # logging.info(t)
+                # imshow("colony_id_matrix", resize(self.binary[t, ...] * 20, (300, 300)))
+                # waitKey(0)
+                # destroyAllWindows()
+                # logging.info(unique(colony_id_matrix))
+                # imshow("colony_id_matrix", resize(colony_id_matrix *20, (300,300)))
+                # waitKey(0)
+                # destroyAllWindows()
+
+            # fuse = 0
+            # split = 0
+            # for k, v in self.statistics.items():
+            #     if k[:5] == 'fusio':
+            #         fuse += 1
+            #     elif k[:5] == 'divis':
+            #         split += 1
+
+            # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
+            self.whole_shape_descriptors = df()
+            self.whole_shape_descriptors['arena'] = [self.statistics['arena']] * self.dims[0]
+            self.whole_shape_descriptors['time'] = timings
+            self.whole_shape_descriptors['area_total'] = self.surfarea.astype(float64)
+            if self.vars['output_in_mm']:
+                self.whole_shape_descriptors['area_total'] *= self.vars['average_pixel_size']
+            time_descriptor_colony = time_descriptor_colony[:, :, :colony_number]
+            time_descriptor_colony = concatenate(stack(time_descriptor_colony, axis=1), axis=1)
+            column_names = char.add(repeat(to_compute_from_sd, colony_number), tile(arange(colony_number) + 1, len(to_compute_from_sd)).astype(str))
+            time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
+            self.whole_shape_descriptors = self.whole_shape_descriptors.join(time_descriptor_colony)
+        if self.vars['do_fading']:
+            self.whole_shape_descriptors['newly_explored_area'] = self.newly_explored_area
+            if self.vars['output_in_mm']:
+                self.whole_shape_descriptors['newly_explored_area'] *= self.vars['average_pixel_size']
+                # for colony_name in colony_names:
+            #     for descriptor in descriptors:
+            #         colony_dictionary[descriptor + "_colony" + str(colony_name)][t] = SD.descriptors[descriptor]
+            #         if self.vars['output_in_mm']:
+            #             if descriptor == 'area':
+            #                 colony_dictionary[descriptor + "_colony" + str(colony_name)][t] *= self.vars['average_pixel_size']
+            #             elif isin(descriptor, ['perimeter', 'major_axis_len', 'minor_axis_len']):
+            #                 colony_dictionary[descriptor + "_colony" + str(colony_name)][t] *= sqrt(self.vars['average_pixel_size'])
+            """Always working algo
+                If one colony become two or more : Create new colomns for each colony and store when they split
+                IF two or more colonies become one : update all these colonies and store when they fused
+            """
+
+            """ I/ with_unexpected_motion_algorithm """
+            """ II/ no_unexpected_motion_algorithm """
+            """ If this colony don't match any previously identified colony: 
+                                        save it as a new one
+                                    """
+            """ If this colony match only one previously identified colony: 
+                Update the corresponding colony features
+                pb: if one (previous) becomes two (the previous that moved and another that moved at the place of the previous) 
+                because of brownian motion / image drift
+                --> One colony information will be lost
+            """
+            """ If this colony match more than one previously identified colony: 
+                Update each of these with the current colony features
+                pb: if one (previous) becomes two (new) because of brownian motion / image drift
+                --> This may identify merging of two colonies that never merged
+            """
+            """ Solution:
+                Add a user implemented parameters: 
+                if there is no unexpected motion : apply the no_unexpected_motion_algorithm
+                else : apply the with_unexpected_motion_algorithm
+            """
+
+            # Fill the whole_shape_descriptors table
+            # self.whole_shape_descriptors = df.from_dict(colony_dictionary)
+
+    def detect_growth_transitions(self):
+        ##
+        if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena']:
+            self.statistics["iso_digi_transi"] = 'NA'
+            if self.statistics["first_move"] != 'NA':
+                logging.info(f"Arena n°{self.statistics['arena']}. Starting growth transition analysis.")
+
+                # II) Once a pseudopod is deployed, look for a disk/ around the original shape
+                growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
+                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=self.cross_33,
+                                            iterations=10,
+                                            borderType=BORDER_CONSTANT, borderValue=0)
+                isisotropic = sum(self.binary[:, :, :] * dilated_origin, (1, 2))
+                isisotropic *= growth_begining
+                # Ask if the dilated origin area is 90% covered during the growth beginning
+                isisotropic = isisotropic > 0.9 * dilated_origin.sum()
+                if any(isisotropic):
+                    self.statistics["is_growth_isotropic"] = 1
+                    # Determine a solidity reference to look for a potential breaking of the isotropic growth
+                    if self.compute_solidity_separately:
+                        solidity_reference = mean(self.solidity[:self.statistics["first_move"]])
+                        different_solidity = self.solidity < (0.9 * solidity_reference)
+                    else:
+                        solidity_reference = mean(
+                            self.whole_shape_descriptors.iloc[:(self.statistics["first_move"]), :]["solidity"])
+                        different_solidity = self.whole_shape_descriptors["solidity"].values < (0.9 * solidity_reference)
+                    # Make sure that isotropic breaking not occur before isotropic growth
+                    if any(different_solidity):
+                        self.statistics["iso_digi_transi"] = nonzero(different_solidity)[0][0] * self.time_interval
+                else:
+                    self.statistics["is_growth_isotropic"] = 0
+            else:
+                self.statistics["is_growth_isotropic"] = 'NA'
+
+            """
+            if logical_or(self.statistics["iso_digi_transi"] != 0, overlap.sum() > ):
+                self.statistics["is_growth_isotropic"] = True
+            # [aim: isotropic phase occurrence]
+
+            growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
+
+
+            # Find moments of the first growth phase that has a solidity similar to the one at the beginning
+            solid_growth = logical_and(growth_begining, similar_solidity)
+            # 
+            if any(logical_not(solid_growth)):
+                self.statistics["iso_digi_transi"] = sum(solid_growth)
+
+
+
+            best_isotropic_candidate = self.binary[solid_growth, :, :][-1]
+            # Use the largest side of the bounding box as a reference to calculate how we should iterate dilatation
+            self.whole_shape_descriptors[solid_growth, :]
+            dilated_origin = dilate(self.shape_evolution.binary, kernel=self.cross_33, iterations=10,
+                                        borderType=BORDER_CONSTANT, borderValue=0)
+            if sum(best_isotropic_candidate * dilated_origin) > 0.95 * dilated_origin.sum():
+                self.isotropic_phase = True
+                self.isotropic_start = nonzero(solid_growth)[0][-1]
+
+            nonzero(self.whole_shape_descriptors[t, 4] > (0.6 * self.whole_shape_descriptors[0, 4]))[0]
+            for t in arange(self.shape_evolution.start, self.shape_evolution.binary.shape[2]):
+
+                new_shapes = self.shape_evolution.binary[:, :, t] - origin
+                # if the newly added area is inferior to the original suface
+                if sum(new_shapes) < sum(origin):
+                    # If the solidity of the current shape is similar to the one at the beginning
+                    if self.whole_shape_descriptors[t, 4] > (0.6 * self.whole_shape_descriptors[0, 4]):
+                        SD = ShapeDescriptors(new_shapes, ["perimeter"])
+                        # If the perimeter of the added shape is superior to the perimeter of the shape at the beginning
+                        if SD.results[0] > self.whole_shape_descriptors[t, 0]:  # will require to be more specific
+                            self.isotropic_phase = True
+                            self.isotropic_start = t
+
+            # III) Look for solidity changes showing the breaking of isotropic growth [aim: time]
+            if self.isotropic_phase:
+                self.isotropic_breaking = \
+                nonzero(self.whole_shape_descriptors[:, 4] < (0.8 * self.whole_shape_descriptors[0, 4]))[0]
+            # IV) Isolate secondary pseudopods and save their shape descriptors just before some of them change
+            # drastically
+            previous_t = 0
+            for t in arange(self.shape_evolution.start, self.shape_evolution.binary.shape[2]):
+                if self.whole_shape_descriptors[t, 4] < 0.9 * self.whole_shape_descriptors[previous_t, 4]:
+                    added_material = self.shape_evolution.binary[:, :, t] - self.shape_evolution.binary[:, :,
+                                                                            previous_t]
+                    new_order, stats, centers = cc(added_material)
+                    pseudopods = nonzero(
+                        stats[:, 4][:-1] > origin_info.first_move_threshold)  # Will need to be more specific
+                    for pseu in pseudopods:
+                        only_pseu = zeros(self.shape_evolution.binary.shape[:2], dtype=uint8)
+                        only_pseu[output == pseu] = 1
+                        SD = ShapeDescriptors(only_pseu, ro.descriptors_list)
+                        SD.results
+            # I) Find a first pseudopod [aim: time]
+            # II) If a pseudopod is deployed, look for a disk/ around the original shape
+            # [aim: isotropic phase occurrence]
+            # III) Look for solidity changes showing the breaking of isotropic growth [aim: time]
+            # IV) Isolate secondary pseudopods and save their shape descriptors just before some of them change
+            # drastically
+        # https://pythonexamples.org/python-opencv-write-text-on-image-puttext/
+            """
+        ##
+
+    def network_detection(self, show_seg=False):
+        if self.statistics["first_move"] != 'NA' and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
+            logging.info(f"Arena n°{self.statistics['arena']}. Starting network detection.")
+
+            if self.vars['origin_state'] == 'constant':
+                origin = (1 - self.origin)
+            else:
+                origin = ones(self.dims[1:], dtype=uint8)
+            # network_proba = zeros(self.dims[1:], dtype=uint64)
+            self.network_dynamics = zeros(self.dims, dtype=uint8)
+            # if len(self.converted_video.shape) == 3:
+            #     self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
+
+            for t in arange(self.statistics["first_move"], self.dims[0]):#, 200):#
+                # t = 400
+                # Ideas: use previous network as a reference, Connect according to intensity
+                # Problems:
+                # 1. at the front, too much homogeneity to find veins: include a metric that consider:
+                # relevant_pixels = self.binary[t, ...] * self.converted_video[t, ...]
+                # ptp(relevant_pixels[nonzero(relevant_pixels)])
+                # min(relevant_pixels[nonzero(relevant_pixels)])
+                # max(relevant_pixels[nonzero(relevant_pixels)])
+
+                # 2. new pads should connect according to intensity and then distance
+                # 3. reinforcement: past network shape should influence the current one.
+
+
+                nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], origin, self.vars['lighter_background'], self.cross_33)
+                nd.segment_locally(side_length=40, step=10, int_variation_thresh=20)
+                # nd.segment_locally(side_length=8, step=2)
+                nd.selects_elongated_or_holed_shapes(hole_surface_ratio=0.1, eccentricity=0.65)
+                # nd.segment_globally()
+                if t > 0:
+                    nd.add_previous_network(self.network_dynamics[t - 1, ...])
+                if self.vars['origin_state'] == 'constant':
+                    nd.add_origin_to_network()
+                nd.connect_network(maximal_distance_connection=50)
+
+                # network_proba -= ((network_proba > 0) - nd.network) == 1
+                # network_proba += nd.network
+                # nd.network = (network_proba > 2).astype(uint8)
+                # nd.connect_network(maximal_distance_connection=50)
+                # self.network_dynamics[t, ...] = network_proba > 2
+                self.network_dynamics[t, ...] = nd.network
+
+                imtoshow = self.visu[t, ...].copy()
+                net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, self.cross_33))
+                imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+
+                self.visu[t, ...] = imtoshow.copy()
+                if show_seg:
+                    imshow("", resize(imtoshow, (1000, 1000)))
+                    waitKey(1)
+
+
+
+
+                # See(nd.network)
+                # from sklearn.feature_extraction.image import img_to_graph
+                # graph = img_to_graph(nd.network)
+            # self.network_dynamics = nonzero(self.network_dynamics)
+            self.network_dynamics = array(nonzero(self.network_dynamics))
+            self.network_dynamics = df(self.network_dynamics, index=["time_coord", "y_coord", "x_coord"])
+            self.network_dynamics.to_csv(f"network_dynamics{self.statistics['arena']}.csv")
+
+        #
+        #         import cv2
+        #         potential_network = cv2.GaussianBlur(self.converted_video[t, ...], (3, 3),cv2.BORDER_DEFAULT)
+        #         potential_network = self.converted_video[t, ...].copy()
+        #         potential_network=cv2.bilateralFilter(self.converted_video[t, ...], 5, 5, 5)
+        #
+        #         potential_network = cv2.medianBlur(self.converted_video[t, ...], 13)
+        #
+        #         potential_network = erode(self.binary[t, ...], self.cross_33) * potential_network
+        #         if self.vars['origin_state'] == 'constant':
+        #             potential_network *= (1 - self.origin)
+        #         cno = CompareNeighborsOf(potential_network)
+        #         cno.with_focal()
+        #         potential_network = (cno.sup_neighbor_nb == 4).astype(uint8)
+        #         potential_network = (logical_or(cno.sup_neighbor_nb > 2, cno.inf_neighbor_nb > 2)).astype(uint8)
+        #         See(potential_network)
+        #         See(cno.equal_neighbor_nb)
+        #         See(self.converted_video[t, ...])
+        #         #potential_network = (cno.inf_neighbor_nb == 4).astype(uint8)
+        #         potential_network = cv2.morphologyEx(potential_network, cv2.MORPH_OPEN, self.cross_33)
+        #
+        #         img = self.converted_video[t, ...].copy()
+        #         net_cc = nonzero(potential_network)
+        #         img[net_cc[0], net_cc[1]] = 255
+        #         See(img)
+        #
+        #
+        #         potential_network = dilate(potential_network, self.cross_33)
+        #         # NOT BAD unit here
+        #
+        #         network_dynamics[t, ...] = skeletonize(potential_network)
+        #
+        #         See(potential_network)
+        #         See(network_dynamics[t, ...])
+        #         relevant_pixels = potential_network[potential_network > 0]
+        #         relevant_pixels = bracket_to_uint8_image_contrast(relevant_pixels)
+        #
+        #
+        #         if self.vars['lighter_background']:
+        #             relevant_pixels = relevant_pixels < 10 + min(relevant_pixels) * 1.6
+        #         else:
+        #             relevant_pixels = relevant_pixels > - 10 + max(relevant_pixels) * 0.625
+        #         potential_network[potential_network > 0] = relevant_pixels
+        #
+        #
+        #
+        #
+        # # Create a matrix of sub-matrices
+        # sub_matrices = zeros(self.dims[1:], dtype=uint64)
+        # side_length = 10
+        # y_mat_nb = self.dims[1] // side_length
+        # x_mat_nb = self.dims[2] // side_length
+        # y_remain = self.dims[1] % side_length
+        # x_remain = self.dims[2] % side_length
+        # counter = 0
+        # for yi in arange(y_mat_nb):
+        #     y_start = yi * side_length
+        #     y_end = (1 + yi) * side_length
+        #     if yi == y_mat_nb - 1:
+        #         y_end += y_remain
+        #     for xi in arange(x_mat_nb):
+        #         x_start = xi * side_length
+        #         x_end = (1 + xi) * side_length
+        #         if xi == x_mat_nb - 1:
+        #             x_end += x_remain
+        #         counter += 1
+        #         sub_matrices[y_start:y_end, x_start:x_end] += counter
+        #
+        # network_dynamics = zeros(self.dims, dtype=uint8)
+        #
+        # for t in arange(self.statistics["first_move"], self.dims[0]):
+        #     # t=200
+        #     import cv2
+        #     potential_network = self.converted_video[t, ...].copy()
+        #     # Ajouter la condition de toucher un bord de la matrice
+        #     tubules = zeros(self.dims[1:], dtype=uint32)
+        #     if self.vars['origin_state'] == 'constant':
+        #         mask_cc = nonzero(erode(self.binary[t, ...], self.cross_33) * (1 - self.origin))
+        #     else:
+        #         mask_cc = nonzero(erode(self.binary[t, ...], self.cross_33))
+        #     mask = zeros(self.dims[1:], dtype=uint64)
+        #     mask[mask_cc[0], mask_cc[1]] = 1
+        #     potential_network *= mask
+        #     sub_matrices *= mask
+        #     matrix_names = unique(sub_matrices)[1:]
+        #     for mat_i in matrix_names:
+        #         #mat_i = matrix_names[0]
+        #          mat = (sub_matrices == mat_i) * potential_network
+        #         See(mat)
+        #     assessed_pixels = sub_matrices * potential_network
+        #     See(potential_network)
+        #
+        #     shape = self.converted_video[t - self.lost_frames, :, :] * self.binary[t, :, :] * (1 - self.origin)
+        #     assessed_pixels = sub_matrices * self.binary[t, :, :] * (1 - self.origin)
+        #     for mat_i in unique(assessed_pixels[assessed_pixels > 0]):
+        #         sub_mat = shape * (assessed_pixels == mat_i)
+        #         threshold = median(sub_mat[sub_mat > 0])
+        #         if self.vars['lighter_background']:
+        #             tubules[threshold < sub_mat > 0] = 1
+        #         else:
+        #             tubules[threshold > sub_mat] = 1
+        #     tubules_vid[t, :, :] = tubules
+
+
+    def study_cytoscillations(self, show_seg):
+        if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+            logging.info(f"Arena n°{self.statistics['arena']}. Starting oscillation analysis.")
+            period_in_frame_nb = int(self.vars['oscillation_period'] / self.time_interval)
+            if period_in_frame_nb < 2:
+                period_in_frame_nb = 2
+            necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
+            available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+            if necessary_memory > available_memory:
+                oscillations_sign = zeros(self.converted_video.shape, dtype=float64)
+                for cy in arange(self.converted_video.shape[1]):
+                    for cx in arange(self.converted_video.shape[2]):
+                        oscillations_sign[:, cy, cx] = gradient(self.converted_video[:, cy, cx].astype(int16),
+                                                                period_in_frame_nb)
+            else:
+                oscillations_sign = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
+            # check if conv change here
+            if not self.vars['lose_accuracy_to_save_memory']:
+                self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
+                # self.converted_video -= min(self.converted_video)
+                # self.converted_video = to_uint8(255 * (self.converted_video / max(self.converted_video)))
+                # self.converted_video = 255 * (self.converted_video / max(self.converted_video))
+                # self.converted_video = round(self.converted_video).astype(uint8)
+            if len(self.converted_video.shape) == 3:
+                self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
+
+            #if ampl_and_periods.shape[0] > 5:
+            #    ampl_and_periods = ampl_and_periods[argsort(ampl_and_periods[:, 0])[-5:], :]
+            #self.statistics["mean_amplitude_over_5_strongest"] = mean(ampl_and_periods[:, 0])
+            #self.statistics["mean_period_over_5_strongest_in_min"] = mean(ampl_and_periods[:, 1] * self.time_interval)
+            oscillations_sign = sign(oscillations_sign)
+            mean_cluster_area = zeros(oscillations_sign.shape[0])
+            cluster_number = zeros(oscillations_sign.shape[0])
+            dotted_image = ones(self.converted_video.shape[1:3], uint8)
+            for cy in arange(dotted_image.shape[0]):
+                if cy % 2 != 0:
+                    dotted_image[cy, :] = 0
+            for cx in arange(dotted_image.shape[1]):
+                if cx % 2 != 0:
+                    dotted_image[:, cx] = 0
+            within_range = (1 - self.binary[0, :, :]) * self.borders
+            # To get the median oscillatory period of each oscillating cluster,
+            # we create a dict containing two lists (for influx and efflux)
+            # Each list element correspond to a cluster and stores :
+            # All pixel coordinates of that cluster, their corresponding lifespan, their time of disappearing
+            # Row number will give the size. Euclidean distance between pix coord, the wave distance
+
+            self.clusters_final_data = empty((0, 4), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance"]
+            period_tracking = zeros(self.converted_video.shape[1:3], dtype=uint32)
+            efflux_study = ClusterFluxStudy(self.converted_video.shape[:3])
+            influx_study = ClusterFluxStudy(self.converted_video.shape[:3])
+            for t in arange(self.converted_video.shape[0]):# arange(500): #
+                contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, self.cross_33)
+                contours_idx = nonzero(contours)
+                imtoshow = self.converted_video[t, ...].copy()
+                imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
+                if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and self.statistics["iso_digi_transi"] != 'NA':
+                    if self.statistics["is_growth_isotropic"] == 1:
+                        if t < self.statistics["iso_digi_transi"]:
+                            imtoshow[contours_idx[0], contours_idx[1], 2] = 255
+                if t >= self.start:
+                    # Add in or ef if a pixel has at least 4 neighbor in or ef
+                    neigh_comp = CompareNeighborsWithValue(oscillations_sign[t, :, :], connectivity=8, data_type=int8)
+                    neigh_comp.is_inf(0, and_itself=False)
+                    neigh_comp.is_sup(0, and_itself=False)
+                    # Not verified if influx is really influx (resp efflux)
+                    influx = neigh_comp.sup_neighbor_nb * self.binary[t, :, :] * within_range
+                    efflux = neigh_comp.inf_neighbor_nb * self.binary[t, :, :] * within_range
+                    # Only keep pixels having at least 4 positive (resp. negative) neighbors
+                    influx[influx <= 4] = 0
+                    efflux[efflux <= 4] = 0
+                    influx[influx > 4] = 1
+                    efflux[efflux > 4] = 1
+
+                    influx, in_stats, centroids = cc(influx)
+                    efflux, ef_stats, centroids = cc(efflux)
+                    # Only keep clusters larger than 50 pixels (smaller are considered as noise
+                    in_smalls = nonzero(in_stats[:, 4] < 50)[0]
+                    if len(in_smalls) > 0:
+                        influx[isin(influx, in_smalls)] = 0
+                        in_stats = in_stats[:in_smalls[0], :]
+                    in_stats = in_stats[1:]
+                    ef_smalls = nonzero(ef_stats[:, 4] < 50)[0]
+                    if len(ef_smalls) > 0:
+                        efflux[isin(efflux, ef_smalls)] = 0
+                        ef_stats = ef_stats[:(ef_smalls[0]), :]
+                    ef_stats = ef_stats[1:]
+                    if t > self.lost_frames:
+                        # Sum the number of connected components minus the background to get the number of clusters
+                        cluster_number[t] = in_stats.shape[0] + ef_stats.shape[0]
+                        if cluster_number[t] > 0:
+                            # #Mettre à jour à chaque tour (ne pas sortir de la fonction)
+                            # current_flux = efflux
+                            # # Mettre dans return
+                            # pixels_lost_from_flux = pixels_lost_from_efflux
+                            # clusters_id = efflux_clusters_id
+                            # alive_clusters_in_flux = alive_clusters_in_efflux
+                            # cluster_total_number = cluster_total_number_efflux
+                            period_tracking, self.clusters_final_data = efflux_study.update_flux(t, contours, efflux, period_tracking, self.clusters_final_data)
+                            period_tracking, self.clusters_final_data = influx_study.update_flux(t, contours, influx, period_tracking, self.clusters_final_data)
+                            # See(period_tracking.astype(uint8) * 50)
+                            # See(influx.astype(uint8) * 50)
+
+                            # Get standardized area
+                            # area_standardization = (sum(self.binary[t, :, :]).astype(int64) - sum(self.binary[0, :, :]).astype(int64))
+                            mean_cluster_area[t] = mean(concatenate((in_stats[:, 4], ef_stats[:, 4])))
+
+                            # Prepare the image for display
+                            in_idx = influx.copy()
+                            ef_idx = efflux.copy()
+                            in_idx *= dotted_image
+                            ef_idx *= dotted_image
+                            in_idx = nonzero(in_idx)
+                            ef_idx = nonzero(ef_idx)
+                            imtoshow[in_idx[0], in_idx[1], :2] = 153 # Green
+                            imtoshow[in_idx[0], in_idx[1], 2] = 0
+                            imtoshow[ef_idx[0], ef_idx[1], 1:] = 0 # Blue
+                            imtoshow[ef_idx[0], ef_idx[1], 0] = 204
+
+                self.converted_video[t, ...] = imtoshow.copy()
+                if show_seg:
+                    imtoshow = resize(imtoshow, (540, 540))
+                    imshow("shape_motion", imtoshow)
+                    waitKey(1)
+            if self.vars['output_in_mm']:
+                self.clusters_final_data[:, 2] *= self.vars['average_pixel_size'] # size
+                self.clusters_final_data[:, 3] *= sqrt(self.vars['average_pixel_size']) # distance
+                self.whole_shape_descriptors['mean_cluster_area'] = mean_cluster_area * self.vars['average_pixel_size']
+            self.whole_shape_descriptors['cluster_number'] = cluster_number
+        else:
+            if not self.vars['lose_accuracy_to_save_memory']:
+                self.converted_video -= min(self.converted_video)
+                self.converted_video = 255 * (self.converted_video / max(self.converted_video))
+                self.converted_video = round(self.converted_video).astype(uint8)
+        if self.statistics["first_move"] == 'NA':
+            # self.magnitudes_and_frequencies = [0, 0]
+            if self.vars['oscilacyto_analysis']:
+                self.whole_shape_descriptors['mean_cluster_area'] = 'NA'
+                self.whole_shape_descriptors['cluster_number'] = 'NA'
+                # self.statistics["max_magnitude"] = 'NA'
+                # self.statistics["frequency_of_max_magnitude"] = 'NA'
+
+    def fractal_analysis(self):
+        if self.statistics["first_move"] != 'NA' and self.vars['fractal_analysis']:
+            logging.info(f"Arena n°{self.statistics['arena']}. Starting fractal analysis.")
+            if self.visu is None:
+                true_frame_width = self.origin.shape[1]
+                if len(self.vars['background_list']) == 0:
+                    self.background = None
+                else:
+                    self.background = self.vars['background_list'][self.statistics['arena'] - 1]
+                self.visu = video2numpy(f"ind_{self.statistics['arena']}.npy", None, self.background, true_frame_width)
+                if len(self.visu.shape) == 3:
+                    self.visu = stack((self.visu, self.visu, self.visu), axis=3)
+
+            self.fractal_boxes = empty((0, 4), dtype=float64) # distance
+            # im_test = zeros(self.binary[0, ...].shape, dtype=uint8)
+            # import cv2
+            # cv2.imwrite("bin_im_test0.jpg", im_test); cv2.imwrite("bin_im_test1.jpg", self.binary[0, ...]);cv2.imwrite("bin_im_test2.jpg", self.binary[100, ...]);cv2.imwrite("bin_im_test3.jpg", self.binary[-1, ...])
+            # cv2.imwrite("im_test0.jpg", self.visu[0, ...]); cv2.imwrite("im_test1.jpg", self.visu[0, ...]);cv2.imwrite("im_test2.jpg", self.visu[100, ...]);cv2.imwrite("im_test3.jpg", self.visu[-1, ...])
+
+            for t in arange(self.dims[0]):
+                # t = 100; self.binary_image = self.binary[t, ...]
+
+                fractan = FractalAnalysis(self.binary[t, ...])
+                fractan.detect_fractal(threshold=self.vars['fractal_threshold_detection'])
+                fractan.extract_fractal(self.visu[t, ...])
+                fractan.get_dimension()
+                self.whole_shape_descriptors.loc[t, 'minkowski_dimension'] = fractan.minkowski_dimension
+                # self.whole_shape_descriptors['minkowski_dimension'].iloc[t] = fractan.minkowski_dimension
+                self.fractal_boxes = concatenate((self.fractal_boxes,
+                                            c_[repeat(self.statistics['arena'], len(fractan.fractal_box_widths)),
+                                            repeat(t, len(fractan.fractal_box_widths)), fractan.fractal_box_lengths,
+                                            fractan.fractal_box_widths]), axis=0)
+
+            if self.vars['output_in_mm']:
+                self.fractal_boxes[:, 2:] *= sqrt(self.vars['average_pixel_size'])
+            # Save an illustration of the fractals of the last image
+            fractan.save_fractal_mesh(f"last_image_fractal_mesh{self.statistics['arena']}.tif")
+
+    def get_descriptors_summary(self):
+        potential_descriptors = ["area", "perimeter", "circularity", "rectangularity", "total_hole_area", "solidity",
+                                 "convexity", "eccentricity", "euler_number", "standard_deviation_y",
+                                 "standard_deviation_x", "skewness_y", "skewness_x", "kurtosis_y", "kurtosis_x",
+                                 "major_axis_len", "minor_axis_len", "axes_orientation"]
+
+        self.statistics["final_area"] = self.binary[-1, :, :].sum()
+
+
+        # for k, v in self.vars['descriptors'].items():
+        #     if isin(k, potential_descriptors):
+        #         # if machin isin potential_descriptors
+        #         if v[1]: #Calculate mean and sd from first move
+        #             if self.statistics["first_move"] != 'NA':
+        #                 self.statistics[f'{k}_mean'] = \
+        #                 self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][k].mean()
+        #                 self.statistics[f'{k}_std'] = \
+        #                 self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][k].std()
+        #             else:
+        #                 self.statistics[f'{k}_mean'] = 'NA'
+        #                 self.statistics[f'{k}_std'] = 'NA'
+        #
+        #         if v[2]: # Calculate linear regression
+        #             if self.statistics["first_move"] != 'NA':
+        #                 # Calculate slope and intercept of descriptors' value against time
+        #                 X = self.whole_shape_descriptors[k].values[self.statistics["first_move"]:]
+        #                 natural_noise = 0.1 * ptp(X)
+        #                 left, right = find_major_incline(X, natural_noise)
+        #                 T = self.whole_shape_descriptors['time'].values[self.statistics["first_move"]:]
+        #                 if right == 1:
+        #                     X = X[left:]
+        #                     T = T[left:]
+        #                     right = 0
+        #                 else:
+        #                     X = X[left:-right]
+        #                     T = T[left:-right]
+        #                 reg = linregress(T, X)
+        #                 self.statistics[f"{k}_reg_start"] = self.statistics["first_move"] + left
+        #                 self.statistics[f"{k}_reg_end"] = self.dims[0] - right
+        #                 self.statistics[f"{k}_slope"] = reg.slope
+        #                 self.statistics[f"{k}_intercept"] = reg.intercept
+        #             else:
+        #                 self.statistics[f"{k}_reg_start"] = 'NA'
+        #                 self.statistics[f"{k}_reg_end"] = 'NA'
+        #                 self.statistics[f"{k}_slope"] = 'NA'
+        #                 self.statistics[f"{k}_intercept"] = 'NA'
+
+
+        """
+        self.statistics["final_area"] = self.binary[-1, :, :].sum()
+        hour_to_frame = int(self.vars['when_to_measure_area_after_first_move'] * 60 / self.time_interval)
+        if self.statistics["first_move"] != 'NA':
+            if self.vars['oscilacyto_analysis']:
+                descriptors = self.vars['descriptors_list'] + ['cluster_number', 'mean_cluster_area']
+            for descriptor in descriptors:
+                # I/ Get the area after a given time after first move
+                stat_name = (f"{descriptor}_{self.vars['when_to_measure_area_after_first_move']}h_after_first_move")
+                if (self.statistics["first_move"] + hour_to_frame) < self.dims[0]:
+                    self.statistics[stat_name] = self.whole_shape_descriptors[descriptor].values[self.statistics["first_move"] + hour_to_frame]
+                else:
+                    self.statistics[stat_name] = self.dims[0]
+
+                if self.vars['descriptors_means']:
+                     # Calculate the mean value of each descriptors after first move
+                    self.statistics[f'{descriptor}_mean'] = self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][
+                        descriptor].mean()
+                    self.statistics[f'{descriptor}_std'] = self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][
+                        descriptor].std()
+                if self.vars['descriptors_regressions']:
+                    # Calculate slope and intercept of descriptors' value against time
+                    X = self.whole_shape_descriptors[descriptor].values[self.statistics["first_move"]:]
+                    natural_noise = 0.1 * ptp(X)
+                    left, right = find_major_incline(X, natural_noise)
+                    T = self.whole_shape_descriptors['time'].values[self.statistics["first_move"]:]
+                    if right == 1:
+                        X = X[left:]
+                        T = T[left:]
+                        right = 0
+                    else:
+                        X = X[left:-right]
+                        T = T[left:-right]
+
+                    reg = linregress(T, X)
+                    self.statistics[f"{descriptor}_reg_start"] = self.statistics["first_move"] + left
+                    self.statistics[f"{descriptor}_reg_end"] = self.dims[0] - right
+                    self.statistics[f"{descriptor}_slope"] = reg.slope
+                    self.statistics[f"{descriptor}_intercept"] = reg.intercept
+        """
+
+    def save_video(self):
+        """ faire en sorte qu'il se passe la même chose ici que dans videoreader"""
+        if self.vars['save_processed_videos']:
+            if self.converted_video.dtype == 'float64':
+                self.converted_video -= min(self.converted_video)
+                self.converted_video = 255 * (self.converted_video / max(self.converted_video))
+                self.converted_video = round(self.converted_video).astype(uint8)
+            if len(self.converted_video.shape) == 3:
+                self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video),
+                                                axis=3)
+                for t in arange(self.dims[0]):
+                    contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, self.cross_33))
+                    self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
+                    if "iso_digi_transi" in self.statistics.keys():
+                        if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and self.statistics["iso_digi_transi"] != 'NA':
+                            if self.statistics["is_growth_isotropic"] == 1:
+                                if t < self.statistics["iso_digi_transi"]:
+                                    self.converted_video[t, contours[0], contours[1], :] = 0, 0, 255
+                # if self.statistics["iso_digi_transi"] != 'NA':
+                #     if self.statistics["is_growth_isotropic"] == 1:
+                #         before_transition = contours[0] < self.statistics["iso_digi_transi"]
+                #         self.converted_video[contours[0][before_transition], contours[1][before_transition], contours[2][before_transition], 2] = 255
+
+            # NEW: replace what is # next
+            if self.visu is None:
+                true_frame_width = self.origin.shape[1]
+                if len(self.vars['background_list']) == 0:
+                    self.background = None
+                else:
+                    self.background = self.vars['background_list'][self.statistics['arena'] - 1]
+                self.visu = video2numpy(f"ind_{self.statistics['arena']}.npy", None, self.background, true_frame_width)
+                if len(self.visu.shape) == 3:
+                    self.visu = stack((self.visu, self.visu, self.visu), axis=3)
+            self.converted_video = concatenate((self.visu, self.converted_video), axis=2)
+            # if self.visu is not None:
+            #     self.converted_video = concatenate((self.visu, self.converted_video), axis=2)
+
+            if any(self.whole_shape_descriptors['time'] > 0):
+                position = (5, self.dims[1] - 5)
+                for t in arange(self.dims[0]):
+                    image = self.converted_video[t, ...]
+                    text = str(self.whole_shape_descriptors['time'][t]) + " min"
+                    image = putText(image,  # numpy array on which text is written
+                                    text,  # text
+                                    position,  # position at which writing has to start
+                                    FONT_HERSHEY_SIMPLEX,  # font family
+                                    1,  # font size
+                                    (self.vars["contour_color"], self.vars["contour_color"], self.vars["contour_color"], 255),  #(209, 80, 0, 255),  # repeat(self.vars["contour_color"], 3),# font color
+                                    2)  # font stroke
+                    self.converted_video[t, ...] = image
+            vid_name = f"ind_{self.statistics['arena']}{self.vars['videos_extension']}"
+            write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
+
+    def save_results(self):
+        self.save_video()
+        if self.vars['several_blob_per_arena']:
+            try:
+                with open(f"one_row_per_frame_arena{self.statistics['arena']}.csv", 'w') as file:
+                    self.whole_shape_descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+            except PermissionError:
+                logging.error(f"Never let one_row_per_frame_arena{self.statistics['arena']}.csv open when Cellects runs")
+
+            create_new_csv: bool = False
+            if os.path.isfile("one_row_per_arena.csv"):
+                try:
+                    with open(f"one_row_per_arena.csv", 'r') as file:
+                        stats = read_csv(file, header=0, sep=";")
+                except PermissionError:
+                    logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+
+                if len(self.statistics) == len(stats.columns) - 1:
+                    try:
+                        with open(f"one_row_per_arena.csv", 'w') as file:
+                            stats.iloc[(self.statistics['arena'] - 1), 1:] = self.statistics.values()
+                            # if len(self.vars['analyzed_individuals']) == 1:
+                            #     stats = df(self.statistics, index=[0])
+                            # else:
+                            #     stats = df.from_dict(self.statistics)
+                        # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
+                            stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+                    except PermissionError:
+                        logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+                else:
+                    create_new_csv = True
+            else:
+                create_new_csv = True
+            if create_new_csv:
+                with open(f"one_row_per_arena.csv", 'w') as file:
+                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
+                               columns=list(self.statistics.keys()))
+                    stats.iloc[(self.statistics['arena'] - 1), :] = self.statistics.values()
+                    stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+
+            # if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+            #     oscil_i = df(
+            #         c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
+            #         columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
+            #     self.one_row_per_oscillating_cluster = concat((self.one_row_per_oscillating_cluster, oscil_i))
+        # if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+        #     savetxt(f"oscillation_cluster{self.statistics['arena']}.csv", self.clusters_final_data,
+        #                     fmt='%1.9f', delimiter=',')
+
+        # savetxt(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", self.magnitudes_and_frequencies,
+        #         fmt='%1.9f', delimiter=',')
+
+
+        # save(f"stats_{self.statistics['arena']}.npy", self.statistics)
+        # if self.vars['descriptors_in_long_format']:
+        #     self.whole_shape_descriptors.to_csv(f"shape_descriptors_{self.statistics['arena']}.csv", sep=";", index=False, lineterminator='\n')
+
+        if not self.vars['keep_unaltered_videos']:
+            os.remove(f"ind_{self.statistics['arena']}.npy")
+
+        # Provide images allowing to assess the analysis efficiency
+        if self.dims[0] > 1:
+            after_one_tenth_of_time = ceil(self.dims[0] / 10).astype(uint64)
+        else:
+            after_one_tenth_of_time = 0
+
+        last_good_detection = self.dims[0] - 1
+        if self.dims[0] > self.lost_frames:
+            if self.vars['do_value_segmentation']:
+                last_good_detection -= self.lost_frames
+        else:
+            last_good_detection = 0
+
+        if self.visu is None:
+            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.converted_video[last_good_detection, :, :, :].copy()
+        else:
+            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
+
+        position = (25, self.dims[1] // 2)
+        text = str(self.statistics['arena'])
+        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, self.cross_33))
+        self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
+        self.efficiency_test_1 = putText(self.efficiency_test_1, text, position, FONT_HERSHEY_SIMPLEX, 1,
+                                        (self.vars["contour_color"], self.vars["contour_color"],
+                                         self.vars["contour_color"], 255), 3)
+
+        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, self.cross_33))
+        self.efficiency_test_2[contours[0], contours[1], :] = self.vars['contour_color']
+        self.efficiency_test_2 = putText(self.efficiency_test_2, text, position, FONT_HERSHEY_SIMPLEX, 1,
+                                         (self.vars["contour_color"], self.vars["contour_color"],
+                                          self.vars["contour_color"], 255), 3)
+
+    def change_results_of_one_arena(self):
+        self.save_video()
+        # with open(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", 'w') as file:
+        #     savetxt(file, self.magnitudes_and_frequencies, fmt='%1.9f', delimiter=';')
+        create_new_csv: bool = False
+        if os.path.isfile("one_row_per_arena.csv"):
+            with open(f"one_row_per_arena.csv", 'r') as file:
+                stats = read_csv(file, header=0, sep=";")
+            if len(self.statistics) == len(stats.columns) - 1:
+                try:
+                    with open(f"one_row_per_arena.csv", 'w') as file:
+                        stats.iloc[(self.statistics['arena'] - 1), 1:] = self.statistics.values()
+                        # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
+                        stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+                except PermissionError:
+                    logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+
+            else:
+                create_new_csv = True
+        else:
+            create_new_csv = True
+        if create_new_csv:
+            try:
+                with open(f"one_row_per_arena.csv", 'w') as file:
+                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
+                               columns=list(self.statistics.keys()))
+                    stats.iloc[(self.statistics['arena'] - 1), :] = self.statistics.values()
+                    stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+            except PermissionError:
+                logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+        create_new_csv = False
+        if os.path.isfile("one_row_per_frame.csv"):
+            try:
+                with open(f"one_row_per_frame.csv", 'r') as file:
+                    descriptors = read_csv(file, header=0, sep=";")
+                if len(self.whole_shape_descriptors.columns) == len(descriptors.columns) - 1:
+                    with open(f"one_row_per_frame.csv", 'w') as file:
+                        # NEW
+                        for descriptor in self.one_row_per_frame.keys():
+                            descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), descriptor] = self.whole_shape_descriptors[descriptor]
+                        # Old
+                        # descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
+                        descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+                else:
+                    create_new_csv = True
+            except PermissionError:
+                logging.error("Never let one_row_per_frame.csv open when Cellects runs")
+        else:
+            create_new_csv = True
+        if create_new_csv:
+            try:
+                with open(f"one_row_per_frame.csv", 'w') as file:
+                    descriptors = df(zeros((len(self.vars['analyzed_individuals']) * self.dims[0], len(self.whole_shape_descriptors.columns))),
+                               columns=list(self.whole_shape_descriptors.keys()))
+                    descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
+                    descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+            except PermissionError:
+                logging.error("Never let one_row_per_frame.csv open when Cellects runs")
+        if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+            oscil_i = df(
+                c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
+                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
+            if os.path.isfile("one_row_per_oscillating_cluster.csv"):
+                try:
+                    with open(f"one_row_per_oscillating_cluster.csv", 'r') as file:
+                        one_row_per_oscillating_cluster = read_csv(file, header=0, sep=";")
+                    with open(f"one_row_per_oscillating_cluster.csv", 'w') as file:
+                        one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.statistics['arena']]
+                        # one_row_per_oscillating_cluster.iloc[self.statistics['arena'] == one_row_per_oscillating_cluster.loc[:, "arena"], :] = None
+                        one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster, oscil_i))
+                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster.append(oscil_i)
+                        one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
+                except PermissionError:
+                    logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
+            else:
+                try:
+                    with open(f"one_row_per_oscillating_cluster.csv", 'w') as file:
+                        oscil_i.to_csv(file, sep=';', index=False, lineterminator='\n')
+                except PermissionError:
+                    logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
+        if self.statistics["first_move"] != 'NA' and self.vars['fractal_analysis']:
+            fractal_i = df(self.fractal_boxes, columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
+            if os.path.isfile("fractal_box_sizes.csv"):
+                try:
+                    with open(f"fractal_box_sizes.csv", 'r') as file:
+                        fractal_box_sizes = read_csv(file, header=0, sep=";")
+                    with open(f"fractal_box_sizes.csv", 'w') as file:
+                        # fractal_box_sizes.iloc[self.statistics['arena'] == fractal_box_sizes['arena'], :] = None
+                        fractal_box_sizes = fractal_box_sizes[fractal_box_sizes['arena'] != self.statistics['arena']]
+                        # fractal_box_sizes = fractal_box_sizes.iloc[fractal_box_sizes['arena'] != self.statistics['arena'], :]
+                        fractal_box_sizes = concat((fractal_box_sizes, fractal_i))
+                        # fractal_box_sizes = fractal_box_sizes.append(fractal_i)
+                        fractal_box_sizes.to_csv(file, sep=';', index=False, lineterminator='\n')
+                except PermissionError:
+                    logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
+            else:
+                try:
+                    with open(f"fractal_box_sizes.csv", 'w') as file:
+                        fractal_i.to_csv(file, sep=';', index=False, lineterminator='\n')
+                except PermissionError:
+                    logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
