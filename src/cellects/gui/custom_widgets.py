@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""This module contains all modified/simplified widgets from PySide6
+It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap, QFont, QPainter
 from numpy import min, max, all, any
