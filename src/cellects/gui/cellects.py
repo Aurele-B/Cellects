@@ -47,6 +47,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
         #self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
         self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
+        self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
         #self.setMaximumWidth(self.screen_width)
         #self.setMaximumHeight(self.screen_height)
         self.setMaximumWidth(822)

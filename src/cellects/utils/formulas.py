@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ This script contains formula functions
     - linear_model
     - get_divisor
@@ -13,6 +14,7 @@
 """
 from numpy import sum, absolute, max, min, empty_like, round_, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
+
 
 @njit()
 def sum_of_abs_differences(array1, array2):
@@ -257,6 +259,7 @@ def cohen_d(vector_1, vector_2):
     n2 = len(vector_2)
     spooled = sqrt(((n2 - 1) * s2 ** 2 + (n1 - 1) * s1 ** 2) / (n1 + n2 - 2))
     return (m2 - m1) / spooled
+
 
 def moving_average(vector, step):
     """

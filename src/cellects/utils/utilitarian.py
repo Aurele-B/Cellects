@@ -1,6 +1,5 @@
 import logging
 import os
-import time
 
 from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, \
     dstack, row_stack, column_stack, quantile, sum, int64, linalg, floor, argmax, gradient, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
@@ -29,6 +28,7 @@ def less_along_first_axis(array_in_1, array_in_2):
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] < value
     return array_out
+
 
 def translate_dict(old_dict):
     """

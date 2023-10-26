@@ -29,6 +29,7 @@ def add_import_path():
     SRC_DIR = Path(split_dir[0]) / "Cellects" / "src"
     sys.path.append(str(SRC_DIR))
 
+
 def run_cellects():
     """Entry point of cellects software."""
     _initialize_coloredlogs(LOGLEVEL)
