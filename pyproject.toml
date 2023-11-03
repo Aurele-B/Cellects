@@ -2,14 +2,19 @@
 name = "Cellects"
 version = "1.0.0"
 description = "Cell Expansion Computer Tracking Software."
-authors = [
-  { name="Aurèle Boussard", email="aurele.boussard@gmail.com" }
-]
+authors = ["Aurèle Boussard"]
 license = "GNU General Public License v3.0"
 readme = "README.md"
-requires-python = ">3.8,<3.13"
+
+[tool.poetry.scripts]
+Cellects = "cellects.__main__:run_cellects"
+
+#[tool.poetry.files]
+#Cellects = "cellects.config.all_vars:run_cellects"
+#devtest = {reference = "cellects.test:test.run_cellects_tests", extras = ["test"], type = "console" }
 
 [tool.poetry.dependencies]
+python = ">3.9,<3.13"
 coloredlogs = "^15.0.1"
 exif = "^1.6.0"
 ExifRead = "^3.0.0"
