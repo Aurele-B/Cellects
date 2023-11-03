@@ -1,13 +1,14 @@
 # Ignore the .idea directory
 .idea/
 docs/
-res/
+dist/
+src/cellects/build/
+src/cellects/dist/
+src/cellects/test/experiment/Data to run Cellects quickly.pkl
 src/cellects/config/all_vars.pkl
-src/cellects/icons/
 src/cellects/paper_illustrations/
-src/cellects/test/
+src/cellects/__main__.spec
 create_dmg.sh
-pyproject.toml
 README_DEV_CHEATSHEET.md
 setup.py
-gitignore
+requirements.txt
