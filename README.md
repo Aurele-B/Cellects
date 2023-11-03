@@ -11,11 +11,11 @@ Installation
 ------------
 To install Cellects, you can:
 
-## 1. Install it in a click using Cellects.exe on windows.
+### 1. Install it in a click using Cellects.exe on windows.
 - Double-click on the Cellects.exe file to start installation
 - Finds the app in Cellects/Cellects/Cellects.exe and run it
 
-## 2. From this repository
+### 2. From this repository
 - Install python 11 (https://www.python.org/downloads/release/python-3116/)
 - Clone this repository (https://github.com/Aurele-B/Cellects.git) in your favorite IDE
 - Upgrade pip:
@@ -35,7 +35,7 @@ poetry install
 Cellects
 ```
 
-## 3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
+### 3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
 - Put the cellects-1.0.0-py3-none-any.whl file in a directory
 - Open a terminal and go in that directory
 - Install all necessary packages and Cellects:
