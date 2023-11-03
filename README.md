@@ -10,9 +10,47 @@ automated computation of a variety of geometrical descriptors, easy installation
 Installation
 ------------
 To install Cellects, you can:
-1. Download the complete project and open it in a python IDE at the folder level: "src"
-2. Install it in a click using Cellects.exe on windows.
-3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
+
+## 1. Install it in a click using Cellects.exe on windows.
+- Double-click on the Cellects.exe file to start installation
+- Finds the app in Cellects/Cellects/Cellects.exe and run it
+
+## 2. From this repository
+- Install python 11 (https://www.python.org/downloads/release/python-3116/)
+- Clone this repository (https://github.com/Aurele-B/Cellects.git) in your favorite IDE
+- Upgrade pip:
+```
+pip install --upgrade pip
+```
+- Install poetry:
+```
+pip install poetry
+```
+- Install all necessary packages:
+```
+poetry install
+```
+- Run Cellects:
+```
+Cellects
+```
+
+## 3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
+- Put the cellects-1.0.0-py3-none-any.whl file in a directory
+- Open a terminal and go in that directory
+- Install all necessary packages and Cellects:
+```
+pip install --upgrade pip
+pip install h5py
+pip install typing-extensions
+pip install wheel
+pip install cellects-1.0.0-py3-none-any.whl
+```
+- Run Cellects:
+```
+Cellects
+```
+
 
 Usage
 ------------
