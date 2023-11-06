@@ -26,9 +26,9 @@ from pathlib import Path
 
 
 # NEW VERSION2
-SRC_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
+CURR_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
 # Add a .parent when trying to build an executable (remove it when trying to build a python package)
-CELLECTS_DIR = SRC_DIR.parent#.parent # Add the ".parent" when creating a windows executable
+CELLECTS_DIR = CURR_DIR.parent#.parent # Add the ".parent" when creating a windows executable
 # NEW VERSION2
 
 CONFIG_DIR = CELLECTS_DIR / "config"
