@@ -4,10 +4,14 @@ import logging
 import os
 import sys
 from pathlib import Path
-
 import coloredlogs
+from PySide6 import QtWidgets, QtGui
+from cellects.core.cellects_paths import ICONS_DIR
 
-from PySide6 import QtWidgets
+# These two lines allow the taskbar icon to be cellects_icon instead if python icon.
+import ctypes
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
+
 
 LOGLEVEL = "INFO" #"DEBUG"
 
@@ -26,6 +30,16 @@ def run_cellects():
     _initialize_coloredlogs(LOGLEVEL)
     from cellects.gui.cellects import CellectsMainWidget
     app = QtWidgets.QApplication([])
+
+    # Add the icon file to the app
+    icon = QtGui.QIcon()
+    if sys.platform.startswith('win'):
+        icon.addPixmap(QtGui.QPixmap(ICONS_DIR / "cellects_icon.ico"))
+    else:
+        icon.addPixmap(QtGui.QPixmap(ICONS_DIR / "cellects_icon.icns"))
+    app.setWindowIcon(icon)
+
+    # Start session
     session = CellectsMainWidget()
     session.show()
     sys.exit(app.exec())

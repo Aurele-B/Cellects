@@ -46,7 +46,7 @@ class OneVideoPerBlob:
         self.shapes_to_remove = None
         self.not_analyzed_individuals = None
 
-    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number, sample_size):
+    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2, sample_size=5, all_same_direction=True, display=False):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         # are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1; img_list=self.data_list; color_space_combination=self.vars['convert_for_origin']; color_number=self.vars["color_number"]; sample_size=5
 
@@ -66,7 +66,7 @@ class OneVideoPerBlob:
             self.top = zeros(self.first_image.shape_number, dtype=int64)
             self.bot = repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
             if are_gravity_centers_moving:
-                self.get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size)
+                self.get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_same_direction, display)
                 # new:
                 new_ordered_first_image = zeros(self.ordered_first_image.shape, dtype=uint8)
                 #
@@ -86,8 +86,8 @@ class OneVideoPerBlob:
                 self.modif_validated_shapes[nonzero(self.ordered_first_image)] = 1
                 self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                     self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-
-                self.get_quick_bb()
+                # self.get_quick_bb()
+                # self.print_bounding_boxes()
             else:
                 self.get_quick_bb()
             self.standardize_video_sizes()
@@ -96,6 +96,7 @@ class OneVideoPerBlob:
             self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 2
             self.left[self.left < 0] = 1
             self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
+
 
     def get_quick_bb(self):
         """
@@ -221,7 +222,7 @@ class OneVideoPerBlob:
             self.right = self.standard[:, 3]
 
 
-    def get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2):
+    def get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_same_direction=True, display=False):
         """
         Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
         on following images. i.e. it segment evenly spaced images (See self.segment_blob_motion and OneImageAnalysis)
@@ -233,9 +234,12 @@ class OneVideoPerBlob:
         :param sample_size: The picture number to analyse. The higher it is, the higher bath accuracy and computation
         time are
         :type sample_size: int
+        :param all_same_direction: Whether all specimens move roughly in the same direction or not
+        :type all_same_direction: bool
         :return: For each shapes, the coordinate of a bounding box including all shape movements
         """
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
+
         self.motion_list = list()
         if img_list.dtype.type is str_:
             frame_number = len(img_list)
@@ -277,9 +281,21 @@ class OneVideoPerBlob:
         print("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
         for step_i in arange(1, sample_size):
             print(step_i)
+
             previously_ordered_centroids = ordered_centroids.copy()
             image_i = self.motion_list[step_i].copy()
             image_i = cv2.dilate(image_i, self.small_kernels, iterations=5)
+
+            # Display the segmentation result for all shapes at this frame
+            if img_list.dtype.type is str_:
+                img_to_display = self.read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr)
+                # img_to_display = readim(img_list[sample_numbers[step_i] - 1], self.raw_images)
+            else:
+                img_to_display = img_list[sample_numbers[step_i] - 1, ...]
+                if self.first_image.cropped:
+                    img_to_display = img_to_display[self.first_image.crop_coord[0]: self.first_image.crop_coord[1],
+                                     self.first_image.crop_coord[2]: self.first_image.crop_coord[3], :]
+
             for shape_i in range(self.first_image.shape_number):
                 shape_to_expand = zeros(image_i.shape, dtype=uint8)
                 shape_to_expand[previous_ordered_image_i == (shape_i + 1)] = 1
@@ -298,81 +314,83 @@ class OneVideoPerBlob:
                 # update the image by putting a purple mask around the current shape
                 contours, useless = cv2.findContours(confirmed_shape, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
                 cv2.drawContours(img_to_display, contours, -1, (255, 0, 180), 3)
-            #     imtoshow = cv2.resize(img_to_display.astype(uint8), (960, 540))
-            #     cv2.imshow('Rough detection', imtoshow)
-            #     cv2.waitKey(1)
-            # cv2.destroyAllWindows()
+                if display:
+                    imtoshow = cv2.resize(img_to_display.astype(uint8), (960, 540))
+                    cv2.imshow('Rough detection', imtoshow)
+                    cv2.waitKey(1)
+            if display:
+                cv2.destroyAllWindows()
 
-            # Display the segmentation result for all shapes at this frame
-            if img_list.dtype.type is str_:
-                img_to_display = self.read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr)
-                # img_to_display = readim(img_list[sample_numbers[step_i] - 1], self.raw_images)
-            else:
-                img_to_display = img_list[sample_numbers[step_i] - 1, ...]
-                if self.first_image.cropped:
-                    img_to_display = img_to_display[self.first_image.crop_coord[0]: self.first_image.crop_coord[1],
-                                                    self.first_image.crop_coord[2]: self.first_image.crop_coord[3], :]
+
             mask_to_display = zeros(image_i.shape, dtype=uint8)
             mask_to_display[nonzero(previous_ordered_image_i)] = 1
             contours_to_display, useless = cv2.findContours(mask_to_display,
                                                           cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
             cv2.drawContours(img_to_display, contours_to_display, -1, (255, 0, 0), 3)
-            # imtoshow = cv2.resize(img_to_display.astype(uint8), (960, 540))
-            # cv2.imshow('Rough detection', imtoshow)
-            # cv2.waitKey(1)
+            if display:
+                imtoshow = cv2.resize(img_to_display.astype(uint8), (960, 540))
+                cv2.imshow('Rough detection', imtoshow)
+                cv2.waitKey(1)
 
             # If the blob moves enough to drastically change its gravity center,
             # update the ordered centroids at each frame.
             detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
                                                                              connectivity=8)
             mask_to_display = mask_to_display.astype(uint8)
-            while logical_and(detected_shape_number != self.first_image.shape_number,
-                                 sum(mask_to_display) < mask_to_display.size):
+            while logical_and(detected_shape_number - 1 != self.first_image.shape_number,
+                                 sum(mask_to_display > 0) < mask_to_display.size):
                 mask_to_display = cv2.dilate(mask_to_display, self.small_kernels, iterations=1)
                 detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
                                                                                  connectivity=8)
                 mask_to_display[nonzero(mask_to_display)] = 1
                 mask_to_display = mask_to_display.astype(uint8)
-                # imtoshow = cv2.resize(mask_to_display * 255, (960, 540))
-                # cv2.imshow('expansion', imtoshow)
-                # cv2.waitKey(1)
+                if display:
+                    imtoshow = cv2.resize(mask_to_display * 255, (960, 540))
+                    cv2.imshow('expansion', imtoshow)
+                    cv2.waitKey(1)
+            if display:
+                cv2.destroyAllWindows()
             ordered_stats, ordered_centroids = rank_from_top_to_bottom_from_left_to_right(mask_to_display,
                                                                                           self.first_image.y_boundaries)
 
-            # Only keep one centroid per shape
-            previous_binary_image = self.motion_list[step_i - 1]
-            prev_bin_idx = nonzero(previous_binary_image)
-            centroimage = zeros(image_i.shape, dtype=uint8)
-            oc = round(ordered_centroids).astype(int64)
-            centroimage[oc[:, 1], oc[:, 0]] = 1
-            # Remove those that are not among the previous binary image
-            centroimage = centroimage * previous_binary_image
-            oc = nonzero(centroimage)
-            nb_of_potential_centroids = len(oc[0])
-            # Only keep centroids that moved the less from their previous position
-            new_ordered_centroids = zeros_like(previously_ordered_centroids)
-            for shape_i in range(self.first_image.shape_number):
-                euclidean_distances = zeros(nb_of_potential_centroids, dtype=float)
-                for i in range(nb_of_potential_centroids):
-                    potential_centroid = [oc[1][i], oc[0][i]]
-                    euclidean_distances[i] = eudist(previously_ordered_centroids[shape_i, :], potential_centroid)
-                idx = argmin(euclidean_distances)
-                new_ordered_centroids[shape_i, :] = oc[1][idx], oc[0][idx]
+            # # Only keep one centroid per shape
+            # previous_binary_image = self.motion_list[step_i - 1]
+            # prev_bin_idx = nonzero(previous_binary_image)
+            # centroimage = zeros(image_i.shape, dtype=uint8)
+            # oc = round(ordered_centroids).astype(int64)
+            # centroimage[oc[:, 1], oc[:, 0]] = 1
+            # # Remove those that are not among the previous binary image
+            # centroimage = centroimage * previous_binary_image
+            # oc = nonzero(centroimage)
+            # nb_of_potential_centroids = len(oc[0])
 
-            # Adjust each centroid position according to the maximal centroid displacement.
-            x_diffs = new_ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
-            if mean(x_diffs) > 0: # They moved left, we add to x
-                add_to_x = max(x_diffs) - x_diffs
-            else: #They moved right, we remove from x
-                add_to_x = min(x_diffs) - x_diffs
-            new_ordered_centroids[:, 0] = new_ordered_centroids[:, 0] + add_to_x
+            # # Only keep centroids that moved the less from their previous position
+            # new_ordered_centroids = zeros_like(previously_ordered_centroids)
+            # for shape_i in range(self.first_image.shape_number):
+            #     euclidean_distances = zeros(nb_of_potential_centroids, dtype=float)
+            #     for i in range(nb_of_potential_centroids):
+            #         potential_centroid = [oc[1][i], oc[0][i]]
+            #         euclidean_distances[i] = eudist(previously_ordered_centroids[shape_i, :], potential_centroid)
+            #     idx = argmin(euclidean_distances)
+            #     new_ordered_centroids[shape_i, :] = oc[1][idx], oc[0][idx]
 
-            y_diffs = new_ordered_centroids[:, 1] - previously_ordered_centroids[:, 1]
-            if mean(y_diffs) > 0:  # They moved down, we add to y
-                add_to_y = max(y_diffs) - y_diffs
-            else:  # They moved up, we remove from y
-                add_to_y = min(y_diffs) - y_diffs
-            new_ordered_centroids[:, 1] = new_ordered_centroids[:, 1] + add_to_y
+            new_ordered_centroids = ordered_centroids
+            if all_same_direction:
+                # Adjust each centroid position according to the maximal centroid displacement.
+                x_diffs = new_ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
+                if mean(x_diffs) > 0: # They moved left, we add to x
+                    add_to_x = max(x_diffs) - x_diffs
+                else: #They moved right, we remove from x
+                    add_to_x = min(x_diffs) - x_diffs
+                new_ordered_centroids[:, 0] = new_ordered_centroids[:, 0] + add_to_x
+
+                y_diffs = new_ordered_centroids[:, 1] - previously_ordered_centroids[:, 1]
+                if mean(y_diffs) > 0:  # They moved down, we add to y
+                    add_to_y = max(y_diffs) - y_diffs
+                else:  # They moved up, we remove from y
+                    add_to_y = min(y_diffs) - y_diffs
+                new_ordered_centroids[:, 1] = new_ordered_centroids[:, 1] + add_to_y
+
             ordered_centroids = new_ordered_centroids
 
             # Normalize each bounding box
@@ -383,7 +401,7 @@ class OneVideoPerBlob:
             self.right[shape_i] = max(shape_i_indices[1])
             self.top[shape_i] = min(shape_i_indices[0])
             self.bot[shape_i] = max(shape_i_indices[0])
-        #new
+        #new See(previous_ordered_image_i)
         self.ordered_first_image = previous_ordered_image_i
 
     def segment_blob_motion(self, image, color_space_combination, color_number):
@@ -422,7 +440,7 @@ class OneVideoPerBlob:
         mask[segments[0], segments[1]] = 1
         mask = cv2.dilate(mask, array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=uint8), iterations=3)
         if display_or_return == 0:
-            imtoshow = cv2.cvtColor(self.first_image.image, cv2.COLOR_GRAY2RGB)
+            imtoshow = self.first_image.bgr.copy()
             imtoshow[mask == 1, 2] = 255
             imtoshow = cv2.resize(imtoshow, (960, 540))
             cv2.imshow('Video contour', imtoshow)
@@ -618,3 +636,34 @@ class OneVideoPerBlob:
 
         for blob_i in arange(self.first_image.shape_number):
             vid_list[blob_i].release()
+
+
+if __name__ == "__main__":
+    from glob import glob
+    from cellects.core.cellects_paths import TEST_DIR
+    from cellects.utils.load_display_save import *
+    from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
+    from numpy import sort, array
+    # os.chdir(TEST_DIR / "experiment")
+    # image = readim("IMG_7653.jpg")
+    os.chdir("D:/Directory/Data/100/101-104/")
+    img_list = sort(glob("IMG_" + '*' + ".jpg"))
+    image = readim(img_list[0])
+    first_image = OneImageAnalysis(image)
+    first_im_color_space_combination = {"lab": array((1, 0, 0), uint8)}
+    last_im_color_space_combination = {"lab": array((0, 0, 1), uint8)}
+    first_image.convert_and_segment(first_im_color_space_combination)
+    first_image.set_spot_shapes_and_size_confint('circle')
+    process_i = ProcessFirstImage(
+        [first_image, False, False, None, False, 8, None, 2, None, None, None])
+    process_i.binary_image = first_image.binary_image
+    process_i.process_binary_image()
+    first_image.validated_shapes = process_i.validated_shapes
+    first_image.shape_number = 8
+    first_image.get_crop_coordinates()
+    # See(first_image.binary_image)
+    self = OneVideoPerBlob(first_image, 100, False)
+    are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_same_direction=True
+    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_same_direction=True, display=True)
+    self.print_bounding_boxes()
+

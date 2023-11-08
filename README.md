@@ -36,6 +36,10 @@ Cellects
 ```
 
 ### 3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
+- Uninstall any previous version with:
+```
+pip uninstall cellects-1.0.0-py3-none-any.whl
+```
 - Put the cellects-1.0.0-py3-none-any.whl file in a directory
 - Open a terminal and go in that directory
 - Install all necessary packages and Cellects:

@@ -103,6 +103,13 @@ class AdvancedParameters(WindowType):
         self.one_per_arena_box_widget.setStyleSheet(boxstylesheet)
 
         # II/C/ Create widgets
+        self.all_same_direction = Checkbox(self.parent().po.all['all_same_direction'])
+        self.all_same_direction.stateChanged.connect(self.all_same_direction_changed)
+        self.all_same_direction_label = FixedText('All cells have the same direction',
+                                                         tip="This parameter only affects the slow algorithm of automatic arena detection.\nChecking it will improve the chances to correctly detect arenas when\n all cells move in the same direction",
+                                                         night_mode=self.parent().po.all['night_mode'])
+
+
         do_distant_shape_integration = self.parent().po.all['do_distant_shape_integration_during_segmentation']
         self.do_distant_shape_integration_during_segmentation = Checkbox(do_distant_shape_integration)
         self.do_distant_shape_integration_during_segmentation.stateChanged.connect(self.do_distant_shape_int_changed)
@@ -183,6 +190,9 @@ class AdvancedParameters(WindowType):
         curr_box_row += 1
         self.one_per_arena_box_layout.addWidget(self.max_distant_shape_size_label, curr_box_row, 0)
         self.one_per_arena_box_layout.addWidget(self.max_distant_shape_size, curr_box_row, 1)
+        curr_box_row += 1
+        self.one_per_arena_box_layout.addWidget(self.all_same_direction, curr_box_row, 0)
+        self.one_per_arena_box_layout.addWidget(self.all_same_direction_label, curr_box_row, 1)
         curr_box_row += 1
 
         self.one_per_arena_box_widget.setLayout(self.one_per_arena_box_layout)
@@ -535,6 +545,10 @@ class AdvancedParameters(WindowType):
         self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
         self.max_core_nb.setVisible(self.parent().po.all['do_multiprocessing'])
         self.max_core_nb_label.setVisible(self.parent().po.all['do_multiprocessing'])
+
+    def all_same_direction_changed(self):
+        """ Triggered when all_same_direction check status changes"""
+        self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
 
     def do_distant_shape_int_changed(self):
         """ Triggered when do_distant_shape_integration_during_segmentation check status changes"""
@@ -1007,6 +1021,8 @@ class AdvancedParameters(WindowType):
             self.parent().po.vars['min_distant_shape_size'] = int(round(self.min_distant_shape_size.value()))
         else:
             self.parent().po.vars['min_distant_shape_size'] = None
+
+        self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
 
         previous_csc = self.parent().po.vars['convert_for_motion'].copy()
         self.save_user_defined_csc()
