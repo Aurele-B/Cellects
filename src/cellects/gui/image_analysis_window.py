@@ -1194,8 +1194,8 @@ class ImageAnalysisWindow(WindowType):
         self.more_than_two_colors.setStyleSheet("margin-left:0%; margin-right:-10%;")
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
-        self.more_than_two_colors_label = FixedText("Heterogeneous back",
-                                                    tip="The program will split the image into categories", night_mode=self.parent().po.all['night_mode'])
+        self.more_than_two_colors_label = FixedText("More than two colors",
+                                                    tip="The program will split the image into categories\nand find the one corresponding to the cell(s)", night_mode=self.parent().po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         # self.more_than_two_colors_label.setFixedWidth(300)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)

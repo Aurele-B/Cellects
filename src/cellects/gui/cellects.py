@@ -5,7 +5,7 @@ import signal
 
 # necessary on OSX
 # pip install cython pyobjus
-
+import sys
 from numpy import min, max, all, any, uint8, zeros, arange
 from PySide6 import QtWidgets, QtGui
 from screeninfo import get_monitors
@@ -19,12 +19,15 @@ from cellects.gui.image_analysis_window import ImageAnalysisWindow
 from cellects.gui.required_output import RequiredOutput
 from cellects.gui.video_analysis_window import VideoAnalysisWindow
 
+from cellects.core.cellects_paths import ICONS_DIR
+
 
 class CellectsMainWidget(QtWidgets.QStackedWidget):
     """ Main widget: this is the main window """
 
     def __init__(self):
         super().__init__()
+
         self.setWindowTitle('Cellects')
         self.pre_processing_done: bool = False
         self.last_is_first: bool = True
@@ -63,18 +66,6 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
         self.instantiate_widgets()
 
-        # self.insertWidget(
-        #     3,
-        #     VideoAnalysisWindow(self),
-        #     night_mode=self.po.all['night_mode'])
-        # self.insertWidget(
-        #     4,
-        #     RequiredOutput(self),
-        #     night_mode=self.po.all['night_mode'])
-        # self.insertWidget(
-        #     5,
-        #     AdvancedParameters(self),
-        #     night_mode=self.po.all['night_mode'])
         self.thread = {}
         self.thread['SaveAllVars'] = SaveAllVarsThread(self)
         self.change_widget(0)

@@ -149,10 +149,13 @@ class ProgramOrganizer:
         # dd = DefaultDicts()
         # self.all = dd.all
         # self.vars = dd.vars
-        self.all['global_pathway'] = "D:\Directory\Scripts\Python\Cellects0623\src\cellects\\test\experiment"
-        self.all['first_folder_sample_number'] = 100
+        self.all['global_pathway'] = "D:/Directory/Data/100/101-104"
+        self.all['first_folder_sample_number'] = 8
         # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
         # self.all['first_folder_sample_number'] = 6
+        # self.all['radical'] = "IMG"
+        # self.all['extension'] = ".jpg"
+        # self.all['im_or_vid'] = 0
         self.look_for_data()
         self.load_data_to_run_cellects_quickly()
         if not self.first_exp_ready_to_run:
@@ -789,14 +792,16 @@ class ProgramOrganizer:
                         self.analysis_instance,
                         self.vars['convert_for_origin'],#self.vars['convert_for_motion']
                         self.vars["color_number"],
-                        sample_size=5)
+                        sample_size=5,
+                        all_same_direction=self.all['all_same_direction'])
                 else:
                     self.videos.get_bounding_boxes(
                         self.all['are_gravity_centers_moving'] == 1,
                         self.data_list,
                         self.vars['convert_for_origin'],#self.vars['convert_for_motion']
                         self.vars["color_number"],
-                        sample_size=5)
+                        sample_size=5,
+                        all_same_direction=self.all['all_same_direction'])
                 # self.all['overwrite_unaltered_videos'] = True
                 # self.videos.print_bounding_boxes(0)
                 logging.info(

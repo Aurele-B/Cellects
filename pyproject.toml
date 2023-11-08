@@ -5,6 +5,7 @@ description = "Cell Expansion Computer Tracking Software."
 authors = ["Aurèle Boussard"]
 license = "GNU General Public License v3.0"
 readme = "README.md"
+include = ["cellects/icons/cellects_icon"]
 
 [tool.poetry.scripts]
 Cellects = "cellects.__main__:run_cellects"

@@ -3,6 +3,7 @@ from cellects.image_analysis.shape_descriptors import descriptors_categories, de
 from numpy import min, max, all, any, array, int8, empty, uint16
 from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
 from cellects.utils.load_display_save import PickleRick
+from cellects.core.cellects_paths import TEST_DIR
 
 
 class DefaultDicts:
@@ -27,6 +28,7 @@ class DefaultDicts:
             'descriptors': descriptors_categories,
             'display_shortcuts': False,
             'do_distant_shape_integration_during_segmentation': False,
+            'all_same_direction': True,
             'do_multiprocessing': False,
             'extension': '.jpg',
             'first_detection_frame': 1,
@@ -34,7 +36,7 @@ class DefaultDicts:
             'first_folder_sample_number': 100,
             'first_move_threshold_in_mm²': 10,
             'folder_list': [],
-            'global_pathway': '',
+            'global_pathway': TEST_DIR / "experiment",
             'im_or_vid': 0,
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
