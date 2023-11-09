@@ -1430,9 +1430,6 @@ class MotionAnalysis:
                     imshow("", resize(imtoshow, (1000, 1000)))
                     waitKey(1)
 
-
-
-
                 # See(nd.network)
                 # from sklearn.feature_extraction.image import img_to_graph
                 # graph = img_to_graph(nd.network)
