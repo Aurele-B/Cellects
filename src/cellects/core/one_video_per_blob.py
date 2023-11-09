@@ -86,7 +86,7 @@ class OneVideoPerBlob:
                 self.modif_validated_shapes[nonzero(self.ordered_first_image)] = 1
                 self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                     self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-                # self.get_quick_bb()
+                self.get_quick_bb()
                 # self.print_bounding_boxes()
             else:
                 self.get_quick_bb()
@@ -444,7 +444,8 @@ class OneVideoPerBlob:
             imtoshow[mask == 1, 2] = 255
             imtoshow = cv2.resize(imtoshow, (960, 540))
             cv2.imshow('Video contour', imtoshow)
-            cv2.waitKey(1)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
         else:
             return mask
 
@@ -664,6 +665,6 @@ if __name__ == "__main__":
     # See(first_image.binary_image)
     self = OneVideoPerBlob(first_image, 100, False)
     are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_same_direction=True
-    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_same_direction=True, display=True)
+    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_same_direction=False, display=True)
     self.print_bounding_boxes()
 
