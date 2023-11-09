@@ -96,8 +96,14 @@ class RequiredOutput(WindowType):
                 col = 1
             self.descriptor_widgets_list.append(FixedText(descriptors_names_to_display[i], 14, night_mode=self.parent().po.all['night_mode']))
             self.layout.addWidget(self.descriptor_widgets_list[label_index], row, col)
-            self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name])) #
-            cb_index = label_index + 1 #
+            self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name]))
+            cb_index = label_index + 1
+
+            # To remove:
+            if name == 'fractal_analysis' or name == 'network_detection':
+                self.descriptor_widgets_list[label_index].setVisible(False)
+                self.descriptor_widgets_list[cb_index].setVisible(False)
+
             self.layout.addWidget(self.descriptor_widgets_list[cb_index], row, col + 1)
         #if not self.parent().po.vars['oscilacyto_analysis']:
             #self.descriptor_widgets_list[cb_index].setVisible(False)

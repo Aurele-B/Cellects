@@ -243,7 +243,10 @@ class ProgramOrganizer:
             #     self.sample_number = self.all['sample_number_per_folder']
 
     def update_folder_id(self, sample_number, folder_name=""):
-        os.chdir(self.all['global_pathway'] + "/" + folder_name)
+        if isinstance(self.all['global_pathway'], str):
+            os.chdir(self.all['global_pathway'] + "/" + folder_name)
+        else:
+            os.chdir(self.all['global_pathway'] / folder_name)
         self.data_list = glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
