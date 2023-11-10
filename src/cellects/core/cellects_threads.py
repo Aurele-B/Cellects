@@ -1098,12 +1098,6 @@ class RunAllThread(QtCore.QThread):
 
     def run(self):
         analysis_status = {"continue": True, "message": ""}
-        # continue_analysis = True
-        # enough_memory = True
-        # if len(self.parent().po.all['folder_list']) > 0:
-        #     message = f"{self.parent().po.all['global_pathway'][:6]} ... {self.parent().po.all['folder_list'][0]}"
-        # else:
-        #     message = f"{self.parent().po.all['global_pathway']}"
         message = self.set_current_folder(0)
 
         if self.parent().po.first_exp_ready_to_run:
@@ -1113,10 +1107,8 @@ class RunAllThread(QtCore.QThread):
                 analysis_status["continue"] = False
                 analysis_status["message"] = f"Wrong cell/colony number detected: redo the first image analysis."
                 self.message_from_thread.emit(f"Wrong cell/colony number detected: restart Cellects and do another analysis.")
-                # continue_analysis = False
             else:
                 analysis_status = self.run_video_writing(message)
-                # enough_memory = self.run_video_writing(message)
                 if analysis_status["continue"]:
                     self.message_from_thread.emit(message + ": Analyse all videos...")
                     analysis_status = self.run_motion_analysis(message)
@@ -1126,18 +1118,13 @@ class RunAllThread(QtCore.QThread):
                         self.parent().po.all['sample_number_per_folder'] = self.parent().po.all['sample_number_per_folder'][1:]
         else:
             self.parent().po.look_for_data()
-            # enough_memory = False
 
         if analysis_status["continue"] and (not self.parent().po.first_exp_ready_to_run or self.parent().po.all['folder_number'] > 1):
             folder_number = max((len(self.parent().po.all['folder_list']), 1))
 
             for exp_i in arange(folder_number):
-                # if self.parent().po.all['folder_list'][exp_i] == "11-14":
-                #     print(exp_i)
-                # folder_name = self.parent().po.all['folder_list'][0]; exp_i=0
                 if len(self.parent().po.all['folder_list']) > 0:
                     logging.info(self.parent().po.all['folder_list'][exp_i])
-                # self.message_from_thread.emit(f"Exp n°{exp_i + 1}/{len(folder_list)}: Starting to analyse {folder_name}")
                 self.parent().po.first_im = None;
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None;
@@ -1182,24 +1169,8 @@ class RunAllThread(QtCore.QThread):
             logging.error(message + " " + analysis_status["message"])
             self.message_from_thread.emit(message + " " + analysis_status["message"])
 
-        # if continue_analysis and enough_memory:
-        #     if self.parent().po.all['folder_number'] > 1:
-        #         self.message_from_thread.emit(f"Exp {self.parent().po.all['folder_list'][0]} to {self.parent().po.all['folder_list'][-1]} analyzed.")
-        #     else:
-        #         curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
-        #         self.message_from_thread.emit(f'Exp {curr_path}, analyzed.')
-
-        # else:
-        #     if len(self.parent().po.all['folder_list']) > 0:
-        #         self.message_from_thread.emit(
-        #             f"Exp {self.parent().po.all['folder_list'][exp_i]} failed.")
-        #     else:
-        #         self.message_from_thread.emit(f'Exp {self.parent().po.all["global_pathway"]} failed.')
     def set_current_folder(self, exp_i):
-        # self.parent().po.look_for_data()
-        # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
-        #     self.parent().po.all['folder_number'] = 1
-        if self.parent().po.all['folder_number'] > 1: # len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
+        if self.parent().po.all['folder_number'] > 1:
             logging.info(f"Use {self.parent().po.all['folder_list'][exp_i]} folder")
 
             message = f"{self.parent().po.all['global_pathway'][:6]} ... {self.parent().po.all['folder_list'][exp_i]}"
@@ -1209,32 +1180,14 @@ class RunAllThread(QtCore.QThread):
             message = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
             logging.info(f"Use {message} folder")
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
-            #message = f"{self.parent().po.all['global_pathway']} "
         return message
 
     def pre_processing(self):
         analysis_status = {"continue": True, "message": ""}
         logging.info("Pre-processing has started")
-        # if len(self.parent().po.all['folder_list']) > 0:
-        #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
-        #                                       self.parent().po.all['folder_list'][0])
-        # else:
-        #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'])
-        # if self.parent().po.use_data_to_run_cellects_quickly and not self.parent().po.all['overwrite_cellects_data'] and os.path.isfile(f'Data to run Cellects quickly.pkl'):
-        #     success = self.parent().po.load_data_to_run_cellects_quickly()
-        #     if not success:
-        #         self.message_from_thread_starting.emit(f"Do image analysis first, by clicking Next on the first window")
-        # else:
-        # continue_analysis = True
         if len(self.parent().po.data_list) > 0:
             self.parent().po.get_first_image()
             self.parent().po.fast_image_segmentation(True)
-            # if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
-            #     print(len(self.parent().po.vars['analyzed_individuals']))
-            #     print(self.parent().po.first_image.shape_number)
-            #     self.message_from_thread.emit(f"Image analysis failed to detect the right cell(s) number: (re)do the complete analysis.")
-            #     continue_analysis = False
-            # else:
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
             try:
@@ -1251,23 +1204,15 @@ class RunAllThread(QtCore.QThread):
                 # self.parent().po.extract_exif()
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                    # self.message_from_thread.emit(f"Image analysis failed to detect the right cell(s) number: (re)do the complete analysis.")
-                    # continue_analysis = False
                     analysis_status["message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
                     analysis_status["continue"] = False
                 elif self.parent().po.top is None and self.parent().imageanalysiswindow.manual_delineation_flag:
                     analysis_status["message"] = f"Auto video delineation failed, use manual delineation tool"
                     analysis_status["continue"] = False
-                    # self.message_from_thread.emit(f"Do manual video delineation for each folder if necessary")
-                    # continue_analysis = False
                 else:
                     self.parent().po.get_origins_and_backgrounds_lists()
-                    # ori_dict = self.parent().po.vars['convert_for_origin']
-                    # mot_dict = self.parent().po.vars['convert_for_motion']
-                    # if not ((ori_dict == mot_dict) and all(char.equal(list(ori_dict.keys()), list(mot_dict.keys())))):
                     self.parent().po.get_last_image()
                     self.parent().po.fast_image_segmentation(is_first_image=False)
-                    # self.parent().po.type_csc_dict()
                     self.parent().po.find_if_lighter_background()
             return analysis_status
         else:
@@ -1326,21 +1271,12 @@ class RunAllThread(QtCore.QThread):
                     prev_img = None
                     images_done = bunch * self.parent().po.vars['img_number']
                     for image_i, image_name in enumerate(self.parent().po.data_list):
-                        # percentage = round(((image_i + images_done) / total_img_number) * 100)
-                        # self.message_from_thread.emit(message + f", Video formatting: {percentage}%")
                         image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
                         self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
-                        # self.message_from_thread.emit(message + f", Video formatting: {current_percentage}%, ETA {remaining_time}")
-                        # logging.info(str(image_i), end='subtract_background ')
                         if not os.path.exists(image_name):
                             raise FileNotFoundError(image_name)
                         img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                        # img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
                         prev_img = img.copy()
-                        # if self.parent().po.first_image.crop_coord is not None:
-                        #     img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
-                        #           self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3],
-                        #           ...]
                         if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                             img = img[:, :, 0]
 
@@ -1353,19 +1289,15 @@ class RunAllThread(QtCore.QThread):
                                 analysis_status["message"] = f"One (or more) image has a different size (restart)"
                                 analysis_status["continue"] = False
                                 logging.info(f"In the {message} folder: one (or more) image has a different size (restart)")
-                                # self.message_from_thread.emit(f"In the {message} folder: one (or more) image has a different size (restart)")
                                 break
                         if not analysis_status["continue"]:
                             break
                     if not analysis_status["continue"]:
                         break
-                    # pat_tracker2 = PercentAndTimeTracker(len(arena))
                     if analysis_status["continue"]:
                         for arena_i, arena_name in enumerate(arena):
                             try:  # Null utiliser hdd = psutil.disk_usage('/') en amont à la place
                                 arena_percentage, eta = pat_tracker2.get_progress()
-                                # arena_percentage = round((arena_i / len(self.parent().po.vars['analyzed_individuals'])) * 100)
-                                # self.message_from_thread.emit(message + f", Video formatting: {percentage}%, Video writing: {arena_percentage}%")
                                 self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
                                 save(vid_names[arena_name], vid_list[arena_i])
                             except OSError:
@@ -1375,8 +1307,6 @@ class RunAllThread(QtCore.QThread):
                 self.parent().po.save_variable_dict()
                 self.parent().po.save_data_to_run_cellects_quickly()
                 analysis_status["message"] = f"Video writing complete."
-                # with open('coordinates.pkl', 'wb') as file:
-                #     pickle.dump(videos_coordinates, file)
                 return analysis_status
             else:
                 analysis_status["continue"] = False
@@ -1414,7 +1344,6 @@ class RunAllThread(QtCore.QThread):
                 tiii = default_timer()
                 pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                 for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
-
                     l = [i, arena, self.parent().po.vars, True, True, False, None]
                     # l = [0, 1, self.parent().po.vars, True, False, False, None]
                     analysis_i = MotionAnalysis(l)
@@ -1496,12 +1425,6 @@ class RunAllThread(QtCore.QThread):
                             # Save basic statistics
                             self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
                             # Save descriptors in long_format
-                            # # NEW
-                            # for descriptor in self.one_row_per_frame.keys():
-                            #     self.one_row_per_frame.loc[
-                            #     results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
-                            #     descriptor] = results_i['one_row_per_frame'][descriptor]
-                            # Old
                             self.parent().po.one_row_per_frame.iloc[
                             results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
                             :] = results_i['one_row_per_frame']
@@ -1522,154 +1445,14 @@ class RunAllThread(QtCore.QThread):
                      "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
 
                 logging.info(f"Parallel analysis lasted {(default_timer() - tiii)/ 60} minutes")
-                # # old
-                # pool = mp.ThreadPool(processes=self.parent().po.cores)
-                # list_args = [[i, arena, self.parent().po.vars, True, True, False, None] for i, arena in
-                #              enumerate(self.parent().po.vars['analyzed_individuals'])]
-                # advance = 0
-                # pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']), core_number=self.parent().po.cores)
-                # for analysis_i in pool.imap_unordered(MotionAnalysis, list_args):
-                #     arena = analysis_i.statistics['arena']
-                #     i = arena - 1
-                #     if not self.parent().po.vars['several_blob_per_arena']:
-                #         # Save basic statistics
-                #         self.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
-                #         # Save descriptors in long_format
-                #         self.one_row_per_frame.iloc[
-                #         i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
-                #         :] = analysis_i.whole_shape_descriptors
-                #         # Save cytosol_oscillations
-                #     if analysis_i.statistics["first_move"] != 'NA' and self.parent().po.vars['oscilacyto_analysis']:
-                #         oscil_i = df(
-                #             c_[repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                #             columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
-                #         self.one_row_per_oscillating_cluster = concat((self.one_row_per_oscillating_cluster, oscil_i))
-                #             # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
-                #
-                #     # Save efficiency visualization
-                #     self.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
-                #                                                              analysis_i.efficiency_test_2)
-                #     advance += 1
-                #     # advance = max((advance, arena))
-                #
-                #     current_percentage, remaining_time = pat_tracker.get_progress(advance)
-                #     self.image_from_thread.emit(
-                #         {"current_image": self.parent().po.last_image.bgr,
-                #          "message": f"{message} Step 2/2: analyzed {advance} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%), ETR: {remaining_time}"})
-
             self.parent().po.save_tables()
             return analysis_status
-            # if os.path.isfile('coordinates.pkl'):
-            #     os.remove('coordinates.pkl')
         else:
             analysis_status["continue"] = False
             analysis_status["message"] = f"Requires an additional {memory_diff}GB of RAM to run"
             self.message_from_thread.emit(f"Analyzing {message} requires an additional {memory_diff}GB of RAM to run")
             return analysis_status
 
-    # def instantiate_tables(self):
-    #     self.parent().po.update_output_list()
-    #     logging.info("Instantiate results tables and validation images")
-    #     if not self.parent().po.vars['several_blob_per_arena']:
-    #         if self.parent().po.vars['iso_digi_analysis']:
-    #             self.one_row_per_arena = df(zeros((len(self.parent().po.vars['analyzed_individuals']), 5), dtype=uint32),
-    #                                           columns=['arena', 'first_move', 'iso_digi_transi', 'is_growth_isotropic',
-    #                                                    'final_area'])
-    #         else:
-    #             self.one_row_per_arena = df(zeros((len(self.parent().po.vars['analyzed_individuals']), 3), dtype=uint32),
-    #                                           columns=['arena', 'first_move', 'final_area'])
-    #
-    #         descriptors = list()
-    #         not_to_consider = ['first_move', 'iso_digi_transi', 'is_growth_isotropic', 'final_area', 'network_detection']  #
-    #         for name, do_compute in self.parent().po.vars['descriptors'].items():
-    #             if do_compute and not isin(name, not_to_consider):
-    #                 descriptors.append(name)
-    #         self.one_row_per_frame = df(zeros((len(self.parent().po.vars['analyzed_individuals']) *
-    #                                            self.parent().po.vars['img_number'],
-    #                                            len(descriptors) + 2)),
-    #                                     columns=['arena', 'time'] + descriptors)
-    #     if self.parent().po.vars['oscilacyto_analysis']:
-    #         self.one_row_per_oscillating_cluster = df(empty((0, 5), dtype=float32),
-    #                                                   columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
-    #                                                            'edge_distance'])
-    #     if self.parent().po.vars['fractal_analysis']:
-    #         self.fractal_box_sizes = df(empty((0, 4), dtype=float32), columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-    #
-    #     if self.parent().po.vars['already_greyscale']:
-    #         if len(self.parent().po.first_image.bgr.shape) == 2:
-    #             self.parent().po.first_image.bgr = stack((self.parent().po.first_image.bgr, self.parent().po.first_image.bgr, self.parent().po.first_image.bgr), axis=2).astype(uint8)
-    #         if len(self.parent().po.last_image.bgr.shape) == 2:
-    #             self.parent().po.last_image.bgr = stack((self.parent().po.last_image.bgr, self.parent().po.last_image.bgr, self.parent().po.last_image.bgr), axis=2).astype(uint8)
-    #         self.parent().po.vars["convert_for_motion"] = {"bgr": array((1, 1, 1), dtype=uint8), "logical": "None"}
-    #
-    # def save_tables(self):
-    #     logging.info("Save results tables and validation images")
-    #     if not self.parent().po.vars['several_blob_per_arena']:
-    #         try:
-    #             self.one_row_per_arena.to_csv("one_row_per_arena.csv", sep=";", index=False, lineterminator='\n')
-    #         except PermissionError:
-    #             logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-    #             self.message_from_thread.emit(f"Never let one_row_per_arena.csv open when Cellects runs")
-    #         try:
-    #             self.one_row_per_frame.to_csv("one_row_per_frame.csv", sep=";", index=False, lineterminator='\n')
-    #         except PermissionError:
-    #             logging.error("Never let one_row_per_frame.csv open when Cellects runs")
-    #             self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
-    #     if self.parent().po.vars['oscilacyto_analysis']:
-    #         try:
-    #             self.one_row_per_oscillating_cluster.to_csv("one_row_per_oscillating_cluster.csv", sep=";", index=False,
-    #                                                         lineterminator='\n')
-    #         except PermissionError:
-    #             logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-    #             self.message_from_thread.emit(f"Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-    #     if self.parent().po.vars['fractal_analysis']:
-    #         try:
-    #             self.fractal_box_sizes.to_csv("fractal_box_sizes.csv", sep=";", index=False,
-    #                                                         lineterminator='\n')
-    #         except PermissionError:
-    #             logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
-    #             self.message_from_thread.emit(f"Never let fractal_box_sizes.csv open when Cellects runs")
-    #
-    #     if self.parent().po.all['extension'] == '.JPG':
-    #         extension = '.PNG'
-    #     else:
-    #         extension = '.JPG'
-    #     imwrite(f"Analysis efficiency, last image{extension}", self.parent().po.last_image.bgr)
-    #     imwrite(
-    #         f"Analysis efficiency, {ceil(self.parent().po.vars['img_number'] / 10).astype(uint64)}th image{extension}",
-    #         self.parent().po.first_image.bgr)
-    #     # self.save_analysis_parameters.to_csv("analysis_parameters.csv", sep=";")
-    #
-    #     software_settings = self.parent().po.vars.copy()
-    #     for key in ['descriptors', 'analyzed_individuals', 'exif', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
-    #         software_settings.pop(key, None)
-    #     global_settings = self.parent().po.all.copy()
-    #     for key in ['analyzed_individuals', 'night_mode', 'expert_mode', 'is_auto', 'arena', 'video_option', 'compute_all_options', 'vars', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
-    #         global_settings.pop(key, None)
-    #     software_settings.update(global_settings)
-    #     software_settings = df.from_dict(software_settings, columns=["Setting"], orient='index')
-    #     try:
-    #         software_settings.to_csv("software_settings.csv", sep=";")
-    #     except PermissionError:
-    #         logging.error("Never let software_settings.csv open when Cellects runs")
-    #         self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
-    #
-    # def add_analysis_visualization_to_first_and_last_images(self, i, first_visualization, last_visualization):
-    #     cr = ((self.parent().po.top[i], self.parent().po.bot[i] + 1),
-    #           (self.parent().po.left[i], self.parent().po.right[i] + 1))
-    #     if self.parent().po.vars['arena_shape'] == 'circle':
-    #         ellipse = Ellipse((cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])).create()
-    #         ellipse = stack((ellipse, ellipse, ellipse), axis=2).astype(uint8)
-    #         first_visualization *= ellipse
-    #         self.parent().po.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-    #         self.parent().po.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
-    #         last_visualization *= ellipse
-    #         self.parent().po.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-    #         self.parent().po.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
-    #     else:
-    #         self.parent().po.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
-    #         self.parent().po.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
-    #
 
 def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subtotals: Queue) -> None:
     grouped_results = []

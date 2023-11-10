@@ -3,6 +3,7 @@
 
 import os
 import logging
+from pathlib import Path
 from numpy import min, max, all, any, uint8, zeros
 from cv2 import resize, waitKey, destroyAllWindows
 from PySide6 import QtWidgets, QtCore
@@ -112,7 +113,7 @@ class FirstWindow(WindowType):
                                       tip="Path to the folder containing images or videos\nThe selected folder may also contain several folders of data",
                                       night_mode=self.parent().po.all['night_mode'])
         self.folder_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.global_pathway = EditText(self.parent().po.all['global_pathway'],
+        self.global_pathway = EditText(str(self.parent().po.all['global_pathway']),
                                        night_mode=self.parent().po.all['night_mode'])
         self.global_pathway.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.global_pathway.textChanged.connect(self.pathway_changed)
@@ -220,10 +221,10 @@ class FirstWindow(WindowType):
 
     def browse_is_clicked(self):
         dialog = QtWidgets.QFileDialog()
-        dialog.setDirectory(self.parent().po.all['global_pathway'])
-        self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
-                                                                             'Select a folder containing images (/videos) or folders of data images (/videos)')
-        self.global_pathway.setText(self.parent().po.all['global_pathway'])
+        dialog.setDirectory(str(self.parent().po.all['global_pathway']))
+        self.parent().po.all['global_pathway'] = Path(dialog.getExistingDirectory(self,
+                                                                             'Select a folder containing images (/videos) or folders of data images (/videos)'))
+        self.global_pathway.setText(str(self.parent().po.all['global_pathway']))
 
     def im2vid(self):
         if self.im_or_vid.currentText() == "Image list":
@@ -250,7 +251,6 @@ class FirstWindow(WindowType):
         self.display_video.update_image(dictionary['current_image'])
 
     def next_is_clicked(self):
-        ##
         if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
             self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
             self.parent().po.all['radical'] = self.radical.text()
@@ -263,7 +263,7 @@ class FirstWindow(WindowType):
                 logging.info("No need to look for data, images or videos already found previously.")
                 self.first_im_read(True)
             else:
-                self.parent().po.all['global_pathway'] = self.global_pathway.text()
+                self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
                 if not os.path.isdir(self.parent().po.all['global_pathway']):
                     self.message.setText('The folder selected is not valid')
                 else:
@@ -346,7 +346,7 @@ class FirstWindow(WindowType):
         if self.thread["LoadDataToRunCellectsQuickly"].isRunning():
             self.thread["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(self.global_pathway.text()):
-            self.parent().po.all['global_pathway'] = self.global_pathway.text()
+            self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
             logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
             os.chdir(self.parent().po.all['global_pathway'])
             # 1) Put invisible widgets
