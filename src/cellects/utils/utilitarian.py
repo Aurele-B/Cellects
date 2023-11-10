@@ -11,7 +11,7 @@ import time
 # methods = ["get_" in i for i in elem_list] # grepl
 from numba.typed import Dict
 from numba import njit
-#from pathlib import Path
+from pathlib import Path
 
 
 @njit()
@@ -48,13 +48,12 @@ def reduce_path_len(pathway, to_start, from_end):
     pathway=Path(os.getcwd())
     reduce_path_len(pathway, 15, 4, 8)
     """
-    max_size = to_start + from_end + 3
     if not isinstance(pathway, str):
         pathway = str(pathway)
+    max_size = to_start + from_end + 3
     if len(pathway) > max_size:
-        return pathway[:to_start] + "..." + pathway[-from_end:]
-    else:
-        return pathway
+        pathway = pathway[:to_start] + "..." + pathway[-from_end:]
+    return pathway
 
 
 def find_nearest(array, value):

@@ -1574,8 +1574,8 @@ class MotionAnalysis:
             #self.statistics["mean_period_over_5_strongest_in_min"] = mean(ampl_and_periods[:, 1] * self.time_interval)
             try:
                 oscillations_sign = sign(oscillations_sign)
-            except np.core._exceptions._ArrayMemoryError:
-                logging.error("Not enough RAM. Retry without opening any program during analysis")
+            except Exception as exc:
+                logging.error(f"Not enough RAM. Retry without opening any program during analysis. Numpy message: {exc}")
             mean_cluster_area = zeros(oscillations_sign.shape[0])
             cluster_number = zeros(oscillations_sign.shape[0])
             dotted_image = ones(self.converted_video.shape[1:3], uint8)

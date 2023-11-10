@@ -149,7 +149,7 @@ class ProgramOrganizer:
         # dd = DefaultDicts()
         # self.all = dd.all
         # self.vars = dd.vars
-        self.all['global_pathway'] = "D:/Directory/Data/100/101-104"
+        self.all['global_pathway'] = Path("D:/Directory/Data/100/101-104")
         self.all['first_folder_sample_number'] = 8
         # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
         # self.all['first_folder_sample_number'] = 6
@@ -243,10 +243,7 @@ class ProgramOrganizer:
             #     self.sample_number = self.all['sample_number_per_folder']
 
     def update_folder_id(self, sample_number, folder_name=""):
-        if isinstance(self.all['global_pathway'], str):
-            os.chdir(self.all['global_pathway'] + "/" + folder_name)
-        else:
-            os.chdir(self.all['global_pathway'] / folder_name)
+        os.chdir(self.all['global_pathway'] / folder_name)
         self.data_list = glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
@@ -1240,16 +1237,26 @@ class ProgramOrganizer:
             for name, do_compute in self.vars['descriptors'].items():
                 if do_compute and not isin(name, not_to_consider):
                     descriptors.append(name)
-            self.one_row_per_frame = df(zeros((len(self.vars['analyzed_individuals']) *
-                                               self.vars['img_number'],
-                                               len(descriptors) + 2)),
+
+            self.one_row_per_frame = df(index=range(len(self.vars['analyzed_individuals']) *
+                                               self.vars['img_number']),
                                         columns=['arena', 'time'] + descriptors)
+
+            # self.one_row_per_frame = df(zeros((len(self.vars['analyzed_individuals']) *
+            #                                    self.vars['img_number'],
+            #                                    len(descriptors) + 2)),
+            #                             columns=['arena', 'time'] + descriptors)
+
         if self.vars['oscilacyto_analysis']:
-            self.one_row_per_oscillating_cluster = df(empty((0, 5), dtype=float32),
-                                                      columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
+            self.one_row_per_oscillating_cluster = df(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
                                                                'edge_distance'])
+            # self.one_row_per_oscillating_cluster = df(empty((0, 5), dtype=float32),
+            #                                           columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
+            #                                                    'edge_distance'])
+
         if self.vars['fractal_analysis']:
-            self.fractal_box_sizes = df(empty((0, 4), dtype=float32), columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
+            self.fractal_box_sizes = df(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
+            # self.fractal_box_sizes = df(empty((0, 4), dtype=float32), columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
 
         if self.vars['already_greyscale']:
             if len(self.first_image.bgr.shape) == 2:
