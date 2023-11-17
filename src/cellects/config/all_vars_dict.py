@@ -103,7 +103,7 @@ class DefaultDicts:
             'video_fps': 60,
             'videos_extension': '.mp4',
             'exif': [],
-            'lose_accuracy_to_save_memory': False,
+            'lose_accuracy_to_save_memory': True,
 
             # Data stored during analysis:
             'descriptors': descriptors,

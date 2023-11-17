@@ -159,7 +159,10 @@ class OneImageAnalysis:
             self.binary_image = otsu_thresholding(self.image)
             if self.previous_binary_image is not None:
                 if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum():
+                    # Ones of the binary image have more in common with the background than with the specimen
                     self.binary_image = 1 - self.binary_image
+                self.binary_image = self.correct_with_previous_binary_image(self.binary_image.copy())
+
             if logical != 'None':
                 # logging.info("Segment the image using Otsu thresholding")
                 self.binary_image2 = otsu_thresholding(self.image2)
@@ -167,6 +170,8 @@ class OneImageAnalysis:
                     if (self.binary_image2 * (1 - self.previous_binary_image)).sum() > (
                             self.binary_image2 * self.previous_binary_image).sum():
                         self.binary_image2 = 1 - self.binary_image2
+                    self.binary_image2 = self.correct_with_previous_binary_image(self.binary_image2.copy())
+
         if logical != 'None':
             if logical == 'Or':
                 self.binary_image = np.logical_or(self.binary_image, self.binary_image2)
@@ -175,6 +180,18 @@ class OneImageAnalysis:
             elif logical == 'Xor':
                 self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
             self.binary_image = self.binary_image.astype(np.uint8)
+
+
+    def correct_with_previous_binary_image(self, binary_image):
+        # If binary image is more than twenty times bigger or smaller than the previous binary image:
+        # otsu thresholding failed, we use a threshold of 127 instead
+        if binary_image.sum() > self.previous_binary_image.sum() * 20 or binary_image.sum() < self.previous_binary_image.sum() * 0.05:
+            binary_image = self.image >= 127
+            # And again, make sure than these pixels are shared with the previous binary image
+            if (binary_image * (1 - self.previous_binary_image)).sum() > (binary_image * self.previous_binary_image).sum():
+                binary_image = 1 - binary_image
+        return binary_image
+
 
     def get_largest_shape(self):
         shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)

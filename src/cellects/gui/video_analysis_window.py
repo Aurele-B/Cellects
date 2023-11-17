@@ -70,7 +70,7 @@ class VideoAnalysisWindow(WindowType):
 
         self.arena_widget = QtWidgets.QWidget()
         self.arena_layout = QtWidgets.QHBoxLayout()
-        self.arena_label = FixedText('arena to analyze:', align='c',
+        self.arena_label = FixedText('Arena to analyze:',
                                        tip="Among selected folders, choose a arena from the first folder\nThen, click on *Quick (or *Full) detection* to load and analyse one arena\nFinally, click on *Read* to see the resulting analysis\n\nSupplementary information:\nLoading will be faster if videos are already saved as ind_*.npy\n*Post processing* automatically runs *Detection* and *Detection* automatically runs *Load One arena*\nEach being faster than the previous one",
                                        night_mode=self.parent().po.all['night_mode'])
         # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
@@ -86,12 +86,12 @@ class VideoAnalysisWindow(WindowType):
                                night_mode=self.parent().po.all['night_mode'])
         self.arena.valueChanged.connect(self.arena_changed)
 
-        self.arena_layout.addItem(horzspaceItem)
+        # self.arena_layout.addItem(horzspaceItem)
         self.arena_layout.addWidget(self.arena_label)
         self.arena_layout.addWidget(self.arena)
-        self.arena_layout.addItem(horzspaceItem)
+        # self.arena_layout.addItem(horzspaceItem)
         self.arena_widget.setLayout(self.arena_layout)
-        self.arena_layout.setAlignment(QtCore.Qt.AlignHCenter)
+        # self.arena_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.left_options_layout.addWidget(self.arena_widget)
 
 
@@ -100,14 +100,13 @@ class VideoAnalysisWindow(WindowType):
 
         self.max_growth_per_frame = Spinbox(min=0, max=0.5, val=self.parent().po.vars['max_growth_per_frame'],
                                             decimals=3, night_mode=self.parent().po.all['night_mode'])
-        self.max_growth_per_frame_label = FixedText('Maximal growth factor',
+        self.max_growth_per_frame_label = FixedText('Maximal growth factor:',
                                                     tip="This factor should be tried and increased (resp. decreases)\nif the analysis underestimates (resp. overestimates) the cell size.\nThe maximal growth factor is a proportion of pixels in the image. \nIt tells Cellects how much the cell(s) can possibly move or grow from one image to the next.\nIn other words, this is the upper limit of the proportion of the image\nthat can change from being the background to being covered by the cell(s).",
                                                     night_mode=self.parent().po.all['night_mode'])
         self.max_growth_per_frame.valueChanged.connect(self.max_growth_per_frame_changed)
-        # self.max_growth_per_frame_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.growth_per_frame_layout.addWidget(self.max_growth_per_frame_label)
         self.growth_per_frame_layout.addWidget(self.max_growth_per_frame)
-        self.growth_per_frame_layout.setAlignment(QtCore.Qt.AlignHCenter)
+        # self.growth_per_frame_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.growth_per_frame_widget.setLayout(self.growth_per_frame_layout)
         self.left_options_layout.addWidget(self.growth_per_frame_widget)
 
@@ -115,18 +114,18 @@ class VideoAnalysisWindow(WindowType):
         self.iterate_layout = QtWidgets.QHBoxLayout()
         self.iterate_smoothing = Spinbox(min=0, max=10, val=self.parent().po.vars['iterate_smoothing'],
                                          night_mode=self.parent().po.all['night_mode'])
-        self.iterate_smoothing_label = FixedText('Repeat video smoothing',
+        self.iterate_smoothing_label = FixedText('Repeat video smoothing:',
                                                  tip="Increase (with steps of 1) if video noise is the source of detection failure",
                                                  night_mode=self.parent().po.all['night_mode'])
         self.iterate_smoothing.valueChanged.connect(self.iterate_smoothing_changed)
         self.iterate_layout.addWidget(self.iterate_smoothing_label)
         self.iterate_layout.addWidget(self.iterate_smoothing)
-        self.iterate_layout.setAlignment(QtCore.Qt.AlignHCenter)
+        # self.iterate_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.iterate_widget.setLayout(self.iterate_layout)
         self.left_options_layout.addWidget(self.iterate_widget)
 
 
-        self.select_option_label = FixedText('Select analysis option',
+        self.select_option_label = FixedText('Select analysis option:',
                                              tip='Select the option allowing the best cell delimitation.',
                                              night_mode=self.parent().po.all['night_mode'])
         self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
@@ -531,16 +530,16 @@ class VideoAnalysisWindow(WindowType):
         if self.thread['VideoReader'].isRunning():  # VideoReaderThreadInThirdWidget
             self.thread['VideoReader'].wait()
         if self.parent().po.load_quick_full > 0:
-            image = self.parent().po.motion.segmentation[0, ...]
+            image = self.parent().po.motion.segmentation[-1, ...]
         # image = morphologyEx(self.parent().po.origins_list[self.parent().po.all['arena'] - 1], MORPH_GRADIENT,
         #                      self.parent().po.motion.cross_33)
         if self.parent().po.motion.visu is None:
-            image = self.parent().po.motion.converted_video[0, ...] * (1 - image)
+            image = self.parent().po.motion.converted_video[-1, ...] * (1 - image)
             image = round(image).astype(uint8)
             image = stack((image, image, image), axis=2)
         else:
             image = stack((image, image, image), axis=2)
-            image = self.parent().po.motion.visu[0, ...] * (1 - image)
+            image = self.parent().po.motion.visu[-1, ...] * (1 - image)
         self.parent().image_to_display = image
         self.display_video.update_image(image)
 

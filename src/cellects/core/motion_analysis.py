@@ -437,6 +437,7 @@ class MotionAnalysis:
             self.segmentation = zeros(self.dims, dtype=uint8)
             # but a background value instead of zeros at the border of the image
             for frame_i in arange(self.dims[0]):
+                # frame_i = 0
                 image_i = self.converted_video[frame_i, ...]
                 image_i = OneImageAnalysis(image_i)
                 image_i.bio_label = self.vars["bio_label"]

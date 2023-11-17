@@ -1729,6 +1729,7 @@ class ImageAnalysisWindow(WindowType):
         self.reinitialize_image_and_masks(self.parent().po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
         self.parent().po.current_combination_id = 0
+        self.advanced_mode_cb.setChecked(True)
         self.visualize_is_clicked()
         self.user_drawn_lines_label.setText('Select and draw')
         self.user_drawn_lines_label.setVisible(True)
