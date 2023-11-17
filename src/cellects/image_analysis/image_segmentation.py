@@ -142,6 +142,7 @@ def get_otsu_threshold(image):
     threshold = bin_mids[:-1][index_of_max_val]
     return threshold
 
+
 @njit()
 def otsu_thresholding(image):
     """

@@ -805,7 +805,8 @@ class OneArenaThread(QtCore.QThread):
         self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
             self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
-        self.parent().po.motion.detection(compute_all_possibilities=True)
+        # self.parent().po.motion.detection(compute_all_possibilities=True)
+        self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         # if self.parent().po.vars['color_number'] > 2:
 
     def post_processing(self):
@@ -844,15 +845,18 @@ class OneArenaThread(QtCore.QThread):
             if self.parent().po.vars['color_number'] > 2:
                 mask = self.parent().po.motion.segmentation
             else:
-                if seg_i == 0:
-                    mask = self.parent().po.motion.luminosity_segmentation
-                elif seg_i == 1:
-                    mask = self.parent().po.motion.gradient_segmentation
-                elif seg_i == 2:
-                    mask = self.parent().po.motion.logical_and
-                elif seg_i == 3:
-                    mask = self.parent().po.motion.logical_or
-                elif seg_i == 4:
+                if self.parent().po.all['compute_all_options']:
+                    if seg_i == 0:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif seg_i == 1:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif seg_i == 2:
+                        mask = self.parent().po.motion.logical_and
+                    elif seg_i == 3:
+                        mask = self.parent().po.motion.logical_or
+                    elif seg_i == 4:
+                        mask = self.parent().po.motion.segmentation
+                else:
                     mask = self.parent().po.motion.segmentation
 
             if self.parent().po.vars['color_number'] > 2 or seg_i == 4:
@@ -991,16 +995,19 @@ class VideoReaderThread(QtCore.QThread):
                 # is the only option to display
             else:
                 # display one of these 4 options
-                if self.parent().po.all['video_option'] == 0:
-                    mask = self.parent().po.motion.luminosity_segmentation
-                elif self.parent().po.all['video_option'] == 1:
-                    mask = self.parent().po.motion.gradient_segmentation
-                elif self.parent().po.all['video_option'] == 2:
-                    mask = self.parent().po.motion.logical_and
-                elif self.parent().po.all['video_option'] == 3:
-                    mask = self.parent().po.motion.logical_or
-                elif self.parent().po.all['video_option'] == 4:
-                    mask = self.parent().po.motion.segmentation
+                try:
+                    if self.parent().po.all['video_option'] == 0:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif self.parent().po.all['video_option'] == 1:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif self.parent().po.all['video_option'] == 2:
+                        mask = self.parent().po.motion.logical_and
+                    elif self.parent().po.all['video_option'] == 3:
+                        mask = self.parent().po.motion.logical_or
+                    elif self.parent().po.all['video_option'] == 4:
+                        mask = self.parent().po.motion.segmentation
+                except AttributeError:
+                    mask = zeros(self.parent().po.motion.dims, dtype=uint8)
 
             if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 4:
                 video_mask = mask
