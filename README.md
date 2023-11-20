@@ -17,7 +17,13 @@ To install Cellects, you can:
 
 ### 2. From this repository
 - Install python 11 (https://www.python.org/downloads/release/python-3116/)
-- Clone this repository (https://github.com/Aurele-B/Cellects.git) in your favorite IDE
+- Install git (https://git-scm.com/downloads)
+- Clone this repository (https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE)
+```
+cd path/toward/an/existing/folder/
+git clone https://github.com/Aurele-B/Cellects.git
+cd path/toward/an/existing/folder/Cellects/
+```
 - Upgrade pip:
 ```
 pip install --upgrade pip
