@@ -229,7 +229,7 @@ def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
     if max_distance is not None:
         if max_distance > min(original_shape.shape) / 2:
             max_distance = (min(original_shape.shape) // 2).astype(uint32)
-        gravity_field = zeros(original_shape.shape, uint8)
+        gravity_field = zeros(original_shape.shape, uint32)
         for gravi in arange(max_distance):
             expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT,
                                 borderValue=0)

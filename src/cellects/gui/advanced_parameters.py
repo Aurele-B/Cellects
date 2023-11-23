@@ -116,7 +116,7 @@ class AdvancedParameters(WindowType):
         self.distant_shape_integration_label = FixedText('Connect distant shapes',
                                                          tip="Allows a homemade algorithm allowing to\nprogressively (i.e. at the growth rate speed of neighboring pixels)\nconnect distant shapes to original shape(s)",
                                                          night_mode=self.parent().po.all['night_mode'])
-        self.ease_distant_shape_integration = Spinbox(min=0, max=10,
+        self.ease_distant_shape_integration = Spinbox(min=0, max=1000000,
                                                       val=self.parent().po.vars['ease_distant_shape_integration'],
                                                       night_mode=self.parent().po.all['night_mode'])
         self.ease_distant_shape_integration_label = FixedText('Detection range factor:',

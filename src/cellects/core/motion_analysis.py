@@ -99,7 +99,10 @@ class MotionAnalysis:
             self.get_origin_shape()
             # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
             # substantial image: if any of them is not detected, the program considers there is not exp.
-            step = self.dims[0] // 20
+            if self.dims[0] >= 40:
+                step = self.dims[0] // 20
+            else:
+                step = 1
             if self.start >= (self.dims[0] - step - 1):
                 self.start = None
             else:
@@ -285,10 +288,10 @@ class MotionAnalysis:
 
     def get_origin_shape(self):
         logging.info(f"Arena n°{self.statistics['arena']}. Make sure of origin shape")
+        self.start = 1
         if self.vars['origin_state'] == "invisible":
             # Use simple thresholding to detect when invisible biomatter becomes visible.
             # When it covers 20 pixels at least
-            self.start = 2
             while logical_and(sum(frame_i.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
                 frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
                 frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
@@ -311,7 +314,6 @@ class MotionAnalysis:
             self.origin_idx = nonzero(self.origin)
             self.substantial_growth = self.origin.sum() + 250
         else:
-            self.start = 2
 
             """
             ori_sum = self.origin.sum()
@@ -413,11 +415,14 @@ class MotionAnalysis:
                 self.step = (round(mean(cover_lengths[cover_lengths > 0])).astype(uint32) // 2) + 1
                 logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
             else:
-                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value = 10")
+                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value is 1 for video length < 40 and 10 otherwise")
 
             # Make sure to avoid a step overestimation
             if self.step > self.dims[0] // 20:
                 self.step = self.dims[0] // 20
+
+            if self.step == 0:
+                self.step = 1
         # When the first_move_threshold is not stringent enough the program may detect a movement due to noise
         # In that case, the substantial_image is empty and there is no reason to proceed further
         else:
@@ -446,7 +451,8 @@ class MotionAnalysis:
                 if frame_i == 0:
                     image_i.previous_binary_image = self.origin
                 else:
-                    image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
+                    if self.vars['origin_state'] != "constant":
+                        image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
                 image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
                 if self.vars['drift_already_corrected']:
@@ -818,7 +824,7 @@ class MotionAnalysis:
         frame_counter = -1
         maximal_size = 0.5 * new_potentials.size
         # NEW: Uncomment the two next lines for futures updates:
-        if (self.vars["do_value_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > (self.start + self.step):
+        if (self.vars["do_value_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > max((self.start + self.step, 6)):
            maximal_size = min((max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['max_growth_per_frame']), self.borders.sum()))
         while logical_and(sum(new_potentials) > maximal_size,
                              frame_counter <= 5):  # logical_and(sum(new_potentials > 0) > 5 * sum(dila_ring), frame_counter <= 5):
