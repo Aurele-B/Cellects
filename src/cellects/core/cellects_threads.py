@@ -784,7 +784,11 @@ class OneArenaThread(QtCore.QThread):
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                 self.parent().po.converted_video2 = self.parent().po.motion.converted_video2.copy()
         self.parent().po.motion.get_origin_shape()
-        step = self.parent().po.motion.dims[0] // 20
+
+        if self.parent().po.motion.dims[0] >= 40:
+            step = self.parent().po.motion.dims[0] // 20
+        else:
+            step = 1
         if self.parent().po.motion.start >= (self.parent().po.motion.dims[0] - step - 1):
             self.parent().po.motion.start = None
         else:
@@ -871,6 +875,7 @@ class OneArenaThread(QtCore.QThread):
             analysis_i.initialize_post_processing()
             analysis_i.t = analysis_i.start
             # print_progress = ForLoopCounter(self.start)
+
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
                 contours = nonzero(

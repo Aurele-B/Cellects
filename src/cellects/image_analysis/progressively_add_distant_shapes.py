@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Contains the class: ProgressivelyAddDistantShapes"""
-from numpy import isin, argmax, delete, arange, zeros, uint8, max, min, any, logical_and, logical_or, uint64, nonzero, sum, unique
+from numpy import isin, argmax, delete, arange, zeros, uint8, max, min, any, logical_and, logical_or, uint64, nonzero, sum, unique, append, empty, uint32
 from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
-from cellects.image_analysis.morphological_operations import make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc
-
+from cellects.image_analysis.morphological_operations import make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
 
 
 
@@ -117,28 +116,84 @@ class ProgressivelyAddDistantShapes:
             self.expanded_shape = self.main_shape
 
     def expand_smalls_toward_main(self):
+        # other_shapes = zeros(self.main_shape.shape, uint8)
+        # other_shapes[self.new_order > 1] = 1
+        # simple_disk = getStructuringElement(MORPH_CROSS, (3, 3))
+        # dil = 0
+        # while logical_and(dil <= self.max_distance, not any(other_shapes * self.main_shape)):
+        #     dil += 1
+        #     rings = dilate(other_shapes, simple_disk, iterations=1, borderType=BORDER_CONSTANT,
+        #                        borderValue=0)
+        #     rings = self.gravity_field * (rings - other_shapes)
+        #     max_field_feeling = max(rings)
+        #     if max_field_feeling > 0:  # If there is no shape within max_distance range, quit the loop
+        #         if dil == 1:
+        #             initial_pixel_number = sum(rings == max_field_feeling)
+        #         while sum(rings == max_field_feeling) > initial_pixel_number:
+        #             shrinking_stick = CompareNeighborsWithValue(rings, 8, uint8)
+        #             shrinking_stick.is_equal(max_field_feeling, True)
+        #             rings[shrinking_stick.equal_neighbor_nb < 2] = 0
+        #
+        #         other_shapes[rings == max_field_feeling] = 1
+        #     else:
+        #         break
+        # return other_shapes, max_field_feeling
+
+
         other_shapes = zeros(self.main_shape.shape, uint8)
         other_shapes[self.new_order > 1] = 1
         simple_disk = getStructuringElement(MORPH_CROSS, (3, 3))
-        dil = 0
-        while logical_and(dil <= self.max_distance, not any(other_shapes * self.main_shape)):
-            dil += 1
-            rings = dilate(other_shapes, simple_disk, iterations=1, borderType=BORDER_CONSTANT,
-                               borderValue=0)
-            rings = self.gravity_field * (rings - other_shapes)
-            max_field_feeling = max(rings)
-            if max_field_feeling > 0:  # If there is no shape within max_distance range, quit the loop
-                if dil == 1:
-                    initial_pixel_number = sum(rings == max_field_feeling)
-                while sum(rings == max_field_feeling) > initial_pixel_number:
-                    shrinking_stick = CompareNeighborsWithValue(rings, 8, uint8)
-                    shrinking_stick.is_equal(max_field_feeling, True)
-                    rings[shrinking_stick.equal_neighbor_nb < 2] = 0
+        kernel = Ellipse((5, 5)).create().astype(uint8)
+        # Dilate the main shape, progressively to infer in what order other shapes should be expanded toward it
+        main_shape = self.main_shape.copy()
+        new_order = self.new_order.copy()
+        order_of_shapes_to_expand = empty(0, dtype=uint32)
+        nb = 3
+        while nb > 2:
+            main_shape = dilate(main_shape, kernel)
+            connections = main_shape.copy()
+            connections *= new_order
+            new_connections = unique(connections)[2:]
+            new_order[isin(new_order, new_connections)] = 1
+            order_of_shapes_to_expand = append(order_of_shapes_to_expand, new_connections)
+            connections[main_shape > 0] = 1
+            connections[other_shapes > 0] = 1
+            nb, connections = connectedComponents(connections)
 
-                other_shapes[rings == max_field_feeling] = 1
-            else:
-                break
-        return other_shapes, max_field_feeling
+        expanded_main = self.main_shape.copy()
+        max_field_feeling = 0
+        for shape_i in order_of_shapes_to_expand:#  unique(self.new_order)[2:]:
+            current_shape = zeros(self.main_shape.shape, uint8)
+            current_shape[self.new_order == shape_i] = 1
+            dil = 0
+            while logical_and(dil <= self.max_distance, not any(current_shape * expanded_main)):
+                dil += 1
+                rings = dilate(current_shape, simple_disk, iterations=1, borderType=BORDER_CONSTANT,
+                               borderValue=0)
+
+                rings = self.gravity_field * (rings - current_shape)
+                max_field_feeling = max(rings)
+                if max_field_feeling > 0:  # If there is no shape within max_distance range, quit the loop
+                    if dil == 1:
+                        initial_pixel_number = sum(rings == max_field_feeling)
+                    while sum(rings == max_field_feeling) > initial_pixel_number:
+                        shrinking_stick = CompareNeighborsWithValue(rings, 8, uint32)
+                        shrinking_stick.is_equal(max_field_feeling, True)
+                        rings[shrinking_stick.equal_neighbor_nb < 2] = 0
+                    current_shape[rings == max_field_feeling] = 1
+                else:
+                    break
+
+            expanded_main[current_shape != 0] = 1
+        # See(other_shapes)
+        # See(expanded_main)
+            # np, a = connectedComponents(expanded_main)
+        return expanded_main, max_field_feeling
+
+
+
+
+
 
     def keep_connected_shapes(self):
         number, order = connectedComponents(self.expanded_shape, ltype=CV_16U)
