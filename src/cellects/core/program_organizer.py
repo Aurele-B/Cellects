@@ -56,7 +56,7 @@ class ProgramOrganizer:
         self.videos = None
         self.motion = None
         self.analysis_instance = None
-        self.current_video_option: uint8 = uint8(0)
+        self.computed_video_options = zeros(5, bool)
         self.vars = {}
         self.all = {}
         self.all['folder_list'] = []

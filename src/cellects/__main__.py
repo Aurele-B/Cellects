@@ -41,6 +41,7 @@ def run_cellects():
 
     # Start session
     session = CellectsMainWidget()
+    session.instantiate()
     session.show()
     sys.exit(app.exec())
 

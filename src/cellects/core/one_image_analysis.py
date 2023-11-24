@@ -190,7 +190,7 @@ class OneImageAnalysis:
             # And again, make sure than these pixels are shared with the previous binary image
             if (binary_image * (1 - self.previous_binary_image)).sum() > (binary_image * self.previous_binary_image).sum():
                 binary_image = 1 - binary_image
-        return binary_image
+        return binary_image.astype(np.uint8)
 
 
     def get_largest_shape(self):

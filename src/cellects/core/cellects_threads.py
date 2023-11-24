@@ -11,7 +11,7 @@ from cv2 import (connectedComponents, connectedComponentsWithStats, imwrite, dil
 from numba.typed import Dict as TDict
 from numpy import (
     min, max, all, any, pi, min, round, mean, diff, square,
-    zeros, array, arange, ones_like, isin, repeat, uint8,
+    zeros, array, arange, ones_like, ones, repeat, uint8,
     uint64, int64, save, nonzero, max, stack, uint32,
     c_, ceil, empty, float32, expand_dims, cumsum)
 from pandas import DataFrame as df
@@ -658,7 +658,7 @@ class OneArenaThread(QtCore.QThread):
         self.parent().po.get_first_image()
         self.parent().po.fast_image_segmentation(is_first_image=True)
         if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
-            self.message_from_thread_starting.emit(f"Image analysis failed to detect the right cell(s) number: (re)do the complete analysis.")
+            self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
             continue_analysis = False
         else:
             self.parent().po.cropping(is_first_image=True)
@@ -670,7 +670,7 @@ class OneArenaThread(QtCore.QThread):
             # self.parent().po.extract_exif()
             self.parent().po.get_background_to_subtract()
             if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                self.message_from_thread_starting.emit(f"Image analysis failed to detect the right cell(s) number: (re)do the complete analysis.")
+                self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
                 continue_analysis = False
             else:
                 self.parent().po.get_origins_and_backgrounds_lists()
@@ -811,6 +811,11 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
         # self.parent().po.motion.detection(compute_all_possibilities=True)
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
+        if self.parent().po.all['compute_all_options']:
+            self.parent().po.computed_video_options = ones(5, bool)
+        else:
+            self.parent().po.computed_video_options = zeros(5, bool)
+            self.parent().po.computed_video_options[self.parent().po.all['video_option']] = True
         # if self.parent().po.vars['color_number'] > 2:
 
     def post_processing(self):
@@ -845,28 +850,23 @@ class OneArenaThread(QtCore.QThread):
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             analysis_i.segmentation = zeros(analysis_i.converted_video.shape[:3], dtype=uint8)
-
-            if self.parent().po.vars['color_number'] > 2:
-                mask = self.parent().po.motion.segmentation
-            else:
-                if self.parent().po.all['compute_all_options']:
-                    if seg_i == 0:
-                        mask = self.parent().po.motion.luminosity_segmentation
-                    elif seg_i == 1:
-                        mask = self.parent().po.motion.gradient_segmentation
-                    elif seg_i == 2:
-                        mask = self.parent().po.motion.logical_and
-                    elif seg_i == 3:
-                        mask = self.parent().po.motion.logical_or
-                    elif seg_i == 4:
-                        mask = self.parent().po.motion.segmentation
+            if self.parent().po.all['compute_all_options']:
+                if seg_i == 0:
+                    analysis_i.segmentation = self.parent().po.motion.segmentation
                 else:
-                    mask = self.parent().po.motion.segmentation
-
-            if self.parent().po.vars['color_number'] > 2 or seg_i == 4:
-                analysis_i.segmentation = mask
+                    if seg_i == 1:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif seg_i == 2:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif seg_i == 3:
+                        mask = self.parent().po.motion.logical_and
+                    elif seg_i == 4:
+                        mask = self.parent().po.motion.logical_or
+                    analysis_i.segmentation[mask[0], mask[1], mask[2]] = 1
             else:
-                analysis_i.segmentation[mask[0], mask[1], mask[2]] = 1
+                if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    analysis_i.segmentation = self.parent().po.motion.segmentation
+
             analysis_i.start = time_parameters[0]
             analysis_i.step = time_parameters[1]
             analysis_i.lost_frames = time_parameters[2]
@@ -877,6 +877,7 @@ class OneArenaThread(QtCore.QThread):
             # print_progress = ForLoopCounter(self.start)
 
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
+                # analysis_i.update_shape(True)
                 analysis_i.update_shape(False)
                 contours = nonzero(
                     morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT,
@@ -898,23 +899,24 @@ class OneArenaThread(QtCore.QThread):
                                            analysis_i.converted_video.shape[0], axis=0)
                 if self.parent().po.vars['color_number'] > 2:
                     self.message_from_thread_starting.emit(
-                        f"The only option available, when the image contains more than 2 colors, failed to detect motion. Try others parameters in the image analysis window")
+                        f"Failed to detect motion. Redo image analysis (with only 2 colors?)")
                 else:
                     self.message_from_thread_starting.emit(f"Tracking option n°{seg_i + 1} failed to detect motion")
 
-            if self.parent().po.vars['color_number'] > 2:
-                self.parent().po.motion.segmentation = analysis_i.binary
-            else:
+            if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
-                    self.parent().po.motion.luminosity_segmentation = nonzero(analysis_i.binary)
-                elif seg_i == 1:
-                    self.parent().po.motion.gradient_segmentation = nonzero(analysis_i.binary)
-                elif seg_i == 2:
-                    self.parent().po.motion.logical_and = nonzero(analysis_i.binary)
-                elif seg_i == 3:
-                    self.parent().po.motion.logical_or = nonzero(analysis_i.binary)
-                elif seg_i == 4:
                     self.parent().po.motion.segmentation = analysis_i.binary
+                elif seg_i == 1:
+                    self.parent().po.motion.luminosity_segmentation = nonzero(analysis_i.binary)
+                elif seg_i == 2:
+                    self.parent().po.motion.gradient_segmentation = nonzero(analysis_i.binary)
+                elif seg_i == 3:
+                    self.parent().po.motion.logical_and = nonzero(analysis_i.binary)
+                elif seg_i == 4:
+                    self.parent().po.motion.logical_or = nonzero(analysis_i.binary)
+            else:
+                self.parent().po.motion.segmentation = analysis_i.binary
+
         # self.message_from_thread_starting.emit("If there are problems, change some parameters and try again")
         self.when_detection_finished.emit("Post processing done, read to see the result")
 
@@ -995,31 +997,26 @@ class VideoReaderThread(QtCore.QThread):
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
         if self.parent().po.load_quick_full > 0:
-            if self.parent().po.vars['color_number'] > 2:
-                mask = self.parent().po.motion.segmentation
-                # is the only option to display
-            else:
-                # display one of these 4 options
-                try:
-                    if self.parent().po.all['video_option'] == 0:
-                        mask = self.parent().po.motion.luminosity_segmentation
-                    elif self.parent().po.all['video_option'] == 1:
-                        mask = self.parent().po.motion.gradient_segmentation
-                    elif self.parent().po.all['video_option'] == 2:
-                        mask = self.parent().po.motion.logical_and
-                    elif self.parent().po.all['video_option'] == 3:
-                        mask = self.parent().po.motion.logical_or
-                    elif self.parent().po.all['video_option'] == 4:
-                        mask = self.parent().po.motion.segmentation
-                except AttributeError:
-                    mask = zeros(self.parent().po.motion.dims, dtype=uint8)
 
-            if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 4:
-                video_mask = mask
+            if self.parent().po.all['compute_all_options']:
+                if self.parent().po.all['video_option'] == 0:
+                    video_mask = self.parent().po.motion.segmentation
+                else:
+                    if self.parent().po.all['video_option'] == 1:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif self.parent().po.all['video_option'] == 2:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif self.parent().po.all['video_option'] == 3:
+                        mask = self.parent().po.motion.logical_and
+                    elif self.parent().po.all['video_option'] == 4:
+                        mask = self.parent().po.motion.logical_or
+                    video_mask = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                    video_mask[mask[0], mask[1], mask[2]] = 1
             else:
-                video_mask = zeros(self.parent().po.motion.dims, dtype=uint8)
-                video_mask[mask[0], mask[1], mask[2]] = 1
-                # video_mask[mask] = 1
+                video_mask = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    video_mask = self.parent().po.motion.segmentation
+
             if self.parent().po.load_quick_full == 1:
                 video_mask = cumsum(video_mask.astype(uint32), axis=0)
                 video_mask[video_mask > 0] = 1
@@ -1047,30 +1044,32 @@ class ChangeOneRepResultThread(QtCore.QThread):
 
     def run(self):
         self.message_from_thread.emit(
-            f"Analyzing arena n°{self.parent().po.all['arena']} and replacing its new results in the final tables")
+            f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
         # self.parent().po.motion2 = deepcopy(self.parent().po.motion)
         if self.parent().po.motion.start is None:
             self.parent().po.motion.binary = repeat(expand_dims(self.parent().po.motion.origin, 0),
                                                      self.parent().po.motion.converted_video.shape[0], axis=0).astype(uint8)
         else:
-            if self.parent().po.vars['color_number'] > 2:
-                mask = self.parent().po.motion.segmentation
-            else:
+
+            if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
-                    mask = self.parent().po.motion.luminosity_segmentation
-                elif self.parent().po.all['video_option'] == 1:
-                    mask = self.parent().po.motion.gradient_segmentation
-                elif self.parent().po.all['video_option'] == 2:
-                    mask = self.parent().po.motion.logical_and
-                elif self.parent().po.all['video_option'] == 3:
-                    mask = self.parent().po.motion.logical_or
-                elif self.parent().po.all['video_option'] == 4:
-                    mask = self.parent().po.motion.segmentation
-            if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 4:
-                self.parent().po.motion.binary = mask
+                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+                else:
+                    if self.parent().po.all['video_option'] == 1:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif self.parent().po.all['video_option'] == 2:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif self.parent().po.all['video_option'] == 3:
+                        mask = self.parent().po.motion.logical_and
+                    elif self.parent().po.all['video_option'] == 4:
+                        mask = self.parent().po.motion.logical_or
+                    self.parent().po.motion.binary = zeros(self.parent().po.motion.dims, dtype=uint8)
+                    self.parent().po.motion.binary[mask[0], mask[1], mask[2]] = 1
             else:
-                self.parent().po.motion.binary = zeros(self.parent().po.motion.dims, dtype=uint8)
-                self.parent().po.motion.binary[mask[0], mask[1], mask[2]] = 1
+                self.parent().po.motion.binary = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+
         if self.parent().po.vars['do_fading']:
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
         self.parent().po.motion.get_descriptors_from_binary()
@@ -1117,8 +1116,8 @@ class RunAllThread(QtCore.QThread):
             self.message_from_thread.emit(message + ": Write videos...")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
                 analysis_status["continue"] = False
-                analysis_status["message"] = f"Wrong cell/colony number detected: redo the first image analysis."
-                self.message_from_thread.emit(f"Wrong cell/colony number detected: restart Cellects and do another analysis.")
+                analysis_status["message"] = f"Wrong specimen number: redo the first image analysis."
+                self.message_from_thread.emit(f"Wrong specimen number: restart Cellects and do another analysis.")
             else:
                 analysis_status = self.run_video_writing(message)
                 if analysis_status["continue"]:
@@ -1152,9 +1151,9 @@ class RunAllThread(QtCore.QThread):
                 if analysis_status["continue"]:
                     self.message_from_thread.emit(message + ": Write videos from images before analysis...")
                     if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
-                        self.message_from_thread.emit(f"Wrong cell/colony number detected: the first image analysis is mandatory.")
+                        self.message_from_thread.emit(f"Wrong specimen number: first image analysis is mandatory.")
                         analysis_status["continue"] = False
-                        analysis_status["message"] = f"Wrong cell/colony number detected: the first image analysis is mandatory."
+                        analysis_status["message"] = f"Wrong specimen number: first image analysis is mandatory."
                     else:
                         analysis_status = self.run_video_writing(message)
                         if analysis_status["continue"]:
@@ -1313,7 +1312,7 @@ class RunAllThread(QtCore.QThread):
                                 self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
                                 save(vid_names[arena_name], vid_list[arena_i])
                             except OSError:
-                                self.message_from_thread.emit(message + f"full disk memory, clear space and rerun")
+                                self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
                 logging.info("When they exist, do not overwrite unaltered video")
                 self.parent().po.all['overwrite_unaltered_videos'] = False
                 self.parent().po.save_variable_dict()

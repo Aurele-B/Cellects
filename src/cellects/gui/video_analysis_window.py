@@ -134,11 +134,11 @@ class VideoAnalysisWindow(WindowType):
         self.select_option.setFixedWidth(175)
         # self.select_option_label.setFixedWidth(265)
         # self.select_option.setFixedWidth(150)
-        self.select_option.addItem("1) Threshold")
-        self.select_option.addItem("2) Slope")
-        self.select_option.addItem("3) T and S")
-        self.select_option.addItem("4) T or S")
-        self.select_option.addItem("5) Frame")
+        self.select_option.addItem("1) Frame")
+        self.select_option.addItem("2) Threshold")
+        self.select_option.addItem("3) Slope")
+        self.select_option.addItem("4) T and S")
+        self.select_option.addItem("5) T or S")
         # for option in range(5):
         #     self.select_option.addItem(f"Option {option + 1}")
         self.select_option.setCurrentIndex(self.parent().po.all['video_option'])
@@ -372,24 +372,24 @@ class VideoAnalysisWindow(WindowType):
         self.parent().po.vars['do_value_segmentation'] = False
         self.parent().po.vars['do_slope_segmentation'] = False
 
-        if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 4:
+        if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 0:
             logging.info(f"This option will detect {self.parent().po.vars['color_number']} distinct luminosity groups for each frame.")
             self.parent().po.vars['frame_by_frame_segmentation'] = True
         else:
             self.parent().po.vars['frame_by_frame_segmentation'] = False
-            if self.parent().po.all['video_option'] == 0:
+            if self.parent().po.all['video_option'] == 1:
                 logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
                 self.parent().po.vars['do_value_segmentation'] = True
-            elif self.parent().po.all['video_option'] == 1:
+            elif self.parent().po.all['video_option'] == 2:
                 logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
                 self.parent().po.vars['do_slope_segmentation'] = True
-            elif self.parent().po.all['video_option'] > 1:
+            elif self.parent().po.all['video_option'] > 2:
                 self.parent().po.vars['do_value_segmentation'] = True
                 self.parent().po.vars['do_slope_segmentation'] = True
-                if self.parent().po.all['video_option'] == 2:
+                if self.parent().po.all['video_option'] == 3:
                     logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
                     self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = True
-                elif self.parent().po.all['video_option'] == 3:
+                elif self.parent().po.all['video_option'] == 4:
                     logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
                     self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = False
         # self.parent().po.motion
@@ -468,6 +468,7 @@ class VideoAnalysisWindow(WindowType):
         if not self.thread['VideoReader'].isRunning() and not self.thread['OneArena'].isRunning() and not self.thread['ChangeOneRepResult'].isRunning():
             self.parent().po.motion = None
             self.reset_general_step()
+            self.parent().po.computed_video_options = zeros(5, bool)
             self.parent().po.all['arena'] = int(round(self.arena.value()))
 
     def load_one_arena_is_clicked(self):
@@ -562,7 +563,7 @@ class VideoAnalysisWindow(WindowType):
                     self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
                     self.thread['ChangeOneRepResult'].start()  # ChangeOneRepResultThreadInThirdWidget
                     self.thread['ChangeOneRepResult'].message_from_thread.connect(self.display_message_from_thread)
-                    self.message.setText("Complete the analysis and change the corresponding result...")
+                    self.message.setText("Complete analysis + change that result")
                 else:
                     self.message.setText("Wait for the analysis to end")
             else:
@@ -571,18 +572,19 @@ class VideoAnalysisWindow(WindowType):
             self.message.setText("Run Post processing first")
 
     def read_is_clicked(self):
-
         if self.parent().po.motion is not None:
             if self.parent().po.motion.segmentation is not None:
                 if not self.thread['OneArena'].isRunning() and not self.thread['VideoReader'].isRunning():
                     self.thread['VideoReader'].start()  # VideoReaderThreadInThirdWidget
                     self.thread['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
+                    # if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    #     self.message.setText("Run detection to visualize analysis")
                 else:
                     self.message.setText("Wait for the analysis to end")
             else:
-                self.message.setText("Run one detection method first")
+                self.message.setText("Run detection first")
         else:
-            self.message.setText("Run one detection method first")
+            self.message.setText("Run detection first")
     #
     # def video_display(self, dictionary):
     #     self.drawn_image = dictionary['image']
@@ -608,7 +610,7 @@ class VideoAnalysisWindow(WindowType):
                     self.parent().po.converted_video = None
                     self.parent().po.converted_video2 = None
                     self.parent().po.visu = None
-                    self.message.setText("Complete analysis has started, wait until this message disappear...")
+                    self.message.setText("Complete analysis has started, wait...")
                     # if not self.parent().po.first_exp_ready_to_run:
                     #     self.parent().po.use_data_to_run_cellects_quickly = True
                     self.thread['RunAll'].start()  # RunAllThread
@@ -621,3 +623,14 @@ class VideoAnalysisWindow(WindowType):
 
     def closeEvent(self, event):
         event.accept
+
+
+# if __name__ == "__main__":
+#     from cellects.gui.cellects import CellectsMainWidget
+#     import sys
+#     app = QtWidgets.QApplication([])
+#     parent = CellectsMainWidget()
+#     session = VideoAnalysisWindow(parent, False)
+#     parent.insertWidget(0, session)
+#     parent.show()
+#     sys.exit(app.exec())

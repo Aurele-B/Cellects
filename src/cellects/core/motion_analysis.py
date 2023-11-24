@@ -448,11 +448,12 @@ class MotionAnalysis:
                 image_i.bio_label = self.vars["bio_label"]
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     image_i.image2 = self.converted_video2[frame_i, ...]
-                if frame_i == 0:
-                    image_i.previous_binary_image = self.origin
-                else:
-                    if self.vars['origin_state'] != "constant":
-                        image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
+                if not self.vars['drift_already_corrected']:
+                    if frame_i == 0:
+                        image_i.previous_binary_image = self.origin
+                    else:
+                        if self.vars['origin_state'] != "constant":
+                            image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
                 image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
                 if self.vars['drift_already_corrected']:
@@ -1931,7 +1932,7 @@ class MotionAnalysis:
         # if self.vars['descriptors_in_long_format']:
         #     self.whole_shape_descriptors.to_csv(f"shape_descriptors_{self.statistics['arena']}.csv", sep=";", index=False, lineterminator='\n')
 
-        if not self.vars['keep_unaltered_videos']:
+        if not self.vars['keep_unaltered_videos'] and os.path.isdir(f"ind_{self.statistics['arena']}.npy"):
             os.remove(f"ind_{self.statistics['arena']}.npy")
 
         # Provide images allowing to assess the analysis efficiency

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""This module creates the Advanced Parameters window of the user interface of Cellects"""
+
+
 import logging
 import os
 from numpy import min, max, all, any, uint8, uint32, round, concatenate, int8, nonzero, isin, array, all
@@ -1050,3 +1052,14 @@ class AdvancedParameters(WindowType):
     
     def closeEvent(self, event):
         event.accept
+
+
+# if __name__ == "__main__":
+#     from cellects.gui.cellects import CellectsMainWidget
+#     import sys
+#     app = QtWidgets.QApplication([])
+#     parent = CellectsMainWidget()
+#     session = AdvancedParameters(parent, False)
+#     parent.insertWidget(0, session)
+#     parent.show()
+#     sys.exit(app.exec())

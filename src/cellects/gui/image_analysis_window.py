@@ -84,6 +84,17 @@ class ImageAnalysisWindow(WindowType):
         self.first_row_layout.addWidget(self.image_number)
         self.first_row_layout.addWidget(self.read)
         self.first_row_layout.addItem(self.horizontal_space)
+
+        self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
+        self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
+        self.one_blob_per_arena_label = FixedText("One cell/colony per arena",
+                                                  tip="Check if there is always only one cell/colony per arena.\nUncheck if each experimental arena can contain several disconnected cells/colonies.",
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.first_row_layout.addWidget(self.one_blob_per_arena)
+        self.first_row_layout.addWidget(self.one_blob_per_arena_label)
+        self.first_row_layout.addItem(self.horizontal_space)
+
         self.scale_with_label = FixedText('Scale with',
                                         tip="What, on the image, should be considered to calculate pixel size in mm",
                                         night_mode=self.parent().po.all['night_mode'])
@@ -233,7 +244,8 @@ class ImageAnalysisWindow(WindowType):
         # self.central_row_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         # self.central_row_widget.setFixedHeight(self.parent().im_max_height)
         self.Vlayout.addWidget(self.central_row_widget)
-        self.Vlayout.setSpacing(0)
+        # self.Vlayout.setSpacing(0)
+        self.Vlayout.addItem(self.vertical_space)
 
         # 3) Add Set supplementary parameters row 1
         self.sup_param_row1_widget = QtWidgets.QWidget()
@@ -242,10 +254,6 @@ class ImageAnalysisWindow(WindowType):
         #                             decimals=0, night_mode=self.parent().po.all['night_mode'])
         # self.sample_number_label = FixedText("Arena per image", night_mode=self.parent().po.all['night_mode'])
         # self.sample_number.valueChanged.connect(self.sample_number_changed)
-        self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
-        self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
-        self.one_blob_per_arena_label = FixedText("One cell/colony per arena", tip="Check if there is always only one cell/colony per arena.\nUncheck if each experimental arena can contain several disconnected cells/colonies.",
-                                                        night_mode=self.parent().po.all['night_mode'])
 
         #HERE
 
@@ -309,12 +317,10 @@ class ImageAnalysisWindow(WindowType):
         self.carefully.clicked.connect(self.carefully_is_clicked)
         self.visualize = PButton('Visualize', night_mode=self.parent().po.all['night_mode'])
         self.visualize.clicked.connect(self.visualize_is_clicked)
-        self.visualize.setVisible(False)
         if self.parent().po.vars['already_greyscale']:
             self.visualize_label = FixedText("Directly: ", night_mode=self.parent().po.all['night_mode'])
         else:
             self.visualize_label = FixedText("Or directly: ", night_mode=self.parent().po.all['night_mode'])
-        self.visualize_label.setVisible(False)
 
         self.sup_param_row1_layout.addWidget(self.generate_analysis_options)
         self.sup_param_row1_layout.addWidget(self.quickly)
@@ -322,8 +328,6 @@ class ImageAnalysisWindow(WindowType):
         self.sup_param_row1_layout.addItem(self.horizontal_space)
         # self.sup_param_row1_layout.addWidget(self.sample_number)
         # self.sup_param_row1_layout.addWidget(self.sample_number_label)
-        self.sup_param_row1_layout.addWidget(self.one_blob_per_arena)
-        self.sup_param_row1_layout.addWidget(self.one_blob_per_arena_label)
         self.sup_param_row1_layout.addItem(self.horizontal_space)
         self.sup_param_row1_layout.addWidget(self.visualize_label)
         self.sup_param_row1_layout.addWidget(self.visualize)
@@ -607,8 +611,8 @@ class ImageAnalysisWindow(WindowType):
         self.logical_operator_label.setVisible(color_analysis and display_logical)
 
         # if not self.parent().po.vars['already_greyscale']:
-        self.visualize.setVisible(is_checked)
-        self.visualize_label.setVisible(is_checked)
+        # self.visualize.setVisible(is_checked)
+        # self.visualize_label.setVisible(is_checked)
         at_least_one_line_drawn = self.bio_masks_number > 0
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
@@ -1729,7 +1733,7 @@ class ImageAnalysisWindow(WindowType):
         self.reinitialize_image_and_masks(self.parent().po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
         self.parent().po.current_combination_id = 0
-        self.advanced_mode_cb.setChecked(True)
+        # self.advanced_mode_cb.setChecked(True)
         self.visualize_is_clicked()
         self.user_drawn_lines_label.setText('Select and draw')
         self.user_drawn_lines_label.setVisible(True)
@@ -1774,3 +1778,14 @@ class ImageAnalysisWindow(WindowType):
 
     def closeEvent(self, event):
         event.accept
+
+
+# if __name__ == "__main__":
+#     from cellects.gui.cellects import CellectsMainWidget
+#     import sys
+#     app = QtWidgets.QApplication([])
+#     parent = CellectsMainWidget()
+#     session = ImageAnalysisWindow(parent, False)
+#     parent.insertWidget(0, session)
+#     parent.show()
+#     sys.exit(app.exec())

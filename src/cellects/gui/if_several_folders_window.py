@@ -224,3 +224,14 @@ class IfSeveralFoldersWindow(WindowType):
 
     def closeEvent(self, event):
         event.accept
+
+
+# if __name__ == "__main__":
+#     from cellects.gui.cellects import CellectsMainWidget
+#     import sys
+#     app = QtWidgets.QApplication([])
+#     parent = CellectsMainWidget()
+#     session = IfSeveralFoldersWindow(parent, False)
+#     parent.insertWidget(0, session)
+#     parent.show()
+#     sys.exit(app.exec())

@@ -35,8 +35,8 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.pre_processing_done: bool = False
         self.screen_height = get_monitors()[0].height
         self.screen_width = get_monitors()[0].width
-        self.im_max_width = self.screen_width // 3
-        self.im_max_height = self.screen_height // 3
+        self.im_max_width = 570  # self.screen_width // 5 374, 296
+        self.im_max_height = 350  # self.screen_height // 5 (1369, 778)
         self.image_to_display = zeros(
             (self.im_max_height, self.im_max_width, 3),
             uint8)
@@ -48,16 +48,23 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.po.load_variable_dict()
         # self.parent().po.all['night_mode'] = True
 
-        #self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
         self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
         self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
-        #self.setMaximumWidth(self.screen_width)
-        #self.setMaximumHeight(self.screen_height)
-        self.setMaximumWidth(822)
-        self.setMaximumHeight(462)
+
+        self.setMaximumWidth(self.screen_width)
+        self.setMaximumHeight(self.screen_height)
+        # self.setMaximumWidth(822)
+        # self.setMaximumHeight(462)
+
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Maximum,
             QtWidgets.QSizePolicy.Maximum)
+
+        # self.setSizePolicy(
+        #     QtWidgets.QSizePolicy.Expanding,
+        #     QtWidgets.QSizePolicy.Expanding)
+
+    def instantiate(self):
 
         self.firstwindow = FirstWindow(
             self,
