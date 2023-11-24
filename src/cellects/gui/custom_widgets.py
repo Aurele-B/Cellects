@@ -70,7 +70,7 @@ class WindowType(QtWidgets.QWidget):
                                               QtWidgets.QSizePolicy.Maximum)
         self.vertical_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
                                               QtWidgets.QSizePolicy.MinimumExpanding)
-        self.resized.connect(self.center_window)
+        # self.resized.connect(self.center_window)
 
     def resizeEvent(self, event):
         '''
@@ -79,6 +79,7 @@ class WindowType(QtWidgets.QWidget):
         :return:
         '''
         self.resized.emit()
+        # print(self.size())
         return super(WindowType, self).resizeEvent(event)
 
     def center_window(self):
