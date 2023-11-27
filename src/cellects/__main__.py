@@ -9,8 +9,9 @@ from PySide6 import QtWidgets, QtGui
 from cellects.core.cellects_paths import ICONS_DIR
 
 # These two lines allow the taskbar icon to be cellects_icon instead if python icon.
-import ctypes
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
+if sys.platform.startswith('win'):
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
 
 
 LOGLEVEL = "INFO" #"DEBUG"
