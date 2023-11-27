@@ -36,7 +36,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.screen_height = get_monitors()[0].height
         self.screen_width = get_monitors()[0].width
         self.im_max_width = 570  # self.screen_width // 5 374, 296
-        self.im_max_height = 350  # self.screen_height // 5 (1369, 778)
+        self.im_max_height = 300# 350  # self.screen_height // 5 (1369, 778)
         self.image_to_display = zeros(
             (self.im_max_height, self.im_max_width, 3),
             uint8)
