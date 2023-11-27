@@ -310,6 +310,15 @@ class AdvancedParameters(WindowType):
 
         # I/ First box: Scales
         # I/A/ Title
+
+        self.right_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
+        self.right_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+        self.right_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
+        self.right_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.right_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        self.right_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+
+
         self.scale_box_label = FixedText('Spatio-temporal scaling:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
         self.right_col_layout.addWidget(self.scale_box_label)
@@ -465,8 +474,12 @@ class AdvancedParameters(WindowType):
         self.left_scroll_table.setWidgetResizable(True)
         self.central_layout.addWidget(self.left_scroll_table)
 
+
         self.central_layout.addItem(self.horizontal_space)
-        self.central_layout.addWidget(self.right_col_widget)
+        self.right_scroll_table.setWidget(self.right_col_widget)
+        self.right_scroll_table.setWidgetResizable(True)
+        self.central_layout.addWidget(self.right_scroll_table)
+        # self.central_layout.addWidget(self.right_col_widget)
         self.central_layout.addItem(self.horizontal_space)
         self.central_widget = QtWidgets.QWidget()
         self.central_widget.setLayout(self.central_layout)
@@ -593,15 +606,15 @@ class AdvancedParameters(WindowType):
         # self.edit_widget.setStyleSheet(boxstylesheet)
         self.edit_layout = QtWidgets.QVBoxLayout()
 
-        self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
-        # self.csc_scroll_table.setVisible(False)
-        # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.csc_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
-        # self.csc_scroll_table.setMinimumWidth(300)
-        self.csc_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.csc_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.csc_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        # self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
+        # # self.csc_scroll_table.setVisible(False)
+        # # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
+        # self.csc_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
+        # # self.csc_scroll_table.setMinimumWidth(300)
+        # self.csc_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
+        # self.csc_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        # self.csc_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.csc_table_widget = QtWidgets.QWidget()
         self.csc_table_layout = QtWidgets.QVBoxLayout()
 
@@ -731,10 +744,11 @@ class AdvancedParameters(WindowType):
         self.csc_table_layout.addWidget(self.more_than_2_colors_widget)
         self.csc_table_layout.addItem(self.vertical_space)
         self.csc_table_widget.setLayout(self.csc_table_layout)
-        self.csc_scroll_table.setWidget(self.csc_table_widget)
-        self.csc_scroll_table.setWidgetResizable(True)
-        self.edit_layout.addWidget(self.csc_scroll_table)
-        # self.edit_layout.addItem(self.vertical_space)
+
+        self.edit_layout.addWidget(self.csc_table_widget)
+        # self.csc_scroll_table.setWidget(self.csc_table_widget)
+        # self.csc_scroll_table.setWidgetResizable(True)
+        # self.edit_layout.addWidget(self.csc_scroll_table)
 
         # self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         # self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
@@ -1054,12 +1068,12 @@ class AdvancedParameters(WindowType):
         event.accept
 
 
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = AdvancedParameters(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())
+if __name__ == "__main__":
+    from cellects.gui.cellects import CellectsMainWidget
+    import sys
+    app = QtWidgets.QApplication([])
+    parent = CellectsMainWidget()
+    session = AdvancedParameters(parent, False)
+    parent.insertWidget(0, session)
+    parent.show()
+    sys.exit(app.exec())

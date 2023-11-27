@@ -79,7 +79,7 @@ class WindowType(QtWidgets.QWidget):
         :return:
         '''
         self.resized.emit()
-        # print(self.size())
+        print(self.size())
         return super(WindowType, self).resizeEvent(event)
 
     def center_window(self):
