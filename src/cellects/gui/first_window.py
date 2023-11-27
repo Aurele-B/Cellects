@@ -428,12 +428,12 @@ class FirstWindow(WindowType):
         event.accept
 
 
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = FirstWindow(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())
+if __name__ == "__main__":
+    from cellects.gui.cellects import CellectsMainWidget
+    import sys
+    app = QtWidgets.QApplication([])
+    parent = CellectsMainWidget()
+    session = FirstWindow(parent, False)
+    parent.insertWidget(0, session)
+    parent.show()
+    sys.exit(app.exec())
