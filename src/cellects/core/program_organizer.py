@@ -1336,12 +1336,12 @@ class ProgramOrganizer:
             self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
 
 
-if __name__ == "__main__":
-    po = ProgramOrganizer()
-    os.chdir(Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example"))
-    po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
-    po.load_variable_dict()
-    po.data_list = []
-    po.load_data_to_run_cellects_quickly()
-    po.save_data_to_run_cellects_quickly()
-    os.getcwd()
+# if __name__ == "__main__":
+#     po = ProgramOrganizer()
+#     os.chdir(Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example"))
+#     po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
+#     po.load_variable_dict()
+#     po.data_list = []
+#     po.load_data_to_run_cellects_quickly()
+#     po.save_data_to_run_cellects_quickly()
+#     os.getcwd()
