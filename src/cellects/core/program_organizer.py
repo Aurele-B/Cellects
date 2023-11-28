@@ -69,6 +69,7 @@ class ProgramOrganizer:
         self.vars['convert_for_origin'] = None
         self.vars['convert_for_motion'] = None
         self.current_combination_id = 0
+        self.data_list = []
         self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
 
     def save_variable_dict(self):
@@ -149,7 +150,7 @@ class ProgramOrganizer:
         # dd = DefaultDicts()
         # self.all = dd.all
         # self.vars = dd.vars
-        self.all['global_pathway'] = Path("D:/Directory/Data/100/101-104")
+        self.all['global_pathway'] = "D:/Directory/Data/100/101-104"
         self.all['first_folder_sample_number'] = 8
         # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
         # self.all['first_folder_sample_number'] = 6
@@ -210,7 +211,7 @@ class ProgramOrganizer:
 
     def look_for_data(self):
         # global_pathway = 'I:\Directory\Tracking_data\generalization_and_potentiation\drop_nak1'
-        os.chdir(self.all['global_pathway'])
+        os.chdir(Path(self.all['global_pathway']))
         logging.info(f"Dir: {self.all['global_pathway']}")
         self.data_list = glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
@@ -218,7 +219,6 @@ class ProgramOrganizer:
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
         if len(self.data_list) == 0:
-            # os.chdir("I:\Directory\Tracking_data\generalization_and_potentiation")
             content = os.listdir()
             for obj in content:
                 if not os.path.isfile(obj):
@@ -243,7 +243,7 @@ class ProgramOrganizer:
             #     self.sample_number = self.all['sample_number_per_folder']
 
     def update_folder_id(self, sample_number, folder_name=""):
-        os.chdir(self.all['global_pathway'] / folder_name)
+        os.chdir(Path(self.all['global_pathway']) / folder_name)
         self.data_list = glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
@@ -1334,3 +1334,14 @@ class ProgramOrganizer:
         except PermissionError:
             logging.error("Never let software_settings.csv open when Cellects runs")
             self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
+
+
+if __name__ == "__main__":
+    po = ProgramOrganizer()
+    os.chdir(Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example"))
+    po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
+    po.load_variable_dict()
+    po.data_list = []
+    po.load_data_to_run_cellects_quickly()
+    po.save_data_to_run_cellects_quickly()
+    os.getcwd()

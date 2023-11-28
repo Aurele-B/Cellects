@@ -113,7 +113,7 @@ class FirstWindow(WindowType):
                                       tip="Path to the folder containing images or videos\nThe selected folder may also contain several folders of data",
                                       night_mode=self.parent().po.all['night_mode'])
         self.folder_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.global_pathway = EditText(str(self.parent().po.all['global_pathway']),
+        self.global_pathway = EditText(self.parent().po.all['global_pathway'],
                                        night_mode=self.parent().po.all['night_mode'])
         self.global_pathway.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.global_pathway.textChanged.connect(self.pathway_changed)
@@ -222,9 +222,9 @@ class FirstWindow(WindowType):
     def browse_is_clicked(self):
         dialog = QtWidgets.QFileDialog()
         dialog.setDirectory(str(self.parent().po.all['global_pathway']))
-        self.parent().po.all['global_pathway'] = Path(dialog.getExistingDirectory(self,
-                                                                             'Select a folder containing images (/videos) or folders of data images (/videos)'))
-        self.global_pathway.setText(str(self.parent().po.all['global_pathway']))
+        self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
+                                                                             'Select a folder containing images (/videos) or folders of data images (/videos)')
+        self.global_pathway.setText(self.parent().po.all['global_pathway'])
 
     def im2vid(self):
         if self.im_or_vid.currentText() == "Image list":
@@ -348,7 +348,7 @@ class FirstWindow(WindowType):
         if os.path.isdir(self.global_pathway.text()):
             self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
             logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
-            os.chdir(self.parent().po.all['global_pathway'])
+            os.chdir(Path(self.parent().po.all['global_pathway']))
             # 1) Put invisible widgets
             self.radical.setVisible(False)
             self.extension.setVisible(False)
