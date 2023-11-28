@@ -50,3 +50,4 @@ def run_cellects():
 if __name__ == "__main__":
     run_cellects()
 
+""" put global_pathway en str"""

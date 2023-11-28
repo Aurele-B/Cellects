@@ -641,13 +641,14 @@ class OneVideoPerBlob:
 
 if __name__ == "__main__":
     from glob import glob
+    from pathlib import Path
     from cellects.core.cellects_paths import TEST_DIR
     from cellects.utils.load_display_save import *
     from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
     from numpy import sort, array
     # os.chdir(TEST_DIR / "experiment")
     # image = readim("IMG_7653.jpg")
-    os.chdir("D:/Directory/Data/100/101-104/")
+    os.chdir(Path("D:/Directory/Data/100/101-104/"))
     img_list = sort(glob("IMG_" + '*' + ".jpg"))
     image = readim(img_list[0])
     first_image = OneImageAnalysis(image)
