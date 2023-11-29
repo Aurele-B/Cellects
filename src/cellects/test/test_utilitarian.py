@@ -3,7 +3,7 @@
 This script contains all unit tests of the utilitarian script
 10 tests
 """
-
+import os
 import unittest
 from cellects.test.cellects_unit_test import CellectsUnitTest
 from cellects.utils.utilitarian import *
@@ -203,6 +203,23 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
             if i == 0:
                 self.assertEqual(progress, 0)
         self.assertEqual(progress, 100)
+
+
+class TestInsensitiveGlob(CellectsUnitTest):
+    def test_insensitive_glob_prefix(self):
+        os.chdir(self.path_input)
+        result = insensitive_glob("Last" + "*")
+        expected_result = ['last_binary_img.tif', 'last_original_img.tif']
+        self.assertEqual(result, expected_result)
+
+    def test_insensitive_glob_suffix(self):
+        os.chdir(self.path_input)
+        result = insensitive_glob("*.TIF")
+        expected_result = ['last_binary_img.tif', 'last_original_img.tif']
+        self.assertEqual(result, expected_result)
+
+
+
 
 
 if __name__ == '__main__':

@@ -36,7 +36,7 @@ class DefaultDicts:
             'first_folder_sample_number': 1,
             'first_move_threshold_in_mm²': 10,
             'folder_list': [],
-            'global_pathway': TEST_DIR / "experiment",
+            'global_pathway': str(TEST_DIR / "experiment"),
             'im_or_vid': 0,
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
