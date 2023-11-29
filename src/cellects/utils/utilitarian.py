@@ -12,6 +12,7 @@ import time
 from numba.typed import Dict
 from numba import njit
 from pathlib import Path
+from glob import glob
 
 
 @njit()
@@ -161,3 +162,14 @@ class PercentAndTimeTracker:
             self.current_step += 1
         return output
 
+
+def insensitive_glob(pattern):
+    """This function changes the behavior of glob so that it becomes case-insensitive
+
+    :param pattern: The pattern to look for in a given folder
+    :type pattern: str
+    :return: The list of files corresponding to that pattern
+    """
+    def either(c):
+        return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
+    return glob(''.join(map(either, pattern)))

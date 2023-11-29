@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""This file contains the class constituting the link between the graphical interface and the computations"""
+
 import logging
 import os
 import pickle
@@ -21,6 +22,7 @@ from cellects.image_analysis.extract_exif import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image
+from cellects.utils.utilitarian import insensitive_glob
 from cellects.image_analysis.morphological_operations import Ellipse
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
@@ -179,7 +181,7 @@ class ProgramOrganizer:
             self.find_if_lighter_background()
             self.extract_exif()
         self.update_output_list()
-        look_for_existing_videos = glob('ind_' + '*' + '.npy')
+        look_for_existing_videos = insensitive_glob('ind_' + '*' + '.npy')
         there_already_are_videos = len(look_for_existing_videos) == len(self.vars['analyzed_individuals'])
         logging.info(
             f"{len(look_for_existing_videos)} .npy video files found for {len(self.vars['analyzed_individuals'])} arenas to analyze")
@@ -213,8 +215,9 @@ class ProgramOrganizer:
         # global_pathway = 'I:\Directory\Tracking_data\generalization_and_potentiation\drop_nak1'
         os.chdir(Path(self.all['global_pathway']))
         logging.info(f"Dir: {self.all['global_pathway']}")
-        self.data_list = glob(
+        self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
+        self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.data_list = sort(self.data_list)
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
@@ -222,7 +225,7 @@ class ProgramOrganizer:
             content = os.listdir()
             for obj in content:
                 if not os.path.isfile(obj):
-                    data_list = glob(obj + "/" + self.all['radical'] + '*' + self.all['extension'])
+                    data_list = insensitive_glob(obj + "/" + self.all['radical'] + '*' + self.all['extension'])
                     if len(data_list) > 0:
                         self.all['folder_list'].append(obj)
                         self.all['folder_number'] += 1
@@ -244,7 +247,7 @@ class ProgramOrganizer:
 
     def update_folder_id(self, sample_number, folder_name=""):
         os.chdir(Path(self.all['global_pathway']) / folder_name)
-        self.data_list = glob(
+        self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
         self.data_list = sort(self.data_list)
@@ -1338,10 +1341,11 @@ class ProgramOrganizer:
 
 # if __name__ == "__main__":
 #     po = ProgramOrganizer()
-#     os.chdir(Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example"))
-#     po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
+#     os.chdir(Path("D:\Directory\Data\Example\Example\Example"))
+#     # po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
 #     po.load_variable_dict()
-#     po.data_list = []
+#     po.all['global_pathway']
 #     po.load_data_to_run_cellects_quickly()
+#     po.all['global_pathway']
 #     po.save_data_to_run_cellects_quickly()
 #     os.getcwd()
