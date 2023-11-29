@@ -1348,4 +1348,3 @@ class ProgramOrganizer:
 #     po.load_data_to_run_cellects_quickly()
 #     po.all['global_pathway']
 #     po.save_data_to_run_cellects_quickly()
-#     os.getcwd()
