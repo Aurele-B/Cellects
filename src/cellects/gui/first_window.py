@@ -138,11 +138,11 @@ class FirstWindow(WindowType):
         self.Vlayout.addItem(self.vertical_space)
 
         # Add the central image display widget
-        self.display_video = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
-        self.display_video = InsertImage(self.display_video, self.parent().im_max_height, self.parent().im_max_width)
-        self.Vlayout.addWidget(self.display_video, alignment=QtCore.Qt.AlignCenter)
-        self.display_video.setVisible(False)
-        self.display_video.mousePressEvent = self.full_screen_display
+        self.display_image = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
+        self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
+        self.Vlayout.addWidget(self.display_image, alignment=QtCore.Qt.AlignCenter)
+        self.display_image.setVisible(False)
+        self.display_image.mousePressEvent = self.full_screen_display
 
         # Add the display shortcuts option
         #self.shortcut_cb = Checkbox(self.parent().po.all['display_shortcuts'])
@@ -248,7 +248,7 @@ class FirstWindow(WindowType):
     def display_image_during_thread(self, dictionary):
         self.message.setText(dictionary['message'])
         self.parent().image_to_display = dictionary['current_image']
-        self.display_video.update_image(dictionary['current_image'])
+        self.display_image.update_image(dictionary['current_image'])
 
     def next_is_clicked(self):
         if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
@@ -340,7 +340,7 @@ class FirstWindow(WindowType):
             self.thread["RunAll"].start()
             self.thread["RunAll"].message_from_thread.connect(self.display_message_from_thread)
             self.thread["RunAll"].image_from_thread.connect(self.display_image_during_thread)
-            self.display_video.setVisible(True)
+            self.display_image.setVisible(True)
 
     def pathway_changed(self):
         if self.thread["LoadDataToRunCellectsQuickly"].isRunning():
