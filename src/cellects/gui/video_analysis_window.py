@@ -164,10 +164,10 @@ class VideoAnalysisWindow(WindowType):
 
 
         # Add the central video display widget
-        self.display_video = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
-        self.display_video = InsertImage(self.display_video, self.parent().im_max_height, self.parent().im_max_width)
-        self.display_video.mousePressEvent = self.full_screen_display
-        self.video_display_layout.addWidget(self.display_video)
+        self.display_image = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
+        self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
+        self.display_image.mousePressEvent = self.full_screen_display
+        self.video_display_layout.addWidget(self.display_image)
 
 
         #   Open right widget
@@ -542,7 +542,7 @@ class VideoAnalysisWindow(WindowType):
             image = stack((image, image, image), axis=2)
             image = self.parent().po.motion.visu[-1, ...] * (1 - image)
         self.parent().image_to_display = image
-        self.display_video.update_image(image)
+        self.display_image.update_image(image)
 
         self.message.setText(message)
 
@@ -554,7 +554,7 @@ class VideoAnalysisWindow(WindowType):
     def display_image_during_thread(self, dictionary):
         self.message.setText(dictionary['message'])
         self.parent().image_to_display = dictionary['current_image']
-        self.display_video.update_image(dictionary['current_image'])
+        self.display_image.update_image(dictionary['current_image'])
 
     def save_one_result_is_clicked(self):
         if self.parent().po.motion is not None:
@@ -588,7 +588,7 @@ class VideoAnalysisWindow(WindowType):
     #
     # def video_display(self, dictionary):
     #     self.drawn_image = dictionary['image']
-    #     self.display_video.update_image(dictionary['image'], self.parent().po.vars['contour_color'])
+    #     self.display_image.update_image(dictionary['image'], self.parent().po.vars['contour_color'])
     #     self.message.setText(dictionary['message'])
     #     # self.message.setText(f"Reading done, try to change parameters if necessary")
 

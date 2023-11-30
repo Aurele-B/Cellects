@@ -47,6 +47,7 @@ class WindowType(QtWidgets.QWidget):
         self.setParent(parent)
         self.frame = QtWidgets.QFrame(self)
         self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().screen_width, self.parent().screen_height))
+        self.display_image = None
         # self.setFont(QFont(textfont, textsize, QFont.Medium))
         # self.setStyleSheet("background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (backgroundcolor, textColor, f"{textsize}pt {textfont};", bordercolor, selectioncolor, selectionbackgroundcolor))
         # self.setStyleSheet("background-color: %s; color: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (backgroundcolor, textColor, bordercolor, selectioncolor, selectionbackgroundcolor))
@@ -79,7 +80,33 @@ class WindowType(QtWidgets.QWidget):
         :return:
         '''
         self.resized.emit()
-        # print(self.size())
+        if self.display_image is not None:
+            win_width, win_height = self.size().width(), self.size().height()
+            # self.display_image.max_width = round(self.parent().image_window_width_ratio * win_width)
+            # self.display_image.max_height = round(self.parent().image_window_height_ratio * win_height)
+            self.display_image.max_width = win_width - self.parent().image_window_width_diff
+            self.display_image.max_height = win_height - self.parent().image_window_height_diff
+
+            # self.display_image.max_width * self.display_image.height_width_ratio
+            # self.display_image.max_height
+            #
+            # self.display_image.max_height / self.display_image.height_width_ratio
+            # self.display_image.max_width
+            print(f"ratio is {self.display_image.height_width_ratio}")
+            # self.display_image.scaled_shape = [round(self.display_image.max_height / self.display_image.height_width_ratio), round(self.display_image.max_width * self.display_image.height_width_ratio)]
+
+            if self.display_image.max_width * self.display_image.height_width_ratio < self.display_image.max_height:
+                print('inf')
+                self.display_image.scaled_shape = [round(self.display_image.max_width * self.display_image.height_width_ratio), self.display_image.max_width]
+            else:
+                print('sup')
+                self.display_image.scaled_shape = [self.display_image.max_height, round(self.display_image.max_height / self.display_image.height_width_ratio)]
+            print(f"im_shape is {self.display_image.scaled_shape}")
+            self.display_image.setMaximumHeight(self.display_image.scaled_shape[0])
+            self.display_image.setMaximumWidth(self.display_image.scaled_shape[1])
+            # self.display_image.resize(self.display_image.scaled_shape[1], self.display_image.scaled_shape[0])
+            # self.display_image.resize(self.display_image.max_width, self.display_image.max_height)
+        print(f"win shape is be {self.size()}")
         return super(WindowType, self).resizeEvent(event)
 
     def center_window(self):
@@ -110,15 +137,15 @@ class FullScreenImage(QtWidgets.QLabel):
         # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setSizePolicy(self.im_size_policy)
 
-        height_width_ratio = image.shape[0] / image.shape[1]
+        self.height_width_ratio = image.shape[0] / image.shape[1]
         image = cvtColor(image, COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
-        if self.max_width * height_width_ratio < self.max_height:
-            self.scaled_shape = [round(self.max_width * height_width_ratio), self.max_width]
+        if self.max_width * self.height_width_ratio < self.max_height:
+            self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, round(self.max_height / height_width_ratio)]
+            self.scaled_shape = [self.max_height, round(self.max_height / self.height_width_ratio)]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         # self.setMaximumHeight(self.scaled_shape[0])
@@ -140,19 +167,20 @@ class InsertImage(QtWidgets.QLabel):
         # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setSizePolicy(self.im_size_policy)
 
-        height_width_ratio = image.shape[0] / image.shape[1]
+        self.height_width_ratio = image.shape[0] / image.shape[1]
         image = cvtColor(image, COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
-        if self.max_width * height_width_ratio < self.max_height:
-            self.scaled_shape = [round(self.max_width * height_width_ratio), self.max_width]
+        if self.max_width * self.height_width_ratio < self.max_height:
+            self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, round(self.max_height / height_width_ratio)]
+            self.scaled_shape = [self.max_height, round(self.max_height / self.height_width_ratio)]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
         self.setMaximumWidth(self.scaled_shape[1])
+        # self.resize(self.scaled_shape[1], self.scaled_shape[0])
         # self.setMinimumSize(self.scaled_shape[0], self.scaled_shape[1])
         self.setPixmap(QPixmap(image))
         self.adjustSize()
@@ -160,22 +188,23 @@ class InsertImage(QtWidgets.QLabel):
 
     def update_image(self, image, text=None, color=255):
         self.true_shape = image.shape
-        height_width_ratio = image.shape[0] / image.shape[1]
+        self.height_width_ratio = image.shape[0] / image.shape[1]
         image = cvtColor(image, COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
-        if self.max_width * height_width_ratio < self.max_height:
-            self.scaled_shape = [int(round(self.max_width * height_width_ratio)), self.max_width]
+        if self.max_width * self.height_width_ratio < self.max_height:
+            self.scaled_shape = [int(round(self.max_width * self.height_width_ratio)), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, int(round(self.max_height / height_width_ratio))]
+            self.scaled_shape = [self.max_height, int(round(self.max_height / self.height_width_ratio))]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
         self.setMaximumWidth(self.scaled_shape[1])
+        # self.resize(self.scaled_shape[1], self.scaled_shape[0])
 
-        if text is not None:
-            pass
+        # if text is not None:
+        #     pass
             # pos = QtCore.QPoint(50, 50)
             # painter = QPainter(self)
             # painter.drawText(pos, text)
