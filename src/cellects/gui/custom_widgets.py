@@ -82,31 +82,15 @@ class WindowType(QtWidgets.QWidget):
         self.resized.emit()
         if self.display_image is not None:
             win_width, win_height = self.size().width(), self.size().height()
-            # self.display_image.max_width = round(self.parent().image_window_width_ratio * win_width)
-            # self.display_image.max_height = round(self.parent().image_window_height_ratio * win_height)
             self.display_image.max_width = win_width - self.parent().image_window_width_diff
             self.display_image.max_height = win_height - self.parent().image_window_height_diff
-
-            # self.display_image.max_width * self.display_image.height_width_ratio
-            # self.display_image.max_height
-            #
-            # self.display_image.max_height / self.display_image.height_width_ratio
-            # self.display_image.max_width
-            print(f"ratio is {self.display_image.height_width_ratio}")
-            # self.display_image.scaled_shape = [round(self.display_image.max_height / self.display_image.height_width_ratio), round(self.display_image.max_width * self.display_image.height_width_ratio)]
-
             if self.display_image.max_width * self.display_image.height_width_ratio < self.display_image.max_height:
-                print('inf')
                 self.display_image.scaled_shape = [round(self.display_image.max_width * self.display_image.height_width_ratio), self.display_image.max_width]
             else:
-                print('sup')
                 self.display_image.scaled_shape = [self.display_image.max_height, round(self.display_image.max_height / self.display_image.height_width_ratio)]
-            print(f"im_shape is {self.display_image.scaled_shape}")
+
             self.display_image.setMaximumHeight(self.display_image.scaled_shape[0])
             self.display_image.setMaximumWidth(self.display_image.scaled_shape[1])
-            # self.display_image.resize(self.display_image.scaled_shape[1], self.display_image.scaled_shape[0])
-            # self.display_image.resize(self.display_image.max_width, self.display_image.max_height)
-        print(f"win shape is be {self.size()}")
         return super(WindowType, self).resizeEvent(event)
 
     def center_window(self):
