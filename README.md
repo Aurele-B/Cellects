@@ -22,7 +22,7 @@ To install Cellects, you can:
 ```
 cd path/toward/an/existing/folder/
 git clone https://github.com/Aurele-B/Cellects.git
-cd path/toward/an/existing/folder/Cellects/
+cd ./Cellects
 ```
 - Upgrade pip:
 ```
@@ -35,6 +35,10 @@ pip install poetry
 - Install all necessary packages:
 ```
 poetry install
+```
+- Make sure to activate the poetry environment:
+```
+poetry shell
 ```
 - Run Cellects:
 ```
