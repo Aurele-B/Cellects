@@ -15,15 +15,20 @@ To install Cellects, you can:
 <br />
 
 ### 1. Install it in a click using Cellects.exe on windows.
-- Double-click on the Cellects.exe file to start installation
+- Download [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
+- Double-click on the Cellects_installer.exe file to start installation
+<br />
+Note 1: Windows may warn you that it's unsafe; that's normal, because we are not a registered developer. Click "More info" and "Run Anyway".
+<br />
+Note 2: For the same reason, other antiviruses may prevent the installation.
 - Finds the app in Cellects/Cellects/Cellects.exe and run it
 
 <br />
 
 ### 2. From this repository
-- Install python 11 (https://www.python.org/downloads/release/python-3116/)
-- Install git (https://git-scm.com/downloads)
-- Clone this repository (https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE)
+- Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
+- Install [git](https://git-scm.com/downloads)
+- Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
 ```
 cd path/toward/an/existing/folder/
 git clone https://github.com/Aurele-B/Cellects.git
