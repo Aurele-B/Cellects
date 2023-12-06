@@ -9,11 +9,16 @@ automated computation of a variety of geometrical descriptors, easy installation
 
 Installation
 ------------
+<br />
+
 To install Cellects, you can:
+<br />
 
 ### 1. Install it in a click using Cellects.exe on windows.
 - Double-click on the Cellects.exe file to start installation
 - Finds the app in Cellects/Cellects/Cellects.exe and run it
+
+<br />
 
 ### 2. From this repository
 - Install python 11 (https://www.python.org/downloads/release/python-3116/)
@@ -36,22 +41,30 @@ pip install poetry
 ```
 poetry install
 ```
-- Make sure to activate the poetry environment:
-```
-poetry shell
-```
 - Run Cellects:
 ```
-Cellects
+poetry run Cellects
+```
+<br />
+
+#### Once installed, run it with:
+```
+cd path/toward/Cellects
+poetry run Cellects
 ```
 
-### 3. Install it as a python package using the wheel file named "cellects-1.0.0-py3-none-any.whl"
+<br />
+
+### 3. Install it in the python global environment with a wheel file
+- Create or download "cellects-1.0.0-py3-none-any.whl" file in a directory
+- Open a terminal and go in that directory
+```
+cd path/toward/the/wheel/file/folder/
+```
 - Uninstall any previous version with:
 ```
 pip uninstall cellects-1.0.0-py3-none-any.whl
 ```
-- Put the cellects-1.0.0-py3-none-any.whl file in a directory
-- Open a terminal and go in that directory
 - Install all necessary packages and Cellects:
 ```
 pip install --upgrade pip
@@ -64,7 +77,13 @@ pip install cellects-1.0.0-py3-none-any.whl
 ```
 Cellects
 ```
-
+#### To get the wheel file:
+Contact me or create the wheel file yourself by:
+- Following section 2. to install Cellects 
+- Creating the wheel file with:
+```
+poetry build
+```
 
 Usage
 ------------
