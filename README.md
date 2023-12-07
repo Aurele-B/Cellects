@@ -20,7 +20,7 @@ To install Cellects, you can:
 <br />
 Note 1: Windows may warn you that it's unsafe; that's normal, because we are not a registered developer. Click "More info" and "Run Anyway".
 <br />
-Note 2: For the same reason, other antiviruses may prevent the installation.
+Note 2: For the same reason, some antivirus software can prevent installation.
 - Finds the app in Cellects/Cellects/Cellects.exe and run it
 
 <br />
