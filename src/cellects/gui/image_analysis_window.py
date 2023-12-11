@@ -460,7 +460,8 @@ class ImageAnalysisWindow(WindowType):
 
     def set_spot_size_check(self):
         is_checked = self.set_spot_size.isChecked()
-        self.spot_size.setVisible(is_checked)
+        if self.step > 0:
+            self.spot_size.setVisible(is_checked)
         self.parent().po.all['set_spot_size'] = is_checked
 
     def spot_size_changed(self):

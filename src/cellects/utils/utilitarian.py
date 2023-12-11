@@ -149,15 +149,15 @@ class PercentAndTimeTracker:
                 local_h += 1
 
             if (local_h + hours) < 24:
-                output = current_prop, f"{local_h + hours}:{eta_m} ({hours}:{minutes} left)"
+                output = current_prop, f", ETA {local_h + hours}:{eta_m} ({hours}:{minutes} left)"
             else:
                 days = (local_h + hours) // 24
                 eta_h = (local_h + hours) % 24
                 eta_d = time.strftime("%m", local_time) + "/" + str(int(time.strftime("%d", local_time)) + days)
-                output = current_prop, f"{eta_d} {eta_h}:{eta_m} ({hours}:{minutes} left)"
+                output = current_prop, f", ETA {eta_d} {eta_h}:{eta_m} ({hours}:{minutes} left)"
             # return current_prop, str(local_h + hours) + ":" + str(local_m + minutes) + "(" + str()
         else:
-            output = 0, "loading, wait..."
+            output = int(round(100 / self.total)), ", wait..."
         if step is None:
             self.current_step += 1
         return output
