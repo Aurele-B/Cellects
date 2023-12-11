@@ -734,7 +734,7 @@ class OneArenaThread(QtCore.QThread):
                 img = img[self.parent().po.top[arena - 1]: (self.parent().po.bot[arena - 1] + add_to_c),
                       self.parent().po.left[arena - 1]: (self.parent().po.right[arena - 1] + add_to_c), :]
 
-                self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%, ETA {eta}", "current_image": img})
+                self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
                 if self.parent().po.vars['already_greyscale']:
                     if self.parent().po.reduce_image_dim:
                         self.parent().po.converted_video[image_i, ...] = img[:, :, 0]
@@ -1388,7 +1388,7 @@ class RunAllThread(QtCore.QThread):
                     # Emit message to the interface
                     current_percentage, eta = pat_tracker.get_progress()
                     self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                 "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%), ETA {eta}"})
+                                                 "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
 
                 logging.info(f"Sequential analysis lasted {(default_timer() - tiii)/ 60} minutes")
             else:
