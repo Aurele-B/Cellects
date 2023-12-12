@@ -1188,7 +1188,7 @@ class ProgramOrganizer:
                     self.vars['output_list'] += [f'{descriptor}_intercept']
         """
 
-    def update_available_core_nb(self, image_bit_number=256, video_bit_number=136):# video_bit_number=176
+    def update_available_core_nb(self, image_bit_number=256, video_bit_number=140):# video_bit_number=176
         if self.vars['lose_accuracy_to_save_memory']:
             video_bit_number -= 56
         if self.vars['convert_for_motion']['logical'] != 'None':
