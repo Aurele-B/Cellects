@@ -2,8 +2,63 @@
 Cellects User Manual
 ====================
 
-Foreword
---------
+# Table of content
+- ## [Foreword](#Foreword)
+- ## [Setting up a first analysis](#Setting-up-a-first-analysis)
+  - ### [Data localisation in the first window](#Data-localisation-in-the-first-window)
+    - [Image list or video](#Image-list-or-video)
+    - [Image prefix and extension](#Image-prefix-and-extension)
+    - [Folder](#Folder)
+    - [Arena number per folder](#Arena-number-per-folder)
+    - [Advanced parameters and Required outputs](#Advanced-parameters-and-Required-outputs)
+    - [Video analysis window and Run all directly](#Video-analysis-window-and-Run-all-directly)
+    - [Next](#Next)
+  - ### [Find where the specimens are in the image analysis window](#Find-where-the-specimens-are-in-the-image-analysis-window)
+    - [Image number](#Image-number)
+    - [One cell or colony per arena](#One-cell-or-colony-per-arena)
+    - [Scale with](#Scale-with)
+    - [Select and draw](#Select-and-draw)
+    - [Advanced mode](#Advanced-mode)
+    - [Generate analysis option](#Generate-analysis-option)
+    - [Select option to read](#Select-option-to-read)
+    - [Video delimitation](#Video-delimitation)
+    - [Whether starting area differs from growing area](#Whether-starting-area-differs-from-growing-area))
+    - [Last image question](#Last-image-question)
+  - ### [Tune parameters of the video tracking window](#Tune-parameters-of-the-video-tracking-window)
+    - [Arena to analyze](#Arena-to-analyze)
+    - [Maximal growth factor](#Maximal-growth-factor)
+    - [Repeat video smoothing](#Repeat-video-smoothing)
+    - [Select analysis option and compute all options](#Select-analysis-option-and-compute-all-options)
+    - [Load one arena](#Load-one-arena)
+    - [Detection](#Detection)
+    - [Fading detection](#Fading-detection)
+    - [Post processing](#Post-processing)
+    - [Run All](#Run-All)
+    - [Save one result](#Save-one-result)
+- ## [Improving and personalizing the analysis](#Improving-and-personalizing-the-analysis)
+  - ### [Advanced parameters](#Advanced-parameters)
+    - [Automatically crop images](#Automatically-crop-images)
+    - [Subtract background](#Subtract-background)
+    - [Correct errors around initial shape](#Correct-errors-around-initial-shape)
+    - [Connect distant shapes](#Connect-distant-shapes)
+    - [All cells have the same direction](#All-cells-have-the-same-direction)
+    - [Automatic size threshold for appearance or motion](#Automatic-size-threshold-for-appearance-or-motion)
+    - [Oscillatory parameter](#Oscillatory-parameter)
+    - [Spatio-temporal scaling](#Spatio-temporal-scaling)
+    - [Run analysis in parallel](#Run-analysis-in-parallel)
+    - [Proc max core number](#Proc-max-core-number)
+    - [Minimal RAM let free](#Minimal-RAM-let-free)
+    - [Video fps](#Video-fps)
+    - [Keep unaltered videos](#Keep-unaltered-videos)
+    - [Saved processed video](#Saved-processed-video)
+    - [Color space combination for video analysis](#Color-space-combination-for-video-analysis)
+    - [Heterogeneous background](#Heterogeneous-background)
+    - [Night mode](#Night-mode)
+  - ### [Required outputs](#Required-outputs)
+  - ### [Analyze multiple folders at once](#Analyze-multiple-folders-at-once)
+
+# Foreword
+
 <div style="text-align: justify">
 Cellects analyzes organisms that grow or move on an immobile surface. 
 In the first section of this user manual, we will explain how to set up a first quick analysis with Cellects. 
@@ -11,16 +66,9 @@ Any Cellects analysis takes place in 3 steps: data specification, first image an
 The second section of this user manual runs thoroughly through every option to run Cellects in particular conditions 
 and to finetune an already working setup.
 
-# Table of content
-1. [Part one: Setting up a first analysis](#-Part-one:-Setting-up-a-first-analysis)
+# Setting up a first analysis
 
-   2. [2/ The image analysis window: find where the specimens are](#2/-The-image-analysis-window:-find-where-the-specimens-are)
-
-2. [Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
-
-## Part one: Setting up a first analysis
-
-## 1/ The first window: data specification
+## Data localisation in the first window
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure1.png"
   alt="Alt text"
@@ -34,18 +82,19 @@ When the user selects several folders, Cellects uses the parameters filled for t
 to analyze all the remaining folders (See Fig. 10: the several folder window). 
 The available variables are shown in Fig. 9: the required output window.
 
-### Image list or video:
+### Image list or video
 The *Image list or video* option indicates whether the data have been stored as an image stack 
 (i.e. a set of files, each of them containing a single image) or as a video. 
 Images must be named alphanumerically so the program can read them in the right order.
 
-### Image prefix (optional) and extension:
+### Image prefix and extension:
 The *Images prefix* and *Images extension* fields allow Cellects to only consider relevant data. 
 For instance, setting “exp_” as image prefix and “.jpg” as image extension will cause Cellects to only consider JPG 
 files whose name starts with “exp_”. 
 The rest of the labeling should be a number indicating the order in which the images were taken.
 
 Additional note:
+- Image prefix is optional
 - If every .jpg files start with IMG_ but the folder(s) also contains other .jpg files (e.g. named info.jpg), 
 the user can exclude all .jpg files that do not start with IMG_ by typing “IMG_” in the *Image prefix* field. 
 Cellects accepts all the following formats: bmp, dib, exr, exr, hdr, jp2, jpe, jpeg, jpg, pbm, pfm, pgm, pic, png, 
@@ -65,8 +114,8 @@ Additional note:
 - If there are several folders to analyze at once, the user can provide a different arena number for each folder
   (see Fig. 10: the several folder window).
 
-### Advanced parameters, Required outputs
-These options are detailed in part two: Improving and personalizing the analysis (Fig. 8 and 9).
+### Advanced parameters and Required outputs
+These options are detailed in Improving and personalizing the analysis (Fig. 8 and 9).
 
 ### Video analysis window and Run all directly
 These options appear when the user already did the image analysis for the current folder. 
@@ -77,7 +126,7 @@ to run directly the complete analysis.
 Click the *Next* button to go to the image analysis window (Fig. 2), or 
 to the window showing the list of folders (Fig. 10) if applicable.
 
-### 2/ The image analysis window: find where the specimens are
+## Find where the specimens are in the image analysis window
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure2.png"
   alt="Alt text"
@@ -85,11 +134,15 @@ to the window showing the list of folders (Fig. 10) if applicable.
   style="display: inline-block; margin: 0 auto; max-width: 300px">
 #### <u>**Figure 2**: Cellects image analysis window</u>
 
-### Image number (optional)
+### Image number
 Which image should be analyzed first? In most cases, it should be the first. 
 Changing this number is only useful when cells are invisible on the first image 
 (e.g. in the case of appearing colonies of bacteria). 
 In that case, select an image showing visible cells in order to enable Cellects to find them.
+
+### One cell or colony per arena
+This option is automatically selected. If there is only one cell (or connected colony) per arena, leave this as it is. 
+If there already are (or will be) several cells (or colonies) per arena, unselect this option.
 
 ### Scale with
 The *Scale with* option gives a scale to the image. 
@@ -101,7 +154,7 @@ Additional notes:
 - As using the width of the specimens decreases the first image detection efficiency, we recommend choosing the width of the image. However, if the width of the specimens is known with more accuracy than the width of the image, we recommend choosing the width of the specimens.
 - By default, distances and surfaces are in pixels (Cellects store the size of one pixel in a file called software_settings.csv). They can automatically be converted in mm (²) by checking the corresponding checkbox in the advanced parameters window (see Fig. 8).
 
-### Select and draw (optional)
+### Select and draw
 *Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are specimens (Cell) 
 and others are background (Back). 
 To use that tool, the user must click once on the *Cell* button (to draw a part of the image containing specimens) or 
@@ -115,7 +168,7 @@ Additional note:
 - If the user wishes to analyze several folders, the *Select and draw* option will only work for the first. 
   If each folder requires using this option, the user has to analyze each folder separately.
 
-### Advanced mode (optional)
+### Advanced mode
 The *Advanced mode* allows Cellects to use a previously working set of parameters (see features detailed below).
 Except if already familiar with color spaces, the user should not use the *Advanced mode* before using 
 one of the *Generate analysis options*. 
@@ -140,10 +193,6 @@ If the detection remains not good enough after having drawn a few specimens and 
 the user should try this algorithm. The user should first check the Heterogeneous background option, 
 then select the number of categories to look for in the image and lastly click on *Visualize*. 
 As this option reduces the video tracking option number from 5 to 1, it should be used as a last resort. 
-
-### One cell/colony per arena
-This option is automatically selected. If there is only one cell (or connected colony) per arena, leave this as it is. 
-If there already are (or will be) several cells (or colonies) per arena, unselect this option.
 
 ### Generate analysis option
 Cellects suggests two algorithms to automatically find the best parameters to detect where the specimens are 
@@ -209,14 +258,14 @@ the growing area (the rest of the arena). That is why this checkbox is checked.
 In all other cases, i.e. when the substrate upon which the specimen grows or moves has the same color everywhere: 
 uncheck that option.
 
-### Last image question (optional)
+### Last image question
 If the user thinks that the parameters used to detect specimens on the first image might not work for all the images, 
 the user can fine tune these parameters and see whether they work to detect specimens on the last image.
 
 Clicking *Yes* allows the user to display and analyze the first image and then to go to the video tracking window. 
 Clicking *No* will directly lead to the video tracking window.
 
-## 3/ The video tracking window: tune dynamical parameters and analysis
+## Tune parameters of the video tracking window
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure5.png"
   alt="Alt text"
@@ -268,7 +317,7 @@ The center of the window displays the video of the corresponding arena.
 *Detection* runs one or all options of video tracking for the chosen arena to analyze. 
 It allows us to test the effect of any change in the previous parameters of that window. 
 Once the detection seems valid, the user can answer “*Done*” to *Step 1: Tune parameters to improve Detection*, 
-and try *Post processing*.
+and try *Post-processing*.
 
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure6.png"
@@ -278,7 +327,7 @@ and try *Post processing*.
 
 #### <u>**Figure 6**: Cellects video tracking window during detection visualization</u>
 
-### Fading detection (optional)
+### Fading detection
 *Fading detection* (Fig. 6) is useful when the specimens not only grow but also move 
 (and therefore, a pixel that was covered by the cell may become uncovered). 
 When checked, *Fading detection* will monitor cell-covered parts of the video to decide whether and when the area 
@@ -288,15 +337,15 @@ everywhere in the video (in other words, consider pixels as abandoned by the spe
 A too high fading value can also cause waves-like patterns in the detection videos.
 
 ### Post processing
-*Post processing* (Fig. 6) will apply the chosen detection algorithm to the video, 
+*Post-processing* (Fig. 6) will apply the chosen detection algorithm to the video, 
 as well as other algorithms allowing to improve detection. These algorithms are:
 - *Fading detection*, described above
 - *Correct errors around initial shape* (fine tuning in the advanced parameters window, see Fig. 8)
 - *Connect distant shapes* (fine tuning in the advanced parameters window, see Fig. 8)
 - Operations on binary images such as opening, closing and logical operations.
 - 
-Once post processing works fine, the user can click “*Done*” to *Step 2: 
-Tune fading and advanced parameters to improve post processing*, and analyze all arenas (*Run All*).
+Once Post-processing works fine, the user can click “*Done*” to *Step 2: 
+Tune fading and advanced parameters to improve Post-processing*, and analyze all arenas (*Run All*).
 
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure7.png"
@@ -315,17 +364,17 @@ Then, Cellects will analyze videos, one by one (See Fig. 7),
 and save the *Required output* (see Fig. 9) as .csv files, a validation video of each arena, 
 and two snapshots of all videos (one after one tenth of the total time and one at the last image).
 
-### Save one result (optional)
+### Save one result
 This button should be used only after having *Run all* at least one time. For instance, 
 if the chosen parameters work fine for 5 arenas over 6, the user can use this Cellects window to change the result of 
 the failing arena. To do so, the user must click the *Run All* button one time with the parameters that work most of 
-the time (9 over 10), and then, adjust to parameters so that the failed analysis gets better after post processing, 
+the time (9 over 10), and then, adjust to parameters so that the failed analysis gets better after Post-processing, 
 and finally click on the *Save one result* button (Fig. 7) to replace the saved results of that arena 
 (i.e. every corresponding row of the .csv files and the validation video).
 
-## Part two: Improving and personalizing the analysis
+# Improving and personalizing the analysis
 
-## 1/ Advanced parameters
+## Advanced parameters
 
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure8.png"
@@ -335,7 +384,7 @@ and finally click on the *Save one result* button (Fig. 7) to replace the saved 
 
 #### <u>**Figure 8**: advanced parameters window</u>
 
-### Automatically crop images (optional)
+### Automatically crop images
 This parameter uses the first image detection to crop all images and improve arena and last image detection. 
 
 Additional note:
@@ -343,13 +392,13 @@ Additional note:
 If the analysis fails or the program crashes while running the image analysis window, 
 unselecting that option may solve the problem.
 
-### Subtract background (optional)
+### Subtract background
 This parameter has an impact on almost all steps of the analysis. 
 Basically, it takes the first image and subtracts it to every following image before analysis. 
 It is mostly useful when the cells are not yet visible in the first image, and according to the setup, 
 that may improve or degrade the analysis.
 
-### Correct errors around initial shape (optional)
+### Correct errors around initial shape
 Only apply this algorithm when there are good reasons to think that detection will be less efficient around the 
 initial shape than everywhere else in the arena. This algorithm compensates for this lack of efficiency by 
 artificially filling potential gaps around the initial shape during growth.
@@ -357,7 +406,7 @@ artificially filling potential gaps around the initial shape during growth.
 In addition, we discourage the use of this option if the growth substrate has the same opacity everywhere 
 (i.e. if it does not differ between the starting region and the growth region).
 
-### Connect distant shapes (optional)
+### Connect distant shapes
 Only apply this algorithm when there is a large light intensity variation within the specimen and 
 no reason for it to be split in two disconnected shapes. 
 It allows a disconnected shape to be dynamically connected to the main shape. 
@@ -370,23 +419,23 @@ Applying this will improve the chances to correctly detect arenas when all cells
 
 Uncheck that option only when specimens move strongly and in many directions.
 
-### Automatic size threshold for appearance/motion (optional)
+### Automatic size threshold for appearance or motion
 Allows the user to set a minimal size threshold (in pixels) to consider that an appearing shape is, for instance, a colony of bacteria.
 
-### Oscillatory parameter (optional)
+### Oscillatory parameter
 The user can ask Cellects to proceed an oscillatory analysis of the specimens (See Fig. 9: the required output window). 
 The oscillatory period is a parameter allowing Cellects to know what kind of oscillatory process to look for in the variations of luminosity.
 
-### Spatio-temporal scaling (optional)
+### Spatio-temporal scaling
 These parameters are very important as they allow the user to set the spatiotemporal scale. 
 The first one sets the time (in minute) between each image of an image stack or frames of a video. 
 The second one asks the user if Cellects should convert areas and distances from pixels to mm/mm2 or not.
 
-### Run analysis in parallel (optional)
+### Run analysis in parallel
 Letting this parameter be checked will use more processor (CPU) capacity during the detection of several arenas but 
 will decrease the time necessary for the analysis.
 
-### Proc max core number (optional)
+### Proc max core number
 The maximal number of  logical cores to be invested in the detection of several arenas. 
 Generally, if the user allocates more cores to the analyses, they will decrease the time necessary for the analysis .
 
@@ -406,13 +455,13 @@ Additional note:
 ### Video fps
 The number of images per second of the validation videos.
 
-### Keep unaltered videos (optional)
+### Keep unaltered videos
 Keeping unaltered videos decreases the time necessary for the analysis. 
 However, these files (.npy) take a lot of disk space. 
 If the user chooses to keep these unaltered videos while improving the analysis, 
 we advise the user to delete these large files when the analysis is fine tuned and completed.
 
-### Saved processed video (optional)
+### Saved processed video
 If this option is selected, Cellects saves the validation videos. 
 These files are much lighter than the unaltered video and can be read by any video reader to check the efficiency of 
 the analysis. We advise the user to keep these videos instead of the unaltered videos.
@@ -423,7 +472,7 @@ without coming back to the image analysis window (while not having to redo the w
 video delimitation). It allows, from the video tracking window, to directly check the effect of changing from one color
 space combination to another on the video detection.
 
-### Heterogeneous background (optional)
+### Heterogeneous background
 For advanced users,  this tool allows to segment (technical term for detect) the image into 2 or 
 more categories using a k-means algorithm. It is much slower than the usual threshold detection, 
 but allows the specimen detection in a more complex environment (basically, with more different colors).
@@ -431,7 +480,7 @@ but allows the specimen detection in a more complex environment (basically, with
 ### Night mode
 Change the background of the application, from bright to dark
 
-## 2/ Required outputs
+## Required outputs
 
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure9.png"
@@ -450,7 +499,7 @@ an isotropic to a digitated growth (Vogel et al. 2016). The *Proceed oscillation
 study the intracytoplasmic oscillations of P. polycephalum following the ideas developed in 
 a literature review by Boussard et al. (2021).
 
-## 3/ Analyze multiple folders at once
+## Analyze multiple folders at once
 
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure10.png"
@@ -479,5 +528,6 @@ select the one to be analyzed first and hold Ctrl/Cmd while selecting the remain
   - Clicking *Run all* directly skips both the image analysis window and the video tracking window, 
   and directly applies all saved settings to all selected folders.
 
-
+## The image analysis window find where the specimens are
+## b
 </div>
