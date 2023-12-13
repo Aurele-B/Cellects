@@ -14,7 +14,10 @@ and to finetune an already working setup.
 Part one: Setting up a first analysis
 --------
 ## 1/ The first window: data specification
-![alt text](https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png)
+<img
+  src="https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png"
+  width="300">
+
 <img
   src="https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png"
   alt="Alt text"
