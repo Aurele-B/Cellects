@@ -13,7 +13,7 @@ Part one: Setting up a first analysis
 <img
   src="https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png"
   alt="Alt text"
-  title="User Manual Figure 1: Cellects first window"
+  title="Figure 1: Cellects first window"
   style="display: inline-block; margin: 0 auto; max-width: 300px">
 
 </div>
