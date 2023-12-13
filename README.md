@@ -89,5 +89,6 @@ Cellects
 
 Usage
 ------------
-Find a usage example on video [here](https://www.youtube.com/watch?v=N-k4p_aSPC0) and/or browse the UserManual.md
+Find a usage example on video [here](https://www.youtube.com/watch?v=N-k4p_aSPC0) and/or browse the [user manual](https://github.com/Aurele-B/Cellects/blob/main/UserManual.md)
+
 </div>
