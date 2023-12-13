@@ -12,9 +12,11 @@ The second section of this user manual runs thoroughly through every option to r
 and to finetune an already working setup.
 
 # Table of content
-[Part one: Setting up a first analysis](#-Part-one:-Setting-up-a-first-analysis)
+1. [Part one: Setting up a first analysis](#-Part-one:-Setting-up-a-first-analysis)
 
-[Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
+2. [2/ The image analysis window: find where the specimens are](#2/-The-image-analysis-window:-find-where-the-specimens-are)
+
+3. [Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
 
 # Part one: Setting up a first analysis
 
