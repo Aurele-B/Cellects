@@ -11,8 +11,13 @@ Any Cellects analysis takes place in 3 steps: data specification, first image an
 The second section of this user manual runs thoroughly through every option to run Cellects in particular conditions 
 and to finetune an already working setup.
 
-Part one: Setting up a first analysis
---------
+# Table of content
+[Part one: Setting up a first analysis](#-Part-one:-Setting-up-a-first-analysis)
+
+[Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
+
+# Part one: Setting up a first analysis
+
 ## 1/ The first window: data specification
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure1.png"
@@ -316,8 +321,8 @@ the time (9 over 10), and then, adjust to parameters so that the failed analysis
 and finally click on the *Save one result* button (Fig. 7) to replace the saved results of that arena 
 (i.e. every corresponding row of the .csv files and the validation video).
 
-Part two: Improving and personalizing the analysis
---------
+# Part two: Improving and personalizing the analysis
+
 ## 1/ Advanced parameters
 
 <img
