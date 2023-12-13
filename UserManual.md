@@ -14,11 +14,11 @@ and to finetune an already working setup.
 # Table of content
 1. [Part one: Setting up a first analysis](#-Part-one:-Setting-up-a-first-analysis)
 
-2. [2/ The image analysis window: find where the specimens are](#2/-The-image-analysis-window:-find-where-the-specimens-are)
+   2. [2/ The image analysis window: find where the specimens are](#2/-The-image-analysis-window:-find-where-the-specimens-are)
 
-3. [Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
+2. [Part two: Improving and personalizing the analysis](#-Part-two:-Improving-and-personalizing-the-analysis)
 
-# Part one: Setting up a first analysis
+## Part one: Setting up a first analysis
 
 ## 1/ The first window: data specification
 <img
@@ -77,7 +77,7 @@ to run directly the complete analysis.
 Click the *Next* button to go to the image analysis window (Fig. 2), or 
 to the window showing the list of folders (Fig. 10) if applicable.
 
-## 2/ The image analysis window: find where the specimens are
+### 2/ The image analysis window: find where the specimens are
 <img
   src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure2.png"
   alt="Alt text"
@@ -323,7 +323,7 @@ the time (9 over 10), and then, adjust to parameters so that the failed analysis
 and finally click on the *Save one result* button (Fig. 7) to replace the saved results of that arena 
 (i.e. every corresponding row of the .csv files and the validation video).
 
-# Part two: Improving and personalizing the analysis
+## Part two: Improving and personalizing the analysis
 
 ## 1/ Advanced parameters
 
