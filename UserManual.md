@@ -47,6 +47,7 @@ Cellects User Manual
     - [Run analysis in parallel](#Run-analysis-in-parallel)
     - [Proc max core number](#Proc-max-core-number)
     - [Minimal RAM let free](#Minimal-RAM-let-free)
+    - [Lose accuracy to save RAM](#Lose-accuracy-to-save-RAM)
     - [Video fps](#Video-fps)
     - [Keep unaltered videos](#Keep-unaltered-videos)
     - [Saved processed video](#Saved-processed-video)
