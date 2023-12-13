@@ -15,11 +15,11 @@ Part one: Setting up a first analysis
 --------
 ## 1/ The first window: data specification
 <img
-  src="https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png"
+  src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure1.png"
   width="300">
 
 <img
-  src="https://github.com/Aurele-B/Cellects/screenshots/UserManualFigure1.png"
+  src="https://github.com/Aurele-B/Cellects/blob/main/screenshots/UserManualFigure1.png"
   alt="Alt text"
   title="Figure 1: Cellects first window"
   style="display: inline-block; margin: 0 auto; max-width: 300px">
