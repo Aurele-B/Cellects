@@ -2,7 +2,6 @@
 Cellects User Manual
 ====================
 
-# Table of content
 - ## [Foreword](#Foreword)
 - ## [Setting up a first analysis](#Setting-up-a-first-analysis)
   - ### [Data localisation in the first window](#Data-localisation-in-the-first-window)
