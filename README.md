@@ -1,4 +1,4 @@
-Cellects: Cell Expansion Computer Tracking software
+Cellects: Cell Expansion Computer Tracking Software
 ===================================================
 
 Description
