@@ -3,29 +3,33 @@ Cellects: Cell Expansion Computer Tracking Software
 
 Description
 -----------
+<div style="text-align: justify">
 Cellects is a tracking software for organisms whose shape and size change over time. 
 Cellects’ main strengths are its broad scope of action, 
 automated computation of a variety of geometrical descriptors, easy installation and user-friendly interface.
+
 
 Installation
 ------------
 <br />
 
-To install Cellects, you can:
+The following is four methods to install Cellects.
 <br />
 
-### 1. Install it in a click using Cellects.exe on windows.
+### 1. With Cellects_installer.exe (windows)
 - Download [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
 - Double-click on the Cellects_installer.exe file to start installation
-<br />
 Note 1: Windows may warn you that it's unsafe; that's normal, because we are not a registered developer. Click "More info" and "Run Anyway".
-<br />
 Note 2: For the same reason, some antivirus software can prevent installation.
+
+- To run Cellects, explore the newly created folder to find and execute Cellects.exe
+<br />
+
+### 2. With Cellects.zip on (windows)
+- Download and extract [Cellects.zip](https://drive.google.com/file/d/1v3SPsQ5H4RiQn13McZlbfcnJSqNz37z0/view?usp=drive_link)
 - To run Cellects, explore the newly created folder to find and execute Cellects.exe
 
-<br />
-
-### 2. From this repository
+### 3. From this repository
 - Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
 - Install [git](https://git-scm.com/downloads)
 - Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
@@ -60,8 +64,8 @@ poetry run Cellects
 
 <br />
 
-### 3. Install it in the python global environment with a wheel file
-- Create or download "cellects-1.0.0-py3-none-any.whl" file in a directory
+### 4. With the wheel file
+- Create or download [cellects-1.0.0-py3-none-any.whl](https://drive.google.com/file/d/1W3N85LSdk5NX7wYPz4WTEgtcF1Ydr32v/view?usp=drive_link) file in a directory
 - Open a terminal and go in that directory
 ```
 cd path/toward/the/wheel/file/folder/
@@ -82,14 +86,8 @@ pip install cellects-1.0.0-py3-none-any.whl
 ```
 Cellects
 ```
-#### To get the wheel file:
-Contact me or create the wheel file yourself by:
-- Following section 2. to install Cellects 
-- Creating the wheel file with:
-```
-poetry build
-```
 
 Usage
 ------------
-Browse the user manual in the supporting information of the paper describing the software.
+Find a usage example on video [here](https://www.youtube.com/watch?v=N-k4p_aSPC0) and/or browse the UserManual.md
+</div>
