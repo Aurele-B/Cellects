@@ -1184,7 +1184,7 @@ class RunAllThread(QtCore.QThread):
         if self.parent().po.all['folder_number'] > 1:
             logging.info(f"Use {self.parent().po.all['folder_list'][exp_i]} folder")
 
-            message = f"{self.parent().po.all['global_pathway'][:6]} ... {self.parent().po.all['folder_list'][exp_i]}"
+            message = f"{str(self.parent().po.all['global_pathway'])[:6]} ... {self.parent().po.all['folder_list'][exp_i]}"
             self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][exp_i],
                                               self.parent().po.all['folder_list'][exp_i])
         else:
@@ -1374,14 +1374,21 @@ class RunAllThread(QtCore.QThread):
                     if analysis_i.statistics["first_move"] != 'NA':
                         if self.parent().po.vars['oscilacyto_analysis']:
                             oscil_i = df(
-                                c_[repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
+                                c_[repeat(arena,
+                                          analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
                                 columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
-                            self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
+                            if i == 0:
+                                self.parent().po.one_row_per_oscillating_cluster = oscil_i
+                            else:
+                                self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
                             # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
                         if self.parent().po.vars['fractal_analysis']:
                             fractal_i = df(analysis_i.fractal_boxes,
                                 columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-                            self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, fractal_i))
+                            if i == 0:
+                                self.parent().po.fractal_box_sizes = fractal_i
+                            else:
+                                self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, fractal_i))
                     # Save efficiency visualization
                     self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                              analysis_i.efficiency_test_2)

@@ -32,35 +32,38 @@ class ProgressivelyAddDistantShapes:
 
     def check_main_shape_label(self, previous_shape):
 
-        # If there is at least one pixel of the previous shape that is not among pixels labelled 1,
-        # clarify who's main shape
-        main_shape_label = unique(previous_shape * self.new_order)
-        main_shape_label = main_shape_label[main_shape_label != 0]
+        if any(self.new_order > 1):
+            # If there is at least one pixel of the previous shape that is not among pixels labelled 1,
+            # clarify who's main shape
+            main_shape_label = unique(previous_shape * self.new_order)
+            main_shape_label = main_shape_label[main_shape_label != 0]
 
-        # If the main shape is not labelled 1 in main_shape:
-        if not isin(1, main_shape_label):
-            # If it is not 1, find which label correspond to the previous shape
-            if len(main_shape_label) > 1:
-                pixel_sum_per_label = zeros(len(main_shape_label), dtype=uint64)
-                # Find out the label corresponding to the largest shape
-                for li, label in enumerate(main_shape_label):
-                    pixel_sum_per_label[li] = self.new_order[self.new_order == label].sum()
-                main_shape_label = main_shape_label[argmax(pixel_sum_per_label)]
-            # Attribute the correct main shape
-            self.main_shape[self.new_order == main_shape_label] = 1
-            # Exchange the 1 and the main shape label in new_order image
-            not_one_idx = nonzero(self.new_order == main_shape_label)
-            one_idx = nonzero(self.new_order == 1)
-            self.new_order[not_one_idx[0], not_one_idx[1]] = 1
-            self.new_order[one_idx[0], one_idx[1]] = main_shape_label
-            # Do the same for stats
-            not_one_stats = self.stats[main_shape_label, :].copy()
-            self.stats[main_shape_label, :] = self.stats[1, :]
-            self.stats[1, :] = not_one_stats
+            # If the main shape is not labelled 1 in main_shape:
+            if not isin(1, main_shape_label):
+                # If it is not 1, find which label correspond to the previous shape
+                if len(main_shape_label) > 1:
+                    pixel_sum_per_label = zeros(len(main_shape_label), dtype=uint64)
+                    # Find out the label corresponding to the largest shape
+                    for li, label in enumerate(main_shape_label):
+                        pixel_sum_per_label[li] = self.new_order[self.new_order == label].sum()
+                    main_shape_label = main_shape_label[argmax(pixel_sum_per_label)]
+                # Attribute the correct main shape
+                self.main_shape[self.new_order == main_shape_label] = 1
+                # Exchange the 1 and the main shape label in new_order image
+                not_one_idx = nonzero(self.new_order == main_shape_label)
+                one_idx = nonzero(self.new_order == 1)
+                self.new_order[not_one_idx[0], not_one_idx[1]] = 1
+                self.new_order[one_idx[0], one_idx[1]] = main_shape_label
+                # Do the same for stats
+                not_one_stats = self.stats[main_shape_label, :].copy()
+                self.stats[main_shape_label, :] = self.stats[1, :]
+                self.stats[1, :] = not_one_stats
+            else:
+            #if any(previous_shape * (self.new_order == 1)):
+                # Create an image of the principal shape
+                self.main_shape[self.new_order == 1] = 1
         else:
-        #if any(previous_shape * (self.new_order == 1)):
-            # Create an image of the principal shape
-            self.main_shape[self.new_order == 1] = 1
+            self.main_shape[nonzero(self.new_order)] = 1
 
     def consider_shapes_sizes(self, min_shape_size=None, max_shape_size=None):
         if self.max_distance != 0:
@@ -85,8 +88,9 @@ class ProgressivelyAddDistantShapes:
     def connect_shapes(self, only_keep_connected_shapes, rank_connecting_pixels, intensity_valley=None):
         # If there are distant shapes of the good size, run the following:
         if self.max_distance != 0 and any(self.new_order > 1):
+            # The intensity valley method does not work yet, don't use it
             if intensity_valley is not None:
-                self.gravity_field = intensity_valley
+                self.gravity_field = intensity_valley # make sure that the values correspond to the coord
             else:
                 # 1) faire un champ gravitationnel autour de la forme principale
                 self.gravity_field = make_gravity_field(self.main_shape, max_distance=self.max_distance, with_erosion=1)
@@ -162,18 +166,21 @@ class ProgressivelyAddDistantShapes:
 
         expanded_main = self.main_shape.copy()
         max_field_feeling = 0
+        # Loop over each shape to connect, from the nearest to the furthest to the main shape
         for shape_i in order_of_shapes_to_expand:#  unique(self.new_order)[2:]:
             current_shape = zeros(self.main_shape.shape, uint8)
             current_shape[self.new_order == shape_i] = 1
             dil = 0
+            # Dilate that shape until it overlaps the main shape
             while logical_and(dil <= self.max_distance, not any(current_shape * expanded_main)):
                 dil += 1
                 rings = dilate(current_shape, simple_disk, iterations=1, borderType=BORDER_CONSTANT,
                                borderValue=0)
 
                 rings = self.gravity_field * (rings - current_shape)
-                max_field_feeling = max(rings)
+                max_field_feeling = max(rings) # min(rings[rings>0])
                 if max_field_feeling > 0:  # If there is no shape within max_distance range, quit the loop
+
                     if dil == 1:
                         initial_pixel_number = sum(rings == max_field_feeling)
                     while sum(rings == max_field_feeling) > initial_pixel_number:

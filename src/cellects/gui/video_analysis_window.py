@@ -369,7 +369,7 @@ class VideoAnalysisWindow(WindowType):
         """
         self.parent().po.all['video_option'] = self.select_option.currentIndex()
         self.parent().po.vars['frame_by_frame_segmentation'] = False
-        self.parent().po.vars['do_value_segmentation'] = False
+        self.parent().po.vars['do_threshold_segmentation'] = False
         self.parent().po.vars['do_slope_segmentation'] = False
 
         if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 0:
@@ -379,12 +379,12 @@ class VideoAnalysisWindow(WindowType):
             self.parent().po.vars['frame_by_frame_segmentation'] = False
             if self.parent().po.all['video_option'] == 1:
                 logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
-                self.parent().po.vars['do_value_segmentation'] = True
+                self.parent().po.vars['do_threshold_segmentation'] = True
             elif self.parent().po.all['video_option'] == 2:
                 logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
                 self.parent().po.vars['do_slope_segmentation'] = True
             elif self.parent().po.all['video_option'] > 2:
-                self.parent().po.vars['do_value_segmentation'] = True
+                self.parent().po.vars['do_threshold_segmentation'] = True
                 self.parent().po.vars['do_slope_segmentation'] = True
                 if self.parent().po.all['video_option'] == 3:
                     logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")

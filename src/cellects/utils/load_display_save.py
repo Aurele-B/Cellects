@@ -264,6 +264,7 @@ def movie(video, keyboard=1, increase_contrast=True):
             final_img = resize(image, (500, 500))
             imshow('Motion analysis', final_img)
             waitKey(keyboard)
+    destroyAllWindows()
 
 
 opencv_accepted_formats = [
