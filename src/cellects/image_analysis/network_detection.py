@@ -10,17 +10,16 @@ from cv2 import connectedComponents, CV_16U
 from cellects.image_analysis.image_segmentation import get_otsu_threshold
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
+from cellects.image_analysis.morphological_operations import cc
 
 
 class NetworkDetection:
-    def __init__(self, grayscale_image, binary_image, origin, lighter_background, cross_33):
+    def __init__(self, grayscale_image, binary_image, lighter_background, cross_33):
         """
         :param grayscale_image: current grayscale image to analyze
         :type grayscale_image: uint8
         :param binary_image: current binary image to analyze
         :type binary_image: uint8
-        :param origin: binary image of the shape detected on the first image
-        :type origin: uint8
         :param lighter_background: True if the background of the image is lighter than the shape to detect
         :type lighter_background: bool
         :param cross_33: A 3*3 matrix containing a binary cross
@@ -29,7 +28,6 @@ class NetworkDetection:
         self.grayscale_image = grayscale_image
         self.binary_image = binary_image
         self.lighter_background = lighter_background
-        self.origin = origin
         self.cross_33 = cross_33
 
     def segment_locally(self, side_length=8, step=2, int_variation_thresh=20):
@@ -53,36 +51,33 @@ class NetworkDetection:
         max_x = max(x)
         max_x += 20
 
-        y_windows = np.arange(0, max_y - min_y + 1, side_length)
-        x_windows = np.arange(0, max_x - min_x + 1, side_length)
+        # y_windows = np.arange(0, max_y - min_y + 1, side_length)
+        # x_windows = np.arange(0, max_x - min_x + 1, side_length)
+        y_size = max_y - min_y + 1
+        x_size = max_x - min_x + 1
         network = np.zeros((max_y - min_y, max_x - min_x), np.uint64)
         homogeneities = np.zeros((max_y - min_y, max_x - min_x), np.uint64)
         cropped_binary_image = self.binary_image[min_y:max_y, min_x:max_x]
         cropped_grayscale_image = self.grayscale_image[min_y:max_y, min_x:max_x]
-        # y_windows = np.arange(0, self.origin.shape[0], side_length)
-        # x_windows = np.arange(0, self.origin.shape[1], side_length)
-        # network = np.zeros(self.origin.shape, np.uint64)
         # will be more efficient if it only loops over a zoom on self.binary_image == 1
         for to_add in np.arange(0, side_length, step):
+            y_windows = np.arange(0, y_size, side_length)
+            x_windows = np.arange(0, x_size, side_length)
             y_windows += to_add
             x_windows += to_add
             for y_start in y_windows:
                 # y_start = 4
                 if y_start < network.shape[0]:
-                # if y_start < self.origin.shape[0]:
                     y_end = y_start + side_length
                     if y_end < network.shape[0]:
-                    # if y_end < self.origin.shape[0]:
                         for x_start in x_windows:
                             if x_start < network.shape[1]:
-                            # if x_start < self.origin.shape[1]:
                                 x_end = x_start + side_length
                                 if x_end < network.shape[1]:
-                                # if x_end < self.origin.shape[1]:
                                     if np.any(cropped_binary_image[y_start:y_end, x_start:x_end]):
                                         potential_network = cropped_grayscale_image[y_start:y_end, x_start:x_end]
-                                        if ptp(potential_network[nonzero(potential_network)]) > int_variation_thresh:
-                                            homogeneities[y_start + net_coord[0], x_start + net_coord[1]] += 1
+                                        if ptp(potential_network[nonzero(potential_network)]) < int_variation_thresh:
+                                            homogeneities[y_start:y_end, x_start:x_end] += 1
                                         threshold = get_otsu_threshold(potential_network)
                                         if self.lighter_background:
                                             net_coord = np.nonzero(potential_network < threshold)
@@ -92,7 +87,7 @@ class NetworkDetection:
 
         self.network = np.zeros(self.binary_image.shape, np.uint8)
         self.network[min_y:max_y, min_x:max_x] = (network >= (side_length // step)).astype(np.uint8)
-        # self.network *= self.origin
+        self.network[min_y:max_y, min_x:max_x][homogeneities >= (side_length // step) - 1] = 0
 
     def segment_globally(self):
         """
@@ -114,7 +109,6 @@ class NetworkDetection:
                     network[coord] = 1
         self.network = network
 
-        # self.network *= self.origin
     def selects_elongated_or_holed_shapes(self, hole_surface_ratio=0.1, eccentricity=0.65):
         """
         This method only keep the elongates or holed shapes.
@@ -131,7 +125,6 @@ class NetworkDetection:
 
         # Filter out component that does not have the shape of the part of a network
         nb, components = cv2.connectedComponents(potential_network)
-        #components, stat, cen = cc(potential_network)
         self.network = np.zeros_like(self.network)
         for compo_i in np.arange(1, nb):
             #compo_i = 1
@@ -150,19 +143,19 @@ class NetworkDetection:
                 matrix_i = np.nonzero(matrix_i)
                 self.network[matrix_i[0], matrix_i[1]] = 1
 
-    def add_previous_network(self, previous_network):
-        """
-        When needed, consider all area occupied by the network at t - 1 as part of the network
-        :return:
-        """
-        self.network[np.nonzero(previous_network)] = 1
-
-    def add_origin_to_network(self):
+    def add_pixels_to_the_network(self, pixels_to_add):
         """
         When needed, consider all area occupied by the origin as part of the network
         :return:
         """
-        self.network[np.nonzero(1 - self.origin)] = 1
+        self.network[pixels_to_add] = 1
+
+    def remove_pixels_from_the_network(self, pixels_to_remove):
+        """
+        When needed, consider all area occupied by the origin as part of the network
+        :return:
+        """
+        self.network[pixels_to_remove] = 0
 
     def connect_network(self, maximal_distance_connection=50):
         """
@@ -173,19 +166,35 @@ class NetworkDetection:
         """
         # Force connection of the disconnected parts of the network
         if np.any(self.network):
-            nb, components = cv2.connectedComponents(self.network)
-            if self.lighter_background:
-                intensity_valley = self.grayscale_image
-            for compo_i in np.arange(1, nb):
-                matrix_i = components == compo_i
+            ordered_image, stats, centers = cc(self.network)
+            # if self.lighter_background:
+            #     intensity_valley = 255 - self.grayscale_image.copy()
+            # else:
+            #     intensity_valley = self.grayscale_image.copy()
+            # new
+            pads = ProgressivelyAddDistantShapes(self.network, ordered_image==1, maximal_distance_connection, self.cross_33)
+            # If max_distance is non nul look for distant shapes
+            # pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
+            pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
+            potential_network = np.nonzero(pads.expanded_shape)
+            self.network[potential_network[0], potential_network[1]] = 1
 
-                # network_i = np.nonzero(change_thresh_until_one(self.grayscale_image, matrix_i, self.lighter_background))
-                # self.network[network_i] = 1
-                pads = ProgressivelyAddDistantShapes(matrix_i, self.network, maximal_distance_connection, self.cross_33)
-                # If max_distance is non nul look for distant shapes
-                pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
-                potential_network = np.nonzero(pads.expanded_shape)
-                self.network[potential_network[0], potential_network[1]] = 1
+            # Remove all disconnected components remaining
+            ordered_image, stats, centers = cc(self.network)
+            self.network[ordered_image != 1] = 0
+
+            # prev:
+            # nb, components = cv2.connectedComponents(self.network)
+            # for compo_i in np.arange(1, nb):
+            #     matrix_i = components == compo_i
+            #
+            #     # network_i = np.nonzero(change_thresh_until_one(self.grayscale_image, matrix_i, self.lighter_background))
+            #     # self.network[network_i] = 1
+            #     pads = ProgressivelyAddDistantShapes(matrix_i, self.network, maximal_distance_connection, self.cross_33)
+            #     # If max_distance is non nul look for distant shapes
+            #     pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
+            #     potential_network = np.nonzero(pads.expanded_shape)
+            #     self.network[potential_network[0], potential_network[1]] = 1
         # Visualize the network
         # img = self.grayscale_image.copy()
         # net_cc = np.nonzero(self.network)

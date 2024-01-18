@@ -264,7 +264,7 @@ class FirstWindow(WindowType):
                 self.first_im_read(True)
             else:
                 self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
-                if not os.path.isdir(self.parent().po.all['global_pathway']):
+                if not os.path.isdir(Path(self.parent().po.all['global_pathway'])):
                     self.message.setText('The folder selected is not valid')
                 else:
                     self.message.setText('')
@@ -345,8 +345,8 @@ class FirstWindow(WindowType):
     def pathway_changed(self):
         if self.thread["LoadDataToRunCellectsQuickly"].isRunning():
             self.thread["LoadDataToRunCellectsQuickly"].wait()
-        if os.path.isdir(self.global_pathway.text()):
-            self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
+        if os.path.isdir(Path(self.global_pathway.text())):
+            self.parent().po.all['global_pathway'] = self.global_pathway.text()
             logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
             os.chdir(Path(self.parent().po.all['global_pathway']))
             # 1) Put invisible widgets

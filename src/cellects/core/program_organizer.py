@@ -197,10 +197,17 @@ class ProgramOrganizer:
             self.videos.write_videos_as_np_arrays(
                 self.data_list, self.vars['min_ram_free'], not self.vars['already_greyscale'], self.reduce_image_dim)
         self.instantiate_tables()
+
+        # i=0
+        # l = [i, i + 1, self.vars, True, False, False, None]
+        # sav = self
+        # self = MotionAnalysis(l)
+        # self.get_descriptors_from_binary()
+        # self.detect_growth_transitions()
+        # show_seg=True
+
         for i, arena in enumerate(self.vars['analyzed_individuals']):
-            # i=0
             l = [i, i + 1, self.vars, True, False, False, None]
-            # self.vars['lose_accuracy_to_save_memory']
             analysis_i = MotionAnalysis(l)
             self.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                      analysis_i.efficiency_test_2)
@@ -1250,16 +1257,11 @@ class ProgramOrganizer:
             #                                    len(descriptors) + 2)),
             #                             columns=['arena', 'time'] + descriptors)
 
-        if self.vars['oscilacyto_analysis']:
-            self.one_row_per_oscillating_cluster = df(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
-                                                               'edge_distance'])
-            # self.one_row_per_oscillating_cluster = df(empty((0, 5), dtype=float32),
-            #                                           columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
-            #                                                    'edge_distance'])
-
-        if self.vars['fractal_analysis']:
-            self.fractal_box_sizes = df(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-            # self.fractal_box_sizes = df(empty((0, 4), dtype=float32), columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
+        # if self.vars['oscilacyto_analysis']:
+        #     self.one_row_per_oscillating_cluster = df(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
+        #                                                        'edge_distance'])
+        # if self.vars['fractal_analysis']:
+        #     self.fractal_box_sizes = df(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
 
         if self.vars['already_greyscale']:
             if len(self.first_image.bgr.shape) == 2:

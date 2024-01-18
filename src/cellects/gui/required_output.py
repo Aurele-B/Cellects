@@ -100,7 +100,7 @@ class RequiredOutput(WindowType):
             cb_index = label_index + 1
 
             # To remove:
-            if name == 'fractal_analysis' or name == 'network_detection':
+            if name == 'fractal_analysis':# or name == 'network_detection':
                 self.descriptor_widgets_list[label_index].setVisible(False)
                 self.descriptor_widgets_list[cb_index].setVisible(False)
 
