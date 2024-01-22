@@ -43,13 +43,23 @@ class NetworkDetection:
         min_y = min(y)
         if (min_y - 20) >= 0:
             min_y -= 20
+        else:
+            min_y = 0
         max_y = max(y)
-        max_y += 20
+        if (max_y + 20) < self.binary_image.shape[0]:
+            max_y += 20
+        else:
+            max_y = self.binary_image.shape[0] - 1
         min_x = min(x)
         if (min_x - 20) >= 0:
             min_x -= 20
+        else:
+            min_x = 0
         max_x = max(x)
-        max_x += 20
+        if (max_x + 20) < self.binary_image.shape[1]:
+            max_x += 20
+        else:
+            max_x = self.binary_image.shape[1] - 1
 
         # y_windows = np.arange(0, max_y - min_y + 1, side_length)
         # x_windows = np.arange(0, max_x - min_x + 1, side_length)
