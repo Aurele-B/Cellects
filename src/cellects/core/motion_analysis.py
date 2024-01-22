@@ -10,6 +10,7 @@ import logging
 import os
 import pickle
 
+import numpy as np
 # from scipy.stats import linregress
 # from scipy import signal as si
 from cv2 import (
@@ -21,9 +22,9 @@ from numba.typed import Dict as TDict
 from numpy import (
     c_, char, floor, pad, append, round, ceil, uint64, float32, absolute, sum,
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
-    ones, empty, array, arange, nonzero, newaxis, max, argmin, argmax, unique,
+    ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
-    logical_xor, logical_not, less, greater, save, sign, uint8, int8, int16,
+    logical_xor, float16, less, greater, save, sign, uint8, int8, int16,
     uint32, float64, expand_dims, min, max, all, any)
 from pandas import DataFrame as df
 from pandas import read_csv, concat
@@ -631,23 +632,36 @@ class MotionAnalysis:
         #     (self.dims[0] - self.lost_frames, self.dims[1], self.dims[2]),
         #     dtype=float64)
         try:
-            smoothed_video = zeros(self.dims, dtype=float64)
-            smooth_kernel = ones(self.step) / self.step
-            for i in arange(converted_video.shape[1]):
-                for j in arange(converted_video.shape[2]):
-                    padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
-                                 (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
-                    moving_average = convolve(padded, smooth_kernel, mode='valid')
-                    if self.vars['iterate_smoothing'] > 1:
-                        for it in arange(1, self.vars['iterate_smoothing']):
-                            padded = pad(moving_average,
-                                         (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
-                            moving_average = convolve(padded, smooth_kernel, mode='valid')
-                            # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
-                    smoothed_video[:, i, j] = moving_average
             if self.vars['lose_accuracy_to_save_memory']:
-                smoothed_video = bracket_to_uint8_image_contrast(smoothed_video)
-                # smoothed_video = to_uint8(smoothed_video)
+                smoothed_video = zeros(self.dims, dtype=uint8)
+                smooth_kernel = ones(self.step) / self.step
+                for i in arange(converted_video.shape[1]):
+                    for j in arange(converted_video.shape[2]):
+                        padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
+                                     (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                        moving_average = convolve(padded, smooth_kernel, mode='valid')
+                        if self.vars['iterate_smoothing'] > 1:
+                            for it in arange(1, self.vars['iterate_smoothing']):
+                                padded = pad(moving_average,
+                                             (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                                moving_average = convolve(padded, smooth_kernel, mode='valid')
+                                # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
+                        smoothed_video[:, i, j] = bracket_to_uint8_image_contrast(moving_average)
+            else:
+                smoothed_video = zeros(self.dims, dtype=float64)
+                smooth_kernel = ones(self.step) / self.step
+                for i in arange(converted_video.shape[1]):
+                    for j in arange(converted_video.shape[2]):
+                        padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
+                                     (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                        moving_average = convolve(padded, smooth_kernel, mode='valid')
+                        if self.vars['iterate_smoothing'] > 1:
+                            for it in arange(1, self.vars['iterate_smoothing']):
+                                padded = pad(moving_average,
+                                             (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
+                                moving_average = convolve(padded, smooth_kernel, mode='valid')
+                                # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
+                        smoothed_video[:, i, j] = moving_average
             return smoothed_video
 
         except MemoryError:
@@ -1529,14 +1543,15 @@ class MotionAnalysis:
             period_in_frame_nb = int(self.vars['oscillation_period'] / self.time_interval)
             if period_in_frame_nb < 2:
                 period_in_frame_nb = 2
+
             necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
             available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-            if necessary_memory > available_memory:
-                oscillations_sign = zeros(self.converted_video.shape, dtype=float64)
+            if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
+                oscillations_sign = zeros(self.converted_video.shape, dtype=float16)
                 for cy in arange(self.converted_video.shape[1]):
                     for cx in arange(self.converted_video.shape[2]):
-                        oscillations_sign[:, cy, cx] = gradient(self.converted_video[:, cy, cx].astype(int16),
-                                                                period_in_frame_nb)
+                        oscillations_sign[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx].astype(int16),
+                                                                period_in_frame_nb), 3).astype(float16)
             else:
                 oscillations_sign = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
             # check if conv change here
