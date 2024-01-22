@@ -1,4 +1,6 @@
 # Ignore the .idea directory
+venv
+*pycache*
 .idea/
 docs/
 dist/
