@@ -25,7 +25,7 @@ from numpy import (
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
     logical_xor, float16, less, greater, save, sign, uint8, int8, int16,
-    uint32, float64, expand_dims, min, max, all, any)
+    uint32, float64, expand_dims, min, max, round_, any)
 from pandas import DataFrame as df
 from pandas import read_csv, concat
 from psutil import virtual_memory
@@ -633,7 +633,7 @@ class MotionAnalysis:
         #     dtype=float64)
         try:
             if self.vars['lose_accuracy_to_save_memory']:
-                smoothed_video = zeros(self.dims, dtype=uint8)
+                smoothed_video = zeros(self.dims, dtype=float16)
                 smooth_kernel = ones(self.step) / self.step
                 for i in arange(converted_video.shape[1]):
                     for j in arange(converted_video.shape[2]):
@@ -646,7 +646,9 @@ class MotionAnalysis:
                                              (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                                 moving_average = convolve(padded, smooth_kernel, mode='valid')
                                 # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
-                        smoothed_video[:, i, j] = bracket_to_uint8_image_contrast(moving_average)
+                        smoothed_video[:, i, j] = moving_average.astype(float16)
+                # smoothed_video -= min(smoothed_video)
+                # smoothed_video = round_(255 * (smoothed_video / max(smoothed_video))).astype(uint8)
             else:
                 smoothed_video = zeros(self.dims, dtype=float64)
                 smooth_kernel = ones(self.step) / self.step
@@ -693,12 +695,12 @@ class MotionAnalysis:
             for cy in arange(self.dims[1]):
                 for cx in arange(self.dims[2]):
                     if self.vars['lose_accuracy_to_save_memory']:
-                        derive[:, cy, cx] = bracket_to_uint8_image_contrast(gradient(derive[:, cy, cx], self.step))
+                        derive[:, cy, cx] = gradient(derive[:, cy, cx], self.step).astype(float16)
                     else:
                         derive[:, cy, cx] = gradient(derive[:, cy, cx], self.step)
         else:
             if self.vars['lose_accuracy_to_save_memory']:
-                derive = bracket_to_uint8_image_contrast(gradient(derive, self.step, axis=0))
+                derive = gradient(derive, self.step, axis=0).astype(float16)
             else:
                 derive = gradient(derive, self.step, axis=0)
 
@@ -1419,7 +1421,7 @@ class MotionAnalysis:
             self.network_dynamics = zeros(self.dims, dtype=uint8)
             # if len(self.converted_video.shape) == 3:
             #     self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
-            if self.converted_video.dtype == "float64":
+            if self.converted_video.dtype != "uint8":
                 self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
             self.covering_intensity = zeros(self.dims[1:], dtype=float64)
             if self.vars['origin_state'] == "fluctuating":
@@ -1556,7 +1558,7 @@ class MotionAnalysis:
                 oscillations_sign = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
             # check if conv change here
             # if not self.vars['lose_accuracy_to_save_memory']:
-            if self.converted_video.dtype == "float64":
+            if self.converted_video.dtype != "uint8":
                 self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
                 # self.converted_video -= min(self.converted_video)
                 # self.converted_video = to_uint8(255 * (self.converted_video / max(self.converted_video)))
@@ -1823,7 +1825,7 @@ class MotionAnalysis:
     def save_video(self):
         """ faire en sorte qu'il se passe la même chose ici que dans videoreader"""
         if self.vars['save_processed_videos']:
-            if self.converted_video.dtype == 'float64':
+            if self.converted_video.dtype != "uint8":
                 self.converted_video -= min(self.converted_video)
                 self.converted_video = 255 * (self.converted_video / max(self.converted_video))
                 self.converted_video = round(self.converted_video).astype(uint8)
