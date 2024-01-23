@@ -25,7 +25,7 @@ from numpy import (
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
     logical_xor, float16, less, greater, save, sign, uint8, int8, int16,
-    uint32, float64, expand_dims, min, max, round_, any)
+    uint32, float64, expand_dims, min, max, any)
 from pandas import DataFrame as df
 from pandas import read_csv, concat
 from psutil import virtual_memory
@@ -648,7 +648,7 @@ class MotionAnalysis:
                                 # moving_average = convolve(moving_average, smooth_kernel, mode='valid')
                         smoothed_video[:, i, j] = moving_average.astype(float16)
                 # smoothed_video -= min(smoothed_video)
-                # smoothed_video = round_(255 * (smoothed_video / max(smoothed_video))).astype(uint8)
+                # smoothed_video = round(255 * (smoothed_video / max(smoothed_video))).astype(uint8)
             else:
                 smoothed_video = zeros(self.dims, dtype=float64)
                 smooth_kernel = ones(self.step) / self.step
@@ -1413,7 +1413,7 @@ class MotionAnalysis:
     def check_converted_video_type(self):
         if self.converted_video.dtype != "uint8":
             self.converted_video -= min(self.converted_video)
-            self.converted_video = round_((255 * (self.converted_video / max(self.converted_video)))).astype(uint8)
+            self.converted_video = round((255 * (self.converted_video / max(self.converted_video)))).astype(uint8)
 
 
     def network_detection(self, show_seg=False):
@@ -1445,7 +1445,7 @@ class MotionAnalysis:
                     #
                     # self.vars['network_mesh_side_length']=10
                     # self.vars['network_mesh_step_length']=2
-                    # self.vars['network_detection_threshold']=50
+                    # self.vars['network_detection_threshold']=10
 
                     nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
                                        step=self.vars['network_mesh_step_length'],
@@ -1467,7 +1467,7 @@ class MotionAnalysis:
 
                         if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
                             remove_faded_pixels = 1 - self.binary[t - 1, ...]
-                            nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels))
+                            nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
 
 
                     # Add the origin as a part of the network:
