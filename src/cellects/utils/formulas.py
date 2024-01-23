@@ -48,7 +48,7 @@ def bracket_to_uint8_image_contrast(image):
     :return: an image with increased contrast
     :rtype: uint8
     """
-    image -= min(image)
+    image = image - min(image)
     return to_uint8(255 * (image / max(image)))
 
 
