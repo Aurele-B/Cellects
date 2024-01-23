@@ -12,7 +12,7 @@
     - acf_fft
     - moving_average
 """
-from numpy import sum, absolute, max, min, empty_like, round_, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
+from numpy import sum, round, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
 
 
@@ -36,7 +36,7 @@ def to_uint8(an_array):
     :rtype: uint8
     """
     out = empty_like(an_array)
-    return round_(an_array, 0, out).astype(uint8)
+    return round(an_array, 0, out).astype(uint8)
 
 
 @njit()

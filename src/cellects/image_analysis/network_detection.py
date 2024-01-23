@@ -39,36 +39,38 @@ class NetworkDetection:
         :type step: uint8
         :return:
         """
+        self.side_length = side_length
+        self.step = step
         y, x = nonzero(self.binary_image)
-        min_y = min(y)
-        if (min_y - 20) >= 0:
-            min_y -= 20
+        self.min_y = min(y)
+        if (self.min_y - 20) >= 0:
+            self.min_y -= 20
         else:
-            min_y = 0
-        max_y = max(y)
-        if (max_y + 20) < self.binary_image.shape[0]:
-            max_y += 20
+            self.min_y = 0
+        self.max_y = max(y)
+        if (self.max_y + 20) < self.binary_image.shape[0]:
+            self.max_y += 20
         else:
-            max_y = self.binary_image.shape[0] - 1
-        min_x = min(x)
-        if (min_x - 20) >= 0:
-            min_x -= 20
+            self.max_y = self.binary_image.shape[0] - 1
+        self.min_x = min(x)
+        if (self.min_x - 20) >= 0:
+            self.min_x -= 20
         else:
-            min_x = 0
-        max_x = max(x)
-        if (max_x + 20) < self.binary_image.shape[1]:
-            max_x += 20
+            self.min_x = 0
+        self.max_x = max(x)
+        if (self.max_x + 20) < self.binary_image.shape[1]:
+            self.max_x += 20
         else:
-            max_x = self.binary_image.shape[1] - 1
+            self.max_x = self.binary_image.shape[1] - 1
 
-        # y_windows = np.arange(0, max_y - min_y + 1, side_length)
-        # x_windows = np.arange(0, max_x - min_x + 1, side_length)
-        y_size = max_y - min_y + 1
-        x_size = max_x - min_x + 1
-        network = np.zeros((max_y - min_y, max_x - min_x), np.uint64)
-        homogeneities = np.zeros((max_y - min_y, max_x - min_x), np.uint64)
-        cropped_binary_image = self.binary_image[min_y:max_y, min_x:max_x]
-        cropped_grayscale_image = self.grayscale_image[min_y:max_y, min_x:max_x]
+        # y_windows = np.arange(0, self.max_y - self.min_y + 1, side_length)
+        # x_windows = np.arange(0, self.max_x - self.min_x + 1, side_length)
+        y_size = self.max_y - self.min_y + 1
+        x_size = self.max_x - self.min_x + 1
+        network = np.zeros((self.max_y - self.min_y, self.max_x - self.min_x), np.uint64)
+        self.homogeneities = np.zeros((self.max_y - self.min_y, self.max_x - self.min_x), np.uint64)
+        cropped_binary_image = self.binary_image[self.min_y:self.max_y, self.min_x:self.max_x]
+        cropped_grayscale_image = self.grayscale_image[self.min_y:self.max_y, self.min_x:self.max_x]
         # will be more efficient if it only loops over a zoom on self.binary_image == 1
         for to_add in np.arange(0, side_length, step):
             y_windows = np.arange(0, y_size, side_length)
@@ -87,7 +89,7 @@ class NetworkDetection:
                                     if np.any(cropped_binary_image[y_start:y_end, x_start:x_end]):
                                         potential_network = cropped_grayscale_image[y_start:y_end, x_start:x_end]
                                         if ptp(potential_network[nonzero(potential_network)]) < int_variation_thresh:
-                                            homogeneities[y_start:y_end, x_start:x_end] += 1
+                                            self.homogeneities[y_start:y_end, x_start:x_end] += 1
                                         threshold = get_otsu_threshold(potential_network)
                                         if self.lighter_background:
                                             net_coord = np.nonzero(potential_network < threshold)
@@ -96,8 +98,8 @@ class NetworkDetection:
                                         network[y_start + net_coord[0], x_start + net_coord[1]] += 1
 
         self.network = np.zeros(self.binary_image.shape, np.uint8)
-        self.network[min_y:max_y, min_x:max_x] = (network >= (side_length // step)).astype(np.uint8)
-        self.network[min_y:max_y, min_x:max_x][homogeneities >= (side_length // step) - 1] = 0
+        self.network[self.min_y:self.max_y, self.min_x:self.max_x] = (network >= (side_length // step)).astype(np.uint8)
+        self.network[self.min_y:self.max_y, self.min_x:self.max_x][self.homogeneities >= (((self.side_length // self.step) // 2) + 1)] = 0
 
     def segment_globally(self):
         """
@@ -160,12 +162,14 @@ class NetworkDetection:
         """
         self.network[pixels_to_add] = 1
 
-    def remove_pixels_from_the_network(self, pixels_to_remove):
+    def remove_pixels_from_the_network(self, pixels_to_remove, remove_homogeneities=True):
         """
         When needed, consider all area occupied by the origin as part of the network
         :return:
         """
         self.network[pixels_to_remove] = 0
+        if remove_homogeneities:
+            self.network[self.min_y:self.max_y, self.min_x:self.max_x][self.homogeneities >= (((self.side_length // self.step) // 2) + 1)] = 0
 
     def connect_network(self, maximal_distance_connection=50):
         """

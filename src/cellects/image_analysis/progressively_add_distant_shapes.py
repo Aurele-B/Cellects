@@ -97,12 +97,12 @@ class ProgressivelyAddDistantShapes:
                 #self.new_order[equal(self.gravity_field, 0)] = 0
                 # If there are near enough shapes, run the following
                 # 2) Dilate other shapes toward the main according to the gradient
-            other_shapes, max_field_feeling = self.expand_smalls_toward_main()
+            other_shapes, max_field_feelings = self.expand_smalls_toward_main()
 
 
             # plt.imshow(other_shapes)
             # If there are shapes within gravity field range
-            if max_field_feeling != 0:
+            if any(max_field_feelings > 0):
                 self.expanded_shape = zeros(self.main_shape.shape, uint8)
                 self.expanded_shape[nonzero(self.main_shape + other_shapes)] = 1
                 if only_keep_connected_shapes:
@@ -165,6 +165,7 @@ class ProgressivelyAddDistantShapes:
             nb, connections = connectedComponents(connections)
 
         expanded_main = self.main_shape.copy()
+        max_field_feelings = empty(0, dtype=uint32)
         max_field_feeling = 0
         # Loop over each shape to connect, from the nearest to the furthest to the main shape
         for shape_i in order_of_shapes_to_expand:#  unique(self.new_order)[2:]:
@@ -179,6 +180,7 @@ class ProgressivelyAddDistantShapes:
 
                 rings = self.gravity_field * (rings - current_shape)
                 max_field_feeling = max(rings) # min(rings[rings>0])
+                max_field_feelings = append(max_field_feeling, max_field_feelings)
                 if max_field_feeling > 0:  # If there is no shape within max_distance range, quit the loop
 
                     if dil == 1:
@@ -195,11 +197,7 @@ class ProgressivelyAddDistantShapes:
         # See(other_shapes)
         # See(expanded_main)
             # np, a = connectedComponents(expanded_main)
-        return expanded_main, max_field_feeling
-
-
-
-
+        return expanded_main, max_field_feelings
 
 
     def keep_connected_shapes(self):
