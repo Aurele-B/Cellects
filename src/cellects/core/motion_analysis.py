@@ -1409,7 +1409,12 @@ class MotionAnalysis:
             # drastically
         # https://pythonexamples.org/python-opencv-write-text-on-image-puttext/
             """
-        ##
+
+    def check_converted_video_type(self):
+        if self.converted_video.dtype != "uint8":
+            self.converted_video -= min(self.converted_video)
+            self.converted_video = round_((255 * (self.converted_video / max(self.converted_video)))).astype(uint8)
+
 
     def network_detection(self, show_seg=False):
         if self.statistics["first_move"] != 'NA' and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
@@ -1421,8 +1426,8 @@ class MotionAnalysis:
             self.network_dynamics = zeros(self.dims, dtype=uint8)
             # if len(self.converted_video.shape) == 3:
             #     self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
-            if self.converted_video.dtype != "uint8":
-                self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
+            self.check_converted_video_type()
+            # self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
             self.covering_intensity = zeros(self.dims[1:], dtype=float64)
             if self.vars['origin_state'] == "fluctuating":
                 self.covering_intensity = self.origin * self.converted_video[0, :, :]
@@ -1558,8 +1563,9 @@ class MotionAnalysis:
                 oscillations_sign = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
             # check if conv change here
             # if not self.vars['lose_accuracy_to_save_memory']:
-            if self.converted_video.dtype != "uint8":
-                self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
+            self.check_converted_video_type()
+            # if self.converted_video.dtype != "uint8":
+            #     self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
                 # self.converted_video -= min(self.converted_video)
                 # self.converted_video = to_uint8(255 * (self.converted_video / max(self.converted_video)))
                 # self.converted_video = 255 * (self.converted_video / max(self.converted_video))
@@ -1825,10 +1831,11 @@ class MotionAnalysis:
     def save_video(self):
         """ faire en sorte qu'il se passe la même chose ici que dans videoreader"""
         if self.vars['save_processed_videos']:
-            if self.converted_video.dtype != "uint8":
-                self.converted_video -= min(self.converted_video)
-                self.converted_video = 255 * (self.converted_video / max(self.converted_video))
-                self.converted_video = round(self.converted_video).astype(uint8)
+            self.check_converted_video_type()
+            # if self.converted_video.dtype != "uint8":
+            #     self.converted_video -= min(self.converted_video)
+            #     self.converted_video = 255 * (self.converted_video / max(self.converted_video))
+            #     self.converted_video = round(self.converted_video).astype(uint8)
             if len(self.converted_video.shape) == 3:
                 self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video),
                                                 axis=3)
