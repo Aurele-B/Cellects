@@ -9,7 +9,7 @@ It loads a video, check origin shape, get the average covering duration of a pix
 import logging
 import os
 import pickle
-
+from gc import collect
 import numpy as np
 # from scipy.stats import linregress
 # from scipy import signal as si
@@ -1029,6 +1029,7 @@ class MotionAnalysis:
         self.sun = None
         self.rays = None
         self.holes = None
+        collect()
         self.surfarea = self.binary.sum((1, 2))
         timings = self.vars['exif']
         if len(timings) < self.dims[0]:
@@ -1828,6 +1829,41 @@ class MotionAnalysis:
                     self.statistics[f"{descriptor}_intercept"] = reg.intercept
         """
 
+    def save_efficiency_tests(self):
+        # Provide images allowing to assess the analysis efficiency
+        if self.dims[0] > 1:
+            after_one_tenth_of_time = ceil(self.dims[0] / 10).astype(uint64)
+        else:
+            after_one_tenth_of_time = 0
+
+        last_good_detection = self.dims[0] - 1
+        if self.dims[0] > self.lost_frames:
+            if self.vars['do_threshold_segmentation']:
+                last_good_detection -= self.lost_frames
+        else:
+            last_good_detection = 0
+
+        if self.visu is None:
+            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.converted_video[last_good_detection, :, :, :].copy()
+        else:
+            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
+
+        position = (25, self.dims[1] // 2)
+        text = str(self.statistics['arena'])
+        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, self.cross_33))
+        self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
+        self.efficiency_test_1 = putText(self.efficiency_test_1, text, position, FONT_HERSHEY_SIMPLEX, 1,
+                                        (self.vars["contour_color"], self.vars["contour_color"],
+                                         self.vars["contour_color"], 255), 3)
+
+        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, self.cross_33))
+        self.efficiency_test_2[contours[0], contours[1], :] = self.vars['contour_color']
+        self.efficiency_test_2 = putText(self.efficiency_test_2, text, position, FONT_HERSHEY_SIMPLEX, 1,
+                                         (self.vars["contour_color"], self.vars["contour_color"],
+                                          self.vars["contour_color"], 255), 3)
+
     def save_video(self):
         """ faire en sorte qu'il se passe la même chose ici que dans videoreader"""
         if self.vars['save_processed_videos']:
@@ -1851,8 +1887,14 @@ class MotionAnalysis:
                 #     if self.statistics["is_growth_isotropic"] == 1:
                 #         before_transition = contours[0] < self.statistics["iso_digi_transi"]
                 #         self.converted_video[contours[0][before_transition], contours[1][before_transition], contours[2][before_transition], 2] = 255
-
-            # NEW: replace what is # next
+            self.binary = None
+            self.already_explored_area = None
+            self.surfarea = None
+            self.borders = None
+            self.origin = None
+            self.origin_idx = None
+            self.covering_intensity = None
+            collect()
             if self.visu is None:
                 true_frame_width = self.origin.shape[1]
                 if len(self.vars['background_list']) == 0:
@@ -1863,8 +1905,7 @@ class MotionAnalysis:
                 if len(self.visu.shape) == 3:
                     self.visu = stack((self.visu, self.visu, self.visu), axis=3)
             self.converted_video = concatenate((self.visu, self.converted_video), axis=2)
-            # if self.visu is not None:
-            #     self.converted_video = concatenate((self.visu, self.converted_video), axis=2)
+            # self.visu = None
 
             if any(self.whole_shape_descriptors['time'] > 0):
                 position = (5, self.dims[1] - 5)
@@ -1881,8 +1922,10 @@ class MotionAnalysis:
                     self.converted_video[t, ...] = image
             vid_name = f"ind_{self.statistics['arena']}{self.vars['videos_extension']}"
             write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
+            # self.converted_video = None
 
     def save_results(self):
+        self.save_efficiency_tests()
         self.save_video()
         if self.vars['several_blob_per_arena']:
             try:
@@ -1942,40 +1985,6 @@ class MotionAnalysis:
         if not self.vars['keep_unaltered_videos'] and os.path.isdir(f"ind_{self.statistics['arena']}.npy"):
             os.remove(f"ind_{self.statistics['arena']}.npy")
 
-        # Provide images allowing to assess the analysis efficiency
-        if self.dims[0] > 1:
-            after_one_tenth_of_time = ceil(self.dims[0] / 10).astype(uint64)
-        else:
-            after_one_tenth_of_time = 0
-
-        last_good_detection = self.dims[0] - 1
-        if self.dims[0] > self.lost_frames:
-            if self.vars['do_threshold_segmentation']:
-                last_good_detection -= self.lost_frames
-        else:
-            last_good_detection = 0
-
-        if self.visu is None:
-            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, :, :, :].copy()
-            self.efficiency_test_2 = self.converted_video[last_good_detection, :, :, :].copy()
-        else:
-            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
-            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
-
-        position = (25, self.dims[1] // 2)
-        text = str(self.statistics['arena'])
-        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, self.cross_33))
-        self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
-        self.efficiency_test_1 = putText(self.efficiency_test_1, text, position, FONT_HERSHEY_SIMPLEX, 1,
-                                        (self.vars["contour_color"], self.vars["contour_color"],
-                                         self.vars["contour_color"], 255), 3)
-
-        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, self.cross_33))
-        self.efficiency_test_2[contours[0], contours[1], :] = self.vars['contour_color']
-        self.efficiency_test_2 = putText(self.efficiency_test_2, text, position, FONT_HERSHEY_SIMPLEX, 1,
-                                         (self.vars["contour_color"], self.vars["contour_color"],
-                                          self.vars["contour_color"], 255), 3)
-
     def change_results_of_one_arena(self):
         self.save_video()
         # with open(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", 'w') as file:
@@ -2014,7 +2023,7 @@ class MotionAnalysis:
                 if len(self.whole_shape_descriptors.columns) == len(descriptors.columns) - 1:
                     with open(f"one_row_per_frame.csv", 'w') as file:
                         # NEW
-                        for descriptor in self.one_row_per_frame.keys():
+                        for descriptor in descriptors.keys():
                             descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), descriptor] = self.whole_shape_descriptors[descriptor]
                         # Old
                         # descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
