@@ -25,16 +25,11 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 - To run Cellects, explore the newly created folder to find and execute Cellects.exe
 <br />
 
-### 2. With Cellects.zip on (windows)
-- Download and extract [Cellects.zip](https://drive.google.com/file/d/1v3SPsQ5H4RiQn13McZlbfcnJSqNz37z0/view?usp=drive_link)
-- To run Cellects, explore the newly created folder to find and execute Cellects.exe
-
-### Mac Instal
+### 2. From this repository (Mac)
 - Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
 - Install [git](https://git-scm.com/downloads)
 - Install [brew](https://brew.sh/)
 - Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
-
 
 - Install the dependencies with poetry
 ```
@@ -70,7 +65,7 @@ pip install .
 poetry run Cellects
 ```
 
-### 3. From this repository
+### 3. From this repository  (Windows or Linux)
 - Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
 - Install [git](https://git-scm.com/downloads)
 - Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
@@ -79,14 +74,17 @@ cd path/toward/an/existing/folder/
 git clone https://github.com/Aurele-B/Cellects.git
 cd ./Cellects
 ```
+
 - Upgrade pip:
 ```
 pip install --upgrade pip
 ```
+
 - Install poetry:
 ```
 pip install poetry
 ```
+
 - Install all necessary packages:
 ```
 poetry install
@@ -94,10 +92,12 @@ poetry install
 
 - Install rawpy
 ```
-pip install rawpy >= "0.18.1"
+poetry add rawpy
 ```
+
 - Run Cellects:
 ```
+
 poetry run Cellects
 ```
 <br />
