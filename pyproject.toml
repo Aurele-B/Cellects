@@ -24,10 +24,11 @@ opencv-python = "^4.8.1.78"
 pandas = "*"
 psutil = "^5.9.6"
 PySide6 = "^6.5.2"
-rawpy = "^0.18.1"
 scipy = "^1.11.3"
 screeninfo = "^0.8.1"
 numpy = "^1.26.1"
+
+
 
 [tool.poetry.group.dev.dependencies]
 h5py = "^3.10.0"
