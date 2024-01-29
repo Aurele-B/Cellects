@@ -1,4 +1,8 @@
 # Ignore the .idea directory
+rawpy
+venv
+*pycache*
+.tool-versions
 .idea/
 docs/
 dist/

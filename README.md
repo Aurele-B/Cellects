@@ -1,7 +1,7 @@
-Cellects: Cell Expansion Computer Tracking Software
+# Cellects: Cell Expansion Computer Tracking Software
 ===================================================
 
-Description
+## Description
 -----------
 <div style="text-align: justify">
 Cellects is a tracking software for organisms whose shape and size change over time. 
@@ -9,7 +9,7 @@ Cellects’ main strengths are its broad scope of action,
 automated computation of a variety of geometrical descriptors, easy installation and user-friendly interface.
 
 
-Installation
+## Installation
 ------------
 <br />
 
@@ -28,6 +28,47 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 ### 2. With Cellects.zip on (windows)
 - Download and extract [Cellects.zip](https://drive.google.com/file/d/1v3SPsQ5H4RiQn13McZlbfcnJSqNz37z0/view?usp=drive_link)
 - To run Cellects, explore the newly created folder to find and execute Cellects.exe
+
+### Mac Instal
+- Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
+- Install [git](https://git-scm.com/downloads)
+- Install [brew](https://brew.sh/)
+- Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
+
+
+- Install the dependencies with poetry
+```
+pip install poetry
+poetry install
+```
+
+- Install llvm
+```
+brew install llvm
+```
+
+- Symlink libomp.dylib
+```
+cd /usr/local/lib
+sudo ln -s /opt/homebrew/opt/libomp/lib/libomp.dylib libomp.dylib
+```
+
+- Clone rawpy
+```
+git clone https://github.com/letmaik/rawpy
+```
+
+- Install rawpy
+```
+cd rawpy
+pip install wheel numpy cython
+pip install .
+```
+
+- Run Cellects
+```
+poetry run Cellects
+```
 
 ### 3. From this repository
 - Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
@@ -49,6 +90,11 @@ pip install poetry
 - Install all necessary packages:
 ```
 poetry install
+```
+
+- Install rawpy
+```
+pip install rawpy >= "0.18.1"
 ```
 - Run Cellects:
 ```
