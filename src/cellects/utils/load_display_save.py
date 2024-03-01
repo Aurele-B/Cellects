@@ -11,6 +11,7 @@ import os
 import pickle
 import time
 import rawpy
+from timeit import default_timer
 from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, stack, nonzero
 from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
 from cellects.core.one_image_analysis import OneImageAnalysis
@@ -24,6 +25,7 @@ class PickleRick:
         self.wait_for_pickle_rick: bool = False
         self.counter = 0
         self.pickle_rick_number = pickle_rick_number
+        self.first_check_time = default_timer()
 
     def check_that_file_is_not_open(self):
         """
@@ -32,7 +34,9 @@ class PickleRick:
         :return: None
         """
         if os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl"):
-            logging.error((f"Cannot read/write, Trying again... tip: unlock by deleting the file named PickleRickx.pkl"))
+            if default_timer() - self.first_check_time > 2:
+                os.remove(f"PickleRick{self.pickle_rick_number}.pkl")
+            # logging.error((f"Cannot read/write, Trying again... tip: unlock by deleting the file named PickleRick{self.pickle_rick_number}.pkl"))
         self.wait_for_pickle_rick = os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl")
 
     def write_pickle_rick(self):

@@ -101,11 +101,23 @@ class ProgramOrganizer:
 
         if os.path.isfile(ALL_VARS_PKL_FILE):
             logging.info("Load the parameters from all_vars.pkl in the config of the Cellects folder")
-            pickle_rick = PickleRick(0)
-            self.all = pickle_rick.read_file(ALL_VARS_PKL_FILE)
-            self.vars = self.all['vars']
-            logging.info("Success to load the parameters dictionaries from the Cellects folder")
-            logging.info(os.getcwd())
+            try:  # NEW
+                with open(ALL_VARS_PKL_FILE, 'rb') as fileopen:  # NEW
+                    self.all = pickle.load(fileopen)  # NEW
+                self.vars = self.all['vars']
+                logging.info("Success to load the parameters dictionaries from the Cellects folder")
+                logging.info(os.getcwd())
+            except Exception as exc:  # NEW
+                logging.error(f"Initialize default parameters because error: {exc}")  # NEW
+                default_dicts = DefaultDicts()  # NEW
+                self.all = default_dicts.all  # NEW
+                self.vars = default_dicts.vars  # NEW
+
+            # pickle_rick = PickleRick(0)
+            # self.all = pickle_rick.read_file(ALL_VARS_PKL_FILE)
+            # self.vars = self.all['vars']
+            # logging.info("Success to load the parameters dictionaries from the Cellects folder")
+            # logging.info(os.getcwd())
         else:
             logging.info("Initialize default parameters")
             default_dicts = DefaultDicts()
@@ -152,8 +164,8 @@ class ProgramOrganizer:
         # dd = DefaultDicts()
         # self.all = dd.all
         # self.vars = dd.vars
-        self.all['global_pathway'] = "D:/Directory/Data/100/101-104"
-        self.all['first_folder_sample_number'] = 8
+        self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
+        self.all['first_folder_sample_number'] = 6
         # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
         # self.all['first_folder_sample_number'] = 6
         # self.all['radical'] = "IMG"
@@ -198,13 +210,15 @@ class ProgramOrganizer:
                 self.data_list, self.vars['min_ram_free'], not self.vars['already_greyscale'], self.reduce_image_dim)
         self.instantiate_tables()
 
-        # i=0
-        # l = [i, i + 1, self.vars, True, False, False, None]
+        # i=1
+        # show_seg=True
+        # l = [i, i + 1, self.vars, True, False, show_seg, None]
         # sav = self
         # self = MotionAnalysis(l)
         # self.get_descriptors_from_binary()
         # self.detect_growth_transitions()
-        # show_seg=True
+        # 1. Trouver pb self.network_dynamics
+        # 2. Sauv all oscil
 
         for i, arena in enumerate(self.vars['analyzed_individuals']):
             l = [i, i + 1, self.vars, True, False, False, None]

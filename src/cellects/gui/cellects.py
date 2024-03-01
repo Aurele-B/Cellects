@@ -71,6 +71,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
     def instantiate(self):
 
+        logging.info("instantiate")
         self.firstwindow = FirstWindow(
             self,
             night_mode=self.po.all['night_mode'])
@@ -90,7 +91,6 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         #     if widget is not None:
         #         self.removeWidget(widget)
         #         # widget.deleteLater()
-
         if severalfolder_included:
             self.ifseveralfolderswindow = IfSeveralFoldersWindow(
                 self, night_mode=self.po.all['night_mode'])
