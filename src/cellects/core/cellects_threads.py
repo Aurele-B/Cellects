@@ -1376,7 +1376,7 @@ class RunAllThread(QtCore.QThread):
                             oscil_i = df(
                                 c_[repeat(arena,
                                           analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
+                                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
                             if i == 0:
                                 self.parent().po.one_row_per_oscillating_cluster = oscil_i
                             else:
@@ -1494,7 +1494,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
                 results_i['one_row_per_oscillating_cluster'] = df(
                     c_[repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
+                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
                 # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
             if vars['fractal_analysis']:
                 results_i['fractal_box_sizes'] = df(analysis_i.fractal_boxes,

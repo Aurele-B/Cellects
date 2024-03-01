@@ -25,6 +25,15 @@ class AdvancedParameters(WindowType):
 
         logging.info("Initialize AdvancedParameters window")
         self.setParent(parent)
+        try:
+            self.true_init()
+        except KeyError:
+            default_dicts = DefaultDicts()
+            self.parent().po.all = default_dicts.all
+            self.parent().po.vars = default_dicts.vars
+            self.true_init()
+
+    def true_init(self):
         self.layout = QtWidgets.QVBoxLayout()
 
         self.left_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget

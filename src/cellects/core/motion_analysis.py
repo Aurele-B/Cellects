@@ -1436,7 +1436,7 @@ class MotionAnalysis:
                 if self.vars['lighter_background']:
                     self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
 
-            for t in arange(self.statistics["first_move"], self.dims[0]):#, 200):#
+            for t in arange(self.statistics["first_move"], self.dims[0]):  #, 200):#
                 # t = 10
                 # t = 200
                 if any(self.binary[t, ...]):
@@ -1526,8 +1526,7 @@ class MotionAnalysis:
             # Read parquet with: pd.read_parquet(f"network_dynamics{self.statistics['arena']}.gzip", engine='pyarrow')
             # self.network_dynamics.to_csv(f"network_dynamics{self.statistics['arena']}.csv")
             # self.network_dynamics.to_parquet(f"network_dynamics{self.statistics['arena']}.parquet")
-            self.network_dynamics[nonzero(self.network_dynamics)] = 2
-            self.network_dynamics[nonzero(self.binary)] = 1
+            self.network_dynamics += self.binary
             save(f"video_of_network{self.statistics['arena']}.npy", self.network_dynamics)
             self.network_dynamics = None
                 # self.network_dynamics = nonzero(self.network_dynamics)
@@ -1600,7 +1599,8 @@ class MotionAnalysis:
             # All pixel coordinates of that cluster, their corresponding lifespan, their time of disappearing
             # Row number will give the size. Euclidean distance between pix coord, the wave distance
 
-            self.clusters_final_data = empty((0, 4), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance"]
+            self.clusters_final_data = empty((0, 6), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance", cy, cx]
+            # self.clusters_final_data = empty((0, 4), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance"]
             period_tracking = zeros(self.converted_video.shape[1:3], dtype=uint32)
             efflux_study = ClusterFluxStudy(self.converted_video.shape[:3])
             influx_study = ClusterFluxStudy(self.converted_video.shape[:3])
@@ -1626,6 +1626,11 @@ class MotionAnalysis:
                     efflux[efflux <= 4] = 0
                     influx[influx > 4] = 1
                     efflux[efflux > 4] = 1
+
+                    in_idx = nonzero(influx)  # NEW
+                    ef_idx = nonzero(efflux)  # NEW
+                    self.cytoscillations[t, in_idx[0], in_idx[1]] = 1  # NEW
+                    self.cytoscillations[t, ef_idx[0], ef_idx[1]] = 2  # NEW
 
                     influx, in_stats, centroids = cc(influx)
                     efflux, ef_stats, centroids = cc(efflux)
@@ -1671,9 +1676,6 @@ class MotionAnalysis:
                             imtoshow[in_idx[0], in_idx[1], 2] = 0
                             imtoshow[ef_idx[0], ef_idx[1], 1:] = 0 # Blue
                             imtoshow[ef_idx[0], ef_idx[1], 0] = 204
-
-                            self.cytoscillations[t, in_idx[0], in_idx[1]] = 1  # NEW
-                            self.cytoscillations[t, ef_idx[0], ef_idx[1]] = 2  # NEW
 
                 self.converted_video[t, ...] = imtoshow.copy()
                 if show_seg:

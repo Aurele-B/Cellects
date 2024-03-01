@@ -96,6 +96,7 @@ class ClusterFluxStudy:
             cluster_size = sum(cluster_bool)
             cluster_img = zeros(self.dims[1:], dtype=uint8)
             cluster_img[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 1
+            nb, im, stats, centro = connectedComponentsWithStats(cluster_img)
             if any(dilate(cluster_img, kernel=self.cross_33, borderType=BORDER_CONSTANT, borderValue=0) * contours):
                 minimal_distance = 1
             else:
@@ -108,7 +109,9 @@ class ClusterFluxStudy:
                 # and the border of the cluster in the cell(s) (now noted 2 in contours)
                 minimal_distance = get_minimal_distance_between_2_shapes(contours)
             data_to_save = array([[mean(self.pixels_data[0, cluster_bool]), t,
-                                   cluster_size, minimal_distance]], dtype=float32)
+                                   cluster_size, minimal_distance, centro[1, 0], centro[1, 1]]], dtype=float32)
+            # data_to_save = array([[mean(self.pixels_data[0, cluster_bool]), t,
+            #                        cluster_size, minimal_distance]], dtype=float32)
             clusters_final_data = append(clusters_final_data, data_to_save,
                                          axis=0)  # ["mean_pixel_period", "total_size", "death_time"]
         # and remove their data from pixels_data
