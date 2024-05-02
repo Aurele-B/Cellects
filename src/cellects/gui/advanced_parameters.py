@@ -1069,11 +1069,11 @@ class AdvancedParameters(WindowType):
             self.parent().po.all['cores'] = uint8(self.max_core_nb.value())
             self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
             self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
-            self.parent().po.vars['video_fps'] = uint32(self.video_fps.value())
+            self.parent().po.vars['video_fps'] = float(self.video_fps.value())
             # self.parent().po.all['overwrite_unaltered_videos'] = self.overwrite_unaltered_videos.isChecked()
             self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
             self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
-            self.parent().po.vars['time_step'] = uint32(self.time_step.value())
+            self.parent().po.vars['time_step'] = float(self.time_step.value())
             # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
 
             do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()

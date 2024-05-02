@@ -20,9 +20,9 @@ digitized', 'subsec_time_original', 'white_balance', 'x_resolution', 'y_and_c_po
 
 
 def extract_time(image_list, pathway="", raw_images=False):
-    from numpy import min, max, any, zeros, arange, all, int, repeat
+    from numpy import min, max, any, zeros, arange, all, int64, repeat
     nb = len(image_list)
-    timings = zeros((nb, 6), dtype=int)
+    timings = zeros((nb, 6), dtype=int64)
     if raw_images:
         import exifread
         for i in arange(nb):

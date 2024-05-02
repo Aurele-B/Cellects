@@ -8,11 +8,12 @@ It loads a video, check origin shape, get the average covering duration of a pix
 
 import logging
 import os
-import pickle
 from gc import collect
 import numpy as np
 # from scipy.stats import linregress
 # from scipy import signal as si
+from timeit import default_timer
+from time import sleep
 from cv2 import (
     connectedComponents, connectedComponentsWithStats, MORPH_CROSS,
     getStructuringElement, CV_16U, erode, dilate, morphologyEx, MORPH_OPEN,
@@ -43,7 +44,7 @@ from cellects.image_analysis.morphological_operations import find_major_incline
 from cellects.utils.formulas import (bracket_to_uint8_image_contrast, eudist, moving_average)
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
-from cellects.utils.utilitarian import PercentAndTimeTracker
+from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
 from cellects.utils.load_display_save import write_video, video2numpy
 
 
@@ -1526,9 +1527,13 @@ class MotionAnalysis:
             # Read parquet with: pd.read_parquet(f"network_dynamics{self.statistics['arena']}.gzip", engine='pyarrow')
             # self.network_dynamics.to_csv(f"network_dynamics{self.statistics['arena']}.csv")
             # self.network_dynamics.to_parquet(f"network_dynamics{self.statistics['arena']}.parquet")
-            self.network_dynamics += self.binary
-            save(f"video_of_network{self.statistics['arena']}.npy", self.network_dynamics)
-            self.network_dynamics = None
+            self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
+            save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
+            del self.network_dynamics
+            save(f"coord_binary{self.statistics['arena']}.npy", smallest_memory_array(nonzero(self.binary), "uint"))
+
+            # self.network_dynamics += self.binary
+            # save(f"video_of_network{self.statistics['arena']}.npy", self.network_dynamics)
                 # self.network_dynamics = nonzero(self.network_dynamics)
                 # d = {}
                 # d["time_coord"] = self.network_dynamics[0]
@@ -1543,46 +1548,59 @@ class MotionAnalysis:
                 # d["x_coord"] = self.network_dynamics[2]
                 # PickleRick().write_file(d, f"plasmodia_dynamics{self.statistics['arena']}.pkl")
 
+    def memory_allocation_for_cytoscillations(self):
+        try:
+            period_in_frame_nb = int(self.vars['oscillation_period'] / self.time_interval)
+            if period_in_frame_nb < 2:
+                period_in_frame_nb = 2
+            necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \
+                               self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
+            available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+            if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
+                oscillations_video = zeros(self.converted_video.shape, dtype=float16)
+                for cy in arange(self.converted_video.shape[1]):
+                    for cx in arange(self.converted_video.shape[2]):
+                        oscillations_video[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx].astype(int16),
+                                                                      period_in_frame_nb), 3).astype(float16)
+            else:
+                oscillations_video = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
+            # check if conv change here
+            # if not self.vars['lose_accuracy_to_save_memory']:
+            self.check_converted_video_type()
+            if len(self.converted_video.shape) == 3:
+                self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
+            # self.cytoscillations = zeros(self.dims, dtype=uint8)
+            oscillations_video = sign(oscillations_video)
+            return oscillations_video
+        except Exception as exc:
+            logging.error(f"Not enough RAM. Retrying to allocate for 10 minutes before crashing")
+            return None
+
 
     def study_cytoscillations(self, show_seg):
         if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting oscillation analysis.")
-            period_in_frame_nb = int(self.vars['oscillation_period'] / self.time_interval)
-            if period_in_frame_nb < 2:
-                period_in_frame_nb = 2
-
-            necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
-            available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-            if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
-                oscillations_sign = zeros(self.converted_video.shape, dtype=float16)
-                for cy in arange(self.converted_video.shape[1]):
-                    for cx in arange(self.converted_video.shape[2]):
-                        oscillations_sign[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx].astype(int16),
-                                                                period_in_frame_nb), 3).astype(float16)
-            else:
-                oscillations_sign = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
-            # check if conv change here
-            # if not self.vars['lose_accuracy_to_save_memory']:
-            self.check_converted_video_type()
-            # if self.converted_video.dtype != "uint8":
+            oscillations_video = None
+            staring_time = default_timer()
+            current_time = default_timer()
+            while oscillations_video is None and (current_time - staring_time) < 600:
+                oscillations_video = self.memory_allocation_for_cytoscillations()
+                if oscillations_video is None:
+                    sleep(30)
+                    current_time = default_timer()
+                    # if self.converted_video.dtype != "uint8":
             #     self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
                 # self.converted_video -= min(self.converted_video)
                 # self.converted_video = to_uint8(255 * (self.converted_video / max(self.converted_video)))
                 # self.converted_video = 255 * (self.converted_video / max(self.converted_video))
                 # self.converted_video = round(self.converted_video).astype(uint8)
-            if len(self.converted_video.shape) == 3:
-                self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
-
             #if ampl_and_periods.shape[0] > 5:
             #    ampl_and_periods = ampl_and_periods[argsort(ampl_and_periods[:, 0])[-5:], :]
             #self.statistics["mean_amplitude_over_5_strongest"] = mean(ampl_and_periods[:, 0])
             #self.statistics["mean_period_over_5_strongest_in_min"] = mean(ampl_and_periods[:, 1] * self.time_interval)
-            try:
-                oscillations_sign = sign(oscillations_sign)
-            except Exception as exc:
-                logging.error(f"Not enough RAM. Retry without opening any program during analysis. Numpy message: {exc}")
-            mean_cluster_area = zeros(oscillations_sign.shape[0])
-            cluster_number = zeros(oscillations_sign.shape[0])
+
+            mean_cluster_area = zeros(oscillations_video.shape[0])
+            cluster_number = zeros(oscillations_video.shape[0])
             dotted_image = ones(self.converted_video.shape[1:3], uint8)
             for cy in arange(dotted_image.shape[0]):
                 if cy % 2 != 0:
@@ -1591,7 +1609,6 @@ class MotionAnalysis:
                 if cx % 2 != 0:
                     dotted_image[:, cx] = 0
             within_range = (1 - self.binary[0, :, :]) * self.borders
-            self.cytoscillations = zeros(self.dims, dtype=uint8)  # NEW
 
             # To get the median oscillatory period of each oscillating cluster,
             # we create a dict containing two lists (for influx and efflux)
@@ -1615,7 +1632,7 @@ class MotionAnalysis:
                             imtoshow[contours_idx[0], contours_idx[1], 2] = 255
                 if t >= self.start:
                     # Add in or ef if a pixel has at least 4 neighbor in or ef
-                    neigh_comp = CompareNeighborsWithValue(oscillations_sign[t, :, :], connectivity=8, data_type=int8)
+                    neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=int8)
                     neigh_comp.is_inf(0, and_itself=False)
                     neigh_comp.is_sup(0, and_itself=False)
                     # Not verified if influx is really influx (resp efflux)
@@ -1629,8 +1646,11 @@ class MotionAnalysis:
 
                     in_idx = nonzero(influx)  # NEW
                     ef_idx = nonzero(efflux)  # NEW
-                    self.cytoscillations[t, in_idx[0], in_idx[1]] = 1  # NEW
-                    self.cytoscillations[t, ef_idx[0], ef_idx[1]] = 2  # NEW
+                    oscillations_video[t, :, :] = 0
+                    oscillations_video[t, in_idx[0], in_idx[1]] = 1  # NEW
+                    oscillations_video[t, ef_idx[0], ef_idx[1]] = 2  # NEW
+                    # self.cytoscillations[t, in_idx[0], in_idx[1]] = 1  # NEW
+                    # self.cytoscillations[t, ef_idx[0], ef_idx[1]] = 2  # NEW
 
                     influx, in_stats, centroids = cc(influx)
                     efflux, ef_stats, centroids = cc(efflux)
@@ -1687,9 +1707,10 @@ class MotionAnalysis:
                 self.clusters_final_data[:, 3] *= sqrt(self.vars['average_pixel_size'])  # distance
                 self.whole_shape_descriptors['mean_cluster_area'] = mean_cluster_area * self.vars['average_pixel_size']
             self.whole_shape_descriptors['cluster_number'] = cluster_number
-
-            save(f"video_of_oscillations{self.statistics['arena']}.npy", self.cytoscillations)  # NEW
-            self.cytoscillations = None  # NEW
+            save(f"coord_influx{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))  # NEW
+            save(f"coord_efflux{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))  # NEW
+            # del self.cytoscillations
+            del oscillations_video
 
         else:
             if not self.vars['lose_accuracy_to_save_memory']:
@@ -1984,7 +2005,7 @@ class MotionAnalysis:
         # if self.vars['descriptors_in_long_format']:
         #     self.whole_shape_descriptors.to_csv(f"shape_descriptors_{self.statistics['arena']}.csv", sep=";", index=False, lineterminator='\n')
 
-        if not self.vars['keep_unaltered_videos'] and os.path.isdir(f"ind_{self.statistics['arena']}.npy"):
+        if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.statistics['arena']}.npy"):
             os.remove(f"ind_{self.statistics['arena']}.npy")
 
     def change_results_of_one_arena(self):

@@ -73,6 +73,8 @@ class ProgramOrganizer:
         self.current_combination_id = 0
         self.data_list = []
         self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
+        self.one_row_per_oscillating_cluster = None
+        self.fractal_box_sizes = None
 
     def save_variable_dict(self):
         logging.info("Save the parameters dictionaries in the Cellects folder")
@@ -1243,11 +1245,11 @@ class ProgramOrganizer:
         logging.info("Instantiate results tables and validation images")
         if not self.vars['several_blob_per_arena']:
             if self.vars['iso_digi_analysis']:
-                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 5), dtype=uint32),
+                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 5), dtype=float),
                                               columns=['arena', 'first_move', 'iso_digi_transi', 'is_growth_isotropic',
                                                        'final_area'])
             else:
-                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=uint32),
+                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
                                               columns=['arena', 'first_move', 'final_area'])
 
             descriptors = list()
@@ -1271,6 +1273,8 @@ class ProgramOrganizer:
             #                                    len(descriptors) + 2)),
             #                             columns=['arena', 'time'] + descriptors)
 
+        self.one_row_per_oscillating_cluster = None
+        self.fractal_box_sizes = None
         # if self.vars['oscilacyto_analysis']:
         #     self.one_row_per_oscillating_cluster = df(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
         #                                                        'edge_distance'])
@@ -1283,7 +1287,6 @@ class ProgramOrganizer:
             if len(self.last_image.bgr.shape) == 2:
                 self.last_image.bgr = stack((self.last_image.bgr, self.last_image.bgr, self.last_image.bgr), axis=2).astype(uint8)
             self.vars["convert_for_motion"] = {"bgr": array((1, 1, 1), dtype=uint8), "logical": "None"}
-
 
     def add_analysis_visualization_to_first_and_last_images(self, i, first_visualization, last_visualization):
         cr = ((self.top[i], self.bot[i] + 1),
@@ -1317,6 +1320,9 @@ class ProgramOrganizer:
                 self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
         if self.vars['oscilacyto_analysis']:
             try:
+                if self.one_row_per_oscillating_cluster is None:
+                    self.one_row_per_oscillating_cluster = df(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
+                                                                       'edge_distance'])
                 self.one_row_per_oscillating_cluster.to_csv("one_row_per_oscillating_cluster.csv", sep=";", index=False,
                                                             lineterminator='\n')
             except PermissionError:
@@ -1324,6 +1330,8 @@ class ProgramOrganizer:
                 self.message_from_thread.emit(f"Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
         if self.vars['fractal_analysis']:
             try:
+                if self.fractal_box_sizes is None:
+                    self.fractal_box_sizes = df(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
                 self.fractal_box_sizes.to_csv("fractal_box_sizes.csv", sep=";", index=False,
                                                             lineterminator='\n')
             except PermissionError:
