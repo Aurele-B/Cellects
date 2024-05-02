@@ -15,7 +15,7 @@ from numpy import (
     uint64, int64, save, nonzero, max, stack, uint32,
     c_, ceil, empty, float32, expand_dims, cumsum)
 from pandas import DataFrame as df
-from pandas import concat
+from pandas import concat, NA, isna
 from PySide6 import QtCore
 
 from cellects.image_analysis.morphological_operations import Ellipse
@@ -1372,7 +1372,7 @@ class RunAllThread(QtCore.QThread):
                             :] = analysis_i.whole_shape_descriptors
 
                             # Save cytosol_oscillations
-                        if analysis_i.statistics["first_move"] != 'NA':
+                        if not isna(analysis_i.statistics["first_move"]):
                             if self.parent().po.vars['oscilacyto_analysis']:
                                 oscil_i = df(
                                     c_[repeat(arena,
@@ -1448,7 +1448,7 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.one_row_per_frame.iloc[
                                     results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
                                     :] = results_i['one_row_per_frame']
-                                if results_i['first_move'] != 'NA':
+                                if not isna(results_i['first_move']):
                                     # Save cytosol_oscillations
                                     if self.parent().po.vars['oscilacyto_analysis']:
                                         if self.parent().po.one_row_per_oscillating_cluster is None:
@@ -1507,7 +1507,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             # Save cytosol_oscillations
 
         results_i['first_move'] = analysis_i.statistics["first_move"]
-        if analysis_i.statistics["first_move"] != 'NA':
+        if not isna(analysis_i.statistics["first_move"]):
             if vars['oscilacyto_analysis']:
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
                 results_i['one_row_per_oscillating_cluster'] = df(

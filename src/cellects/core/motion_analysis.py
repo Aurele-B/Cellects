@@ -28,7 +28,7 @@ from numpy import (
     logical_xor, float16, less, greater, save, sign, uint8, int8, int16,
     uint32, float64, expand_dims, min, max, any)
 from pandas import DataFrame as df
-from pandas import read_csv, concat
+from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.morphological_operations import Ellipse
@@ -1060,7 +1060,7 @@ class MotionAnalysis:
             self.whole_shape_descriptors['time'] = timings
             # solidity must be added if detect growth transition is computed
             origin = self.binary[0, :, :]
-            self.statistics["first_move"] = 'NA'
+            self.statistics["first_move"] = NA
 
             for t in arange(self.dims[0]):
                 SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
@@ -1078,7 +1078,7 @@ class MotionAnalysis:
                     self.solidity[t] = solidity.descriptors["solidity"]
                     # self.solidity[t] = list(solidity.descriptors.values())[0]
                 # I) Find a first pseudopod [aim: time]
-                if self.statistics["first_move"] == 'NA':
+                if isna(self.statistics["first_move"]):
                     if self.surfarea[t] >= (origin.sum() + self.vars['first_move_threshold']):
                         self.statistics["first_move"] = t
 
@@ -1314,8 +1314,8 @@ class MotionAnalysis:
     def detect_growth_transitions(self):
         ##
         if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena']:
-            self.statistics["iso_digi_transi"] = 'NA'
-            if self.statistics["first_move"] != 'NA':
+            self.statistics["iso_digi_transi"] = NA
+            if not isna(self.statistics["first_move"]):
                 logging.info(f"Arena n°{self.statistics['arena']}. Starting growth transition analysis.")
 
                 # II) Once a pseudopod is deployed, look for a disk/ around the original shape
@@ -1343,7 +1343,7 @@ class MotionAnalysis:
                 else:
                     self.statistics["is_growth_isotropic"] = 0
             else:
-                self.statistics["is_growth_isotropic"] = 'NA'
+                self.statistics["is_growth_isotropic"] = NA
 
             """
             if logical_or(self.statistics["iso_digi_transi"] != 0, overlap.sum() > ):
@@ -1419,7 +1419,7 @@ class MotionAnalysis:
 
 
     def network_detection(self, show_seg=False):
-        if self.statistics["first_move"] != 'NA' and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
+        if not isna(self.statistics["first_move"]) and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting network detection.")
             # if self.vars['origin_state'] == 'constant':
             #     origin = (1 - self.origin)
@@ -1578,7 +1578,7 @@ class MotionAnalysis:
 
 
     def study_cytoscillations(self, show_seg):
-        if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+        if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting oscillation analysis.")
             oscillations_video = None
             staring_time = default_timer()
@@ -1626,7 +1626,7 @@ class MotionAnalysis:
                 contours_idx = nonzero(contours)
                 imtoshow = self.converted_video[t, ...].copy()
                 imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
-                if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and self.statistics["iso_digi_transi"] != 'NA':
+                if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
                     if self.statistics["is_growth_isotropic"] == 1:
                         if t < self.statistics["iso_digi_transi"]:
                             imtoshow[contours_idx[0], contours_idx[1], 2] = 255
@@ -1717,16 +1717,16 @@ class MotionAnalysis:
                 self.converted_video -= min(self.converted_video)
                 self.converted_video = 255 * (self.converted_video / max(self.converted_video))
                 self.converted_video = round(self.converted_video).astype(uint8)
-        if self.statistics["first_move"] == 'NA':
+        if isna(self.statistics["first_move"]):
             # self.magnitudes_and_frequencies = [0, 0]
             if self.vars['oscilacyto_analysis']:
-                self.whole_shape_descriptors['mean_cluster_area'] = 'NA'
-                self.whole_shape_descriptors['cluster_number'] = 'NA'
+                self.whole_shape_descriptors['mean_cluster_area'] = NA
+                self.whole_shape_descriptors['cluster_number'] = NA
                 # self.statistics["max_magnitude"] = 'NA'
                 # self.statistics["frequency_of_max_magnitude"] = 'NA'
 
     def fractal_analysis(self):
-        if self.statistics["first_move"] != 'NA' and self.vars['fractal_analysis']:
+        if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting fractal analysis.")
             if self.visu is None:
                 true_frame_width = self.origin.shape[1]
@@ -1902,7 +1902,7 @@ class MotionAnalysis:
                     contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, self.cross_33))
                     self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
                     if "iso_digi_transi" in self.statistics.keys():
-                        if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and self.statistics["iso_digi_transi"] != 'NA':
+                        if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
                             if self.statistics["is_growth_isotropic"] == 1:
                                 if t < self.statistics["iso_digi_transi"]:
                                     self.converted_video[t, contours[0], contours[1], :] = 0, 0, 255
@@ -2066,7 +2066,7 @@ class MotionAnalysis:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
-        if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+        if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
             oscil_i = df(
                 c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
                 columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
@@ -2088,7 +2088,7 @@ class MotionAnalysis:
                         oscil_i.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:
                     logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-        if self.statistics["first_move"] != 'NA' and self.vars['fractal_analysis']:
+        if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
             fractal_i = df(self.fractal_boxes, columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
             if os.path.isfile("fractal_box_sizes.csv"):
                 try:
