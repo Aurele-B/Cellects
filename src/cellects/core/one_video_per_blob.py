@@ -147,8 +147,11 @@ class OneVideoPerBlob:
             idx = nonzero(logical_or(all_distances[:, 0] == shape_i, all_distances[:, 1] == shape_i))
             # print(all_distances[idx, 2])
             # Compute the minimal distance related to shape i and divide by 2
-            dist = all_distances[idx, 2].min() // 2
-            # Save the coordinates of the arena around shape i
+            if len(all_distances[idx, 2]) > 0:
+                dist = all_distances[idx, 2].min() // 2
+            else:
+                dist = 1
+                # Save the coordinates of the arena around shape i
             self.left[shape_i - 1] = x_min[shape_i - 1] - dist.astype(int64)
             self.right[shape_i - 1] = x_max[shape_i - 1] + dist.astype(int64)
             self.top[shape_i - 1] = y_min[shape_i - 1] - dist.astype(int64)

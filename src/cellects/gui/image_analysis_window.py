@@ -460,7 +460,7 @@ class ImageAnalysisWindow(WindowType):
 
     def set_spot_size_check(self):
         is_checked = self.set_spot_size.isChecked()
-        if self.step > 0:
+        if self.step == 1:
             self.spot_size.setVisible(is_checked)
         self.parent().po.all['set_spot_size'] = is_checked
 
@@ -1723,6 +1723,7 @@ class ImageAnalysisWindow(WindowType):
         self.decision_label.setText('')
         self.yes.setVisible(False)
         self.no.setVisible(False)
+        self.spot_size.setVisible(False)
         self.starting_differs_from_growing_cb.setVisible(False)
         self.starting_differs_from_growing_label.setVisible(False)
         self.message.setText('Gathering data and visualizing last image analysis result')
@@ -1760,8 +1761,8 @@ class ImageAnalysisWindow(WindowType):
             self.no.setVisible(False)
             self.next.setVisible(True)
 
-            self.message.setText(f"Final checks, wait... ")
 
+            self.message.setText(f"Final checks, wait... ")
             self.parent().last_is_image_analysis = True
             self.thread['FinalizeImageAnalysis'].start()
             if self.parent().po.vars["color_number"] > 2:

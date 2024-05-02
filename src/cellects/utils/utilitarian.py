@@ -2,7 +2,7 @@ import logging
 import os
 
 from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, \
-    dstack, row_stack, column_stack, quantile, sum, int64, linalg, floor, argmax, gradient, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
+    iinfo, uint16, uint32, uint64, ndarray, int64, linalg, floor, max, gradient, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
 
 import pickle
 from timeit import default_timer
@@ -173,3 +173,21 @@ def insensitive_glob(pattern):
     def either(c):
         return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
     return glob(''.join(map(either, pattern)))
+
+
+def smallest_memory_array(array_object, array_type='uint'):
+    if isinstance(array_object, ndarray):
+        value_max = array_object.max()
+    else:
+        value_max = max(((array_object[0].max(), array_object[0].max())))
+
+    if array_type == 'uint':
+        if value_max <= iinfo(uint8).max:
+            array_object = array(array_object, dtype=uint8)
+        elif value_max <= iinfo(uint16).max:
+            array_object = array(array_object, dtype=uint16)
+        elif value_max <= iinfo(uint32).max:
+            array_object = array(array_object, dtype=uint32)
+        else:
+            array_object = array(array_object, dtype=uint64)
+    return array_object

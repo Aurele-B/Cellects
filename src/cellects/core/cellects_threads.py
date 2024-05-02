@@ -1136,9 +1136,9 @@ class RunAllThread(QtCore.QThread):
             for exp_i in arange(folder_number):
                 if len(self.parent().po.all['folder_list']) > 0:
                     logging.info(self.parent().po.all['folder_list'][exp_i])
-                self.parent().po.first_im = None;
+                self.parent().po.first_im = None
                 self.parent().po.first_image = None
-                self.parent().po.last_im = None;
+                self.parent().po.last_im = None
                 self.parent().po.last_image = None
                 self.parent().po.videos = None
                 self.parent().po.top = None
@@ -1347,128 +1347,146 @@ class RunAllThread(QtCore.QThread):
         analysis_status = {"continue": True, "message": ""}
         logging.info(f"Starting motion analysis with the detection method n°{self.parent().po.all['video_option']}")
         self.parent().po.instantiate_tables()
-        memory_diff = self.parent().po.update_available_core_nb()
-        if self.parent().po.cores > 0:
-            if not self.parent().po.all['do_multiprocessing'] or self.parent().po.cores == 1:
-                self.message_from_thread.emit(f"{message} Step 2/2: Video analysis")
-                logging.info("fStarting sequential analysis")
-                tiii = default_timer()
-                pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-                for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
-                    l = [i, arena, self.parent().po.vars, True, True, False, None]
-                    # l = [0, 1, self.parent().po.vars, True, False, False, None]
-                    analysis_i = MotionAnalysis(l)
-                    if not self.parent().po.vars['several_blob_per_arena']:
-                        # Save basic statistics
-                        self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
-                        # Save descriptors in long_format
-                        # NEW
-                        # for descriptor in self.one_row_per_frame.keys():
-                        #     self.one_row_per_frame.loc[i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'], descriptor] = analysis_i.whole_shape_descriptors[descriptor]
-                        # Old
-                        self.parent().po.one_row_per_frame.iloc[
-                        i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
-                        :] = analysis_i.whole_shape_descriptors
-
-                        # Save cytosol_oscillations
-                    if analysis_i.statistics["first_move"] != 'NA':
-                        if self.parent().po.vars['oscilacyto_analysis']:
-                            oscil_i = df(
-                                c_[repeat(arena,
-                                          analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
-                            if i == 0:
-                                self.parent().po.one_row_per_oscillating_cluster = oscil_i
-                            else:
-                                self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
-                            # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
-                        if self.parent().po.vars['fractal_analysis']:
-                            fractal_i = df(analysis_i.fractal_boxes,
-                                columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-                            if i == 0:
-                                self.parent().po.fractal_box_sizes = fractal_i
-                            else:
-                                self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, fractal_i))
-                    # Save efficiency visualization
-                    self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
-                                                                             analysis_i.efficiency_test_2)
-                    # Emit message to the interface
-                    current_percentage, eta = pat_tracker.get_progress()
-                    self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                 "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
-
-                logging.info(f"Sequential analysis lasted {(default_timer() - tiii)/ 60} minutes")
-            else:
-                self.message_from_thread.emit(
-                    f"{message}, Step 2/2:  Analyse all videos using {self.parent().po.cores} cores...")
-
-                logging.info("fStarting analysis in parallel")
-
-                # new
-                tiii = default_timer()
-                arena_number = len(self.parent().po.vars['analyzed_individuals'])
-                self.advance = 0
-                self.pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']),
-                                                    core_number=self.parent().po.cores)
-
-                fair_core_workload = arena_number // self.parent().po.cores
-                cores_with_1_more = arena_number % self.parent().po.cores
-                EXTENTS_OF_SUBRANGES = []
-                bound = 0
-                parallel_organization = [fair_core_workload + 1 for _ in range(cores_with_1_more)] + [fair_core_workload for _ in range(self.parent().po.cores - cores_with_1_more)]
-                # Emit message to the interface
-                self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                             "message": f"{message} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
-                for i, extent_size in enumerate(parallel_organization):
-                    EXTENTS_OF_SUBRANGES.append((bound, bound := bound + extent_size))
-
-                PROCESSES = []
-                subtotals = Manager().Queue()# Queue()
-                for extent in EXTENTS_OF_SUBRANGES:
-                    # print(extent)
-                    p = Process(target=motion_analysis_process, args=(extent[0], extent[1], self.parent().po.vars, subtotals))
-                    p.start()
-                    PROCESSES.append(p)
-
-                for p in PROCESSES:
-                    p.join()
-
-                self.message_from_thread.emit(f"{message}, Step 2/2:  Saving all results...")
-                for i in range(subtotals.qsize()):
-                    grouped_results = subtotals.get()
-                    for j, results_i in enumerate(grouped_results):
-                        # j=0;results_i=grouped_results[j]
-                        # print(isinstance(results_i, list))
+        try:
+            memory_diff = self.parent().po.update_available_core_nb()
+            if self.parent().po.cores > 0: # i.e. enough memory
+                if not self.parent().po.all['do_multiprocessing'] or self.parent().po.cores == 1:
+                    self.message_from_thread.emit(f"{message} Step 2/2: Video analysis")
+                    logging.info("fStarting sequential analysis")
+                    tiii = default_timer()
+                    pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
+                    for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
+                        l = [i, arena, self.parent().po.vars, True, True, False, None]
+                        # l = [0, 1, self.parent().po.vars, True, False, False, None]
+                        analysis_i = MotionAnalysis(l)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
-                            self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
+                            self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
                             # Save descriptors in long_format
+                            # NEW
+                            # for descriptor in self.one_row_per_frame.keys():
+                            #     self.one_row_per_frame.loc[i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'], descriptor] = analysis_i.whole_shape_descriptors[descriptor]
+                            # Old
                             self.parent().po.one_row_per_frame.iloc[
-                            results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
-                            :] = results_i['one_row_per_frame']
-                        if results_i['first_move'] != 'NA':
+                            i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
+                            :] = analysis_i.whole_shape_descriptors
+
                             # Save cytosol_oscillations
+                        if analysis_i.statistics["first_move"] != 'NA':
                             if self.parent().po.vars['oscilacyto_analysis']:
-                                self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
+                                oscil_i = df(
+                                    c_[repeat(arena,
+                                              analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
+                                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
+                                if self.parent().po.one_row_per_oscillating_cluster is None:
+                                    self.parent().po.one_row_per_oscillating_cluster = oscil_i
+                                else:
+                                    self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
                                 # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
-
-                            # Save fractal
                             if self.parent().po.vars['fractal_analysis']:
-                                self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, results_i['fractal_box_sizes']))
+                                fractal_i = df(analysis_i.fractal_boxes,
+                                    columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
+                                if self.parent().po.fractal_box_sizes is None:
+                                    self.parent().po.fractal_box_sizes = fractal_i
+                                else:
+                                    self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, fractal_i))
                         # Save efficiency visualization
-                        self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
-                                                                                 results_i['efficiency_test_2'])
-                self.image_from_thread.emit(
-                    {"current_image": self.parent().po.last_image.bgr,
-                     "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
+                        self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
+                                                                                 analysis_i.efficiency_test_2)
+                        # Emit message to the interface
+                        current_percentage, eta = pat_tracker.get_progress()
+                        self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
+                                                     "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
 
-                logging.info(f"Parallel analysis lasted {(default_timer() - tiii)/ 60} minutes")
-            self.parent().po.save_tables()
-            return analysis_status
-        else:
+                    logging.info(f"Sequential analysis lasted {(default_timer() - tiii)/ 60} minutes")
+                else:
+                    self.message_from_thread.emit(
+                        f"{message}, Step 2/2:  Analyse all videos using {self.parent().po.cores} cores...")
+
+                    logging.info("fStarting analysis in parallel")
+
+                    # new
+                    tiii = default_timer()
+                    arena_number = len(self.parent().po.vars['analyzed_individuals'])
+                    self.advance = 0
+                    self.pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']),
+                                                        core_number=self.parent().po.cores)
+
+                    fair_core_workload = arena_number // self.parent().po.cores
+                    cores_with_1_more = arena_number % self.parent().po.cores
+                    EXTENTS_OF_SUBRANGES = []
+                    bound = 0
+                    parallel_organization = [fair_core_workload + 1 for _ in range(cores_with_1_more)] + [fair_core_workload for _ in range(self.parent().po.cores - cores_with_1_more)]
+                    # Emit message to the interface
+                    self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
+                                                 "message": f"{message} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
+                    for i, extent_size in enumerate(parallel_organization):
+                        EXTENTS_OF_SUBRANGES.append((bound, bound := bound + extent_size))
+
+                    try:
+                        PROCESSES = []
+                        subtotals = Manager().Queue()# Queue()
+                        for extent in EXTENTS_OF_SUBRANGES:
+                            # print(extent)
+                            p = Process(target=motion_analysis_process, args=(extent[0], extent[1], self.parent().po.vars, subtotals))
+                            p.start()
+                            PROCESSES.append(p)
+
+                        for p in PROCESSES:
+                            p.join()
+
+                        self.message_from_thread.emit(f"{message}, Step 2/2:  Saving all results...")
+                        for i in range(subtotals.qsize()):
+                            grouped_results = subtotals.get()
+                            for j, results_i in enumerate(grouped_results):
+                                # j=0;results_i=grouped_results[j]
+                                # print(isinstance(results_i, list))
+                                if not self.parent().po.vars['several_blob_per_arena']:
+                                    # Save basic statistics
+                                    self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
+                                    # Save descriptors in long_format
+                                    self.parent().po.one_row_per_frame.iloc[
+                                    results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
+                                    :] = results_i['one_row_per_frame']
+                                if results_i['first_move'] != 'NA':
+                                    # Save cytosol_oscillations
+                                    if self.parent().po.vars['oscilacyto_analysis']:
+                                        if self.parent().po.one_row_per_oscillating_cluster is None:
+                                            self.parent().po.one_row_per_oscillating_cluster = results_i['one_row_per_oscillating_cluster']
+                                        else:
+                                            self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
+                                        # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
+
+                                    # Save fractal
+                                    if self.parent().po.vars['fractal_analysis']:
+                                        if self.parent().po.fractal_box_sizes is None:
+                                            self.parent().po.fractal_box_sizes = results_i['fractal_box_sizes']
+                                        else:
+                                            self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, results_i['fractal_box_sizes']))
+                                # Save efficiency visualization
+                                self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
+                                                                                         results_i['efficiency_test_2'])
+                        self.image_from_thread.emit(
+                            {"current_image": self.parent().po.last_image.bgr,
+                             "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
+
+                        logging.info(f"Parallel analysis lasted {(default_timer() - tiii)/ 60} minutes")
+                    except MemoryError:
+                        analysis_status["continue"] = False
+                        analysis_status["message"] = f"Not enough memory, reduce the core number for parallel analysis"
+                        self.message_from_thread.emit(f"Analyzing {message} requires to reduce the core number for parallel analysis")
+                        return analysis_status
+                self.parent().po.save_tables()
+                return analysis_status
+            else:
+                analysis_status["continue"] = False
+                analysis_status["message"] = f"Requires an additional {memory_diff}GB of RAM to run"
+                self.message_from_thread.emit(f"Analyzing {message} requires an additional {memory_diff}GB of RAM to run")
+                return analysis_status
+        except MemoryError:
             analysis_status["continue"] = False
-            analysis_status["message"] = f"Requires an additional {memory_diff}GB of RAM to run"
-            self.message_from_thread.emit(f"Analyzing {message} requires an additional {memory_diff}GB of RAM to run")
+            analysis_status["message"] = f"Requires additional memory to run"
+            self.message_from_thread.emit(f"Analyzing {message} requires additional memory to run")
             return analysis_status
 
 
