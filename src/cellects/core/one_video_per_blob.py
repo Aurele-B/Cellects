@@ -485,14 +485,19 @@ class OneVideoPerBlob:
         bunch_nb = int(ceil(necessary_memory / available_memory))
 
         video_nb_per_bunch = floor(self.first_image.shape_number / bunch_nb).astype(uint8)
-        vid_list = [zeros(sizes[i, :], dtype=uint8) for i in range(video_nb_per_bunch)]
+        analysis_status = {"continue": True, "message": ""}
+        try:
+            vid_list = [zeros(sizes[i, :], dtype=uint8) for i in range(video_nb_per_bunch)]
+        except ValueError as err:
+            analysis_status = {"continue": False, "message": "Probably failed to detect the right cell(s) number, do the first image analysis manually."}
+            logging.error(f"{analysis_status['message']} error is: {err}")
         # Check for available ROM memory
         if (psutil.disk_usage('/')[2] >> 30) < (necessary_memory + 2):
             rom_memory_required = necessary_memory + 2
         else:
             rom_memory_required = None
         logging.info(f"Cellects will start writing {self.first_image.shape_number} videos. Given available memory, it will do it in {bunch_nb} time(s)")
-        return bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required
+        return bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status
 
     def write_videos_as_np_arrays(self, img_list, min_ram_free, in_colors=False, reduce_image_dim=False):
         #self=self.videos
@@ -500,7 +505,7 @@ class OneVideoPerBlob:
         #min_ram_free = self.vars['min_ram_free']
         #in_colors = not self.vars['already_greyscale']
 
-        bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required = self.prepare_video_writing(img_list, min_ram_free, in_colors)
+        bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status = self.prepare_video_writing(img_list, min_ram_free, in_colors)
         for bunch in arange(bunch_nb):
             print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
             # Add the remaining videos to the last bunch if necessary
