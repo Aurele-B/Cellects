@@ -1250,93 +1250,103 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.videos.top = self.parent().po.top
             self.parent().po.videos.bot = self.parent().po.bot
             self.parent().po.videos.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required = self.parent().po.videos.prepare_video_writing(
+            bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status = self.parent().po.videos.prepare_video_writing(
                 self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
+            if analysis_status["continue"]:
+                # Check that there is enough available RAM for one video par bunch and ROM for all videos
+                if video_nb_per_bunch > 0 and rom_memory_required is None:
+                    convert_for_motion = None
+                    total_img_number = bunch_nb * self.parent().po.vars['img_number']
+                    # is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
 
-            # Check that there is enough available RAM for one video par bunch and ROM for all videos
-            if video_nb_per_bunch > 0 and rom_memory_required is None:
-                convert_for_motion = None
-                total_img_number = bunch_nb * self.parent().po.vars['img_number']
-                # is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
-
-                pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
-                pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-                arena_percentage = 0
-                for bunch in arange(bunch_nb):
-                    # Update the labels of arenas and the vid_list to write
-                    if bunch == (bunch_nb - 1):
-                        # The last bunch is larger if there is a remaining to division
-                        remaining = self.parent().po.first_image.shape_number % bunch_nb
-                        arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
-                        if bunch > 0:
+                    pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
+                    pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
+                    arena_percentage = 0
+                    for bunch in arange(bunch_nb):
+                        # Update the labels of arenas and the vid_list to write
+                        if bunch == (bunch_nb - 1):
                             # The last bunch is larger if there is a remaining to division
-                            vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                        # Add the remaining videos to the last bunch if necessary
-                        for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
-                            vid_list.append(zeros(sizes[i, :], dtype=uint8))
-                    else:
-                        arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        if bunch > 0:
-                            vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                            remaining = self.parent().po.first_image.shape_number % bunch_nb
+                            arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
+                            if bunch > 0:
+                                # The last bunch is larger if there is a remaining to division
+                                vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                            # Add the remaining videos to the last bunch if necessary
+                            for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
+                                vid_list.append(zeros(sizes[i, :], dtype=uint8))
+                        else:
+                            arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
+                            if bunch > 0:
+                                try:
+                                    vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                                except MemoryError:
+                                    analysis_status["message"] = f"Not enough RAM available"
+                                    analysis_status["continue"] = False
+                                    logging.info(
+                                        f"Not enough RAM available for the {message} folder")
+                                    break
 
-                    prev_img = None
-                    images_done = bunch * self.parent().po.vars['img_number']
-                    for image_i, image_name in enumerate(self.parent().po.data_list):
-                        image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
-                        self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
-                        if not os.path.exists(image_name):
-                            raise FileNotFoundError(image_name)
-                        img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                        prev_img = img.copy()
-                        if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
-                            img = img[:, :, 0]
+                        prev_img = None
+                        images_done = bunch * self.parent().po.vars['img_number']
+                        for image_i, image_name in enumerate(self.parent().po.data_list):
+                            image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
+                            self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
+                            if not os.path.exists(image_name):
+                                raise FileNotFoundError(image_name)
+                            img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
+                            prev_img = img.copy()
+                            if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
+                                img = img[:, :, 0]
 
-                        for arena_i, arena_name in enumerate(arena):
-                            try:
-                                sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
-                                          self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
-                                vid_list[arena_i][image_i, ...] = sub_img
-                            except ValueError:
-                                analysis_status["message"] = f"One (or more) image has a different size (restart)"
-                                analysis_status["continue"] = False
-                                logging.info(f"In the {message} folder: one (or more) image has a different size (restart)")
+                            for arena_i, arena_name in enumerate(arena):
+                                try:
+                                    sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
+                                              self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
+                                    vid_list[arena_i][image_i, ...] = sub_img
+                                except ValueError:
+                                    analysis_status["message"] = f"One (or more) image has a different size (restart)"
+                                    analysis_status["continue"] = False
+                                    logging.info(f"In the {message} folder: one (or more) image has a different size (restart)")
+                                    break
+                            if not analysis_status["continue"]:
                                 break
                         if not analysis_status["continue"]:
                             break
-                    if not analysis_status["continue"]:
-                        break
-                    if analysis_status["continue"]:
-                        for arena_i, arena_name in enumerate(arena):
-                            try:  # Null utiliser hdd = psutil.disk_usage('/') en amont à la place
-                                arena_percentage, eta = pat_tracker2.get_progress()
-                                self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
-                                save(vid_names[arena_name], vid_list[arena_i])
-                            except OSError:
-                                self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
-                logging.info("When they exist, do not overwrite unaltered video")
-                self.parent().po.all['overwrite_unaltered_videos'] = False
-                self.parent().po.save_variable_dict()
-                self.parent().po.save_data_to_run_cellects_quickly()
-                analysis_status["message"] = f"Video writing complete."
-                return analysis_status
-            else:
-                analysis_status["continue"] = False
-                if video_nb_per_bunch == 0:
-                    memory_diff = self.parent().po.update_available_core_nb()
-                    ram_message = f"{memory_diff}GB of additional RAM"
-                if rom_memory_required is not None:
-                    rom_message = f"at least {rom_memory_required}GB of free ROM"
+                        if analysis_status["continue"]:
+                            for arena_i, arena_name in enumerate(arena):
+                                try:  # Null utiliser hdd = psutil.disk_usage('/') en amont à la place
+                                    arena_percentage, eta = pat_tracker2.get_progress()
+                                    self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
+                                    save(vid_names[arena_name], vid_list[arena_i])
+                                except OSError:
+                                    self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
+                        logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
+                    logging.info("When they exist, do not overwrite unaltered video")
+                    self.parent().po.all['overwrite_unaltered_videos'] = False
+                    self.parent().po.save_variable_dict()
+                    self.parent().po.save_data_to_run_cellects_quickly()
+                    analysis_status["message"] = f"Video writing complete."
+                    return analysis_status
+                else:
+                    analysis_status["continue"] = False
+                    if video_nb_per_bunch == 0:
+                        memory_diff = self.parent().po.update_available_core_nb()
+                        ram_message = f"{memory_diff}GB of additional RAM"
+                    if rom_memory_required is not None:
+                        rom_message = f"at least {rom_memory_required}GB of free ROM"
 
-                if video_nb_per_bunch == 0 and rom_memory_required is not None:
-                    analysis_status["message"] = f"Requires {ram_message} and {rom_message} to run"
-                    # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} and {rom_message} to run")
-                elif video_nb_per_bunch == 0:
-                    analysis_status["message"] = f"Requires {ram_message} to run"
-                    # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} to run")
-                elif rom_memory_required is not None:
-                    analysis_status["message"] = f"Requires {rom_message} to run"
-                    # self.message_from_thread.emit(f"Analyzing {message} requires {rom_message} to run")
-                logging.info(f"Cellects is not writing videos: insufficient memory")
+                    if video_nb_per_bunch == 0 and rom_memory_required is not None:
+                        analysis_status["message"] = f"Requires {ram_message} and {rom_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} and {rom_message} to run")
+                    elif video_nb_per_bunch == 0:
+                        analysis_status["message"] = f"Requires {ram_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} to run")
+                    elif rom_memory_required is not None:
+                        analysis_status["message"] = f"Requires {rom_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {rom_message} to run")
+                    logging.info(f"Cellects is not writing videos: insufficient memory")
+                    return analysis_status
+            else:
                 return analysis_status
         else:
             logging.info(f"Cellects is not writing videos: unnecessary")
