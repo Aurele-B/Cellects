@@ -7,7 +7,7 @@
 import logging
 from numpy import arange, any, round, uint8, int8, int16, int64, uint64, save, array, zeros, zeros_like, \
     nonzero, less, greater_equal, logical_and, logical_or, repeat, floor, ceil, unique, \
-    delete, linspace, argmin, mean, sum, absolute, where, append, in1d, \
+    delete, linspace, all, mean, sum, absolute, where, append, in1d, \
     multiply, column_stack, triu_indices, str_, min, max
 import cv2
 import os
@@ -471,6 +471,7 @@ class OneVideoPerBlob:
         img_nb = len(img_list)
 
         # 2) Create a table of the dimensions of each video
+        # Add 10% to the necessary memory to avoid problems
         necessary_memory = img_nb * multiply((self.bot - self.top + 1).astype(uint64), (self.right - self.left + 1).astype(uint64)).sum() * 8 * 1.16415e-10
         if in_colors:
             sizes = column_stack(
@@ -480,24 +481,32 @@ class OneVideoPerBlob:
         else:
             sizes = column_stack(
                 (repeat(img_nb, self.first_image.shape_number), self.bot - self.top + 1, self.right - self.left + 1))
-
+        self.use_list_of_vid = True
+        if all(sizes[0, :] == sizes):
+            self.use_list_of_vid = False
         available_memory = (psutil.virtual_memory().available >> 30) - min_ram_free
         bunch_nb = int(ceil(necessary_memory / available_memory))
+        if bunch_nb > 1:
+            # The program will need twice the memory to create the second bunch.
+            bunch_nb = int(ceil(2 * necessary_memory / available_memory))
 
         video_nb_per_bunch = floor(self.first_image.shape_number / bunch_nb).astype(uint8)
         analysis_status = {"continue": True, "message": ""}
         try:
-            vid_list = [zeros(sizes[i, :], dtype=uint8) for i in range(video_nb_per_bunch)]
-        except ValueError as err:
+            if self.use_list_of_vid:
+                video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in range(video_nb_per_bunch)]
+            else:
+                video_bunch = zeros(append(sizes[0, :], video_nb_per_bunch), dtype=uint8)
+        except ValueError as v_err:
             analysis_status = {"continue": False, "message": "Probably failed to detect the right cell(s) number, do the first image analysis manually."}
-            logging.error(f"{analysis_status['message']} error is: {err}")
+            logging.error(f"{analysis_status['message']} error is: {v_err}")
         # Check for available ROM memory
         if (psutil.disk_usage('/')[2] >> 30) < (necessary_memory + 2):
             rom_memory_required = necessary_memory + 2
         else:
             rom_memory_required = None
         logging.info(f"Cellects will start writing {self.first_image.shape_number} videos. Given available memory, it will do it in {bunch_nb} time(s)")
-        return bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status
+        return bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status
 
     def write_videos_as_np_arrays(self, img_list, min_ram_free, in_colors=False, reduce_image_dim=False):
         #self=self.videos
@@ -505,7 +514,7 @@ class OneVideoPerBlob:
         #min_ram_free = self.vars['min_ram_free']
         #in_colors = not self.vars['already_greyscale']
 
-        bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status = self.prepare_video_writing(img_list, min_ram_free, in_colors)
+        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status = self.prepare_video_writing(img_list, min_ram_free, in_colors)
         for bunch in arange(bunch_nb):
             print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
             # Add the remaining videos to the last bunch if necessary
@@ -514,16 +523,25 @@ class OneVideoPerBlob:
                 arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
                 if bunch > 0:
                     # The last bunch is larger if there is a remaining to division
-                    vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                    if self.use_list_of_vid:
+                        video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                    else:
+                        video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
                     # Add the remaining videos to the last bunch if necessary
-                for i in arange(self.first_image.shape_number - remaining,
-                                self.first_image.shape_number):
-                    vid_list.append(zeros(sizes[i, :], dtype=uint8))
-            # Otherwise, use the same vid_list and loop over the right individuals
+                if self.use_list_of_vid:
+                    for i in arange(self.first_image.shape_number - remaining,
+                                    self.first_image.shape_number):
+                        video_bunch.append(zeros(sizes[i, :], dtype=uint8))
+                else:
+                    video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
+            # Otherwise, use the same video_bunch and loop over the right individuals
             else:
                 arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
                 if bunch > 0:
-                    vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                    if self.use_list_of_vid:
+                        video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                    else:
+                        video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
             prev_img = None
             images_done = bunch * len(img_list)
             for image_i, image_name in enumerate(img_list):
@@ -545,9 +563,15 @@ class OneVideoPerBlob:
                     # arena_i = 0; arena_name = arena[arena_i]
                     sub_img = img[self.top[arena_name]: (self.bot[arena_name] + 1),
                                                              self.left[arena_name]: (self.right[arena_name] + 1), ...]
-                    vid_list[arena_i][image_i, ...] = sub_img
+                    if self.use_list_of_vid:
+                        video_bunch[arena_i][image_i, ...] = sub_img
+                    else:
+                        video_bunch[image_i, :, :, :, arena_i] = sub_img
             for arena_i, arena_name in enumerate(arena):
-                save(vid_names[arena_name], vid_list[arena_i])
+                if self.use_list_of_vid:
+                    save(vid_names[arena_name], video_bunch[arena_i])
+                else:
+                    save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
 
     def read_and_rotate(self, image_name, prev_img):
         """ Thie method read an image from its name and:

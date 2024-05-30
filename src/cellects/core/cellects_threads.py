@@ -13,7 +13,7 @@ from numpy import (
     min, max, all, any, pi, min, round, mean, diff, square,
     zeros, array, arange, ones_like, ones, repeat, uint8,
     uint64, int64, save, nonzero, max, stack, uint32,
-    c_, ceil, empty, float32, expand_dims, cumsum)
+    c_, ceil, append, float32, expand_dims, cumsum)
 from pandas import DataFrame as df
 from pandas import concat, NA, isna
 from PySide6 import QtCore
@@ -1250,7 +1250,7 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.videos.top = self.parent().po.top
             self.parent().po.videos.bot = self.parent().po.bot
             self.parent().po.videos.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, vid_list, vid_names, rom_memory_required, analysis_status = self.parent().po.videos.prepare_video_writing(
+            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status = self.parent().po.videos.prepare_video_writing(
                 self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
             if analysis_status["continue"]:
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
@@ -1258,33 +1258,73 @@ class RunAllThread(QtCore.QThread):
                     convert_for_motion = None
                     total_img_number = bunch_nb * self.parent().po.vars['img_number']
                     # is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
-
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
+
+
+                    # # NEW version to read images and write videos at the same time. PB: Stun the disk
+                    # # from: https://stackoverflow.com/questions/65802751/adding-big-matrices-stored-in-hdf5-datasets
+                    # # https://docs.h5py.org/en/stable/quick.html#quick
+                    # import h5py
+                    # image_percentage = 0
+                    # arena_percentage = 0
+                    # prev_img = None
+                    # for image_i, image_name in enumerate(self.parent().po.data_list):
+                    #     image_percentage, remaining_time = pat_tracker1.get_progress(image_i)
+                    #     self.message_from_thread.emit(
+                    #         message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
+                    #     if not os.path.exists(image_name):
+                    #         raise FileNotFoundError(image_name)
+                    #     img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
+                    #     prev_img = img.copy()
+                    #     if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
+                    #         img = img[:, :, 0]
+                    #     for arena_i, arena_name in enumerate(arange(self.parent().po.first_image.shape_number)):
+                    #         with h5py.File(f"ind{arena_i}.h5", 'a') as h5fw:
+                    #             arena_i_vid = h5fw.create_dataset(f"ind{arena_i}", shape=sizes[arena_i, :], dtype='f')
+                    #             arena_i_vid[arena_i, ...] = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
+                    #                   self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
+                    #         arena_percentage, eta = pat_tracker2.get_progress()
+                    #         self.message_from_thread.emit(
+                    #             message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")  # , ETA {remaining_time}
+                    #         # arena_i_vid.close()
+                    # # NEW:
+
+
                     arena_percentage = 0
                     for bunch in arange(bunch_nb):
-                        # Update the labels of arenas and the vid_list to write
+                        # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1):
                             # The last bunch is larger if there is a remaining to division
                             remaining = self.parent().po.first_image.shape_number % bunch_nb
                             arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
                             if bunch > 0:
                                 # The last bunch is larger if there is a remaining to division
-                                vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                                if self.parent().po.videos.use_list_of_vid:
+                                    video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                                else:
+                                    video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
                             # Add the remaining videos to the last bunch if necessary
-                            for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
-                                vid_list.append(zeros(sizes[i, :], dtype=uint8))
+                            if self.parent().po.videos.use_list_of_vid:
+                                for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
+                                    video_bunch.append(zeros(sizes[i, :], dtype=uint8))
+                            else:
+                                video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
                         else:
                             arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
                             if bunch > 0:
-                                try:
-                                    vid_list = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                                except MemoryError:
-                                    analysis_status["message"] = f"Not enough RAM available"
-                                    analysis_status["continue"] = False
-                                    logging.info(
-                                        f"Not enough RAM available for the {message} folder")
-                                    break
+                                if self.parent().po.videos.use_list_of_vid:
+                                    video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                                else:
+                                    video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+                                # try:
+                                #     video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                                # except MemoryError:
+                                #     analysis_status["message"] = f"Not enough RAM available"
+                                #     analysis_status["continue"] = False
+                                #     logging.info(
+                                #         f"Not enough RAM available for the {message} folder")
+                                #     break
 
                         prev_img = None
                         images_done = bunch * self.parent().po.vars['img_number']
@@ -1302,7 +1342,10 @@ class RunAllThread(QtCore.QThread):
                                 try:
                                     sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
                                               self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
-                                    vid_list[arena_i][image_i, ...] = sub_img
+                                    if self.parent().po.videos.use_list_of_vid:
+                                        video_bunch[arena_i][image_i, ...] = sub_img
+                                    else:
+                                        video_bunch[image_i, :, :, :, arena_i] = sub_img
                                 except ValueError:
                                     analysis_status["message"] = f"One (or more) image has a different size (restart)"
                                     analysis_status["continue"] = False
@@ -1314,10 +1357,13 @@ class RunAllThread(QtCore.QThread):
                             break
                         if analysis_status["continue"]:
                             for arena_i, arena_name in enumerate(arena):
-                                try:  # Null utiliser hdd = psutil.disk_usage('/') en amont à la place
+                                try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
                                     self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
-                                    save(vid_names[arena_name], vid_list[arena_i])
+                                    if self.parent().po.videos.use_list_of_vid:
+                                        save(vid_names[arena_name], video_bunch[arena_i])
+                                    else:
+                                        save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
                         logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
