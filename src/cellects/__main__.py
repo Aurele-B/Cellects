@@ -50,4 +50,10 @@ def run_cellects():
 if __name__ == "__main__":
     run_cellects()
 
-""" put global_pathway en str"""
+"""
+Use mass_nak_Ha5
+
+rank_from_top_to_bottom_from_left_to_right fails
+What should be 34 is 9. Also find why little dots around the beginning for this arena.
+
+"""
