@@ -90,6 +90,10 @@ class AdvancedParameters(WindowType):
         self.ring_correction_label = FixedText('Correct errors around initial shape',
                                                tip="Apply an algorithm allowing to correct some failure around the initial shape\nThese errors are most likely due to color variations\n themselves due to substrate width differences crossed by light\naround initial cell lying on an opaque substrate",
                                                night_mode=self.parent().po.all['night_mode'])
+        self.keep_masks_for_all_folders = Checkbox(self.parent().po.all['keep_masks_for_all_folders'])
+        self.keep_masks_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
+                                               tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep these informations for all folders (if checked)\n- Only use these informations for the current folder (if unchecked)",
+                                               night_mode=self.parent().po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
         self.general_param_box_layout.addWidget(self.crop_images, 0, 0)
@@ -98,6 +102,8 @@ class AdvancedParameters(WindowType):
         self.general_param_box_layout.addWidget(self.subtract_background_label, 1, 1)
         self.general_param_box_layout.addWidget(self.ring_correction, 2, 0)
         self.general_param_box_layout.addWidget(self.ring_correction_label, 2, 1)
+        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders, 3, 0)
+        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders_label, 3, 1)
         self.general_param_box_widget.setLayout(self.general_param_box_layout)
         self.left_col_layout.addWidget(self.general_param_box_widget)
         # self.layout.addWidget(self.general_param_box_widget, curr_row_1st_col, 1, 2, 2)
@@ -1052,6 +1058,7 @@ class AdvancedParameters(WindowType):
             self.parent().po.all['crop_images'] = self.crop_images.isChecked()
             self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
             self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
+            self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
 
             # if self.parent().po.vars['origin_state'] == "invisible":
             self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()

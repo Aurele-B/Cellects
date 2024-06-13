@@ -1,6 +1,6 @@
 import os
 from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
-from numpy import min, max, all, any, array, int8, empty, uint16
+from numpy import min, max, all, any, array, int8, empty, uint16, int64
 from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
 from cellects.utils.load_display_save import PickleRick
 from cellects.core.cellects_paths import TEST_DIR
@@ -41,6 +41,10 @@ class DefaultDicts:
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
+            'bio_mask': None,
+            'back_mask': None,
+            'keep_masks_for_all_folders': False,
+
             # 'overwrite_cellects_data': True,
             'overwrite_unaltered_videos': False,
             'radical': 'IMG_',

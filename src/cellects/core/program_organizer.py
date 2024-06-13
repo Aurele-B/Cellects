@@ -83,8 +83,12 @@ class ProgramOrganizer:
         # soft_path = syspath[potentials_paths[0][-1]]
         # self.untype_csc_dict()
         self.all['vars'] = self.vars
+        all_vars = self.all.copy()
+        if not self.all['keep_masks_for_all_folders']:
+            all_vars['bio_mask'] = None
+            all_vars['back_mask'] = None
         pickle_rick = PickleRick(0)
-        pickle_rick.write_file(self.all, ALL_VARS_PKL_FILE)
+        pickle_rick.write_file(all_vars, ALL_VARS_PKL_FILE)
         # with open(ALL_VARS_PKL_FILE, 'wb') as fileopen:
         #     pickle.dump(self.all, fileopen, protocol=0)
 
@@ -595,7 +599,7 @@ class ProgramOrganizer:
     def fast_image_segmentation(self, is_first_image, biomask=None, backmask=None, spot_size=None):
         if is_first_image:
             self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                                 biomask, backmask, subtract_background=None, subtract_background2=None)
+                                                 self.all["bio_mask"], self.all["back_mask"], subtract_background=None, subtract_background2=None)
             if not self.first_image.drift_correction_already_adjusted:
                 self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
                 if self.vars['drift_already_corrected']:
@@ -607,17 +611,17 @@ class ProgramOrganizer:
             logging.info(self.sample_number)
             process_i = ProcessFirstImage(
                 [self.first_image, False, False, None, self.vars['several_blob_per_arena'],
-                 self.sample_number, spot_size, self.vars["color_number"], biomask, backmask, None])
+                 self.sample_number, spot_size, self.vars["color_number"], self.all["bio_mask"], self.all["back_mask"], None])
             process_i.binary_image = self.first_image.binary_image
             process_i.process_binary_image(use_bio_and_back_masks=True)
 
-            if backmask is not None:
-                if any(process_i.shapes[backmask]):
-                    process_i.shapes[isin(process_i.shapes, unique(process_i.shapes[backmask]))] = 0
+            if self.all["back_mask"] is not None:
+                if any(process_i.shapes[self.all["back_mask"]]):
+                    process_i.shapes[isin(process_i.shapes, unique(process_i.shapes[self.all["back_mask"]]))] = 0
                     process_i.validated_shapes = (process_i.shapes > 0).astype(uint8)
-            if biomask is not None:
-                process_i.validated_shapes[biomask] = 1
-            if backmask is not None or biomask is not None:
+            if self.all["bio_mask"] is not None:
+                process_i.validated_shapes[self.all["bio_mask"]] = 1
+            if self.all["back_mask"] is not None or self.all["bio_mask"] is not None:
                 process_i.shape_number, process_i.shapes = connectedComponents(process_i.validated_shapes, connectivity=8)
                 process_i.shape_number -= 1
 
@@ -1230,6 +1234,12 @@ class ProgramOrganizer:
                 video_bit_number -= 56
         if self.vars['already_greyscale']:
             video_bit_number -= 64
+        if self.vars['oscilacyto_analysis']:
+            video_bit_number += 16
+            image_bit_number += 128
+        if self.vars['network_detection']:
+            video_bit_number += 8
+            image_bit_number += 64
 
         if isinstance(self.bot, list):
             one_image_memory = multiply((self.bot[0] - self.top[0] + 1),

@@ -317,6 +317,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
                 spot_size = self.parent().po.starting_blob_hsize_in_pixels
             else:
                 spot_size = None
+            self.parent().po.all["bio_mask"] = biomask
+            self.parent().po.all["back_mask"] = backmask
             self.parent().po.fast_image_segmentation(is_first_image=True, biomask=biomask, backmask=backmask, spot_size=spot_size)
             if shape_nb == self.parent().po.sample_number and self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] != self.parent().po.sample_number:
                 self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] = shape_nb
@@ -339,12 +341,13 @@ class FirstImageAnalysisThread(QtCore.QThread):
                     self.message_from_thread.emit("Generating analysis options, around 1 minute")
             if self.parent().imageanalysiswindow.asking_first_im_parameters_flag:
                 self.parent().po.first_image.find_first_im_csc(sample_number=self.parent().po.sample_number,
-                                                                                   several_blob_per_arena=None,
-                                                                                   spot_shape=None, spot_size=None,
-                                                                                   kmeans_clust_nb=kmeans_clust_nb,
-                                                                                   biomask=biomask, backmask=backmask,
-                                                                                   color_space_dictionaries=None,
-                                                                                   carefully=self.parent().po.carefully)
+                                                               several_blob_per_arena=None,
+                                                               spot_shape=None, spot_size=None,
+                                                               kmeans_clust_nb=kmeans_clust_nb,
+                                                               biomask=self.parent().po.all["bio_mask"],
+                                                               backmask=self.parent().po.all["back_mask"],
+                                                               color_space_dictionaries=None,
+                                                               carefully=self.parent().po.carefully)
             else:
                 if self.parent().po.all['scale_with_image_or_cells'] == 0:
                     self.parent().po.get_average_pixel_size()
@@ -355,7 +358,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    spot_shape=self.parent().po.all['starting_blob_shape'],
                                                                spot_size=self.parent().po.starting_blob_hsize_in_pixels,
                                                                                    kmeans_clust_nb=kmeans_clust_nb,
-                                                                                   biomask=biomask, backmask=backmask,
+                                                                                   biomask=self.parent().po.all["bio_mask"],
+                                                                                   backmask=self.parent().po.all["back_mask"],
                                                                                    color_space_dictionaries=None,
                                                                                    carefully=self.parent().po.carefully)
 
