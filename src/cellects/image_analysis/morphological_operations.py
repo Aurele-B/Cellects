@@ -634,9 +634,14 @@ def expand_to_fill_holes(binary_video, holes, cross_33):
         distance_against_time, holes_time_start, holes_time_end = get_radius_distance_against_time(binary_video, holes_contours)
         # Use that vector to progressively fill holes at the same speed as shape grows
         for t in arange(len(distance_against_time)):
-            past_image = binary_video[holes_time_start + t, :, :]
-            past_image[holes >= distance_against_time[t]] = 1
-            binary_video[holes_time_start + t, :, :] = past_image
+            new_order, stats, centers = cc((holes >= distance_against_time[t]).astype(uint8))
+            for comp_i in arange(1, stats.shape[0]):
+                past_image = binary_video[holes_time_start + t, :, :].copy()
+                with_new_comp = new_order == comp_i
+                past_image[with_new_comp] = 1
+                nb_comp, image_garbage = connectedComponents(past_image)
+                if nb_comp == 2:
+                    binary_video[holes_time_start + t, :, :][with_new_comp] = 1
         # Make sure that holes remain filled from holes_time_end to the end of the video
         for t in arange((holes_time_end + 1), binary_video.shape[0]):
             past_image = binary_video[t, :, :]
