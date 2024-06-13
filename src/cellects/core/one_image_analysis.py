@@ -969,6 +969,15 @@ class OneImageAnalysis:
 
     def projection_to_get_peaks_boundaries(self, axis):
         sums = np.sum(self.validated_shapes, axis)
+
+        # y_ax = slopes.copy()
+        # x_ax = np.arange(len(slopes))
+        # img = np.zeros((len(y_ax), len(x_ax)))
+        # img[y_ax, x_ax] = 1
+        # See(img)
+        # for i in range(len(sc[0])):
+        #     img[sc[0][i]:sc[0][i] + 20, :] = 1
+
         slopes = np.greater(sums, 0)
         slopes = np.append(0, np.diff(slopes))
         coord = np.nonzero(slopes)[0]
