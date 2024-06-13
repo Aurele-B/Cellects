@@ -520,7 +520,6 @@ class ProgramOrganizer:
                 self.analysis_instance = zeros(
                     [int(cap.get(CAP_PROP_FRAME_COUNT)), int(cap.get(CAP_PROP_FRAME_HEIGHT)),
                      int(cap.get(CAP_PROP_FRAME_WIDTH)), 3])
-                self.vars['dims'] = self.analysis_instance.shape[:3]
                 while cap.isOpened() and counter < 1:
                     ret, frame = cap.read()
                     if counter == 0:
@@ -541,6 +540,7 @@ class ProgramOrganizer:
                 cap.release()
                 self.first_im = self.analysis_instance[
                     self.all['first_detection_frame'] - 1, ...]
+            self.vars['dims'] = self.analysis_instance.shape[:3]
 
         else:
             self.vars['img_number'] = len(self.data_list)
