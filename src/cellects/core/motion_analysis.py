@@ -119,7 +119,7 @@ class MotionAnalysis:
                     self.t = self.start
                     # print_progress = ForLoopCounter(self.start)
                     # self.binary = self.segmentation # HERE
-                    while self.t < self.binary.shape[0]:  # 11:  #
+                    while self.t < self.binary.shape[0]:  #1200:  #
                         self.update_shape(show_seg)
                 #
             if self.start is None:
@@ -949,9 +949,9 @@ class MotionAnalysis:
         self.binary[self.t, :, :] = new_shape * self.borders
         self.surfarea[self.t] = sum(self.binary[self.t, :, :])
 
-        # Calculate the mean distance covered per frame and correct for a ring of not really fadinged pixels
+        # Calculate the mean distance covered per frame and correct for a ring of not really fading pixels
         if self.mean_distance_per_frame is None:
-            if self.vars['ring_correction']:
+            if self.vars['ring_correction'] and not self.vars['several_blob_per_arena']:
                 if logical_and((self.t % 20) == 0,
                                   logical_and(self.surfarea[self.t] > self.substantial_growth,
                                                  self.surfarea[self.t] < self.substantial_growth * 2)):
@@ -981,9 +981,10 @@ class MotionAnalysis:
                         ray_through_back = None
             if any(self.surfarea[:self.t] > self.substantial_growth * 2):
 
-                if self.vars['ring_correction']:
+                if self.vars['ring_correction'] and not self.vars['several_blob_per_arena']:
                     # Apply the hole correction
                     self.holes = morphologyEx(self.holes, MORPH_CLOSE, self.cross_33, iterations=10)
+                    # If some holes are not covered by now
                     if any(self.holes * (1 - self.binary[self.t, :, :])):  # if any(self.holes > 0):
                         self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
                             expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes, self.cross_33)

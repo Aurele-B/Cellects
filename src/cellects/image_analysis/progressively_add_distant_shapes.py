@@ -234,7 +234,15 @@ class ProgressivelyAddDistantShapes:
 
         # Use that vector to progressively fill pixels at the same speed as shape grows
         for t in arange(len(distance_against_time)):
-            self.binary_video[time_start + t, :, :][self.expanded_shape >= distance_against_time[t]] = 1
+            image_garbage = (self.expanded_shape >= distance_against_time[t]).astype(uint8)
+            new_order, stats, centers = cc(image_garbage)
+            for comp_i in arange(1, stats.shape[0]):
+                past_image = self.binary_video[time_start + t, :, :].copy()
+                with_new_comp = new_order == comp_i
+                past_image[with_new_comp] = 1
+                nb_comp, image_garbage = connectedComponents(past_image)
+                if nb_comp == 2:
+                    self.binary_video[time_start + t, :, :][with_new_comp] = 1
         #self.expanded_shape[self.expanded_shape > 0] = 1
         #self.binary_video[time_end:, :, :] += self.expanded_shape
         for t in arange(time_end, self.binary_video.shape[0]):
