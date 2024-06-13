@@ -13,7 +13,7 @@ from cv2 import (
 from numba.typed import Dict as TDict
 from pandas import DataFrame as df
 from numpy import (
-    float32, stack, ceil, all, any, equal, pi, min, round, mean, diff, sum, multiply, square,
+    median, stack, ceil, all, any, equal, pi, min, round, mean, diff, sum, multiply, square,
     sqrt, zeros, array, arange, ones_like, isin, sort, repeat, uint8, uint32, unique,
     uint16, uint64, delete, savetxt, nonzero, max, absolute, empty, int8)
 from psutil import virtual_memory
@@ -310,8 +310,9 @@ class ProgramOrganizer:
                 self.vars = self.all['vars']
                 self.is_data_up_to_date()
                 print(self.vars['convert_for_motion'])
-
+                folder_changed = False
                 if current_global_pathway != self.all['global_pathway']:
+                    folder_changed = True
                     logging.info(
                         "Although the folder is ready, it is not at the same place as it was during creation, updating")
                     self.all['global_pathway'] = current_global_pathway
@@ -323,8 +324,8 @@ class ProgramOrganizer:
 
                 if len(self.data_list) == 0:
                     self.look_for_data()
-                    # if folder_number > 1:
-                    #     self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
+                    if folder_changed and folder_number > 1:
+                        self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
                 self.get_first_image()
                 self.get_last_image()
                 (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly[
@@ -768,6 +769,7 @@ class ProgramOrganizer:
         # self.delineation_number += 1
         # if self.delineation_number > 1:
         #     print('stophere')
+        analysis_status = {"continue": True, "message": ""}
         if (self.sample_number > 1 and not self.vars['several_blob_per_arena']):
             compute_get_bb: bool = True
             if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('Data to run Cellects quickly.pkl')):
@@ -814,25 +816,32 @@ class ProgramOrganizer:
             if compute_get_bb:
                 if self.all['im_or_vid'] == 1:
                     self.videos.get_bounding_boxes(
-                        self.all['are_gravity_centers_moving'] == 1,
-                        self.analysis_instance,
-                        self.vars['convert_for_origin'],#self.vars['convert_for_motion']
-                        self.vars["color_number"],
+                        are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
+                        img_list=self.analysis_instance,
+                        color_space_combination=self.vars['convert_for_origin'],#self.vars['convert_for_motion']
+                        color_number=self.vars["color_number"],
                         sample_size=5,
                         all_same_direction=self.all['all_same_direction'])
                 else:
                     self.videos.get_bounding_boxes(
-                        self.all['are_gravity_centers_moving'] == 1,
-                        self.data_list,
-                        self.vars['convert_for_origin'],#self.vars['convert_for_motion']
-                        self.vars["color_number"],
+                        are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
+                        img_list=self.data_list,
+                        color_space_combination=self.vars['convert_for_origin'],
+                        color_number=self.vars["color_number"],
                         sample_size=5,
                         all_same_direction=self.all['all_same_direction'])
+                if any(self.videos.ordered_stats[:, 4] > 100 * median(self.videos.ordered_stats[:, 4])):
+                    analysis_status['message'] = "A specimen is at least 100 times larger: (re)do the first image analysis."
+                    analysis_status['continue'] = False
+                if any(self.videos.ordered_stats[:, 4] < 0.01 * median(self.videos.ordered_stats[:, 4])):
+                    analysis_status['message'] = "A specimen is at least 100 times smaller: (re)do the first image analysis."
+                    analysis_status['continue'] = False
                 # self.all['overwrite_unaltered_videos'] = True
                 # self.videos.print_bounding_boxes(0)
                 logging.info(
                     str(self.videos.not_analyzed_individuals) + " individuals are out of picture scope and cannot be analyzed")
             self.left, self.right, self.top, self.bot = self.videos.left, self.videos.right, self.videos.top, self.videos.bot
+
         else:
             self.left, self.right, self.top, self.bot = array([1]), array([self.first_image.image.shape[1] - 2]), array([1]), array([self.first_image.image.shape[0] - 2])
             self.videos.left, self.videos.right, self.videos.top, self.videos.bot = array([1]), array([self.first_image.image.shape[1] - 2]), array([1]), array([self.first_image.image.shape[0] - 2])
@@ -842,6 +851,7 @@ class ProgramOrganizer:
             self.vars['analyzed_individuals'] = delete(self.vars['analyzed_individuals'],
                                                        self.videos.not_analyzed_individuals - 1)
         # logging.info(self.top)
+        return analysis_status
 
     def get_background_to_subtract(self):
         """
@@ -952,7 +962,7 @@ class ProgramOrganizer:
         # self = po
         # 2) Represent the segmentation using a particular color space combination
         if self.all['are_gravity_centers_moving'] != 1:
-            self.delineate_each_arena()
+            analysis_status = self.delineate_each_arena()
         # self.fi.crop_images(self.first_image.crop_coord)
         self.last_image = OneImageAnalysis(self.last_im)
         self.last_image.crop_images(self.videos.first_image.crop_coord)

@@ -454,6 +454,8 @@ class OneVideoPerBlob:
 
 
     def prepare_video_writing(self, img_list, min_ram_free, in_colors=False):
+        #https://stackoverflow.com/questions/48672130/saving-to-hdf5-is-very-slow-python-freezing
+        #https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
         # 1) Create a list of video names
         if self.not_analyzed_individuals is not None:
             number_to_add = len(self.not_analyzed_individuals)
@@ -505,8 +507,11 @@ class OneVideoPerBlob:
             rom_memory_required = necessary_memory + 2
         else:
             rom_memory_required = None
+        remaining = self.first_image.shape_number % bunch_nb
+        if remaining > 0:
+            bunch_nb += 1
         logging.info(f"Cellects will start writing {self.first_image.shape_number} videos. Given available memory, it will do it in {bunch_nb} time(s)")
-        return bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status
+        return bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining
 
     def write_videos_as_np_arrays(self, img_list, min_ram_free, in_colors=False, reduce_image_dim=False):
         #self=self.videos
@@ -514,34 +519,44 @@ class OneVideoPerBlob:
         #min_ram_free = self.vars['min_ram_free']
         #in_colors = not self.vars['already_greyscale']
 
-        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status = self.prepare_video_writing(img_list, min_ram_free, in_colors)
+        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors)
         for bunch in arange(bunch_nb):
             print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
-            # Add the remaining videos to the last bunch if necessary
-            if bunch == (bunch_nb - 1):
-                remaining = self.first_image.shape_number % bunch_nb
-                arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
-                if bunch > 0:
-                    # The last bunch is larger if there is a remaining to division
-                    if self.use_list_of_vid:
-                        video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                    else:
-                        video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-                    # Add the remaining videos to the last bunch if necessary
-                if self.use_list_of_vid:
-                    for i in arange(self.first_image.shape_number - remaining,
-                                    self.first_image.shape_number):
-                        video_bunch.append(zeros(sizes[i, :], dtype=uint8))
-                else:
-                    video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
-            # Otherwise, use the same video_bunch and loop over the right individuals
+            if bunch == (bunch_nb - 1) and remaining > 0:
+                arena = arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
             else:
                 arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                if bunch > 0:
-                    if self.use_list_of_vid:
-                        video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                    else:
-                        video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+            # print(arena)
+            if self.parent().po.videos.use_list_of_vid:
+                video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+            else:
+                video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+
+            # # Add the remaining videos to the last bunch if necessary
+            # if bunch == (bunch_nb - 1):
+            #     remaining = self.first_image.shape_number % bunch_nb
+            #     arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
+            #     if bunch > 0:
+            #         # The last bunch is larger if there is a remaining to division
+            #         if self.use_list_of_vid:
+            #             video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+            #         else:
+            #             video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+            #         # Add the remaining videos to the last bunch if necessary
+            #     if self.use_list_of_vid:
+            #         for i in arange(self.first_image.shape_number - remaining,
+            #                         self.first_image.shape_number):
+            #             video_bunch.append(zeros(sizes[i, :], dtype=uint8))
+            #     else:
+            #         video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
+            # # Otherwise, use the same video_bunch and loop over the right individuals
+            # else:
+            #     arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
+            #     if bunch > 0:
+            #         if self.use_list_of_vid:
+            #             video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+            #         else:
+            #             video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
             prev_img = None
             images_done = bunch * len(img_list)
             for image_i, image_name in enumerate(img_list):
