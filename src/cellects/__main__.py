@@ -51,9 +51,5 @@ if __name__ == "__main__":
     run_cellects()
 
 """
-Use mass_nak_Ha5
-
-rank_from_top_to_bottom_from_left_to_right fails
-What should be 34 is 9. Also find why little dots around the beginning for this arena.
 
 """
