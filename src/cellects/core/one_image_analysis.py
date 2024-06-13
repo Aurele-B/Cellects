@@ -961,7 +961,6 @@ class OneImageAnalysis:
             cy_min = 0
             cy_max = len(self.y_boundaries) - 1
 
-
         self.crop_coord = [cy_min, cy_max, cx_min, cx_max]
         return are_zigzag
         # plt.imshow(self.image)

@@ -57,6 +57,7 @@ class LookForDataThreadInFirstW(QtCore.QThread):
     def run(self):
         self.parent().po.look_for_data()
 
+
 class LoadFirstFolderIfSeveralThread(QtCore.QThread):
     message_when_thread_finished = QtCore.Signal(bool)
     def __init__(self, parent=None):
@@ -456,12 +457,12 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
                 self.parent().po.first_image.y_boundaries = None
             else:
                 logging.info("Start automatic video delineation")
-                self.parent().po.delineate_each_arena()
-                self.message_when_thread_finished.emit("")
+                analysis_status = self.parent().po.delineate_each_arena()
+                self.message_when_thread_finished.emit(analysis_status["message"])
         else:
             logging.info("Start automatic video delineation")
-            self.parent().po.delineate_each_arena()
-            self.message_when_thread_finished.emit("")
+            analysis_status = self.parent().po.delineate_each_arena()
+            self.message_when_thread_finished.emit(analysis_status["message"])
 
         # self.parent().po.first_image.image.shape
 
@@ -640,7 +641,7 @@ class OneArenaThread(QtCore.QThread):
 
     def pre_processing(self):
         logging.info("Pre-processing has started")
-        continue_analysis = True
+        analysis_status = {"continue": True, "message": ""}
         # Thinds to save and load here:
         # situations : 1° on a tout fait et osed de succeed to load
         # if not self.parent().po.first_exp_ready_to_run réglé
@@ -659,28 +660,32 @@ class OneArenaThread(QtCore.QThread):
         self.parent().po.fast_image_segmentation(is_first_image=True)
         if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
             self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
-            continue_analysis = False
+            analysis_status["continue"] = False
         else:
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
-            self.parent().po.delineate_each_arena()
-            self.parent().po.data_to_save['exif'] = True
-            self.parent().po.save_data_to_run_cellects_quickly()
-            self.parent().po.data_to_save['exif'] = False
-            # self.parent().po.extract_exif()
-            self.parent().po.get_background_to_subtract()
-            if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
-                continue_analysis = False
+            analysis_status = self.parent().po.delineate_each_arena()
+            if not analysis_status["continue"]:
+                self.message_from_thread_starting.emit(analysis_status["message"])
+                logging.error(analysis_status['message'])
             else:
-                self.parent().po.get_origins_and_backgrounds_lists()
-                self.parent().po.get_last_image()
-                self.parent().po.fast_image_segmentation(False)
-                # self.parent().po.type_csc_dict()
-                self.parent().po.find_if_lighter_background()
-                logging.info("The current (or the first) folder is ready to run")
-                self.parent().po.first_exp_ready_to_run = True
-        return continue_analysis
+                self.parent().po.data_to_save['exif'] = True
+                self.parent().po.save_data_to_run_cellects_quickly()
+                self.parent().po.data_to_save['exif'] = False
+                # self.parent().po.extract_exif()
+                self.parent().po.get_background_to_subtract()
+                if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
+                    self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
+                    analysis_status["continue"] = False
+                else:
+                    self.parent().po.get_origins_and_backgrounds_lists()
+                    self.parent().po.get_last_image()
+                    self.parent().po.fast_image_segmentation(False)
+                    # self.parent().po.type_csc_dict()
+                    self.parent().po.find_if_lighter_background()
+                    logging.info("The current (or the first) folder is ready to run")
+                    self.parent().po.first_exp_ready_to_run = True
+        return analysis_status["continue"]
 
     def load_one_arena(self):
         arena = self.parent().po.all['arena']
@@ -1202,7 +1207,7 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
             try:
-                self.parent().po.delineate_each_arena()
+                analysis_status = self.parent().po.delineate_each_arena()
             except ValueError:
                 analysis_status[
                     "message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
@@ -1250,18 +1255,19 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.videos.top = self.parent().po.top
             self.parent().po.videos.bot = self.parent().po.bot
             self.parent().po.videos.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status = self.parent().po.videos.prepare_video_writing(
+            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.parent().po.videos.prepare_video_writing(
                 self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
             if analysis_status["continue"]:
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
                 if video_nb_per_bunch > 0 and rom_memory_required is None:
                     convert_for_motion = None
-                    total_img_number = bunch_nb * self.parent().po.vars['img_number']
+                    # total_img_number = bunch_nb * self.parent().po.vars['img_number']
                     # is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
 
-
+                    # https://stackoverflow.com/questions/48672130/saving-to-hdf5-is-very-slow-python-freezing
+                    # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
                     # # NEW version to read images and write videos at the same time. PB: Stun the disk
                     # # from: https://stackoverflow.com/questions/65802751/adding-big-matrices-stored-in-hdf5-datasets
                     # # https://docs.h5py.org/en/stable/quick.html#quick
@@ -1292,39 +1298,42 @@ class RunAllThread(QtCore.QThread):
 
 
                     arena_percentage = 0
+                    # for bunch in arange(bunch_nb): old
                     for bunch in arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
-                        if bunch == (bunch_nb - 1):
-                            # The last bunch is larger if there is a remaining to division
-                            remaining = self.parent().po.first_image.shape_number % bunch_nb
-                            arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
-                            if bunch > 0:
-                                # The last bunch is larger if there is a remaining to division
-                                if self.parent().po.videos.use_list_of_vid:
-                                    video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                                else:
-                                    video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-                            # Add the remaining videos to the last bunch if necessary
-                            if self.parent().po.videos.use_list_of_vid:
-                                for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
-                                    video_bunch.append(zeros(sizes[i, :], dtype=uint8))
-                            else:
-                                video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
+                        # if bunch == (bunch_nb - 1): old
+                        if bunch == (bunch_nb - 1) and remaining > 0:
+                            arena = arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
                         else:
                             arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                            if bunch > 0:
-                                if self.parent().po.videos.use_list_of_vid:
-                                    video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                                else:
-                                    video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-                                # try:
-                                #     video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                                # except MemoryError:
-                                #     analysis_status["message"] = f"Not enough RAM available"
-                                #     analysis_status["continue"] = False
-                                #     logging.info(
-                                #         f"Not enough RAM available for the {message} folder")
-                                #     break
+                        # print(arena)
+                        if self.parent().po.videos.use_list_of_vid:
+                            video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                        else:
+                            video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+                        # if bunch == bunch_nb:
+                            # # The last bunch is larger if there is a remaining to division
+                            # remaining = self.parent().po.first_image.shape_number % bunch_nb
+                            # arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
+                            # if bunch > 0:
+                            #     # The last bunch is larger if there is a remaining to division
+                            #     if self.parent().po.videos.use_list_of_vid:
+                            #         video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                            #     else:
+                            #         video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
+                            # # Add the remaining videos to the last bunch if necessary
+                            # if self.parent().po.videos.use_list_of_vid:
+                            #     for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
+                            #         video_bunch.append(zeros(sizes[i, :], dtype=uint8))
+                            # else:
+                            #     video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
+                        # else:
+                        #     arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
+                        #     if bunch > 0:
+                        #         if self.parent().po.videos.use_list_of_vid:
+                        #             video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                        #         else:
+                        #             video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
 
                         prev_img = None
                         images_done = bunch * self.parent().po.vars['img_number']
