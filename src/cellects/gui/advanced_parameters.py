@@ -95,6 +95,21 @@ class AdvancedParameters(WindowType):
                                                tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep these informations for all folders (if checked)\n- Only use these informations for the current folder (if unchecked)",
                                                night_mode=self.parent().po.all['night_mode'])
 
+        self.prevent_fast_growth_near_periphery = Checkbox(self.parent().po.vars['prevent_fast_growth_near_periphery'])
+        self.prevent_fast_growth_near_periphery_label = FixedText('Prevent fast growth near periphery',
+                                               tip="During video analysis, the borders of the arena may create wrong detection\n- Remove fast growing detection near periphery (if checked)\n- Do not change the detection (if unchecked)",
+                                               night_mode=self.parent().po.all['night_mode'])
+
+        self.prevent_fast_growth_near_periphery.stateChanged.connect(self.prevent_fast_growth_near_periphery_check)
+        self.periphery_width = Spinbox(min=0, max=1000, val=self.parent().po.vars['periphery_width'],
+                                            decimals=0, night_mode=self.parent().po.all['night_mode'])
+        self.periphery_width_label = FixedText('Periphery width',
+                                               tip="In pixels",
+                                               night_mode=self.parent().po.all['night_mode'])
+        self.periphery_width.setVisible(False)
+        self.periphery_width_label.setVisible(False)
+
+
         # I/D/ Arrange widgets in the box
         self.general_param_box_layout.addWidget(self.crop_images, 0, 0)
         self.general_param_box_layout.addWidget(self.crop_images_label, 0, 1)
@@ -104,6 +119,10 @@ class AdvancedParameters(WindowType):
         self.general_param_box_layout.addWidget(self.ring_correction_label, 2, 1)
         self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders, 3, 0)
         self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders_label, 3, 1)
+        self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery, 4, 0)
+        self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, 4, 1)
+        self.general_param_box_layout.addWidget(self.periphery_width, 5, 0)
+        self.general_param_box_layout.addWidget(self.periphery_width_label, 5, 1)
         self.general_param_box_widget.setLayout(self.general_param_box_layout)
         self.left_col_layout.addWidget(self.general_param_box_widget)
         # self.layout.addWidget(self.general_param_box_widget, curr_row_1st_col, 1, 2, 2)
@@ -602,6 +621,11 @@ class AdvancedParameters(WindowType):
         if self.subtract_background.isChecked():
             self.parent().po.first_exp_ready_to_run = False
 
+    def prevent_fast_growth_near_periphery_check(self):
+        checked_status = self.prevent_fast_growth_near_periphery.isChecked()
+        self.periphery_width.setVisible(checked_status)
+        self.periphery_width_label.setVisible(checked_status)
+
     def do_automatic_size_thresholding_changed(self):
         """ Triggered when do_automatic_size_thresholding check status changes"""
         self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
@@ -1059,6 +1083,8 @@ class AdvancedParameters(WindowType):
             self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
             self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
             self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
+            self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
+            self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
 
             # if self.parent().po.vars['origin_state'] == "invisible":
             self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
