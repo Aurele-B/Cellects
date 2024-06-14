@@ -7,7 +7,7 @@ import os
 import time
 from glob import glob
 from timeit import default_timer
-from cv2 import (connectedComponents, connectedComponentsWithStats, imwrite, dilate, morphologyEx, MORPH_GRADIENT)
+from cv2 import (connectedComponents, connectedComponentsWithStats, imwrite, dilate, morphologyEx, MORPH_GRADIENT, FONT_HERSHEY_SIMPLEX, putText)
 from numba.typed import Dict as TDict
 from numpy import (
     min, max, all, any, pi, min, round, mean, diff, square,
@@ -231,6 +231,16 @@ class UpdateImageThread(QtCore.QThread):
                     max_cy = self.parent().po.bot[contour_i]
                     min_cx = self.parent().po.left[contour_i]
                     max_cx = self.parent().po.right[contour_i]
+                    text = f"{contour_i + 1}"
+                    position = (self.parent().po.left[contour_i] + 25, self.parent().po.top[contour_i] + (self.parent().po.bot[contour_i] - self.parent().po.top[contour_i]) // 2)
+                    image = putText(image,  # numpy array on which text is written
+                                    text,  # text
+                                    position,  # position at which writing has to start
+                                    FONT_HERSHEY_SIMPLEX,  # font family
+                                    1,  # font size
+                                    (138, 95, 18, 255),
+                                    # (209, 80, 0, 255),  # repeat(self.vars["contour_color"], 3),# font color
+                                    2)  # font stroke
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     if self.parent().po.vars['arena_shape'] == 'circle':

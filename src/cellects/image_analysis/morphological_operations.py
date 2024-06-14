@@ -21,7 +21,7 @@ It contains the following functions:
 """
 import logging
 from numpy import square, round, vstack, repeat, append, sqrt, apply_along_axis, arange, zeros_like, zeros, argsort, uint8, min, any, \
-    float32, linspace, dstack, not_equal, row_stack, column_stack, quantile, transpose, concatenate, logical_and, logical_or, uint64, nonzero, absolute, sum, uint32, uint16, \
+    float32, linspace, dstack, not_equal, row_stack, column_stack, quantile, transpose, concatenate, logical_and, logical_or, uint64, nonzero, ceil, sum, uint32, uint16, \
     fromfunction, greater_equal, logical_xor, equal, ptp, max, min, sort, unique, where, greater, minimum, less_equal, count_nonzero, argwhere, array, ones, int8
 from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
 from scipy.spatial import KDTree
@@ -456,49 +456,76 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image, y_boundaries, get_o
     """
     nb_components, output, stats, centroids = connectedComponentsWithStats(binary_image.astype(uint8),
                                                                                connectivity=8)
-    # First order according to x: from left to right
+
     centroids = centroids[1:, :]
-    x_order = argsort(centroids[:, 0])
-    centroids = centroids[x_order, :]
-
-    # Then use the boundaries of each Y peak to sort these shapes row by row
-    if y_boundaries is not None:
-        binary_image = output.copy()
-        binary_image[nonzero(binary_image)] = 1
-        y_starts, y_ends = argwhere(y_boundaries == - 1), argwhere(y_boundaries == 1)
-
-        # margins_ci = array((0.1, 0.2, 0.3, 0.4, 0.5))
-        margins_ci = array((0.5, 0.4, 0.3, 0.2, 0.1))
-        ranking_success: bool = True
-        for margin in margins_ci:
-            y_order = zeros(centroids.shape[0], dtype=uint8)
-            count: uint8 = 0
-            y_margins = (y_ends - y_starts) * margin# 0.3
-            for y_interval in arange(len(y_starts)):
-                for patch_i in arange(nb_components - 1):
-                    # Compare the y coordinate of the centroid with the detected y intervals with
-                    # an added margin in order to order coordinates
-                    if logical_and(centroids[patch_i, 1] >= (y_starts[y_interval] - y_margins[y_interval]),
-                                      centroids[patch_i, 1] <= (y_ends[y_interval] + y_margins[y_interval])):
-                        try:
-                            y_order[count] = patch_i
-                            count = count + 1
-                        except IndexError:
-                            ranking_success = False
-
-            if ranking_success:
-                break
-    else:
-        ranking_success = False
-    # if that all tested margins failed, do not rank_from_top_to_bottom_from_left_to_right, i.e. keep automatic ranking
-    if not ranking_success:
-        y_order = arange(centroids.shape[0])
-
-    # Second order according to y: from top to bottom
-    ordered_centroids = centroids[y_order, :]
+    final_order = zeros(centroids.shape[0], dtype=uint8)
+    sorted_against_y = argsort(centroids[:, 1])
+    # row_nb = (y_boundaries == 1).sum()
+    row_nb = max(((y_boundaries == 1).sum(), (y_boundaries == - 1).sum()))
+    component_per_row = int(ceil((nb_components - 1) / row_nb))
+    for row_i in range(row_nb):
+        row_i_start = row_i * component_per_row
+        if row_i == (row_nb - 1):
+            sorted_against_x = argsort(centroids[sorted_against_y[row_i_start:], 0])
+            final_order[row_i_start:] = sorted_against_y[row_i_start:][sorted_against_x]
+        else:
+            row_i_end = (row_i + 1) * component_per_row
+            sorted_against_x = argsort(centroids[sorted_against_y[row_i_start:row_i_end], 0])
+            final_order[row_i_start:row_i_end] = sorted_against_y[row_i_start:row_i_end][sorted_against_x]
+    ordered_centroids = centroids[final_order, :]
     ordered_stats = stats[1:, :]
-    ordered_stats = ordered_stats[x_order, :]
-    ordered_stats = ordered_stats[y_order, :]
+    ordered_stats = ordered_stats[final_order, :]
+
+    # If it fails, use another algo
+    if (final_order == 0).sum() > 1:
+        nb_components, output, stats, centroids = connectedComponentsWithStats(binary_image.astype(uint8),
+                                                                               connectivity=8)
+        # First order according to x: from left to right
+        # Remove the background and order centroids along x axis
+        centroids = centroids[1:, :]
+        x_order = argsort(centroids[:, 0])
+        centroids = centroids[x_order, :]
+
+
+        # Then use the boundaries of each Y peak to sort these shapes row by row
+        if y_boundaries is not None:
+            binary_image = output.copy()
+            binary_image[nonzero(binary_image)] = 1
+            y_starts, y_ends = argwhere(y_boundaries == - 1), argwhere(y_boundaries == 1)
+
+            margins_ci = array((0.5, 0.4, 0.3, 0.2, 0.1))
+            for margin in margins_ci:
+                ranking_success: bool = True
+                y_order = zeros(centroids.shape[0], dtype=uint8)
+                count: uint8 = 0
+                y_margins = (y_ends - y_starts) * margin# 0.3
+                # Loop and try to fill each row with all components, fail if the final number is wrong
+                for y_interval in arange(len(y_starts)):
+                    for patch_i in arange(nb_components - 1):
+                        # Compare the y coordinate of the centroid with the detected y intervals with
+                        # an added margin in order to order coordinates
+                        if logical_and(centroids[patch_i, 1] >= (y_starts[y_interval] - y_margins[y_interval]),
+                                          centroids[patch_i, 1] <= (y_ends[y_interval] + y_margins[y_interval])):
+                            try:
+                                y_order[count] = patch_i
+                                count = count + 1
+                            except IndexError as exc:
+                                ranking_success = False
+
+                if ranking_success:
+                    break
+        else:
+            ranking_success = False
+        # if that all tested margins failed, do not rank_from_top_to_bottom_from_left_to_right, i.e. keep automatic ranking
+        if not ranking_success:
+            y_order = arange(centroids.shape[0])
+
+
+        # Second order according to y: from top to bottom
+        ordered_centroids = centroids[y_order, :]
+        ordered_stats = stats[1:, :]
+        ordered_stats = ordered_stats[x_order, :]
+        ordered_stats = ordered_stats[y_order, :]
 
     if get_ordered_image:
         ordered_image = zeros(binary_image.shape, dtype=uint8)
