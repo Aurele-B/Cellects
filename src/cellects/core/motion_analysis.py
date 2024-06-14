@@ -25,7 +25,7 @@ from numpy import (
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
-    logical_xor, float16, less, greater, save, sign, uint8, int8, int16,
+    logical_xor, float16, less, greater, save, sign, uint8, int8, int16, zeros_like,
     uint32, float64, expand_dims, min, max, any)
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
@@ -821,6 +821,39 @@ class MotionAnalysis:
         if self.vars['do_fading']:
             self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
             self.already_explored_area = self.origin.copy()
+
+        if self.vars['prevent_fast_growth_near_periphery']:
+            near_periphery = zeros(self.dims[1:])
+            if self.vars['arena_shape'] == 'circle':
+                periphery_width = self.vars['periphery_width'] * 2
+                elliperiphery = Ellipse((self.dims[1] - periphery_width, self.dims[2] - periphery_width)).create()
+                half_width = periphery_width // 2
+                if periphery_width % 2 == 0:
+                    near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
+                else:
+                    near_periphery[half_width:-half_width - 1, half_width:-half_width - 1] = elliperiphery
+                near_periphery = 1 - near_periphery
+            else:
+                near_periphery[:self.vars['periphery_width'], :] = 1
+                near_periphery[-self.vars['periphery_width']:, :] = 1
+                near_periphery[:, :self.vars['periphery_width']] = 1
+                near_periphery[:, -self.vars['periphery_width']:] = 1
+
+            growth_near_periphery = diff(self.segmentation * near_periphery, axis=0)
+            growth_near_periphery[growth_near_periphery != 0] = 1
+            growth_near_periphery = growth_near_periphery.astype(uint8)
+            summed_growth_near_periphery = growth_near_periphery.sum((1, 2))
+            size_threshold = median(summed_growth_near_periphery[summed_growth_near_periphery > 0]) * 10
+            fast_growth_near_periphery = summed_growth_near_periphery > size_threshold
+            fast_growth_near_periphery = nonzero(fast_growth_near_periphery)[0]
+            for frame_i in fast_growth_near_periphery:
+                growth_near_periphery[frame_i, ...] = dilate(growth_near_periphery[frame_i, ...], kernel=self.cross_33, iterations=1)
+                shapes, stats, centers = cc(growth_near_periphery[frame_i, ...])
+                detection_to_cancel = zeros_like(shapes)
+                detection_to_cancel[isin(shapes, nonzero(stats[:, 4] > 10)[0][1:])] = 1
+                self.segmentation[(frame_i - 1):(frame_i + 2), ...] *= (1 - detection_to_cancel)
+                self.segmentation[frame_i:(frame_i + 2), ...] *= (1 - detection_to_cancel)
+
 
     def update_shape(self, show_seg):
         ## Build the new shape state from the t-1 one

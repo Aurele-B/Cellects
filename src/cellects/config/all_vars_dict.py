@@ -86,6 +86,8 @@ class DefaultDicts:
             'fractal_threshold_detection': 100,
             'subtract_background': False,
             'ring_correction': False,
+            'prevent_fast_growth_near_periphery': False,
+            'periphery_width': 25,
             # According to Smith and Saldana (1992),
             # P. polycephalum shuttle streaming has a period of 100-200s
             'already_greyscale': False,
