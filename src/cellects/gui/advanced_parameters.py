@@ -106,8 +106,7 @@ class AdvancedParameters(WindowType):
         self.periphery_width_label = FixedText('Periphery width',
                                                tip="In pixels",
                                                night_mode=self.parent().po.all['night_mode'])
-        self.periphery_width.setVisible(False)
-        self.periphery_width_label.setVisible(False)
+        self.prevent_fast_growth_near_periphery_check()
 
 
         # I/D/ Arrange widgets in the box
