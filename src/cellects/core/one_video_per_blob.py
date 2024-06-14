@@ -420,6 +420,7 @@ class OneVideoPerBlob:
 
 
     def print_bounding_boxes(self, display_or_return=0):
+        imtoshow = self.first_image.bgr.copy()
         segments = zeros((2, 1), dtype=uint8)
         for i in arange(self.first_image.shape_number):
             j = i * 4
@@ -439,13 +440,22 @@ class OneVideoPerBlob:
                                                                              array((self.bot[i], self.right[i]))),
                                  axis=1)
 
+            text = f"{i + 1}"
+            position = (self.left[i] + 25, self.top[i] + (self.bot[i] - self.top[i]) // 2)
+            imtoshow = cv2.putText(imtoshow,  # numpy array on which text is written
+                            text,  # text
+                            position,  # position at which writing has to start
+                            cv2.FONT_HERSHEY_SIMPLEX,  # font family
+                            1,  # font size
+                            (0, 0, 0, 255),  # (209, 80, 0, 255),  # repeat(self.vars["contour_color"], 3),# font color
+                            2)  # font stroke
+
         mask = zeros(self.first_image.validated_shapes.shape, dtype=uint8)
         mask[segments[0], segments[1]] = 1
         mask = cv2.dilate(mask, array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=uint8), iterations=3)
         if display_or_return == 0:
-            imtoshow = self.first_image.bgr.copy()
-            imtoshow[mask == 1, 2] = 255
-            imtoshow = cv2.resize(imtoshow, (960, 540))
+            imtoshow[mask == 1, :] = 0
+            imtoshow = cv2.resize(imtoshow, (2000, 1000))
             cv2.imshow('Video contour', imtoshow)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
