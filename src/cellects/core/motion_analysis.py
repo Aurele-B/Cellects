@@ -1691,7 +1691,7 @@ class MotionAnalysis:
 
                     influx, in_stats, centroids = cc(influx)
                     efflux, ef_stats, centroids = cc(efflux)
-                    # Only keep clusters larger than 50 pixels (smaller are considered as noise
+                    # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
                     in_smalls = nonzero(in_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
                     if len(in_smalls) > 0:
                         influx[isin(influx, in_smalls)] = 0
