@@ -823,37 +823,24 @@ class MotionAnalysis:
             self.already_explored_area = self.origin.copy()
 
         if self.vars['prevent_fast_growth_near_periphery']:
-            near_periphery = zeros(self.dims[1:])
+            self.near_periphery = zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
                 elliperiphery = Ellipse((self.dims[1] - periphery_width, self.dims[2] - periphery_width)).create()
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
-                    near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
+                    self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
                 else:
-                    near_periphery[half_width:-half_width - 1, half_width:-half_width - 1] = elliperiphery
-                near_periphery = 1 - near_periphery
+                    self.near_periphery[half_width:-half_width - 1, half_width:-half_width - 1] = elliperiphery
+                self.near_periphery = 1 - self.near_periphery
             else:
-                near_periphery[:self.vars['periphery_width'], :] = 1
-                near_periphery[-self.vars['periphery_width']:, :] = 1
-                near_periphery[:, :self.vars['periphery_width']] = 1
-                near_periphery[:, -self.vars['periphery_width']:] = 1
-
-            growth_near_periphery = diff(self.segmentation * near_periphery, axis=0)
-            growth_near_periphery[growth_near_periphery != 0] = 1
-            growth_near_periphery = growth_near_periphery.astype(uint8)
-            summed_growth_near_periphery = growth_near_periphery.sum((1, 2))
-            size_threshold = median(summed_growth_near_periphery[summed_growth_near_periphery > 0]) * 10
-            fast_growth_near_periphery = summed_growth_near_periphery > size_threshold
-            fast_growth_near_periphery = nonzero(fast_growth_near_periphery)[0]
-            for frame_i in fast_growth_near_periphery:
-                growth_near_periphery[frame_i, ...] = dilate(growth_near_periphery[frame_i, ...], kernel=self.cross_33, iterations=1)
-                shapes, stats, centers = cc(growth_near_periphery[frame_i, ...])
-                detection_to_cancel = zeros_like(shapes)
-                detection_to_cancel[isin(shapes, nonzero(stats[:, 4] > 10)[0][1:])] = 1
-                self.segmentation[(frame_i - 1):(frame_i + 2), ...] *= (1 - detection_to_cancel)
-                self.segmentation[frame_i:(frame_i + 2), ...] *= (1 - detection_to_cancel)
-
+                self.near_periphery[:self.vars['periphery_width'], :] = 1
+                self.near_periphery[-self.vars['periphery_width']:, :] = 1
+                self.near_periphery[:, :self.vars['periphery_width']] = 1
+                self.near_periphery[:, -self.vars['periphery_width']:] = 1
+            self.near_periphery = nonzero(self.near_periphery)
+            # near_periphery = zeros(self.dims[1:])
+            # near_periphery[self.near_periphery] = 1
 
     def update_shape(self, show_seg):
         ## Build the new shape state from the t-1 one
@@ -1040,6 +1027,21 @@ class MotionAnalysis:
             self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
             self.already_explored_area = logical_or(self.already_explored_area, self.binary[self.t, :, :])
 
+        if self.vars['prevent_fast_growth_near_periphery']:
+            # growth_near_periphery = diff(self.binary[self.t-1:self.t+1, :, :] * self.near_periphery, axis=0)
+            growth_near_periphery = diff(self.binary[self.t-1:self.t+1, self.near_periphery[0], self.near_periphery[1]], axis=0)
+            if (growth_near_periphery == 1).sum() > self.vars['max_periphery_growth']:
+                # self.binary[self.t, self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t - 1, self.near_periphery[0], self.near_periphery[1]]
+                periphery_to_remove = zeros(self.dims[1:], dtype=uint8)
+                periphery_to_remove[self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t, self.near_periphery[0], self.near_periphery[1]]
+                shapes, stats, centers = cc(periphery_to_remove)
+                periphery_to_remove = nonzero(isin(shapes, nonzero(stats[:, 4] > self.vars['max_periphery_growth'])[0][1:]))
+                self.binary[self.t, periphery_to_remove[0], periphery_to_remove[1]] = self.binary[self.t - 1, periphery_to_remove[0], periphery_to_remove[1]]
+                if not self.vars['several_blob_per_arena']:
+                    shapes, stats, centers = cc(self.binary[self.t, ...])
+                    shapes[shapes != 1] = 0
+                    self.binary[self.t, ...] = shapes
+
         # Display
 
         if show_seg:
@@ -1053,7 +1055,7 @@ class MotionAnalysis:
             imshow("shape_motion", imtoshow)
             waitKey(1)
         self.t += 1
-        ##
+
 
     def get_descriptors_from_binary(self):
         ##
@@ -1501,7 +1503,7 @@ class MotionAnalysis:
                         # remove_faded_pixels = self.binary[t, ...] * logical_xor(self.binary[t, ...],
                         #                                                         self.binary[t - 1, ...])
 
-                        if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
+                        if self.vars['do_fading'] and (t > self.step + self.lost_frames):
                             remove_faded_pixels = 1 - self.binary[t - 1, ...]
                             nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
 
