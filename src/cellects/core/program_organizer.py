@@ -328,7 +328,7 @@ class ProgramOrganizer:
 
                 if len(self.data_list) == 0:
                     self.look_for_data()
-                    if folder_changed and folder_number > 1:
+                    if folder_changed and folder_number > 1 and len(self.all['folder_list']) > 0:
                         self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
                 self.get_first_image()
                 self.get_last_image()

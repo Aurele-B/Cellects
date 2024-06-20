@@ -82,17 +82,19 @@ class AdvancedParameters(WindowType):
         # I/C/ Create widgets
         self.crop_images = Checkbox(self.parent().po.all['crop_images'])
         self.crop_images_label = FixedText('Automatically crop images', tip="If more than one cell shape are (or may appear) in each arena", night_mode=self.parent().po.all['night_mode'])
+
         self.subtract_background = Checkbox(self.parent().po.vars['subtract_background'])
         self.subtract_background.stateChanged.connect(self.subtract_background_check)
-
         self.subtract_background_label = FixedText('Subtract background', tip="Apply an algorithm allowing to remove a potential brightness gradient from images during analysis", night_mode=self.parent().po.all['night_mode'])
-        self.ring_correction = Checkbox(self.parent().po.vars['ring_correction'])
-        self.ring_correction_label = FixedText('Correct errors around initial shape',
-                                               tip="Apply an algorithm allowing to correct some failure around the initial shape\nThese errors are most likely due to color variations\n themselves due to substrate width differences crossed by light\naround initial cell lying on an opaque substrate",
-                                               night_mode=self.parent().po.all['night_mode'])
+
         self.keep_masks_for_all_folders = Checkbox(self.parent().po.all['keep_masks_for_all_folders'])
         self.keep_masks_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
                                                tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep these informations for all folders (if checked)\n- Only use these informations for the current folder (if unchecked)",
+                                               night_mode=self.parent().po.all['night_mode'])
+
+        self.ring_correction = Checkbox(self.parent().po.vars['ring_correction'])
+        self.ring_correction_label = FixedText('Correct errors around initial shape',
+                                               tip="Apply an algorithm allowing to correct some failure around the initial shape\nThese errors are most likely due to color variations\n themselves due to substrate width differences crossed by light\naround initial cell lying on an opaque substrate",
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery = Checkbox(self.parent().po.vars['prevent_fast_growth_near_periphery'])
@@ -119,10 +121,10 @@ class AdvancedParameters(WindowType):
         self.general_param_box_layout.addWidget(self.crop_images_label, 0, 1)
         self.general_param_box_layout.addWidget(self.subtract_background, 1, 0)
         self.general_param_box_layout.addWidget(self.subtract_background_label, 1, 1)
-        self.general_param_box_layout.addWidget(self.ring_correction, 2, 0)
-        self.general_param_box_layout.addWidget(self.ring_correction_label, 2, 1)
-        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders, 3, 0)
-        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders_label, 3, 1)
+        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders, 2, 0)
+        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders_label, 2, 1)
+        self.general_param_box_layout.addWidget(self.ring_correction, 3, 0)
+        self.general_param_box_layout.addWidget(self.ring_correction_label, 3, 1)
         self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery, 4, 0)
         self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, 4, 1)
         self.general_param_box_layout.addWidget(self.periphery_width, 5, 0)
@@ -306,9 +308,17 @@ class AdvancedParameters(WindowType):
         self.oscillation_period_label = FixedText('Internal oscillation period (min)',
                                                   tip="If one expect biotic oscillations to occur",
                                                   night_mode=self.parent().po.all['night_mode'])
-        self.oscillation_period_layout.addWidget(self.oscillation_period, 3, 0)
 
-        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 3, 1)
+        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.minimal_oscillating_cluster_size_label = FixedText('Minimal oscillating cluster size',
+                                                  tip="In pixels\nWhen analyzing oscillations within the detected specimen(s)\nCellects looks for clusters of pixels that oscillate synchronously\nThis parameter sets the minimal size (in pixels) of these clusters.",
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
+        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size, 1, 0)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size_label, 1, 1)
 
         self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
         self.left_col_layout.addWidget(self.oscillation_period_widget)
@@ -1089,8 +1099,8 @@ class AdvancedParameters(WindowType):
         else:
             self.parent().po.all['crop_images'] = self.crop_images.isChecked()
             self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
-            self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
             self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
+            self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
             self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
             self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
             self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
@@ -1101,6 +1111,7 @@ class AdvancedParameters(WindowType):
 
             self.parent().po.vars['first_detection_method'] = self.appearing_selection.currentText()
             self.parent().po.vars['oscillation_period'] = self.oscillation_period.value()
+            self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
             self.parent().po.vars['fractal_threshold_detection'] = self.fractal_threshold_detection.value()
 
             self.parent().po.vars['network_detection_threshold'] = int(round(self.network_detection_threshold.value()))
