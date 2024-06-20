@@ -1057,16 +1057,17 @@ class MotionAnalysis:
         self.t += 1
 
 
-    def get_descriptors_from_binary(self):
+    def get_descriptors_from_binary(self, release_memory=True):
         ##
-        self.substantial_image = None
-        self.covering_intensity = None
-        self.segmentation = None
-        self.gravity_field = None
-        self.sun = None
-        self.rays = None
-        self.holes = None
-        collect()
+        if release_memory:
+            self.substantial_image = None
+            self.covering_intensity = None
+            self.segmentation = None
+            self.gravity_field = None
+            self.sun = None
+            self.rays = None
+            self.holes = None
+            collect()
         self.surfarea = self.binary.sum((1, 2))
         timings = self.vars['exif']
         if len(timings) < self.dims[0]:
@@ -1662,7 +1663,7 @@ class MotionAnalysis:
                 contours_idx = nonzero(contours)
                 imtoshow = self.converted_video[t, ...].copy()
                 imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
-                if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
+                if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
                     if self.statistics["is_growth_isotropic"] == 1:
                         if t < self.statistics["iso_digi_transi"]:
                             imtoshow[contours_idx[0], contours_idx[1], 2] = 255
@@ -1691,12 +1692,12 @@ class MotionAnalysis:
                     influx, in_stats, centroids = cc(influx)
                     efflux, ef_stats, centroids = cc(efflux)
                     # Only keep clusters larger than 50 pixels (smaller are considered as noise
-                    in_smalls = nonzero(in_stats[:, 4] < 50)[0]
+                    in_smalls = nonzero(in_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
                     if len(in_smalls) > 0:
                         influx[isin(influx, in_smalls)] = 0
                         in_stats = in_stats[:in_smalls[0], :]
                     in_stats = in_stats[1:]
-                    ef_smalls = nonzero(ef_stats[:, 4] < 50)[0]
+                    ef_smalls = nonzero(ef_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
                     if len(ef_smalls) > 0:
                         efflux[isin(efflux, ef_smalls)] = 0
                         ef_stats = ef_stats[:(ef_smalls[0]), :]
@@ -2105,7 +2106,7 @@ class MotionAnalysis:
         if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
             oscil_i = df(
                 c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
-                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
+                columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
             if os.path.isfile("one_row_per_oscillating_cluster.csv"):
                 try:
                     with open(f"one_row_per_oscillating_cluster.csv", 'r') as file:
