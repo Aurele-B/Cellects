@@ -101,9 +101,14 @@ class AdvancedParameters(WindowType):
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery.stateChanged.connect(self.prevent_fast_growth_near_periphery_check)
-        self.periphery_width = Spinbox(min=0, max=1000, val=self.parent().po.vars['periphery_width'],
+        self.periphery_width = Spinbox(min=1, max=1000, val=self.parent().po.vars['periphery_width'],
                                             decimals=0, night_mode=self.parent().po.all['night_mode'])
         self.periphery_width_label = FixedText('Periphery width',
+                                               tip="In pixels",
+                                               night_mode=self.parent().po.all['night_mode'])
+        self.max_periphery_growth = Spinbox(min=1, max=1000000, val=self.parent().po.vars['max_periphery_growth'],
+                                            decimals=0, night_mode=self.parent().po.all['night_mode'])
+        self.max_periphery_growth_label = FixedText('Max periphery growth',
                                                tip="In pixels",
                                                night_mode=self.parent().po.all['night_mode'])
         self.prevent_fast_growth_near_periphery_check()
@@ -122,6 +127,8 @@ class AdvancedParameters(WindowType):
         self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, 4, 1)
         self.general_param_box_layout.addWidget(self.periphery_width, 5, 0)
         self.general_param_box_layout.addWidget(self.periphery_width_label, 5, 1)
+        self.general_param_box_layout.addWidget(self.max_periphery_growth, 6, 0)
+        self.general_param_box_layout.addWidget(self.max_periphery_growth_label, 6, 1)
         self.general_param_box_widget.setLayout(self.general_param_box_layout)
         self.left_col_layout.addWidget(self.general_param_box_widget)
         # self.layout.addWidget(self.general_param_box_widget, curr_row_1st_col, 1, 2, 2)
@@ -624,6 +631,8 @@ class AdvancedParameters(WindowType):
         checked_status = self.prevent_fast_growth_near_periphery.isChecked()
         self.periphery_width.setVisible(checked_status)
         self.periphery_width_label.setVisible(checked_status)
+        self.max_periphery_growth.setVisible(checked_status)
+        self.max_periphery_growth_label.setVisible(checked_status)
 
     def do_automatic_size_thresholding_changed(self):
         """ Triggered when do_automatic_size_thresholding check status changes"""
@@ -1084,6 +1093,7 @@ class AdvancedParameters(WindowType):
             self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
             self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
             self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
+            self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
 
             # if self.parent().po.vars['origin_state'] == "invisible":
             self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()

@@ -1093,6 +1093,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
         self.parent().po.motion.get_descriptors_from_binary()
         self.parent().po.motion.detect_growth_transitions()
+        self.parent().po.max_distance = self.parent().po.pixel_ring_depth * self.parent().po.vars['ease_connect_distant_shape']
         self.parent().po.motion.network_detection(False)
         self.parent().po.motion.study_cytoscillations(False)
         self.parent().po.motion.fractal_analysis()
