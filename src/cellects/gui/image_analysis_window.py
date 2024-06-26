@@ -435,7 +435,29 @@ class ImageAnalysisWindow(WindowType):
             self.message.setText("Wait for the analysis to end")
         else:
             self.parent().firstwindow.instantiate = True
-            self.parent().change_widget(0)  # Fisrt
+            self.hold_click_flag: bool = False
+            self.is_first_image_flag: bool = True
+            self.is_image_analysis_running: bool = False
+            self.is_image_analysis_display_running: bool = False
+            self.asking_first_im_parameters_flag: bool = True
+            self.first_im_parameters_answered: bool = False
+            self.auto_delineation_flag: bool = False
+            self.delineation_done: bool = False
+            self.asking_delineation_flag: bool = False
+            self.asking_slower_or_manual_delineation_flag: bool = False
+            self.slower_delineation_flag: bool = False
+            self.asking_last_image_flag: bool = False
+            self.step = 0
+            self.temporary_mask_coord = []
+            self.saved_coord = []
+            self.back1_bio2 = 0
+            self.bio_masks_number = 0
+            self.back_masks_number = 0
+            self.arena_masks_number = 0
+            self.available_bio_names = arange(1, 1000, dtype=uint16)
+            self.available_back_names = arange(1, 1000, dtype=uint16)
+            self.parent().po.current_combination_id = 0
+            self.parent().change_widget(0)  # First
 
     def read_is_clicked(self):
         if not self.thread["GetFirstIm"].isRunning():
