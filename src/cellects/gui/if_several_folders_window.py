@@ -200,6 +200,8 @@ class IfSeveralFoldersWindow(WindowType):
             self.next_clicked_once = True
             self.Video_analysis_window.setVisible(True)
             self.Run_all_directly.setVisible(True)
+            self.parent().firstwindow.Video_analysis_window.setVisible(True)
+            self.parent().firstwindow.Run_all_directly.setVisible(True)
         else:
             self.instantiates_widgets_and_do_image_analysis()
 
