@@ -2,7 +2,7 @@
 """This module contains all modified/simplified widgets from PySide6
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtGui import QImage, QPixmap, QFont, QPainter
+from PySide6.QtGui import QImage, QPixmap, QFont, QPainter, QPainter, QPainterPath, QColor
 from numpy import min, max, all, any
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
@@ -293,6 +293,45 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
             QSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 16px; }
             QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
         """)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        button_width = 20
+        button_height = self.height() // 2
+        up_rect = QtCore.QRect(self.width() - button_width, 0, button_width, button_height)
+        down_rect = QtCore.QRect(self.width() - button_width, button_height, button_width, button_height)
+
+        # Draw button backgrounds
+        painter.fillRect(up_rect, QColor(240, 240, 240))
+        painter.fillRect(down_rect, QColor(240, 240, 240))
+
+        # Draw button borders
+        painter.setPen(QColor(200, 200, 200))
+        painter.drawLine(self.width() - button_width, 0, self.width() - button_width, self.height())
+        painter.drawLine(self.width() - button_width, button_height, self.width(), button_height)
+
+        # Draw arrows
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setBrush(QColor(100, 100, 100))
+
+        # Up arrow
+        up_arrow = QPainterPath()
+        up_arrow.moveTo(up_rect.center().x() - 4, up_rect.center().y() + 2)
+        up_arrow.lineTo(up_rect.center().x() + 4, up_rect.center().y() + 2)
+        up_arrow.lineTo(up_rect.center().x(), up_rect.center().y() - 2)
+        up_arrow.closeSubpath()
+        painter.drawPath(up_arrow)
+
+        # Down arrow
+        down_arrow = QPainterPath()
+        down_arrow.moveTo(down_rect.center().x() - 4, down_rect.center().y() - 2)
+        down_arrow.lineTo(down_rect.center().x() + 4, down_rect.center().y() - 2)
+        down_arrow.lineTo(down_rect.center().x(), down_rect.center().y() + 2)
+        down_arrow.closeSubpath()
+        painter.drawPath(down_arrow)
 
     def night_mode_switch(self, night_mode):
         if night_mode:
