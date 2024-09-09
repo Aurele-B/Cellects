@@ -2,7 +2,7 @@
 """This module contains all modified/simplified widgets from PySide6
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtGui import QImage, QPixmap, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
+from PySide6.QtGui import QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 from numpy import min, max, all, any
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
@@ -325,14 +325,19 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        button_width = 20
+        button_width = 15
         button_height = self.height() // 2
+        text_rect = QtCore.QRect(0, 0, self.width() - button_width, self.height())
         up_rect = QtCore.QRect(self.width() - button_width, 0, button_width, button_height)
         down_rect = QtCore.QRect(self.width() - button_width, button_height, button_width, button_height)
 
         # Draw button backgrounds
         painter.fillRect(up_rect, QColor(240, 240, 240))
         painter.fillRect(down_rect, QColor(240, 240, 240))
+
+        # Draw text area border
+        painter.setPen(QPen(self.palette().color(QPalette.Mid), 1))
+        painter.drawRect(text_rect.adjusted(0, 0, -1, -1))
 
         # Draw button borders
         painter.setPen(QPen(QColor(200, 200, 200), 1))
