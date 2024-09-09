@@ -29,7 +29,6 @@ screeninfo = "^0.8.1"
 numpy = "^1.26.1"
 
 
-
 [tool.poetry.group.dev.dependencies]
 h5py = "^3.10.0"
 typing-extensions = "^4.8.0"

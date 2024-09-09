@@ -10,7 +10,6 @@ import logging
 import os
 import pickle
 import time
-import rawpy
 from timeit import default_timer
 from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, stack, nonzero
 from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
@@ -306,9 +305,12 @@ def readim(image_path, raw_image=False):
     :return:
     """
     if raw_image:
-        raw = rawpy.imread(image_path)
-        raw = raw.postprocess()
-        return cvtColor(raw, COLOR_RGB2BGR)
+        logging.error("Cannot read this image format. If the rawpy package can, ask for a version of Cellects using it.")
+        # import rawpy
+        # raw = rawpy.imread(image_path)
+        # raw = raw.postprocess()
+        # return cvtColor(raw, COLOR_RGB2BGR)
+        return imread(image_path)
     else:
         return imread(image_path)
 
