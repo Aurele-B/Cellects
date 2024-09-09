@@ -2,7 +2,7 @@
 """This module contains all modified/simplified widgets from PySide6
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtGui import QImage, QPixmap, QFont, QPainter, QPainter, QPainterPath, QColor
+from PySide6.QtGui import QImage, QPixmap, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 from numpy import min, max, all, any
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
@@ -271,28 +271,54 @@ class PButton(QtWidgets.QPushButton):
         self.setWindowOpacity(1)
         self.setStyleSheet("background-color: %s; color: %s; border: %s; border-radius: %s" % (buttoncolor, textColor, buttonborder, buttonangles))
 
+import numpy as np
+class Spinbox(QtWidgets.QAbstractSpinBox):
+    valueChanged = QtCore.Signal(float)
 
-class Spinbox(QtWidgets.QDoubleSpinBox):
+    class StepType:
+        DefaultStepType = 0
+        AdaptiveDecimalStepType = 1
     def __init__(self, min=0, max=100000, val=0, decimals=None, night_mode=False):
         super().__init__()
+        self.setFixedHeight(30)
+        self._minimum = min
+        self._maximum = max
+        self._value = val
+        if decimals is None:
+            decimals = 0
+        self._decimals = decimals
+        if decimals == 0:
+            self._singleStep = 1
+        else:
+            self._singleStep = 0.1
+        self._stepType = self.StepType.DefaultStepType
+
+        self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        self.lineEdit().setAlignment(QtCore.Qt.AlignRight)
+        self._updateDisplayValue()
+        self._updateValidator()
+
+        self.lineEdit().textChanged.connect(self._handleTextChanged)
+
+        self.setMinimumWidth(100)
+
         self.setMinimum(min)
         self.setMaximum(max)
         self.setValue(val)
-        self.setFixedHeight(30)
         self.decimals = decimals
         if decimals is not None:
             self.setDecimals(decimals)
-            self.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
+            # self.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
         else:
             self.setDecimals(0)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode_switch(night_mode)
-        self.setStyleSheet("""
-            QSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 16px; }
-            QSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 16px; }
-            QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
-        """)
+        # self.setStyleSheet("""
+        #     QSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 16px; }
+        #     QSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 16px; }
+        #     QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
+        # """)
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -309,7 +335,7 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
         painter.fillRect(down_rect, QColor(240, 240, 240))
 
         # Draw button borders
-        painter.setPen(QColor(200, 200, 200))
+        painter.setPen(QPen(QColor(200, 200, 200), 1))
         painter.drawLine(self.width() - button_width, 0, self.width() - button_width, self.height())
         painter.drawLine(self.width() - button_width, button_height, self.width(), button_height)
 
@@ -322,7 +348,6 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
         up_arrow.moveTo(up_rect.center().x() - 4, up_rect.center().y() + 2)
         up_arrow.lineTo(up_rect.center().x() + 4, up_rect.center().y() + 2)
         up_arrow.lineTo(up_rect.center().x(), up_rect.center().y() - 2)
-        up_arrow.closeSubpath()
         painter.drawPath(up_arrow)
 
         # Down arrow
@@ -330,9 +355,112 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
         down_arrow.moveTo(down_rect.center().x() - 4, down_rect.center().y() - 2)
         down_arrow.lineTo(down_rect.center().x() + 4, down_rect.center().y() - 2)
         down_arrow.lineTo(down_rect.center().x(), down_rect.center().y() + 2)
-        down_arrow.closeSubpath()
         painter.drawPath(down_arrow)
 
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        button_width = 20
+        text_rect = self.rect().adjusted(0, 0, -button_width, 0)
+        self.lineEdit().setGeometry(text_rect)
+
+    def mousePressEvent(self, event):
+        button_width = 20
+        button_height = self.height() // 2
+        if event.x() > self.width() - button_width:
+            if event.y() < button_height:
+                self.stepUp()
+            else:
+                self.stepDown()
+        else:
+            super().mousePressEvent(event)
+
+    def sizeHint(self):
+        fm = QFontMetrics(self.font())
+        max_str = f"{self._maximum:.{self._decimals}f}"
+        w = fm.horizontalAdvance(max_str) + 30  # Add some padding for buttons
+        h = super().sizeHint().height()
+        return QtCore.QSize(np.max((w, 100)), h)  # Ensure a minimum width of 100 pixels
+
+    def setMaximum(self, maximum):
+        self._maximum = float(maximum)
+        self._updateValidator()
+        self.setValue(np.min((self._value, self._maximum)))
+        self.updateGeometry()
+
+    def setDecimals(self, decimals):
+        try:
+            self._decimals = np.max((0, int(decimals)))
+        except (ValueError, TypeError):
+            print(f"Invalid decimals value: {decimals}. Using 2 decimals as default.")
+            self._decimals = 2
+        self._updateValidator()
+        self._updateDisplayValue()
+        self.updateGeometry()
+
+    def _updateDisplayValue(self):
+        if self._decimals == 0:
+            self.lineEdit().setText(f"{int(round(self._value))}")
+        else:
+            self.lineEdit().setText(f"{self._value:.{self._decimals}f}")
+
+    def _updateValidator(self):
+        self.lineEdit().setValidator(QDoubleValidator(self._minimum, self._maximum, self._decimals, self))
+
+    def setValue(self, value):
+        clamped_value = np.clip(value, self._minimum, self._maximum)
+        if np.abs(clamped_value - self._value) >= 1e-8:  # Compare floats with small tolerance
+            self._value = clamped_value
+            self._updateDisplayValue()
+            self.valueChanged.emit(self._value)
+
+    def value(self):
+        return self._value
+
+    def setMinimum(self, minimum):
+        self._minimum = float(minimum)
+        self._updateValidator()
+        self.setValue(np.max((self._value, self._minimum)))
+
+    def setSingleStep(self, step):
+        self._singleStep = float(step)
+
+    def setStepType(self, step_type):
+        if step_type not in (self.StepType.DefaultStepType, self.StepType.AdaptiveDecimalStepType):
+            raise ValueError("Invalid step type")
+        self._stepType = step_type
+
+    def stepBy(self, steps):
+        if self._stepType == self.StepType.DefaultStepType:
+            new_value = self._value + steps * self._singleStep
+        else:  # AdaptiveDecimalStepType
+            abs_value = np.abs(self._value)
+            if abs_value == 0:
+                new_value = steps * self._singleStep
+            else:
+                decade = np.floor(np.log10(abs_value))
+                step_size = np.power(10, decade) / 100.0
+                new_value = self._value + steps * step_size
+
+        if self._decimals == 0:
+            new_value = round(new_value)
+
+        self.setValue(new_value)
+
+    def _handleTextChanged(self, text):
+        if text:
+            try:
+                value = float(text)
+                self.setValue(value)
+            except ValueError:
+                pass
+
+    def stepEnabled(self):
+        return self.StepUpEnabled | self.StepDownEnabled
+
+    def event(self, event):
+        if event.type() in [QtCore.QEvent.HoverEnter, QtCore.QEvent.HoverLeave, QtCore.QEvent.HoverMove]:
+            self.update()
+        return super().event(event)
     def night_mode_switch(self, night_mode):
         if night_mode:
             self.setStyleSheet(
