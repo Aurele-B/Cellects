@@ -52,7 +52,6 @@ poetry install
 
 - Run Cellects:
 ```
-
 poetry run Cellects
 ```
 <br />
@@ -65,7 +64,7 @@ poetry run Cellects
 
 <br />
 
-### 4. With the wheel file
+### 3. With the wheel file
 - Create or download [cellects-1.0.0-py3-none-any.whl](https://drive.google.com/file/d/1W3N85LSdk5NX7wYPz4WTEgtcF1Ydr32v/view?usp=drive_link) file in a directory
 - Open a terminal and go in that directory
 ```
