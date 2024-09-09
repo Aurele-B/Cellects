@@ -12,10 +12,10 @@ from cellects.core.cellects_paths import ICONS_DIR
 if sys.platform.startswith('win'):
     import ctypes
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
+    ctypes.windll.user32.SetProcessDPIAware()
 
 
 LOGLEVEL = "INFO" #"DEBUG"
-
 
 def _initialize_coloredlogs(loglevel: str = 'DEBUG') -> None:
     """Initialize logging parameters with coloredlogs library."""
