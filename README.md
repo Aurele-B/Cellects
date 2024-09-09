@@ -29,9 +29,12 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 - Install [python 3.11](https://www.python.org/downloads/release/python-3116/)
 - Install [git](https://git-scm.com/downloads)
 - On Mac: also install [brew](https://brew.sh/)
-- Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
+- Choose a place to install Cellects:
 ```
 cd path/toward/an/existing/folder/
+```
+- Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
+```
 git clone https://github.com/Aurele-B/Cellects.git
 cd ./Cellects
 ```

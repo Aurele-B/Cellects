@@ -288,6 +288,11 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode_switch(night_mode)
+        self.setStyleSheet("""
+            QSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 16px; }
+            QSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 16px; }
+            QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
+        """)
 
     def night_mode_switch(self, night_mode):
         if night_mode:
