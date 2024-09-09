@@ -44,7 +44,10 @@ pip install --upgrade pip
 ```
 pip install poetry
 ```
-
+- [Facultative] Remove a previous environment:
+```
+poetry env remove python
+```
 - Install all necessary packages:
 ```
 poetry install
