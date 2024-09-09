@@ -4,6 +4,7 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 from numpy import min, max, all, any
+import numpy as np
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
 # colorblind-friendly : rgb(42, 251, 97) , rgb(126, 85, 197)
@@ -271,7 +272,7 @@ class PButton(QtWidgets.QPushButton):
         self.setWindowOpacity(1)
         self.setStyleSheet("background-color: %s; color: %s; border: %s; border-radius: %s" % (buttoncolor, textColor, buttonborder, buttonangles))
 
-import numpy as np
+
 class Spinbox(QtWidgets.QAbstractSpinBox):
     valueChanged = QtCore.Signal(float)
 
@@ -300,7 +301,7 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
 
         self.lineEdit().textChanged.connect(self._handleTextChanged)
 
-        self.setMinimumWidth(100)
+        self.setMinimumWidth(120)
 
         self.setMinimum(min)
         self.setMaximum(max)
