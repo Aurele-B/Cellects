@@ -278,6 +278,7 @@ class Spinbox(QtWidgets.QDoubleSpinBox):
         self.setMinimum(min)
         self.setMaximum(max)
         self.setValue(val)
+        self.setFixedHeight(30)
         self.decimals = decimals
         if decimals is not None:
             self.setDecimals(decimals)

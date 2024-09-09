@@ -38,7 +38,6 @@ def run_cellects():
     else:
         icon.addPixmap(QtGui.QPixmap(ICONS_DIR / "cellects_icon.icns"))
     app.setWindowIcon(icon)
-    app.setStyle('Macintosh')
     # Start session
     session = CellectsMainWidget()
     session.instantiate()
