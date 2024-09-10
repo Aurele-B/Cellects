@@ -33,6 +33,7 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 ```
 cd path/toward/an/existing/folder/
 ```
+Note: The repository will be cloned to that folder; if updating an existing project, use a different folder name and rename it after verifying the new version.
 - Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
 ```
 git clone https://github.com/Aurele-B/Cellects.git
@@ -47,7 +48,7 @@ pip install --upgrade pip
 ```
 pip install poetry
 ```
-- [Facultative] Remove a previous environment:
+- [Facultative: when changing python version] Remove a previous environment:
 ```
 poetry env remove python
 ```
