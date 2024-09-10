@@ -3,7 +3,6 @@
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
-from numpy import min, max, all, any
 import numpy as np
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
@@ -273,7 +272,7 @@ class PButton(QtWidgets.QPushButton):
         self.setStyleSheet("background-color: %s; color: %s; border: %s; border-radius: %s" % (buttoncolor, textColor, buttonborder, buttonangles))
 
 
-class Spinbox(QtWidgets.QAbstractSpinBox):
+class Spinbox(QtWidgets.QWidget):
     valueChanged = QtCore.Signal(float)
 
     class StepType:
@@ -293,13 +292,37 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
         else:
             self._singleStep = 0.1
         self._stepType = self.StepType.DefaultStepType
+        self._button_width = 16
+        self._button_height = 12
 
-        self.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
-        self.lineEdit().setAlignment(QtCore.Qt.AlignRight)
+        self._layout = QtWidgets.QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(0)
+
+        self._line_edit = QtWidgets.QLineEdit(self)
+        self._line_edit.setAlignment(QtCore.Qt.AlignRight)
+        self._layout.addWidget(self._line_edit)
+
+        button_layout = QtWidgets.QVBoxLayout()
+        button_layout.setSpacing(0)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+
+        self._up_button = QtWidgets.QPushButton("▲", self)
+        self._up_button.setFixedSize(self._button_width, self._button_height)
+        self._up_button.clicked.connect(self.stepUp)
+        button_layout.addWidget(self._up_button)
+
+        self._down_button = QtWidgets.QPushButton("▼", self)
+        self._down_button.setFixedSize(self._button_width, self._button_height)
+        self._down_button.clicked.connect(self.stepDown)
+        button_layout.addWidget(self._down_button)
+
+        self._layout.addLayout(button_layout)
+
         self._updateDisplayValue()
         self._updateValidator()
 
-        self.lineEdit().textChanged.connect(self._handleTextChanged)
+        self._line_edit.textChanged.connect(self._handleTextChanged)
 
         self.setMinimumWidth(120)
 
@@ -321,96 +344,37 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
         #     QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
         # """)
 
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        button_width = 15
-        button_height = self.height() // 2
-        text_rect = QtCore.QRect(0, 0, self.width() - button_width, self.height())
-        up_rect = QtCore.QRect(self.width() - button_width, 0, button_width, button_height)
-        down_rect = QtCore.QRect(self.width() - button_width, button_height, button_width, button_height)
-
-        # Draw button backgrounds
-        painter.fillRect(up_rect, QColor(240, 240, 240))
-        painter.fillRect(down_rect, QColor(240, 240, 240))
-
-        # Draw text area border
-        painter.setPen(QPen(self.palette().color(QPalette.Mid), 1))
-        painter.drawRect(text_rect.adjusted(0, 0, -1, -1))
-
-        # Draw button borders
-        painter.setPen(QPen(QColor(200, 200, 200), 1))
-        painter.drawLine(self.width() - button_width, 0, self.width() - button_width, self.height())
-        painter.drawLine(self.width() - button_width, button_height, self.width(), button_height)
-
-        # Draw arrows
-        painter.setPen(QtCore.Qt.NoPen)
-        painter.setBrush(QColor(100, 100, 100))
-
-        # Up arrow
-        up_arrow = QPainterPath()
-        up_arrow.moveTo(up_rect.center().x() - 4, up_rect.center().y() + 2)
-        up_arrow.lineTo(up_rect.center().x() + 4, up_rect.center().y() + 2)
-        up_arrow.lineTo(up_rect.center().x(), up_rect.center().y() - 2)
-        painter.drawPath(up_arrow)
-
-        # Down arrow
-        down_arrow = QPainterPath()
-        down_arrow.moveTo(down_rect.center().x() - 4, down_rect.center().y() - 2)
-        down_arrow.lineTo(down_rect.center().x() + 4, down_rect.center().y() - 2)
-        down_arrow.lineTo(down_rect.center().x(), down_rect.center().y() + 2)
-        painter.drawPath(down_arrow)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        button_width = 20
-        text_rect = self.rect().adjusted(0, 0, -button_width, 0)
-        self.lineEdit().setGeometry(text_rect)
-
-    def mousePressEvent(self, event):
-        button_width = 20
-        button_height = self.height() // 2
-        if event.x() > self.width() - button_width:
-            if event.y() < button_height:
-                self.stepUp()
-            else:
-                self.stepDown()
-        else:
-            super().mousePressEvent(event)
+        self.setStyleSheet("""
+            QPushButton {
+                font-size: 8px;
+                padding: 0px;
+                margin: 0px;
+                border: 1px solid #c0c0c0;
+                background-color: #f0f0f0;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """)
 
     def sizeHint(self):
         fm = QFontMetrics(self.font())
         max_str = f"{self._maximum:.{self._decimals}f}"
-        w = fm.horizontalAdvance(max_str) + 30  # Add some padding for buttons
-        h = super().sizeHint().height()
-        return QtCore.QSize(np.max((w, 100)), h)  # Ensure a minimum width of 100 pixels
+        w = fm.horizontalAdvance(max_str) + self._button_width + 5  # Add some padding
+        h = self._line_edit.sizeHint().height()
+        return QtCore.QSize(max(w, 100), h)  # Ensure a minimum width of 100 pixels
 
-    def setMaximum(self, maximum):
-        self._maximum = float(maximum)
-        self._updateValidator()
-        self.setValue(np.min((self._value, self._maximum)))
-        self.updateGeometry()
-
-    def setDecimals(self, decimals):
-        try:
-            self._decimals = np.max((0, int(decimals)))
-        except (ValueError, TypeError):
-            print(f"Invalid decimals value: {decimals}. Using 2 decimals as default.")
-            self._decimals = 2
-        self._updateValidator()
-        self._updateDisplayValue()
-        self.updateGeometry()
+    def minimumSizeHint(self):
+        return QtCore.QSize(self._button_width * 3, self._line_edit.minimumSizeHint().height())
 
     def _updateDisplayValue(self):
         if self._decimals == 0:
-            self.lineEdit().setText(f"{int(round(self._value))}")
+            self._line_edit.setText(f"{int(round(self._value))}")
         else:
-            self.lineEdit().setText(f"{self._value:.{self._decimals}f}")
+            self._line_edit.setText(f"{self._value:.{self._decimals}f}")
 
     def _updateValidator(self):
-        self.lineEdit().setValidator(QDoubleValidator(self._minimum, self._maximum, self._decimals, self))
+        self._line_edit.setValidator(QDoubleValidator(self._minimum, self._maximum, self._decimals, self))
 
     def setValue(self, value):
         clamped_value = np.clip(value, self._minimum, self._maximum)
@@ -425,10 +389,20 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
     def setMinimum(self, minimum):
         self._minimum = float(minimum)
         self._updateValidator()
-        self.setValue(np.max((self._value, self._minimum)))
+        self.setValue(max(self._value, self._minimum))
+
+    def setMaximum(self, maximum):
+        self._maximum = float(maximum)
+        self._updateValidator()
+        self.setValue(min(self._value, self._maximum))
 
     def setSingleStep(self, step):
         self._singleStep = float(step)
+
+    def setDecimals(self, decimals):
+        self._decimals = int(decimals)
+        self._updateValidator()
+        self._updateDisplayValue()
 
     def setStepType(self, step_type):
         if step_type not in (self.StepType.DefaultStepType, self.StepType.AdaptiveDecimalStepType):
@@ -447,10 +421,13 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
                 step_size = np.power(10, decade) / 100.0
                 new_value = self._value + steps * step_size
 
-        if self._decimals == 0:
-            new_value = round(new_value)
-
         self.setValue(new_value)
+
+    def stepUp(self):
+        self.stepBy(1)
+
+    def stepDown(self):
+        self.stepBy(-1)
 
     def _handleTextChanged(self, text):
         if text:
@@ -460,13 +437,6 @@ class Spinbox(QtWidgets.QAbstractSpinBox):
             except ValueError:
                 pass
 
-    def stepEnabled(self):
-        return self.StepUpEnabled | self.StepDownEnabled
-
-    def event(self, event):
-        if event.type() in [QtCore.QEvent.HoverEnter, QtCore.QEvent.HoverLeave, QtCore.QEvent.HoverMove]:
-            self.update()
-        return super().event(event)
     def night_mode_switch(self, night_mode):
         if night_mode:
             self.setStyleSheet(
