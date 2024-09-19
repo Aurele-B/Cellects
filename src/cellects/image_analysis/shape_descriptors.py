@@ -29,7 +29,7 @@ descriptors_names_to_display = ['Area', 'Perimeter', 'Circularity', 'Rectangular
                                 'Related to fractals'
                                 ]#, 'Oscillating cluster nb and size'
 
-from_shape_descriptors_class = {'area': True, '': False, 'perimeter': False, 'circularity': False, 'rectangularity': False,
+from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
                'euler_number': False, 'standard_deviation_y': False, 'standard_deviation_x': False,
                'skewness_y': False, 'skewness_x': False, 'kurtosis_y': False, 'kurtosis_x': False,

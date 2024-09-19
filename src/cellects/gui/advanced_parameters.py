@@ -106,12 +106,12 @@ class AdvancedParameters(WindowType):
         self.periphery_width = Spinbox(min=1, max=1000, val=self.parent().po.vars['periphery_width'],
                                             decimals=0, night_mode=self.parent().po.all['night_mode'])
         self.periphery_width_label = FixedText('Periphery width',
-                                               tip="In pixels",
+                                               tip="The width, in pixels, of the arena s border designated as the peripheral region",
                                                night_mode=self.parent().po.all['night_mode'])
         self.max_periphery_growth = Spinbox(min=1, max=1000000, val=self.parent().po.vars['max_periphery_growth'],
                                             decimals=0, night_mode=self.parent().po.all['night_mode'])
         self.max_periphery_growth_label = FixedText('Max periphery growth',
-                                               tip="In pixels",
+                                               tip="The maximum detectable size (in pixels) of a shape in a single frame near the periphery of the arena.\nLarger shapes will be considered as noise.",
                                                night_mode=self.parent().po.all['night_mode'])
         self.prevent_fast_growth_near_periphery_check()
 
