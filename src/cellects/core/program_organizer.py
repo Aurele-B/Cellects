@@ -28,6 +28,7 @@ from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.config.all_vars_dict import DefaultDicts
+from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class
 from cellects.core.cellects_paths import TEST_DIR
 from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
 
@@ -1207,7 +1208,8 @@ class ProgramOrganizer:
                 self.vars['descriptors']['minor_axis_len'] = self.all['descriptors'][descriptor]
                 self.vars['descriptors']['axes_orientation'] = self.all['descriptors'][descriptor]
             else:
-                if not isin(descriptor, ['iso_digi_analysis', 'oscilacyto_analysis', 'fractal_analysis']):
+                if isin(descriptor, list(from_shape_descriptors_class.keys())):
+                # if not isin(descriptor, ['iso_digi_analysis', 'oscilacyto_analysis', 'network_detection', 'fractal_analysis']):
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
         self.vars['descriptors']['cluster_number'] = self.vars['oscilacyto_analysis']
         self.vars['descriptors']['mean_cluster_area'] = self.vars['oscilacyto_analysis']

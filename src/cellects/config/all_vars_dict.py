@@ -88,7 +88,7 @@ class DefaultDicts:
             'ring_correction': False,
             'prevent_fast_growth_near_periphery': False,
             'periphery_width': 40,
-            'max_periphery_growth': 50,
+            'max_periphery_growth': 20,
             # According to Smith and Saldana (1992),
             # P. polycephalum shuttle streaming has a period of 100-200s
             'already_greyscale': False,

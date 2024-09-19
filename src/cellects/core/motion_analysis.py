@@ -1729,9 +1729,9 @@ class MotionAnalysis:
                             ef_idx *= dotted_image
                             in_idx = nonzero(in_idx)
                             ef_idx = nonzero(ef_idx)
-                            imtoshow[in_idx[0], in_idx[1], :2] = 153 # Green
+                            imtoshow[in_idx[0], in_idx[1], :2] = 153  # Green: influx, intensity increase
                             imtoshow[in_idx[0], in_idx[1], 2] = 0
-                            imtoshow[ef_idx[0], ef_idx[1], 1:] = 0 # Blue
+                            imtoshow[ef_idx[0], ef_idx[1], 1:] = 0  # Blue: efflux, intensity decrease
                             imtoshow[ef_idx[0], ef_idx[1], 0] = 204
 
                 self.converted_video[t, ...] = imtoshow.copy()
@@ -2049,24 +2049,34 @@ class MotionAnalysis:
         self.save_video()
         # with open(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", 'w') as file:
         #     savetxt(file, self.magnitudes_and_frequencies, fmt='%1.9f', delimiter=';')
+
+        # I/ Update/Create one_row_per_arena.csv
         create_new_csv: bool = False
         if os.path.isfile("one_row_per_arena.csv"):
-            with open(f"one_row_per_arena.csv", 'r') as file:
-                stats = read_csv(file, header=0, sep=";")
-            if len(self.statistics) == len(stats.columns) - 1:
-                try:
-                    with open(f"one_row_per_arena.csv", 'w') as file:
-                        stats.iloc[(self.statistics['arena'] - 1), 1:] = self.statistics.values()
-                        # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
-                        stats.to_csv(file, sep=';', index=False, lineterminator='\n')
-                except PermissionError:
-                    logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-
-            else:
-                create_new_csv = True
+            try:
+                with open(f"one_row_per_arena.csv", 'r') as file:
+                    stats = read_csv(file, header=0, sep=";")
+                for stat_name, stat_value in self.statistics.items():
+                    if stat_name in stats.columns:
+                        stats.loc[(self.statistics['arena'] - 1), stat_name] = self.statistics[stat_name]
+                with open(f"one_row_per_arena.csv", 'w') as file:
+                    stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+            except PermissionError:
+                logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+            # if len(self.statistics) == len(stats.columns):
+            #     try:
+            #         with open(f"one_row_per_arena.csv", 'w') as file:
+            #             stats.iloc[(self.statistics['arena'] - 1), :] = self.statistics.values()
+            #             # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
+            #             stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+            #     except PermissionError:
+            #         logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+            # else:
+            #     create_new_csv = True
         else:
             create_new_csv = True
         if create_new_csv:
+            logging.info("Create a new one_row_per_arena.csv file")
             try:
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
@@ -2075,26 +2085,43 @@ class MotionAnalysis:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+
+        # II/ Update/Create one_row_per_frame.csv
         create_new_csv = False
         if os.path.isfile("one_row_per_frame.csv"):
             try:
                 with open(f"one_row_per_frame.csv", 'r') as file:
                     descriptors = read_csv(file, header=0, sep=";")
-                if len(self.whole_shape_descriptors.columns) == len(descriptors.columns) - 1:
-                    with open(f"one_row_per_frame.csv", 'w') as file:
-                        # NEW
-                        for descriptor in descriptors.keys():
-                            descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), descriptor] = self.whole_shape_descriptors[descriptor]
-                        # Old
-                        # descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
-                        descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
-                else:
-                    create_new_csv = True
+                for stat_name, stat_value in self.whole_shape_descriptors.items():
+                    if stat_name in descriptors.columns:
+                        descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0] - 1), stat_name] = self.whole_shape_descriptors.loc[:, stat_name].values[:]
+                with open(f"one_row_per_frame.csv", 'w') as file:
+                    descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+                # with open(f"one_row_per_frame.csv", 'w') as file:
+                #     for descriptor in descriptors.keys():
+                #         descriptors.loc[
+                #         ((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]),
+                #         descriptor] = self.whole_shape_descriptors[descriptor]
+                #     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+
+
+
+                # if len(self.whole_shape_descriptors.columns) == len(descriptors.columns):
+                #     with open(f"one_row_per_frame.csv", 'w') as file:
+                #         # NEW
+                #         for descriptor in descriptors.keys():
+                #             descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), descriptor] = self.whole_shape_descriptors[descriptor]
+                #         # Old
+                #         # descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
+                #         descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+                # else:
+                #     create_new_csv = True
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
         else:
             create_new_csv = True
         if create_new_csv:
+            logging.info("Create a new one_row_per_frame.csv file")
             try:
                 with open(f"one_row_per_frame.csv", 'w') as file:
                     descriptors = df(zeros((len(self.vars['analyzed_individuals']) * self.dims[0], len(self.whole_shape_descriptors.columns))),
@@ -2103,6 +2130,8 @@ class MotionAnalysis:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
+
+        # III/ Update/Create one_row_per_oscillating_cluster.csv
         if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
             oscil_i = df(
                 c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
@@ -2112,11 +2141,14 @@ class MotionAnalysis:
                     with open(f"one_row_per_oscillating_cluster.csv", 'r') as file:
                         one_row_per_oscillating_cluster = read_csv(file, header=0, sep=";")
                     with open(f"one_row_per_oscillating_cluster.csv", 'w') as file:
-                        one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.statistics['arena']]
-                        # one_row_per_oscillating_cluster.iloc[self.statistics['arena'] == one_row_per_oscillating_cluster.loc[:, "arena"], :] = None
-                        one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster, oscil_i))
-                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster.append(oscil_i)
+                        one_row_per_oscillating_cluster_before = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] < self.statistics['arena']]
+                        one_row_per_oscillating_cluster_after = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] > self.statistics['arena']]
+                        one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster_before, oscil_i, one_row_per_oscillating_cluster_after))
                         one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
+
+                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.statistics['arena']]
+                        # one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster, oscil_i))
+                        # one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:
                     logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
             else:
@@ -2125,6 +2157,8 @@ class MotionAnalysis:
                         oscil_i.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:
                     logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
+
+        # IV/ Update/Create fractal_box_sizes.csv
         if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
             fractal_i = df(self.fractal_boxes, columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
             if os.path.isfile("fractal_box_sizes.csv"):
@@ -2132,12 +2166,14 @@ class MotionAnalysis:
                     with open(f"fractal_box_sizes.csv", 'r') as file:
                         fractal_box_sizes = read_csv(file, header=0, sep=";")
                     with open(f"fractal_box_sizes.csv", 'w') as file:
-                        # fractal_box_sizes.iloc[self.statistics['arena'] == fractal_box_sizes['arena'], :] = None
-                        fractal_box_sizes = fractal_box_sizes[fractal_box_sizes['arena'] != self.statistics['arena']]
-                        # fractal_box_sizes = fractal_box_sizes.iloc[fractal_box_sizes['arena'] != self.statistics['arena'], :]
-                        fractal_box_sizes = concat((fractal_box_sizes, fractal_i))
-                        # fractal_box_sizes = fractal_box_sizes.append(fractal_i)
+                        fractal_box_sizes_before = fractal_box_sizes[fractal_box_sizes['arena'] < self.statistics['arena']]
+                        fractal_box_sizes_after = fractal_box_sizes[fractal_box_sizes['arena'] > self.statistics['arena']]
+                        fractal_box_sizes = concat((fractal_box_sizes_before, fractal_i, fractal_box_sizes_after))
                         fractal_box_sizes.to_csv(file, sep=';', index=False, lineterminator='\n')
+
+                        # fractal_box_sizes = fractal_box_sizes[fractal_box_sizes['arena'] != self.statistics['arena']]
+                        # fractal_box_sizes = concat((fractal_box_sizes, fractal_i))
+                        # fractal_box_sizes.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:
                     logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
             else:
