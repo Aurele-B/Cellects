@@ -113,16 +113,16 @@ class MotionAnalysis:
                     self.detection()
                     self.initialize_post_processing()
                     ###
-                    if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t720_y1475_x1477.npy"):
-                        binary_coord = load(f"coord_specimen{self.statistics['arena']}_t720_y1475_x1477.npy")
-                        self.binary = zeros((720, 1475, 1477), dtype=uint8)
+                    if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy"):
+                        binary_coord = load(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
+                        self.binary = zeros((self.dims[0], self.dims[1], self.dims[2]), dtype=uint8)
                         self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
                     else:
                     ###
                         self.t = self.start
                         # print_progress = ForLoopCounter(self.start)
                         # self.binary = self.segmentation # HERE
-                        while self.t < self.binary.shape[0]:  #1200:  #
+                        while self.t < 200:  #self.binary.shape[0]:  #
                             self.update_shape(show_seg)
                 #
             if self.start is None:
@@ -339,6 +339,7 @@ class MotionAnalysis:
                 #frame_i[self.origin_idx[0], self.origin_idx[1]] = int_sample[:len(self.origin_idx[0])]
 
                 frame_i = OneImageAnalysis(frame_i)
+                frame_i = OneImageAnalysis(frame_i)
                 #luminosity_threshold = round(absolute((mean(int_sample) - ori_mean) // 2))
                 frame_i.thresholding()
                 frame_list.append(frame_i.binary_image)
@@ -454,11 +455,6 @@ class MotionAnalysis:
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     smoothed_vid2[frame_i, ...] = bracket_to_uint8_image_contrast(smoothed_vid2[frame_i, ...])
 
-            # 2. Smooth converted videos at these times and within this mask
-            # smoothed_vid = self.smooth_pixel_slopes(smoothed_vid)
-            # if self.vars['convert_for_motion']['logical'] != 'None':
-            #     smoothed_vid2 = self.smooth_pixel_slopes(smoothed_vid2)
-
             for frame_i in arange(self.dims[0]):#20):#
                 # 1. Get the mask valid for a number of images around it (step).
                 if frame_i < self.step // 2:
@@ -491,7 +487,7 @@ class MotionAnalysis:
                 image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
                 if image_i.binary_image.sum() > self.segmentation[frame_i - 1, ...].sum() * (1 + self.vars['max_growth_per_frame']):
-                    image_i.binary_image = (image_i.image > (quantile(image_i.image, 0.995))).astype(uint8)
+                    image_i.binary_image = (image_i.image > (quantile(image_i.image, 0.9))).astype(uint8)
                 im = zeros(self.dims[1:], dtype=uint8)
                 im[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.image
                 image_i.image = im.copy()
@@ -947,17 +943,15 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
+        # Remove noise by opening and by keeping the shape within borders
+        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
         # Add distant shapes within a radius, score every added pixels according to their distance
         if self.vars['several_blob_per_arena']:
-            # keep the shape within borders
-            new_potentials *= self.borders
             if self.vars['origin_state'] == "constant":
                 new_shape = logical_or(new_potentials, self.origin).astype(uint8)
             else:
                 new_shape = new_potentials.copy()
         else:
-            # Remove noise by opening and by keeping the shape within borders
-            new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
             ## Build the new shape state from the t-1 one
             new_shape = self.binary[self.t - 1, :, :].copy()
             if new_shape.sum() == 0:
@@ -1079,7 +1073,10 @@ class MotionAnalysis:
             if self.visu is not None:
                 im_to_display = self.visu[self.t, ...].copy()
                 contours = nonzero(morphologyEx(self.binary[self.t, :, :], MORPH_GRADIENT, cross_33))
-                im_to_display[contours[0], contours[1]] = 0
+                if self.vars['lighter_background']:
+                    im_to_display[contours[0], contours[1]] = 0
+                else:
+                    im_to_display[contours[0], contours[1]] = 255
             else:
                 im_to_display = self.binary[self.t, :, :] * 255
             imtoshow = resize(im_to_display, (540, 540))
