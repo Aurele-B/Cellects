@@ -14,6 +14,7 @@ from numba.typed import Dict as TDict
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import get_all_color_spaces, generate_color_space_combination, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
 class OneImageAnalysis:
@@ -160,7 +161,7 @@ class OneImageAnalysis:
                 if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum():
                     # Ones of the binary image have more in common with the background than with the specimen
                     self.binary_image = 1 - self.binary_image
-                self.binary_image = self.correct_with_previous_binary_image(self.binary_image.copy())
+                # self.binary_image = self.correct_with_previous_binary_image(self.binary_image.copy())
 
             if logical != 'None':
                 # logging.info("Segment the image using Otsu thresholding")
@@ -169,7 +170,7 @@ class OneImageAnalysis:
                     if (self.binary_image2 * (1 - self.previous_binary_image)).sum() > (
                             self.binary_image2 * self.previous_binary_image).sum():
                         self.binary_image2 = 1 - self.binary_image2
-                    self.binary_image2 = self.correct_with_previous_binary_image(self.binary_image2.copy())
+                    # self.binary_image2 = self.correct_with_previous_binary_image(self.binary_image2.copy())
 
         if logical != 'None':
             if logical == 'Or':
@@ -185,6 +186,10 @@ class OneImageAnalysis:
         # If binary image is more than twenty times bigger or smaller than the previous binary image:
         # otsu thresholding failed, we use a threshold of 127 instead
         if binary_image.sum() > self.previous_binary_image.sum() * 20 or binary_image.sum() < self.previous_binary_image.sum() * 0.05:
+            binary_adaptive = cv2.adaptiveThreshold(bracket_to_uint8_image_contrast(self.image), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+            # from skimage import filters
+            # threshold_value = filters.threshold_li(self.image)
+            # binary_image = self.image >= threshold_value
             binary_image = self.image >= 127
             # And again, make sure than these pixels are shared with the previous binary image
             if (binary_image * (1 - self.previous_binary_image)).sum() > (binary_image * self.previous_binary_image).sum():

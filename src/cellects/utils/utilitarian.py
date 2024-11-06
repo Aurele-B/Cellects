@@ -160,6 +160,9 @@ class PercentAndTimeTracker:
             output = int(round(100 / self.total)), ", wait..."
         if step is None:
             self.current_step += 1
+        if element_number is not None:
+            if self.current_step < 50:
+                output = int(0), ", wait to get more accurate ETA..."
         return output
 
 

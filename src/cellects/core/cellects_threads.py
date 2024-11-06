@@ -910,8 +910,6 @@ class OneArenaThread(QtCore.QThread):
                 self.image_from_thread.emit(
                     {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
                      "current_image": current_image})
-            if self.parent().po.vars['do_fading']:
-                self.parent().po.newly_explored_area[:, seg_i] = analysis_i.newly_explored_area
             if analysis_i.start is None:
                 analysis_i.binary = repeat(expand_dims(analysis_i.origin, 0),
                                            analysis_i.converted_video.shape[0], axis=0)
@@ -1304,7 +1302,10 @@ class RunAllThread(QtCore.QThread):
                                     if self.parent().po.videos.use_list_of_vid:
                                         video_bunch[arena_i][image_i, ...] = sub_img
                                     else:
-                                        video_bunch[image_i, :, :, :, arena_i] = sub_img
+                                        if len(video_bunch.shape) == 5:
+                                            video_bunch[image_i, :, :, :, arena_i] = sub_img
+                                        else:
+                                            video_bunch[image_i, :, :, arena_i] = sub_img
                                 except ValueError:
                                     analysis_status["message"] = f"One (or more) image has a different size (restart)"
                                     analysis_status["continue"] = False
@@ -1322,7 +1323,10 @@ class RunAllThread(QtCore.QThread):
                                     if self.parent().po.videos.use_list_of_vid:
                                         save(vid_names[arena_name], video_bunch[arena_i])
                                     else:
-                                        save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                                        if len(video_bunch.shape) == 5:
+                                            save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                                        else:
+                                            save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
                         logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
