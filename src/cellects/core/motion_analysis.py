@@ -943,15 +943,16 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
-        # Remove noise by opening and by keeping the shape within borders
-        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
         # Add distant shapes within a radius, score every added pixels according to their distance
         if self.vars['several_blob_per_arena']:
+            new_potentials *= self.borders
             if self.vars['origin_state'] == "constant":
                 new_shape = logical_or(new_potentials, self.origin).astype(uint8)
             else:
                 new_shape = new_potentials.copy()
         else:
+            # Remove noise by opening and by keeping the shape within borders
+            new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
             ## Build the new shape state from the t-1 one
             new_shape = self.binary[self.t - 1, :, :].copy()
             if new_shape.sum() == 0:
@@ -1966,7 +1967,6 @@ class MotionAnalysis:
                 #         before_transition = contours[0] < self.statistics["iso_digi_transi"]
                 #         self.converted_video[contours[0][before_transition], contours[1][before_transition], contours[2][before_transition], 2] = 255
             del self.binary
-            del self.already_explored_area
             del self.surfarea
             del self.borders
             del self.origin
@@ -2076,7 +2076,7 @@ class MotionAnalysis:
                     stats = read_csv(file, header=0, sep=";")
                 for stat_name, stat_value in self.statistics.items():
                     if stat_name in stats.columns:
-                        stats.loc[(self.statistics['arena'] - 1), stat_name] = self.statistics[stat_name]
+                        stats.loc[(self.statistics['arena'] - 1), stat_name] = array(list(self.statistics[stat_name], dtype=uint32)
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
@@ -2099,7 +2099,7 @@ class MotionAnalysis:
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
                                columns=list(self.statistics.keys()))
-                    stats.iloc[(self.statistics['arena'] - 1), :] = self.statistics.values()
+                    stats.iloc[(self.statistics['arena'] - 1), :] = array(list(self.statistics.values()), dtype=uint32)
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
