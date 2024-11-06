@@ -7,14 +7,17 @@ import cv2
 import numpy as np
 from numpy import nonzero, zeros_like, uint8, min, max, ptp
 from cv2 import connectedComponents, CV_16U
+from skimage import morphology
+from scipy import ndimage
+from collections import defaultdict
 from cellects.image_analysis.image_segmentation import get_otsu_threshold
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
-from cellects.image_analysis.morphological_operations import cc
+from cellects.image_analysis.morphological_operations import cross_33, cc, CompareNeighborsWithValue
 
 
 class NetworkDetection:
-    def __init__(self, grayscale_image, binary_image, lighter_background, cross_33):
+    def __init__(self, grayscale_image, binary_image, lighter_background):
         """
         :param grayscale_image: current grayscale image to analyze
         :type grayscale_image: uint8
@@ -22,16 +25,14 @@ class NetworkDetection:
         :type binary_image: uint8
         :param lighter_background: True if the background of the image is lighter than the shape to detect
         :type lighter_background: bool
-        :param cross_33: A 3*3 matrix containing a binary cross
-        :type cross_33: uint8
         """
         self.grayscale_image = grayscale_image
         self.binary_image = binary_image
         self.lighter_background = lighter_background
-        self.cross_33 = cross_33
 
     def segment_locally(self, side_length=8, step=2, int_variation_thresh=20):
         """
+        Segment small squares of the images to detect local intensity valleys
         This method segment the network locally using otsu thresholding on a rolling window
         :param side_length: The size of the window to detect the tubes of the network
         :type side_length: uint8
@@ -103,7 +104,7 @@ class NetworkDetection:
 
     def segment_globally(self):
         """
-        This method remove pixels whose intensity is too close from the average
+        ABANDONED METHOD: This method remove pixels whose intensity is too close from the average
         :return:
         """
         grayscale_network = self.grayscale_image * self.network
@@ -123,6 +124,7 @@ class NetworkDetection:
 
     def selects_elongated_or_holed_shapes(self, hole_surface_ratio=0.1, eccentricity=0.65):
         """
+        Remove shapes that are very circular and does not contain holes:
         This method only keep the elongates or holed shapes.
         An elongated shape as a strong eccentricity
         A holed shape contain a holes of a decent size
@@ -132,8 +134,8 @@ class NetworkDetection:
         :type eccentricity: float64
         :return:
         """
-        potential_network = cv2.morphologyEx(self.network, cv2.MORPH_OPEN, self.cross_33)
-        potential_network = cv2.morphologyEx(potential_network, cv2.MORPH_CLOSE, self.cross_33)
+        potential_network = cv2.morphologyEx(self.network, cv2.MORPH_OPEN, cross_33)
+        potential_network = cv2.morphologyEx(potential_network, cv2.MORPH_CLOSE, cross_33)
 
         # Filter out component that does not have the shape of the part of a network
         nb, components = cv2.connectedComponents(potential_network)
@@ -157,6 +159,7 @@ class NetworkDetection:
 
     def add_pixels_to_the_network(self, pixels_to_add):
         """
+        Make sure that the previous network is still in
         When needed, consider all area occupied by the origin as part of the network
         :return:
         """
@@ -186,7 +189,7 @@ class NetworkDetection:
             # else:
             #     intensity_valley = self.grayscale_image.copy()
             # new
-            pads = ProgressivelyAddDistantShapes(self.network, ordered_image==1, maximal_distance_connection, self.cross_33)
+            pads = ProgressivelyAddDistantShapes(self.network, ordered_image==1, maximal_distance_connection)
             # If max_distance is non nul look for distant shapes
             # pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
             pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
@@ -197,70 +200,160 @@ class NetworkDetection:
             ordered_image, stats, centers = cc(self.network)
             self.network[ordered_image != 1] = 0
 
-            # prev:
-            # nb, components = cv2.connectedComponents(self.network)
-            # for compo_i in np.arange(1, nb):
-            #     matrix_i = components == compo_i
-            #
-            #     # network_i = np.nonzero(change_thresh_until_one(self.grayscale_image, matrix_i, self.lighter_background))
-            #     # self.network[network_i] = 1
-            #     pads = ProgressivelyAddDistantShapes(matrix_i, self.network, maximal_distance_connection, self.cross_33)
-            #     # If max_distance is non nul look for distant shapes
-            #     pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
-            #     potential_network = np.nonzero(pads.expanded_shape)
-            #     self.network[potential_network[0], potential_network[1]] = 1
-        # Visualize the network
-        # img = self.grayscale_image.copy()
-        # net_cc = np.nonzero(self.network)
-        # img[net_cc[0], net_cc[1]] = 255
-        # See(img)
-        # Remains to really skeletonize that network !
 
+    #### Houssam ####
     def skeletonize(self):
         """
         Skeletonize the network
         :return:
         """
-        self.skeleton = skeletonize(self.network)
-        # https://github.com/LingDong-/skeleton-tracing
-        # https://runebook.dev/fr/docs/scikit_learn/modules/generated/sklearn.feature_extraction.image.img_to_graph
-
-def skeletonize(binary_image):
-    # Get a Cross Shaped Kernel
-    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
-    while True:
-        # Open the image
-        open = cv2.morphologyEx(binary_image, cv2.MORPH_OPEN, element)
-        # Substract open from the original image
-        temp = cv2.subtract(binary_image, open)
-        # Erode the original image and refine the skeleton
-        eroded = cv2.erode(binary_image, element)
-        skel = cv2.bitwise_or(binary_image, temp)
-        binary_image = eroded.copy()
-        # If there are no white pixels left, ie. the image has been completely eroded, quit the loop
-        if cv2.countNonZero(binary_image) == 0:
-            break
-    return skel
+        self.skeleton = morphology.skeletonize(self.network)
 
 
-def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
-    coord = nonzero(binary_image)
-    min_cx = min(coord[0])
-    max_cx = max(coord[0])
-    min_cy = min(coord[1])
-    max_cy = max(coord[1])
-    gray_img = grayscale_image[min_cy:max_cy, min_cx:max_cx]
-    threshold = get_otsu_threshold(gray_img)
-    bin_img = (gray_img < threshold).astype(uint8)
-    detected_shape_number, bin_img = connectedComponents(bin_img, ltype=CV_16U)
-    while (detected_shape_number > 2) and (0 < threshold < 255):
-        if lighter_background:
-            threshold += 1
-            bin_img = (gray_img < threshold).astype(uint8)
+    def detect_nodes(self):
+        """
+        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
+        :return:
+        """
+        # Nous calculons le nombre de voisins pour chaque pixel du squelette
+        cnv = CompareNeighborsWithValue(self.skeleton, 8)
+        cnv.is_equal(1, and_itself=True)
+        neighbor_counts = cnv.equal_neighbor_nb
+
+        # Identification des nœuds : pixels avec 1 ou plus de 2 voisins
+        nodes = ((neighbor_counts == 1) | (neighbor_counts > 2)) & self.skeleton
+
+        # Étiquetage des nœuds
+        labeled_nodes, num_labels = ndimage.label(nodes, structure=np.ones((3, 3), dtype=np.uint8))
+
+        # Positions des nœuds
+        node_positions = ndimage.center_of_mass(nodes, labeled_nodes, range(1, num_labels + 1))
+        # Conversion des positions en entiers
+        node_positions = [tuple(map(int, pos)) for pos in node_positions]
+        # Création d'un mapping label -> position
+        label_to_position = {label: pos for label, pos in zip(range(1, num_labels + 1), node_positions)}
+
+        return labeled_nodes, label_to_position
+
+
+    def find_segments(self, labeled_nodes, label_to_position):
+        """
+        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
+        :return:
+        """
+        # Suppression des nœuds du squelette
+        skeleton_wo_nodes = self.skeleton.copy()
+        skeleton_wo_nodes[labeled_nodes > 0] = 0
+
+        # Détection des segments (composantes connectées sans les nœuds)
+        num_labels, labels = cv2.connectedComponents(skeleton_wo_nodes.astype(np.uint8))
+        segments = []
+
+        for label in range(1, num_labels):
+            segment_mask = (labels == label)
+            coords = np.column_stack(np.where(segment_mask))
+
+            # Dilatation du segment pour trouver les nœuds adjacents
+            dilated_segment = morphology.binary_dilation(segment_mask, morphology.disk(2))
+            overlapping_nodes = labeled_nodes * dilated_segment
+            node_labels = np.unique(overlapping_nodes[overlapping_nodes > 0])
+
+            if len(node_labels) >= 2:
+                # Si au moins deux nœuds sont connectés, on trouve les deux plus éloignés
+                node_positions = [label_to_position[n_label] for n_label in node_labels]
+                distances = np.sum((np.array(node_positions)[:, None] - np.array(node_positions)[None, :]) ** 2, axis=2)
+                idx_max = np.unravel_index(np.argmax(distances), distances.shape)
+                start_label = node_labels[idx_max[0]]
+                end_label = node_labels[idx_max[1]]
+                start_pos = label_to_position[start_label]
+                end_pos = label_to_position[end_label]
+                segments.append({
+                    'start_label': start_label,
+                    'end_label': end_label,
+                    'start_pos': start_pos,
+                    'end_pos': end_pos,
+                    'coords': coords
+                })
+            elif len(node_labels) == 1:
+                # Si un seul nœud est connecté, on trouve l'extrémité la plus éloignée
+                start_label = node_labels[0]
+                start_pos = label_to_position[start_label]
+                distances = np.sum((coords - np.array(start_pos)) ** 2, axis=1)
+                idx_max = np.argmax(distances)
+                end_pos = tuple(coords[idx_max])
+                segments.append({
+                    'start_label': start_label,
+                    'end_label': None,
+                    'start_pos': start_pos,
+                    'end_pos': end_pos,
+                    'coords': coords
+                })
+        return segments
+
+    def extract_node_degrees(self, segments):
+        """
+        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
+        :return:
+        """
+        node_degrees = defaultdict(int)
+        for segment in segments:
+            start_label = segment['start_label']
+            end_label = segment['end_label']
+            node_degrees[start_label] += 1
+            if end_label is not None:
+                node_degrees[end_label] += 1
+        return node_degrees
+
+
+    def get_segment_width(self, binary_image, segment, distance_map):
+        """
+        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
+        :return:
+        """
+        coords = segment['coords']
+        distances = []
+        for i in range(1, len(coords) - 1):
+            y, x = coords[i]
+            if distance_map[y, x] == 0:
+                continue
+            dy = coords[i + 1][0] - coords[i - 1][0]
+            dx = coords[i + 1][1] - coords[i - 1][1]
+            norm = np.hypot(dx, dy)
+            if norm == 0:
+                continue
+            perp_dx = -dy / norm
+            perp_dy = dx / norm
+            length = distance_map[y, x] * 2
+            if length < 1:
+                continue
+            r0 = y - perp_dy * length / 2
+            c0 = x - perp_dx * length / 2
+            r1 = y + perp_dy * length / 2
+            c1 = x + perp_dx * length / 2
+            line_length = int(np.hypot(r1 - r0, c1 - c0))
+            if line_length == 0:
+                continue
+            line_coords = np.linspace(0, 1, line_length)
+            rr = ((1 - line_coords) * r0 + line_coords * r1).astype(int)
+            cc = ((1 - line_coords) * c0 + line_coords * c1).astype(int)
+            valid_idx = (rr >= 0) & (rr < binary_image.shape[0]) & (cc >= 0) & (cc < binary_image.shape[1])
+            rr = rr[valid_idx]
+            cc = cc[valid_idx]
+            if not np.all(binary_image[rr, cc]):
+                continue
+            width = len(rr)
+            distances.append(width)
+        if distances:
+            largeurs = {
+                'largeur_moyenne': np.mean(distances),
+                'largeur_noeud_A': distances[0],
+                'largeur_noeud_B': distances[-1],
+                'largeur_milieu': distances[len(distances) // 2],
+                'largeur_minimale': np.min(distances),
+                'largeur_maximale': np.max(distances)
+            }
+            return largeurs
         else:
-            threshold -= 1
-            bin_img = (gray_img < threshold).astype(uint8)
-        detected_shape_number, bin_img = connectedComponents(bin_img, ltype=CV_16U)
-    binary_image = zeros_like(binary_image, uint8)
-    binary_image[min_cy:max_cy, min_cx:max_cx] = bin_img
-    return binary_image
+            return None
+
+        #### Houssam ####

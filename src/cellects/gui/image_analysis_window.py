@@ -984,9 +984,12 @@ class ImageAnalysisWindow(WindowType):
                 if self.no.isVisible():
                     self.decision_label.setText(
                         f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied, Click No to fill in more parameters")
+                    self.yes.setVisible(True)
+                    self.no.setVisible(True)
                 else:
                     self.decision_label.setText(
                         f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied")
+                    self.yes.setVisible(True)
 
             if self.parent().po.vars['several_blob_per_arena'] and (detected_shape_nb == self.parent().po.sample_number):
                 self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")

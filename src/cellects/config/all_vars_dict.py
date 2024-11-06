@@ -115,7 +115,7 @@ class DefaultDicts:
             'videos_extension': '.mp4',
             'exif': [],
             'lose_accuracy_to_save_memory': True,
-
+            'save_binary_masks': False,
             # Data stored during analysis:
             'descriptors': descriptors,
         }

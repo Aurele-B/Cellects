@@ -18,7 +18,7 @@ from pandas import DataFrame as df
 from pandas import concat, NA, isna
 from PySide6 import QtCore
 
-from cellects.image_analysis.morphological_operations import Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import read_and_rotate, PickleRick
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
@@ -166,8 +166,8 @@ class UpdateImageThread(QtCore.QThread):
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
                 # if not self.parent().imageanalysiswindow.is_first_image_flag:
-                binary_idx = morphologyEx(binary_idx, MORPH_GRADIENT, self.parent().po.cross_33)
-                binary_idx = dilate(binary_idx, kernel=self.parent().po.cross_33, iterations=contour_width)
+                binary_idx = morphologyEx(binary_idx, MORPH_GRADIENT, cross_33)
+                binary_idx = dilate(binary_idx, kernel=cross_33, iterations=contour_width)
                 binary_idx = nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
@@ -245,12 +245,12 @@ class UpdateImageThread(QtCore.QThread):
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     if self.parent().po.vars['arena_shape'] == 'circle':
                         ellipse = Ellipse((max_cy - min_cy, max_cx - min_cx)).create().astype(uint8)
-                        ellipse = morphologyEx(ellipse, MORPH_GRADIENT, self.parent().po.cross_33)
+                        ellipse = morphologyEx(ellipse, MORPH_GRADIENT, cross_33)
                         mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
                     else:
                         mask[(min_cy, max_cy), min_cx:max_cx] = 1
                         mask[min_cy:max_cy, (min_cx, max_cx)] = 1
-                    mask = dilate(mask, kernel=self.parent().po.cross_33, iterations=contour_width)
+                    mask = dilate(mask, kernel=cross_33, iterations=contour_width)
 
                     mask = nonzero(mask)
                     image[mask[0], mask[1], :] = array((138, 95, 18), dtype=uint8)# self.parent().po.vars['contour_color']
@@ -899,8 +899,7 @@ class OneArenaThread(QtCore.QThread):
                 # analysis_i.update_shape(True)
                 analysis_i.update_shape(False)
                 contours = nonzero(
-                    morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT,
-                                 analysis_i.cross_33))
+                    morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT, cross_33))
                 current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
                 # else:
                 #     current_image = round(self.parent().po.motion.converted_video[analysis_i.t - 1, :, :]).astype(uint8)
@@ -939,69 +938,6 @@ class OneArenaThread(QtCore.QThread):
         # self.message_from_thread_starting.emit("If there are problems, change some parameters and try again")
         self.when_detection_finished.emit("Post processing done, read to see the result")
 
-
-        #     list_args = [[self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
-        #       False, False, False, videos_in_ram] for i in range(len(segmentation))]
-        #
-        # memory_diff = self.parent().po.update_available_core_nb(image_bit_number=312, video_bit_number=112)
-        # if self.parent().po.all['cores'] > 0:
-        #     seg_i = 0
-        #     pool = mp.ThreadPool(processes=self.parent().po.all['cores'])
-        #     for analysis_i in pool.imap_unordered(MotionAnalysis, list_args):
-        #         analysis_i.segmentation = segmentation[seg_i]
-        #         analysis_i.start = time_parameters[0]
-        #         analysis_i.step = time_parameters[1]
-        #         analysis_i.lost_frames = time_parameters[2]
-        #         analysis_i.substantial_growth = time_parameters[3]
-        #         # analysis_i.dims = [analysis_i.dims]
-        #         analysis_i.initialize_post_processing()
-        #         analysis_i.t = analysis_i.start
-        #         # print_progress = ForLoopCounter(self.start)
-        #         while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
-        #             analysis_i.update_shape(False)
-        #             contours = nonzero(
-        #                 morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT,
-        #                              analysis_i.cross_33))
-        #             if self.parent().po.motion.visu is not None:
-        #                 current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
-        #             else:
-        #                 current_image = round(self.parent().po.motion.converted_video[analysis_i.t - 1, :, :]).astype(uint8)
-        #                 current_image = stack((current_image, current_image, current_image), axis=2)
-        #             # Not ok to have visu:
-        #             # current_image = analysis_i.visu[analysis_i.t - 1, :, :, :].copy()
-        #             current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
-        #             if seg_i == 0:
-        #                 self.image_from_thread.emit(
-        #                     {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
-        #                      "current_image": current_image})
-        #         if analysis_i.start is None:
-        #             analysis_i.binary = repeat(expand_dims(analysis_i.origin, 0),
-        #                                                     analysis_i.converted_video.shape[0], axis=0)
-        #             if self.parent().po.vars['color_number'] > 2:
-        #                 self.message_from_thread_starting.emit(f"The only option available, when the image contains more than 2 colors, failed to detect motion. Try others parameters in the image analysis window")
-        #             else:
-        #                 self.message_from_thread_starting.emit(f"Tracking option n°{seg_i + 1} failed to detect motion")
-        #         else:
-        #             self.message_from_thread_starting.emit("If there are problems, change some parameters and try again")
-        #
-        #         if self.parent().po.vars['color_number'] > 2:
-        #             self.parent().po.motion.segmentation = analysis_i.binary
-        #         else:
-        #             if seg_i == 0:
-        #                 self.parent().po.motion.luminosity_segmentation = analysis_i.binary
-        #                 logging.info(analysis_i.binary.shape)
-        #             elif seg_i == 1:
-        #                 self.parent().po.motion.gradient_segmentation = analysis_i.binary
-        #             elif seg_i == 2:
-        #                 self.parent().po.motion.logical_and = analysis_i.binary
-        #             elif seg_i == 3:
-        #                 self.parent().po.motion.logical_or = analysis_i.binary
-        #             elif seg_i == 4:
-        #                 self.parent().po.motion.segmentation = analysis_i.binary
-        #         seg_i += 1
-        #     self.when_detection_finished.emit("Post processing done, read to see the result")
-        # else:
-        #     self.message_from_thread_starting.emit(f"Post processing requires an additional {memory_diff}GB of RAM to run")
 
 
 class VideoReaderThread(QtCore.QThread):
@@ -1043,7 +979,7 @@ class VideoReaderThread(QtCore.QThread):
         logging.info(f"sum: {video_mask.sum()}")
         # timings = genfromtxt("timings.csv")
         for t in arange(self.parent().po.motion.dims[0]):
-            mask = morphologyEx(video_mask[t, ...], MORPH_GRADIENT, self.parent().po.motion.cross_33)
+            mask = morphologyEx(video_mask[t, ...], MORPH_GRADIENT, cross_33)
             mask = stack((mask, mask, mask), axis=2)
             # current_image[current_image > 0] = self.parent().po.vars['contour_color']
             current_image = video_analysis[t, ...].copy()
@@ -1093,9 +1029,9 @@ class ChangeOneRepResultThread(QtCore.QThread):
         self.parent().po.motion.max_distance = 9 * self.parent().po.vars['ease_connect_distant_shape']
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         self.parent().po.motion.detect_growth_transitions()
-        self.parent().po.motion.network_detection(False)
+        self.parent().po.motion.networks_detection(False)
         self.parent().po.motion.study_cytoscillations(False)
-        self.parent().po.motion.fractal_analysis()
+        self.parent().po.motion.fractal_descriptions()
         self.parent().po.motion.get_descriptors_summary()
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
@@ -1435,6 +1371,7 @@ class RunAllThread(QtCore.QThread):
                     tiii = default_timer()
                     pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                     for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
+
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
                         # l = [i, arena, self.parent().po.vars, True, False, False, None]
                         # l = [0, 1, self.parent().po.vars, True, False, False, None]

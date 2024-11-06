@@ -15,7 +15,7 @@ from pandas import DataFrame as df
 from numpy import (
     median, stack, ceil, all, any, equal, pi, min, round, mean, diff, sum, multiply, square,
     sqrt, zeros, array, arange, ones_like, isin, sort, repeat, uint8, uint32, unique,
-    uint16, uint64, delete, savetxt, nonzero, max, absolute, empty, int8)
+    uint16, uint64, delete, savetxt, nonzero, max, absolute, load, logical_or)
 from psutil import virtual_memory
 from pathlib import Path
 from cellects.image_analysis.extract_exif import extract_time  # named exif
@@ -23,14 +23,12 @@ from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image
 from cellects.utils.utilitarian import insensitive_glob
-from cellects.image_analysis.morphological_operations import Ellipse
+from cellects.image_analysis.morphological_operations import Ellipse, cross_33
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class
-from cellects.core.cellects_paths import TEST_DIR
-from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
 
 
 class ProgramOrganizer:
@@ -73,7 +71,6 @@ class ProgramOrganizer:
         self.vars['convert_for_motion'] = None
         self.current_combination_id = 0
         self.data_list = []
-        self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
         self.one_row_per_oscillating_cluster = None
         self.fractal_box_sizes = None
 
@@ -217,25 +214,36 @@ class ProgramOrganizer:
                 self.data_list, self.vars['min_ram_free'], not self.vars['already_greyscale'], self.reduce_image_dim)
         self.instantiate_tables()
 
-        # i=1
-        # show_seg=True
-        # l = [i, i + 1, self.vars, True, False, show_seg, None]
-        # sav = self
-        # self = MotionAnalysis(l)
-        # self.get_descriptors_from_binary()
-        # self.detect_growth_transitions()
-        # 1. Trouver pb self.network_dynamics
-        # 2. Sauv all oscil
+        i=1
+        show_seg=True
 
-        for i, arena in enumerate(self.vars['analyzed_individuals']):
-            l = [i, i + 1, self.vars, True, False, False, None]
-            analysis_i = MotionAnalysis(l)
-            self.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
-                                                                     analysis_i.efficiency_test_2)
-        self.save_tables()
+        if os.path.isfile(f"coord_specimen{i + 1}_t720_y1475_x1477.npy"):
+            binary_coord = load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
+            l = [i, i + 1, self.vars, False, False, show_seg, None]
+            sav = self
+            self = MotionAnalysis(l)
+            self.binary = zeros((720, 1475, 1477), dtype=uint8)
+            self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
+        else:
+            l = [i, i + 1, self.vars, True, False, show_seg, None]
+            sav = self
+            self = MotionAnalysis(l)
+        self.get_descriptors_from_binary()
+        self.detect_growth_transitions()
+        self.vars['save_binary_masks'] = True
+        self.networks_detection(show_seg)
+        self.study_cytoscillations(show_seg)
+
+        # for i, arena in enumerate(self.vars['analyzed_individuals']):
+        #     l = [i, i + 1, self.vars, True, False, False, None]
+        #     analysis_i = MotionAnalysis(l)
+        #     self.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
+        #                                                              analysis_i.efficiency_test_2)
+        # self.save_tables()
+        #
+        # self = MotionAnalysis(l)
         # l = [5, 6, self.vars, True, False, False, None]
         # sav=self
-        # self = MotionAnalysis(l)
         # self.get_descriptors_from_binary()
         # self.detect_growth_transitions()
 

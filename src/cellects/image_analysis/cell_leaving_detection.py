@@ -12,8 +12,10 @@ from numpy import (
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
     logical_xor, logical_not, less, greater, any, sign, uint8, int8, int16,
     uint32, float64, expand_dims, min, max, all, any)
+from cellects.image_analysis.morphological_operations import cross_33
 
-def cell_leaving_detection(new_shape, covering_intensity, previous_binary, greyscale_image, fading_coefficient, lighter_background, several_blob_per_arena, erodila_disk, cross_33, protect_from_fading=None, add_to_fading=None):
+
+def cell_leaving_detection(new_shape, covering_intensity, previous_binary, greyscale_image, fading_coefficient, lighter_background, several_blob_per_arena, erodila_disk, protect_from_fading=None, add_to_fading=None):
     # To look for fading pixels, only consider the internal contour of the shape at t-1
     fading = erode(previous_binary, erodila_disk)
     # fading = logical_xor(self.binary[self.t - 1, :, :], fading)
