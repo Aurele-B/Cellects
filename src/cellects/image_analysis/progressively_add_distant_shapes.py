@@ -2,12 +2,12 @@
 """Contains the class: ProgressivelyAddDistantShapes"""
 from numpy import isin, argmax, delete, arange, zeros, uint8, max, min, any, logical_and, logical_or, uint64, nonzero, sum, unique, append, empty, uint32
 from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
-from cellects.image_analysis.morphological_operations import make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
 
 
 
 class ProgressivelyAddDistantShapes:
-    def __init__(self, new_potentials, previous_shape, max_distance, cross_33):
+    def __init__(self, new_potentials, previous_shape, max_distance):
         """
         This class check new potential shapes sizes and distance to a main
         (first called previous) shape.
@@ -23,7 +23,6 @@ class ProgressivelyAddDistantShapes:
         :param max_distance: The maximal distance for a shape from new_potentials to get bridged
         :param cross_33: A binary crux
         """
-        self.cross_33 = cross_33
         self.new_order = logical_or(new_potentials, previous_shape).astype(uint8)
         self.new_order, self.stats, centers = cc(self.new_order)
         self.main_shape = zeros(self.new_order.shape, uint8)
@@ -146,7 +145,7 @@ class ProgressivelyAddDistantShapes:
 
         other_shapes = zeros(self.main_shape.shape, uint8)
         other_shapes[self.new_order > 1] = 1
-        simple_disk = getStructuringElement(MORPH_CROSS, (3, 3))
+        simple_disk = cross_33
         kernel = Ellipse((5, 5)).create().astype(uint8)
         # Dilate the main shape, progressively to infer in what order other shapes should be expanded toward it
         main_shape = self.main_shape.copy()
@@ -254,7 +253,7 @@ class ProgressivelyAddDistantShapes:
 
     def find_expansion_timings(self):
         max_t = self.binary_video.shape[0] - 1
-        dilated_one = dilate(self.expanded_shape, self.cross_33)
+        dilated_one = dilate(self.expanded_shape, cross_33)
         # Find the time at which the nearest pixel of the expanded_shape si reached by the main shape
         closest_pixels = zeros(self.main_shape.shape, dtype=uint8)
         closest_pixels[self.expanded_shape == max(dilated_one)] = 1

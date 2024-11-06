@@ -9,7 +9,6 @@ It loads a video, check origin shape, get the average covering duration of a pix
 import logging
 import os
 from gc import collect
-import numpy as np
 # from scipy.stats import linregress
 # from scipy import signal as si
 from timeit import default_timer
@@ -25,22 +24,19 @@ from numpy import (
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
-    logical_xor, float16, less, greater, save, sign, uint8, int8, int16, zeros_like,
+    logical_xor, float16, less, greater, save, sign, uint8, int8, int16, load,
     uint32, float64, expand_dims, min, max, any)
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
-from cellects.image_analysis.morphological_operations import Ellipse
 from cellects.image_analysis.network_detection import NetworkDetection
 from cellects.image_analysis.fractal_analysis import FractalAnalysis
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
-from cellects.image_analysis.morphological_operations import (
-    CompareNeighborsWithValue, image_borders, draw_me_a_sun,
-    make_gravity_field, cc, expand_to_fill_holes)
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.morphological_operations import find_major_incline
+from cellects.image_analysis.morphological_operations import (cross_33, find_major_incline, Ellipse,
+    CompareNeighborsWithValue, image_borders, draw_me_a_sun, make_gravity_field, cc, expand_to_fill_holes)
 from cellects.utils.formulas import (bracket_to_uint8_image_contrast, eudist, moving_average)
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
@@ -66,10 +62,10 @@ class MotionAnalysis:
         videos_already_in_ram = l[6]
         self.visu = None
         self.binary = None
+        self.origin_idx = None
         self.smoothing_flag: bool = False
         logging.info(f"Start the motion analysis of the arena n°{self.statistics['arena']}")
 
-        self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
         self.vars = vars
         # self.origin = self.vars['first_image'][self.vars['top'][l[0]]:(
         #    self.vars['bot'][l[0]] + 1),
@@ -116,11 +112,18 @@ class MotionAnalysis:
                     # self.vars['true_if_use_light_AND_slope_else_OR']: bool = False
                     self.detection()
                     self.initialize_post_processing()
-                    self.t = self.start
-                    # print_progress = ForLoopCounter(self.start)
-                    # self.binary = self.segmentation # HERE
-                    while self.t < self.binary.shape[0]:  #1200:  #
-                        self.update_shape(show_seg)
+                    ###
+                    if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t720_y1475_x1477.npy"):
+                        binary_coord = load(f"coord_specimen{self.statistics['arena']}_t720_y1475_x1477.npy")
+                        self.binary = zeros((720, 1475, 1477), dtype=uint8)
+                        self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
+                    else:
+                    ###
+                        self.t = self.start
+                        # print_progress = ForLoopCounter(self.start)
+                        # self.binary = self.segmentation # HERE
+                        while self.t < self.binary.shape[0]:  #1200:  #
+                            self.update_shape(show_seg)
                 #
             if self.start is None:
                 self.binary = repeat(expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
@@ -136,9 +139,9 @@ class MotionAnalysis:
             if analyse_shape:
                 self.get_descriptors_from_binary()
                 self.detect_growth_transitions()
-                self.network_detection(show_seg)
+                self.networks_detection(show_seg)
                 self.study_cytoscillations(show_seg)
-                self.fractal_analysis()
+                self.fractal_descriptions()
                 self.get_descriptors_summary()
                 if videos_already_in_ram is None:
                     self.save_results()
@@ -390,8 +393,7 @@ class MotionAnalysis:
         growth *= self.borders
         growth_vision = OneImageAnalysis(growth)
         growth_vision.thresholding()
-        # self.substantial_image = erode(growth, self.cross_33, iterations=2)
-        self.substantial_image = erode(growth_vision.binary_image, self.cross_33, iterations=2)
+        self.substantial_image = erode(growth_vision.binary_image, cross_33, iterations=2)
 
         # New stuff: (removed because was too stringent and impeded a lot of analyses)
         # already_in_origin = self.substantial_image * self.origin
@@ -443,19 +445,33 @@ class MotionAnalysis:
                 logging.info(f"Arena n°{self.statistics['arena']}. Adjust each image to drift correction")
             self.segmentation = zeros(self.dims, dtype=uint8)
             # but a background value instead of zeros at the border of the image
-            for frame_i in arange(self.dims[0]):
+
+            for frame_i in arange(100):#self.dims[0]):#
                 # frame_i = 0
                 image_i = self.converted_video[frame_i, ...]
                 image_i = OneImageAnalysis(image_i)
                 image_i.bio_label = self.vars["bio_label"]
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     image_i.image2 = self.converted_video2[frame_i, ...]
-                if not self.vars['drift_already_corrected']:
+                if self.vars['drift_already_corrected']:
+                    # true_image_mask = image_i.image != 0
+                    true_pixels = nonzero(image_i.image)
+                    min_y, max_y = min(true_pixels[0]), max(true_pixels[0])
+                    min_x, max_x = min(true_pixels[1]), max(true_pixels[1])
+                    image_i.image = image_i.image[min_y:(max_y + 1), min_x:(max_x + 1)]
+                    if frame_i == 0:
+                        image_i.previous_binary_image = self.origin[min_y:(max_y + 1), min_x:(max_x + 1)]
+                    else:
+                        image_i.previous_binary_image = self.converted_video[frame_i - 1, ...][min_y:(max_y + 1), min_x:(max_x + 1)]
+                    if self.vars['convert_for_motion']['logical'] != 'None':
+                        image_i.image2 = image_i.image2[min_y:(max_y + 1), min_x:(max_x + 1)]
+                else:
                     if frame_i == 0:
                         image_i.previous_binary_image = self.origin
                     else:
                         if self.vars['origin_state'] != "constant":
                             image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
+
                 image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
                 if self.vars['drift_already_corrected']:
@@ -518,7 +534,7 @@ class MotionAnalysis:
                 self.converted_video2 = self.smooth_pixel_slopes(self.converted_video2)
                 if self.vars['do_slope_segmentation'] or compute_all_possibilities:
                     gradient_segmentation2 = self.lum_slope_segmentation(self.converted_video2)
-                    gradient_segmentation2[-self.lost_frames:, ...] = repeat(gradient_segmentation2[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
+                    gradient_segmentation2[-self.lost_frames:, ...] = repeat(gradient_segmentation2[-self.lost_frames, :, :][newaxis, :, :], self.lost_frames, axis=0)
                     if self.vars['convert_for_motion']['logical'] == 'Or':
                         gradient_segmentation = logical_or(gradient_segmentation, gradient_segmentation2)
                     elif self.vars['convert_for_motion']['logical'] == 'And':
@@ -566,7 +582,7 @@ class MotionAnalysis:
         if not shape_motion_failed:
             # do_threshold_segmentation = 0.8
             # i = arange(17)
-            # l_values_thresholds = np.power(-1, i) * (0.8 - 0.1 * (i // 2))
+            # l_values_thresholds = power(-1, i) * (0.8 - 0.1 * (i // 2))
             value_segmentation_thresholds = arange(0.8, -0.7, -0.1)
             validated_thresholds = zeros(value_segmentation_thresholds.shape, dtype=bool)
             counter = 0
@@ -771,12 +787,12 @@ class MotionAnalysis:
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
         self.erodila_disk = Ellipse((self.pixel_ring_depth, self.pixel_ring_depth)).create().astype(uint8)
+        self.max_distance = self.pixel_ring_depth * self.vars['ease_connect_distant_shape']
 
     def initialize_post_processing(self):
         ## Initialization
         logging.info(f"Arena n°{self.statistics['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['ring_correction']}, Connect distant shapes: {self.vars['ease_connect_distant_shape'] > 0}, How to select appearing cell(s): {self.vars['first_detection_method']}")
 
-        self.max_distance = self.pixel_ring_depth * self.vars['ease_connect_distant_shape']
         self.binary = zeros(self.dims[:3], dtype=uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .npy videos and Data to run Cellects quickly.pkl and re-run")
@@ -812,15 +828,11 @@ class MotionAnalysis:
         self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
                                            sqrt(sum(self.binary[(self.start - 1), :, :])))
         if self.vars['ring_correction']:
-            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], self.cross_33,
-                                      ray_length_coef=1.25)  # plt.imshow(sun)
+            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = zeros(self.dims[1:], dtype=uint8)
             # cannot_fading = self.holes.copy()
             self.pixel_ring_depth += 2
             self.update_ring_width()
-        if self.vars['do_fading']:
-            self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
-            self.already_explored_area = self.origin.copy()
 
         if self.vars['prevent_fast_growth_near_periphery']:
             self.near_periphery = zeros(self.dims[1:])
@@ -882,7 +894,7 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
         # Remove noise by opening and by keeping the shape within borders
-        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, self.cross_33) * self.borders
+        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
 
         # Add distant shapes within a radius, score every added pixels according to their distance
         if self.vars['several_blob_per_arena']:
@@ -891,7 +903,7 @@ class MotionAnalysis:
             if new_shape.sum() == 0:
                 new_shape = new_potentials
             else:
-                pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance, self.cross_33)
+                pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
                 # If max_distance is non nul look for distant shapes
                 pads.consider_shapes_sizes(self.vars['min_distant_shape_size'],
                                                      self.vars['max_distant_shape_size'])
@@ -910,7 +922,7 @@ class MotionAnalysis:
                 pads = None
 
         # Fill holes
-        new_shape = morphologyEx(new_shape, MORPH_CLOSE, self.cross_33)
+        new_shape = morphologyEx(new_shape, MORPH_CLOSE, cross_33)
 
         if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
             # Shape Erosion
@@ -925,46 +937,8 @@ class MotionAnalysis:
             protect_from_fading = None
             if self.vars['origin_state'] == 'constant':
                 protect_from_fading = self.origin
-            new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, self.cross_33, protect_from_fading)
-            # To look for fading pixels, only consider the internal contour of the shape at t-1
-            # fading = erode(self.binary[self.t - 1, :, :], self.erodila_disk)
-            # # fading = logical_xor(self.binary[self.t - 1, :, :], fading)
-            # fading = self.binary[self.t - 1, :, :] - fading
-            # # If the origin state is considered constant: origin pixels will never be fading
-            # if self.vars['origin_state'] == 'constant':
-            #     fading *= (1 - self.origin)
-            # # With a lighter background, fading them if their intensity gets higher than the covering intensity
-            # if self.vars['lighter_background']:
-            #     #self.covering_intensity[new_idx[0], new_idx[1]] = ref[-round(self.vars['fading'] * 100), :]
-            #     fading = fading * greater((self.converted_video[self.t - self.lost_frames, :, :]),
-            #                                          (1 - self.vars['fading']) * self.covering_intensity).astype(
-            #         uint8)
-            # else:
-            #     #self.covering_intensity[new_idx[0], new_idx[1]] = ref[round(self.vars['fading'] * 100), :]
-            #     fading = fading * less((self.converted_video[self.t - self.lost_frames, :, :]),
-            #                                       (1 + self.vars['fading']) * self.covering_intensity).astype(
-            #         uint8)
-            #
-            # if any(fading):
-            #     fading = morphologyEx(fading, MORPH_CLOSE, self.cross_33, iterations=1)
-            #     if not self.vars['several_blob_per_arena']:
-            #         # Check if uncov_potentials does not break the shape into several components
-            #         uncov_nb, uncov_shapes = connectedComponents(fading, ltype=CV_16U)
-            #         nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
-            #         i = 0
-            #         while i <= uncov_nb:
-            #             i += 1
-            #             prev_nb = nb
-            #             new_shape[nonzero(uncov_shapes == i)] = 0
-            #             nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
-            #             if nb > prev_nb:
-            #                 new_shape[nonzero(uncov_shapes == i)] = 1
-            #                 nb, garbage_img = connectedComponents(new_shape, ltype=CV_16U)
-            #         uncov_shapes = None
-            #     else:
-            #         new_shape[nonzero(fading)] = 0
-            #     new_shape = morphologyEx(new_shape, MORPH_OPEN, self.cross_33, iterations=0)
-            #     new_shape = morphologyEx(new_shape, MORPH_CLOSE, self.cross_33)
+            new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, protect_from_fading)
+
         self.covering_intensity *= new_shape
         self.binary[self.t, :, :] = new_shape * self.borders
         self.surfarea[self.t] = sum(self.binary[self.t, :, :])
@@ -1003,11 +977,11 @@ class MotionAnalysis:
 
                 if self.vars['ring_correction'] and not self.vars['several_blob_per_arena']:
                     # Apply the hole correction
-                    self.holes = morphologyEx(self.holes, MORPH_CLOSE, self.cross_33, iterations=10)
+                    self.holes = morphologyEx(self.holes, MORPH_CLOSE, cross_33, iterations=10)
                     # If some holes are not covered by now
                     if any(self.holes * (1 - self.binary[self.t, :, :])):  # if any(self.holes > 0):
                         self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
-                            expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes, self.cross_33)
+                            expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
                         if holes_time_end is not None:
                             self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
                             self.binary[holes_time_end:(self.t + 1), :, :][
@@ -1023,9 +997,6 @@ class MotionAnalysis:
                     self.mean_distance_per_frame = mean(- distance_against_time)
                 else:
                     self.mean_distance_per_frame = 1
-        if self.vars['do_fading']:
-            self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
-            self.already_explored_area = logical_or(self.already_explored_area, self.binary[self.t, :, :])
 
         if self.vars['prevent_fast_growth_near_periphery']:
             # growth_near_periphery = diff(self.binary[self.t-1:self.t+1, :, :] * self.near_periphery, axis=0)
@@ -1047,7 +1018,7 @@ class MotionAnalysis:
         if show_seg:
             if self.visu is not None:
                 im_to_display = self.visu[self.t, ...].copy()
-                contours = nonzero(morphologyEx(self.binary[self.t, :, :], MORPH_GRADIENT, self.cross_33))
+                contours = nonzero(morphologyEx(self.binary[self.t, :, :], MORPH_GRADIENT, cross_33))
                 im_to_display[contours[0], contours[1]] = 0
             else:
                 im_to_display = self.binary[self.t, :, :] * 255
@@ -1068,6 +1039,13 @@ class MotionAnalysis:
             self.rays = None
             self.holes = None
             collect()
+        if self.vars['do_fading']:
+            self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
+            self.already_explored_area = self.origin.copy()
+            for self.t in range(self.dims[0]):
+                self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
+                self.already_explored_area = logical_or(self.already_explored_area, self.binary[self.t, :, :])
+
         self.surfarea = self.binary.sum((1, 2))
         timings = self.vars['exif']
         if len(timings) < self.dims[0]:
@@ -1357,7 +1335,7 @@ class MotionAnalysis:
 
                 # II) Once a pseudopod is deployed, look for a disk/ around the original shape
                 growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
-                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=self.cross_33,
+                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=cross_33,
                                             iterations=10,
                                             borderType=BORDER_CONSTANT, borderValue=0)
                 isisotropic = sum(self.binary[:, :, :] * dilated_origin, (1, 2))
@@ -1401,7 +1379,7 @@ class MotionAnalysis:
             best_isotropic_candidate = self.binary[solid_growth, :, :][-1]
             # Use the largest side of the bounding box as a reference to calculate how we should iterate dilatation
             self.whole_shape_descriptors[solid_growth, :]
-            dilated_origin = dilate(self.shape_evolution.binary, kernel=self.cross_33, iterations=10,
+            dilated_origin = dilate(self.shape_evolution.binary, kernel=cross_33, iterations=10,
                                         borderType=BORDER_CONSTANT, borderValue=0)
             if sum(best_isotropic_candidate * dilated_origin) > 0.95 * dilated_origin.sum():
                 self.isotropic_phase = True
@@ -1455,7 +1433,7 @@ class MotionAnalysis:
             self.converted_video = round((255 * (self.converted_video / max(self.converted_video)))).astype(uint8)
 
 
-    def network_detection(self, show_seg=False):
+    def networks_detection(self, show_seg=False):
         if not isna(self.statistics["first_move"]) and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting network detection.")
             # if self.vars['origin_state'] == 'constant':
@@ -1471,6 +1449,8 @@ class MotionAnalysis:
             if self.vars['origin_state'] == "fluctuating":
                 self.covering_intensity = self.origin * self.converted_video[0, :, :]
             if self.vars['origin_state'] == "constant":
+                if self.origin_idx is None:
+                    self.origin_idx = nonzero(self.origin)
                 if self.vars['lighter_background']:
                     self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
 
@@ -1478,36 +1458,22 @@ class MotionAnalysis:
                 # t = 10
                 # t = 200
                 if any(self.binary[t, ...]):
-                    nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'], self.cross_33)
-
-                    # Segment small squares of the images to detect local intensity valleys
-                    #
-                    # self.vars['network_mesh_side_length']=10
-                    # self.vars['network_mesh_step_length']=2
-                    # self.vars['network_detection_threshold']=10
+                    nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'])
 
                     nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
                                        step=self.vars['network_mesh_step_length'],
                                        int_variation_thresh=self.vars['network_detection_threshold'])
-
                     # See(nd.binary_image)
                     # See(nd.network)
-
-                    # Remove shapes that are very circular and does not contain holes:
                     nd.selects_elongated_or_holed_shapes(hole_surface_ratio=0.1, eccentricity=0.65)
                     # nd.segment_globally()
 
                     if t > 0:
-                        # Make sure that the previous network is still in:
                         nd.add_pixels_to_the_network(nonzero(self.network_dynamics[t - 1, ...]))
-                        # And remove the faded areas
-                        # remove_faded_pixels = self.binary[t, ...] * logical_xor(self.binary[t, ...],
-                        #                                                         self.binary[t - 1, ...])
-
                         if self.vars['do_fading'] and (t > self.step + self.lost_frames):
+                            # Remove the faded areas
                             remove_faded_pixels = 1 - self.binary[t - 1, ...]
                             nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
-
 
                     # Add the origin as a part of the network:
                     if self.vars['origin_state'] == 'constant':
@@ -1516,32 +1482,18 @@ class MotionAnalysis:
                     # Connect all network pieces together:
                     nd.connect_network(maximal_distance_connection=self.max_distance)  # int(4*max(self.dims[1:3])//5))
 
-                    # if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
-                    #     previous_binary = self.network_dynamics[t - 1, ...]
-                    #     new_idx = nonzero(logical_xor(nd.network, previous_binary))
-                    #     start_intensity_monitoring = t - self.lost_frames - self.step
-                    #     end_intensity_monitoring = t - self.lost_frames
-                    #     self.covering_intensity[new_idx[0], new_idx[1]] = median(
-                    #         self.converted_video[start_intensity_monitoring:end_intensity_monitoring, new_idx[0], new_idx[1]],
-                    #         axis=0)
-                    #     greyscale_image = self.converted_video[self.t - self.lost_frames, :, :]
-                    #     if self.vars['origin_state'] == 'constant':
-                    #         protect_from_fading = self.origin
-                    #     add_to_fading = 1 - self.binary[t, ...]
-                    #     # add_to_fading = self.binary[t, ...] * logical_xor(self.binary[t, ...], self.binary[t - 1, ...])
-                    #
-                    #     nd.network, self.covering_intensity = cell_leaving_detection(nd.network, self.covering_intensity,
-                    #                                                                 previous_binary, greyscale_image,
-                    #                                                                 self.vars['fading'],
-                    #                                                                 self.vars['lighter_background'],
-                    #                                                                 self.vars['several_blob_per_arena'],
-                    #                                                                 self.erodila_disk, self.cross_33,
-                    #                                                                 protect_from_fading, add_to_fading)
-
                     self.network_dynamics[t, ...] = nd.network
 
+                    # #### Houssam ####
+                    # nd.skeletonize()
+                    # labeled_nodes, label_to_position = nd.detect_nodes()
+                    # segments = nd.find_segments(labeled_nodes, label_to_position)
+                    # node_degrees = nd.extract_node_degrees(segments)
+                    # # largeurs = nd.get_segment_width(self.binary[t, ...], segments, distance_map)
+                    # #### Houssam ####
+
                     imtoshow = self.visu[t, ...].copy()
-                    net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, self.cross_33))
+                    net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, cross_33))
                     imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
 
                     # Remember to uncomment this when done!!! For visualization.
@@ -1552,22 +1504,16 @@ class MotionAnalysis:
                         self.visu[t, ...] = imtoshow.copy()
             if show_seg:
                 destroyAllWindows()
-                # I put fading and change max_dist from 12 to 36
-
-                # See(nd.network)
-                # from sklearn.feature_extraction.image import img_to_graph
-                # graph = img_to_graph(nd.network)
-            # self.network_dynamics = nonzero(self.network_dynamics)
-            # self.network_dynamics = array(nonzero(self.network_dynamics))
-            # self.network_dynamics = df(self.network_dynamics, index=["time_coord", "y_coord", "x_coord"])
-            # self.network_dynamics.to_parquet(f"network_dynamics{self.statistics['arena']}.gzip")
-            # Read parquet with: pd.read_parquet(f"network_dynamics{self.statistics['arena']}.gzip", engine='pyarrow')
-            # self.network_dynamics.to_csv(f"network_dynamics{self.statistics['arena']}.csv")
-            # self.network_dynamics.to_parquet(f"network_dynamics{self.statistics['arena']}.parquet")
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
-            save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
+            if self.vars['save_binary_masks']:
+                save(f"coord_intra_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
             del self.network_dynamics
-            save(f"coord_binary{self.statistics['arena']}.npy", smallest_memory_array(nonzero(self.binary), "uint"))
+            if self.vars['save_binary_masks']:
+                save(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(self.binary), "uint"))
+
+            # save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
+            # del self.network_dynamics
+            # save(f"coord_binary{self.statistics['arena']}.npy", smallest_memory_array(nonzero(self.binary), "uint"))
 
             # self.network_dynamics += self.binary
             # save(f"video_of_network{self.statistics['arena']}.npy", self.network_dynamics)
@@ -1593,14 +1539,18 @@ class MotionAnalysis:
             necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \
                                self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
             available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+            average_intensities = mean(self.converted_video, (1, 2))
             if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
                 oscillations_video = zeros(self.converted_video.shape, dtype=float16)
                 for cy in arange(self.converted_video.shape[1]):
                     for cx in arange(self.converted_video.shape[2]):
-                        oscillations_video[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx].astype(int16),
+                        oscillations_video[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx]/average_intensities,
                                                                       period_in_frame_nb), 3).astype(float16)
+                        # oscillations_video[:, cy, cx] = round(gradient(self.converted_video[:, cy, cx].astype(int16),
+                        #                                               period_in_frame_nb), 3).astype(float16)
             else:
-                oscillations_video = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
+                oscillations_video = gradient(self.converted_video/average_intensities, period_in_frame_nb, axis=0)
+                # oscillations_video = gradient(self.converted_video.astype(int16), period_in_frame_nb, axis=0)
             # check if conv change here
             # if not self.vars['lose_accuracy_to_save_memory']:
             self.check_converted_video_type()
@@ -1610,7 +1560,7 @@ class MotionAnalysis:
             oscillations_video = sign(oscillations_video)
             return oscillations_video
         except Exception as exc:
-            logging.error(f"Not enough RAM. Retrying to allocate for 10 minutes before crashing")
+            logging.error(f"Not enough RAM. Retrying to allocate for 10 minutes before crashing. {exc}")
             return None
 
 
@@ -1658,8 +1608,10 @@ class MotionAnalysis:
             period_tracking = zeros(self.converted_video.shape[1:3], dtype=uint32)
             efflux_study = ClusterFluxStudy(self.converted_video.shape[:3])
             influx_study = ClusterFluxStudy(self.converted_video.shape[:3])
+            if self.start is None:
+                self.start = 0
             for t in arange(self.converted_video.shape[0]):# arange(500): #
-                contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, self.cross_33)
+                contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33)
                 contours_idx = nonzero(contours)
                 imtoshow = self.converted_video[t, ...].copy()
                 imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
@@ -1740,12 +1692,17 @@ class MotionAnalysis:
                     imshow("shape_motion", imtoshow)
                     waitKey(1)
             if self.vars['output_in_mm']:
+                self.clusters_final_data[:, 1] *= self.time_interval # phase
                 self.clusters_final_data[:, 2] *= self.vars['average_pixel_size']  # size
                 self.clusters_final_data[:, 3] *= sqrt(self.vars['average_pixel_size'])  # distance
                 self.whole_shape_descriptors['mean_cluster_area'] = mean_cluster_area * self.vars['average_pixel_size']
             self.whole_shape_descriptors['cluster_number'] = cluster_number
-            save(f"coord_influx{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))  # NEW
-            save(f"coord_efflux{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))  # NEW
+
+            if self.vars['save_binary_masks']:
+                save(f"coord_thickening{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))
+                save(f"coord_slimming{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))
+            # save(f"coord_influx{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))  # NEW
+            # save(f"coord_efflux{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))  # NEW
             # del self.cytoscillations
             del oscillations_video
 
@@ -1762,7 +1719,7 @@ class MotionAnalysis:
                 # self.statistics["max_magnitude"] = 'NA'
                 # self.statistics["frequency_of_max_magnitude"] = 'NA'
 
-    def fractal_analysis(self):
+    def fractal_descriptions(self):
         if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting fractal analysis.")
             if self.visu is None:
@@ -1912,13 +1869,13 @@ class MotionAnalysis:
 
         position = (25, self.dims[1] // 2)
         text = str(self.statistics['arena'])
-        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, self.cross_33))
+        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, cross_33))
         self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
         self.efficiency_test_1 = putText(self.efficiency_test_1, text, position, FONT_HERSHEY_SIMPLEX, 1,
                                         (self.vars["contour_color"], self.vars["contour_color"],
                                          self.vars["contour_color"], 255), 3)
 
-        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, self.cross_33))
+        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, cross_33))
         self.efficiency_test_2[contours[0], contours[1], :] = self.vars['contour_color']
         self.efficiency_test_2 = putText(self.efficiency_test_2, text, position, FONT_HERSHEY_SIMPLEX, 1,
                                          (self.vars["contour_color"], self.vars["contour_color"],
@@ -1936,7 +1893,7 @@ class MotionAnalysis:
                 self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video),
                                                 axis=3)
                 for t in arange(self.dims[0]):
-                    contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, self.cross_33))
+                    contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33))
                     self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
                     if "iso_digi_transi" in self.statistics.keys():
                         if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):

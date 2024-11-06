@@ -12,7 +12,7 @@ from numpy import (
     append, float32, sum, mean, zeros, empty, array, nonzero, unique,
     isin, logical_or, logical_not, greater, uint8,
     uint32, min, any)
-from cellects.image_analysis.morphological_operations import get_minimal_distance_between_2_shapes
+from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes
 
 
 class ClusterFluxStudy:
@@ -23,7 +23,6 @@ class ClusterFluxStudy:
         self.clusters_id = zeros(self.dims[1:], dtype=uint32)
         # self.alive_clusters_in_flux = empty(0, dtype=uint32)#list()
         self.cluster_total_number = 0
-        self.cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
 
     def update_flux(self, t, contours, current_flux, period_tracking, clusters_final_data):
         # flux_dir_changed = logical_xor(current_flux, self.clusters_id)
@@ -97,11 +96,11 @@ class ClusterFluxStudy:
             cluster_img = zeros(self.dims[1:], dtype=uint8)
             cluster_img[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 1
             nb, im, stats, centro = connectedComponentsWithStats(cluster_img)
-            if any(dilate(cluster_img, kernel=self.cross_33, borderType=BORDER_CONSTANT, borderValue=0) * contours):
+            if any(dilate(cluster_img, kernel=cross_33, borderType=BORDER_CONSTANT, borderValue=0) * contours):
                 minimal_distance = 1
             else:
                 if cluster_size > 200:
-                    cluster_img = nonzero(morphologyEx(cluster_img, MORPH_GRADIENT, self.cross_33))
+                    cluster_img = nonzero(morphologyEx(cluster_img, MORPH_GRADIENT, cross_33))
                     contours[cluster_img] = 2
                 else:
                     contours[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 2

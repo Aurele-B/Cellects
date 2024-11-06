@@ -64,6 +64,13 @@ class RequiredOutput(WindowType):
         # self.last_row_layout.addWidget(self.oscilacyto_label)
         # self.last_row_layout.addWidget(self.oscilacyto)
 
+        self.binary_mask_label = FixedText('Save binary mask coordinates', 14, tip="If checked, saves the binary mask coordinates used to compute the selected descriptors.\nMost of them only require the cell presence mask.\nThe oscillatory and network analyses require additional masks (also saved if checked)\nWarning: these masks may take a lot of hard drive space.", night_mode=self.parent().po.all['night_mode'])
+        # self.parent().po.vars['save_binary_masks'] = True
+        self.binary_mask = Checkbox(self.parent().po.vars['save_binary_masks'])
+        self.binary_mask.stateChanged.connect(self.binary_mask_saving)
+        self.last_row_layout.addWidget(self.binary_mask_label)
+        self.last_row_layout.addWidget(self.binary_mask)
+
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
         self.last_row_layout.addItem(self.horizontal_space)
@@ -107,6 +114,9 @@ class RequiredOutput(WindowType):
             self.layout.addWidget(self.descriptor_widgets_list[cb_index], row, col + 1)
         #if not self.parent().po.vars['oscilacyto_analysis']:
             #self.descriptor_widgets_list[cb_index].setVisible(False)
+
+    def binary_mask_saving(self):
+        self.parent().po.vars['save_binary_masks'] = self.binary_mask.isChecked()
 
     # def do_oscilacyto(self):
     #     do_it = self.oscilacyto.isChecked()

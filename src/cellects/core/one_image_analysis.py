@@ -11,7 +11,7 @@ import cv2  # named opencv-python
 import multiprocessing.pool as mp
 from numba.typed import List as TList
 from numba.typed import Dict as TDict
-from cellects.image_analysis.morphological_operations import Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import get_all_color_spaces, generate_color_space_combination, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 
@@ -43,7 +43,6 @@ class OneImageAnalysis:
         self.binary_image = np.zeros(self.image.shape[:2], dtype=np.uint8)
         self.previous_binary_image = None
         self.validated_shapes = np.zeros(self.image.shape[:2], dtype=np.uint8)
-        self.cross_33 = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
         self.centroids = 0
         self.shape_number = 0
         self.concomp_stats = 0
@@ -229,27 +228,22 @@ class OneImageAnalysis:
         if not self.drift_correction_already_adjusted:
             self.drift_correction_already_adjusted = True
 
-            mask = cv2.dilate(self.binary_image, kernel=self.cross_33)
+            mask = cv2.dilate(self.binary_image, kernel=cross_33)
             mask -= self.binary_image
             mask = np.nonzero(mask)
 
             drift_correction = np.mean(self.image[mask[0], mask[1]])
             self.image[np.nonzero(self.binary_image)] = drift_correction
             threshold = get_otsu_threshold(self.image)
-            binary1 = (self.image > threshold)
-            binary2 = np.logical_not(binary1)
-            if binary1.sum() < binary2.sum():
-                binary = binary1
-            else:
-                binary = binary2
-            while np.any(binary * self.binary_image) and threshold > 1: #binary.sum() > self.binary_image.sum()
-                threshold -= 1
-                binary1 = (self.image > threshold)
-                binary2 = np.logical_not(binary1)
-                if binary1.sum() < binary2.sum():
-                    binary = binary1
-                else:
-                    binary = binary2
+            binary = (self.image > threshold)
+            # while np.any(binary * self.binary_image) and threshold > 1: #binary.sum() > self.binary_image.sum()
+            #     threshold -= 1
+            #     binary1 = (self.image > threshold)
+            #     binary2 = np.logical_not(binary1)
+            #     if binary1.sum() < binary2.sum():
+            #         binary = binary1
+            #     else:
+            #         binary = binary2
             self.binary_image = binary.astype(np.uint8)
 
             if self.image2 is not None:
@@ -598,7 +592,7 @@ class OneImageAnalysis:
                     csc_dict[c_space] = channels
                     color_space_dictionaries.append(csc_dict)
         if ref_image is not None:
-            ref_image = cv2.dilate(ref_image, self.cross_33)
+            ref_image = cv2.dilate(ref_image, cross_33)
         else:
             ref_image = np.ones(self.bgr.shape[:2], dtype=np.uint8)
         if out_of_arenas is not None:
@@ -800,8 +794,8 @@ class OneImageAnalysis:
                     self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
                 # self.im_combinations[len(self.im_combinations) - 1]["csc"] = {list(self.saved_color_space_list[saved_csc])[0]: self.combination_features[saved_csc, :3]}
                 self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                # contours = cv2.morphologyEx(self.saved_images_list[saved_csc], cv2.MORPH_GRADIENT, self.cross_33)
-                # contours = np.nonzero(cv2.dilate(contours, self.cross_33, iterations=3))
+                # contours = cv2.morphologyEx(self.saved_images_list[saved_csc], cv2.MORPH_GRADIENT, cross_33)
+                # contours = np.nonzero(cv2.dilate(contours, cross_33, iterations=3))
                 self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
                     saved_csc]).astype(np.uint8)
         # logging.info(default_timer()-tic)

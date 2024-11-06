@@ -18,6 +18,8 @@ It contains the following functions:
     - expand_until_overlap
     - expand_to_fill_holes
     - expand_smalls_toward_biggest
+    - change_thresh_until_one
+    - Ellipse
 """
 import logging
 from numpy import square, round, vstack, repeat, append, sqrt, apply_along_axis, arange, zeros_like, zeros, argsort, uint8, min, any, \
@@ -28,6 +30,9 @@ from scipy.spatial import KDTree
 from numba import njit
 from cellects.utils.formulas import moving_average
 from cellects.image_analysis.image_segmentation import get_otsu_threshold
+
+
+cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
 
 
 class CompareNeighborsWithValue:
@@ -221,7 +226,7 @@ def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
     
     :return: a matrix of the gravity field
     """
-    kernel = getStructuringElement(MORPH_CROSS, (3, 3))
+    kernel = cross_33
     if with_erosion > 0:
         original_shape = erode(original_shape, kernel, iterations=with_erosion,
                                    borderType=BORDER_CONSTANT, borderValue=0)
@@ -646,7 +651,7 @@ def get_radius_distance_against_time(binary_video, field):
     return distance_against_time, time_start, time_end
 
 
-def expand_to_fill_holes(binary_video, holes, cross_33):
+def expand_to_fill_holes(binary_video, holes):
     #first move should be the time at wich the first pixel hole could have been covered
     #it should ask how much time the shape made to cross a distance long enough to overlap all holes
     holes_contours = dilate(holes, cross_33, borderType=BORDER_CONSTANT, borderValue=0)
@@ -679,6 +684,29 @@ def expand_to_fill_holes(binary_video, holes, cross_33):
         distance_against_time = [1, 2]
 
     return binary_video, holes_time_end, distance_against_time
+
+
+def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
+    coord = nonzero(binary_image)
+    min_cx = min(coord[0])
+    max_cx = max(coord[0])
+    min_cy = min(coord[1])
+    max_cy = max(coord[1])
+    gray_img = grayscale_image[min_cy:max_cy, min_cx:max_cx]
+    threshold = get_otsu_threshold(gray_img)
+    bin_img = (gray_img < threshold).astype(uint8)
+    detected_shape_number, bin_img = connectedComponents(bin_img, ltype=CV_16U)
+    while (detected_shape_number > 2) and (0 < threshold < 255):
+        if lighter_background:
+            threshold += 1
+            bin_img = (gray_img < threshold).astype(uint8)
+        else:
+            threshold -= 1
+            bin_img = (gray_img < threshold).astype(uint8)
+        detected_shape_number, bin_img = connectedComponents(bin_img, ltype=CV_16U)
+    binary_image = zeros_like(binary_image, uint8)
+    binary_image[min_cy:max_cy, min_cx:max_cx] = bin_img
+    return binary_image
 
 
 class Ellipse:

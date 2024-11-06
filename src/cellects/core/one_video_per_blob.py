@@ -3,22 +3,16 @@
     in order to make one video per detected arena from a bunch of chronologically ordered images.
 """
 
-
+import os
 import logging
 from numpy import arange, any, round, uint8, int8, int16, int64, uint64, save, array, zeros, zeros_like, \
     nonzero, less, greater_equal, logical_and, logical_or, repeat, floor, ceil, unique, \
     delete, linspace, all, mean, sum, absolute, where, append, in1d, \
     multiply, column_stack, triu_indices, str_, min, max
 import cv2
-import os
 import psutil
-# import skvideo.io
-from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.morphological_operations import get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.utils.load_display_save import readim
-from cellects.image_analysis.morphological_operations import Ellipse
-from cellects.utils.formulas import eudist, sum_of_abs_differences
 
 
 class OneVideoPerBlob:
@@ -38,7 +32,6 @@ class OneVideoPerBlob:
         self.raw_images = raw_images
         if self.original_shape_hsize is not None:
             self.k_size = int(((self.original_shape_hsize // 5) * 2) + 1)
-        self.cross_33 = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
 
         # 7) Create required empty arrays: especially the bounding box coordinates of each video
         self.ordered_first_image = None
@@ -77,7 +70,7 @@ class OneVideoPerBlob:
                     new_potentials[nonzero(self.ordered_first_image == i)] = 1
                     new_potentials[nonzero(self.unchanged_ordered_fimg == i)] = 0
 
-                    pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance=2, cross_33=self.cross_33)
+                    pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance=2)
                     pads.consider_shapes_sizes(min_shape_size=10)
                     pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
                     new_ordered_first_image[nonzero(pads.expanded_shape)] = i
@@ -110,7 +103,7 @@ class OneVideoPerBlob:
         """
         from timeit import default_timer
         tic = default_timer()
-        shapes = cv2.morphologyEx(self.modif_validated_shapes, cv2.MORPH_GRADIENT, self.cross_33)
+        shapes = cv2.morphologyEx(self.modif_validated_shapes, cv2.MORPH_GRADIENT, cross_33)
         x_min = self.ordered_stats[:, 0]
         y_min = self.ordered_stats[:, 1]
         x_max = self.ordered_stats[:, 0] + self.ordered_stats[:, 2]
@@ -599,7 +592,7 @@ class OneVideoPerBlob:
                     save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
 
     def read_and_rotate(self, image_name, prev_img):
-        """ Thie method read an image from its name and:
+        """ This method read an image from its name and:
         - Make sure to properly crop it
         - Rotate the image if ir is not in the same orientation as the reference
         - Make sure that the rotation is on the good direction (clockwise or counterclockwise)"""

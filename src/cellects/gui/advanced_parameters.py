@@ -158,7 +158,7 @@ class AdvancedParameters(WindowType):
         self.connect_distant_shape_during_segmentation = Checkbox(connect_distant_shape)
         self.connect_distant_shape_during_segmentation.stateChanged.connect(self.do_distant_shape_int_changed)
         self.connect_distant_shape_label = FixedText('Connect distant shapes',
-                                                         tip="Allows a homemade algorithm allowing to\nprogressively (i.e. at the growth rate speed of neighboring pixels)\nconnect distant shapes to original shape(s)",
+                                                         tip="Allows a homemade algorithm allowing to\nprogressively (i.e. at the growth rate speed of neighboring pixels)\nconnect distant shapes to original shape(s)\nWarning: this option can drastically increase the duration of the analysis",
                                                          night_mode=self.parent().po.all['night_mode'])
         self.ease_connect_distant_shape = Spinbox(min=0, max=1000000,
                                                       val=self.parent().po.vars['ease_connect_distant_shape'],
@@ -295,7 +295,7 @@ class AdvancedParameters(WindowType):
 
         # IV/ Fourth box: Oscillation period:#
         # IV/A/ Title
-        self.oscillation_label = FixedText('Oscillatory parameter:', tip="",
+        self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
                                               night_mode=self.parent().po.all['night_mode'])
         self.left_col_layout.addWidget(self.oscillation_label)
 
