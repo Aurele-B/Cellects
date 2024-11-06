@@ -13,6 +13,7 @@ import cv2
 import psutil
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
+from cellects.utils.load_display_save import readim
 
 
 class OneVideoPerBlob:
@@ -584,12 +585,18 @@ class OneVideoPerBlob:
                     if self.use_list_of_vid:
                         video_bunch[arena_i][image_i, ...] = sub_img
                     else:
-                        video_bunch[image_i, :, :, :, arena_i] = sub_img
+                        if len(video_bunch.shape) == 5:
+                            video_bunch[image_i, :, :, :, arena_i] = sub_img
+                        else:
+                            video_bunch[image_i, :, :, arena_i] = sub_img
             for arena_i, arena_name in enumerate(arena):
                 if self.use_list_of_vid:
                     save(vid_names[arena_name], video_bunch[arena_i])
                 else:
-                    save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                    if len(video_bunch.shape) == 5:
+                        save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                    else:
+                        save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
 
     def read_and_rotate(self, image_name, prev_img):
         """ This method read an image from its name and:
