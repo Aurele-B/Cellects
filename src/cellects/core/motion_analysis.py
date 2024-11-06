@@ -458,13 +458,13 @@ class MotionAnalysis:
                     true_pixels = nonzero(image_i.image)
                     min_y, max_y = min(true_pixels[0]), max(true_pixels[0])
                     min_x, max_x = min(true_pixels[1]), max(true_pixels[1])
-                    image_i.image = image_i.image[min_y:(max_y + 1), min_x:(max_x + 1)]
+                    image_i.image = bracket_to_uint8_image_contrast(image_i.image[min_y:(max_y + 1), min_x:(max_x + 1)])
                     if frame_i == 0:
                         image_i.previous_binary_image = self.origin[min_y:(max_y + 1), min_x:(max_x + 1)]
                     else:
                         image_i.previous_binary_image = self.converted_video[frame_i - 1, ...][min_y:(max_y + 1), min_x:(max_x + 1)]
                     if self.vars['convert_for_motion']['logical'] != 'None':
-                        image_i.image2 = image_i.image2[min_y:(max_y + 1), min_x:(max_x + 1)]
+                        image_i.image2 = bracket_to_uint8_image_contrast(image_i.image2[min_y:(max_y + 1), min_x:(max_x + 1)])
                 else:
                     if frame_i == 0:
                         image_i.previous_binary_image = self.origin
@@ -475,10 +475,17 @@ class MotionAnalysis:
                 image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
                 if self.vars['drift_already_corrected']:
-                    image_i.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
-                    # image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
-                    #                      bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
-                # self.segmentation[frame_i, ...] = image_i.binary_image
+                    im = zeros(self.dims[1:], dtype=uint8)
+                    im[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.image
+                    image_i.image = im.copy()
+                    im2 = zeros(self.dims[1:], dtype=uint8)
+                    im2[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.image2
+                    image_i.image2 = im2.copy()
+                    bin_im = zeros(self.dims[1:], dtype=uint8)
+                    bin_im[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.binary_image
+                    image_i.binary_image = bin_im.copy()
+
+                    # image_i.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
                 # See(frame.binary_image)
                 if self.vars['lose_accuracy_to_save_memory']:
                     self.converted_video[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image)
