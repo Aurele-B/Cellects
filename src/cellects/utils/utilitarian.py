@@ -162,7 +162,7 @@ class PercentAndTimeTracker:
             self.current_step += 1
         if element_number is not None:
             if self.current_step < 50:
-                output = int(0), ", wait to get more accurate ETA..."
+                output = int(0), ", wait to get a more accurate ETA..."
         return output
 
 

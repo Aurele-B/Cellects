@@ -116,6 +116,7 @@ class DefaultDicts:
             'exif': [],
             'lose_accuracy_to_save_memory': True,
             'save_binary_masks': False,
+            'grid_segmentation': False,
             # Data stored during analysis:
             'descriptors': descriptors,
         }

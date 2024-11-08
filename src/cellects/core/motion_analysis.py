@@ -24,8 +24,9 @@ from numpy import (
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
-    logical_xor, float16, less, greater, save, sign, uint8, int8, int16, load,
+    logical_xor, float16, less, greater, save, sign, uint8, int8, logical_not, load,
     uint32, float64, expand_dims, min, max, any)
+from numpy.ma.core import ones_like, logical_not
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
@@ -122,7 +123,7 @@ class MotionAnalysis:
                         self.t = self.start
                         # print_progress = ForLoopCounter(self.start)
                         # self.binary = self.segmentation # HERE
-                        while self.t < 200:  #self.binary.shape[0]:  #
+                        while self.t < self.binary.shape[0]:  #200:  #
                             self.update_shape(show_seg)
                 #
             if self.start is None:
@@ -293,19 +294,39 @@ class MotionAnalysis:
 
     def get_origin_shape(self):
         logging.info(f"Arena n°{self.statistics['arena']}. Make sure of origin shape")
-        self.start = 1
-        if self.vars['origin_state'] == "invisible":
-            # Use simple thresholding to detect when invisible biomatter becomes visible.
-            # When it covers 20 pixels at least
-            while logical_and(sum(frame_i.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
-                frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
-                frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
+        if self.vars['origin_state'] == "constant":
+            self.start = 1
+            self.origin_idx = nonzero(self.origin)
+            if self.vars['lighter_background']:
+                # Initialize the covering_intensity matrix as a reference for pixel fading
+                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
+            self.substantial_growth = 1.2 * self.origin.sum()
+        else:
+            self.start = - 1
+            analysisi = OneImageAnalysis(self.converted_video[0, :, :])
+            analysisi.binary_image = 0
+            if self.vars['drift_already_corrected']:
+                mask_coord = zeros((self.dims[0], 4), dtype=uint32)
+                for frame_i in arange(self.dims[0]):  # 100):#
+                    true_pixels = nonzero(self.converted_video[frame_i, ...])
+                    mask_coord[frame_i, :] = min(true_pixels[0]), max(true_pixels[0]), min(true_pixels[1]), max(
+                        true_pixels[1])
+            else:
+                mask_coord = None
+            while logical_and(sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
                 self.start += 1
+                analysisi = self.frame_by_frame_segmentation(self.start, mask_coord)
+
+                # frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
+                # frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
+                # frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
+                # self.start += 1
+
             # Use connected components to find which shape is the nearest from the image center.
             if self.vars['several_blob_per_arena']:
-                self.origin = frame_i.binary_image
+                self.origin = analysisi.binary_image
             else:
-                nb_components, output, stats, centroids = connectedComponentsWithStats(frame_i.binary_image,
+                nb_components, output, stats, centroids = connectedComponentsWithStats(analysisi.binary_image,
                                                                                            connectivity=8)
                 if self.vars['first_detection_method'] == 'most_central':
                     center = array((self.dims[2] // 2, self.dims[1] // 2))
@@ -313,51 +334,13 @@ class MotionAnalysis:
                     for shape_i in arange(1, nb_components):
                         stats[shape_i - 1] = eudist(center, centroids[shape_i, :])
                     # The shape having the minimal euclidean distance from the center will be the original shape
+                    self.origin = zeros((self.dims[1], self.dims[2]), dtype=uint8)
                     self.origin[output == (argmin(stats) + 1)] = 1
                 elif self.vars['first_detection_method'] == 'largest':
+                    self.origin = zeros((self.dims[1], self.dims[2]), dtype=uint8)
                     self.origin[output == argmax(stats[1:, 4])] = 1
             self.origin_idx = nonzero(self.origin)
             self.substantial_growth = self.origin.sum() + 250
-        else:
-
-            """
-            ori_sum = self.origin.sum()
-            self.origin_idx = nonzero(self.origin)
-            sum_i = ori_sum
-            frame_list = []
-            # Loop until the shape grow above user defined threshold
-            while logical_and((ori_sum + self.vars['first_move_threshold']) > sum_i, t < self.dims[0] - 1):
-                t += 1
-                frame_i = self.converted_video[t, :, :].copy()
-                #ori_mean = mean(frame_i[self.origin_idx[0], self.origin_idx[1]])
-                #if self.vars['lighter_background']:
-                #    frame_i[self.origin_idx[0], self.origin_idx[1]] = 0
-                #    int_sample = frame_i[frame_i >= quantile(frame_i, 0.75)]
-                #else:  # Take typical dark pixels otherwise
-                #    frame_i[self.origin_idx[0], self.origin_idx[1]] = 255
-                #    int_sample = frame_i[frame_i <= quantile(frame_i, 0.25)]
-                #frame_i[self.origin_idx[0], self.origin_idx[1]] = int_sample[:len(self.origin_idx[0])]
-
-                frame_i = OneImageAnalysis(frame_i)
-                frame_i = OneImageAnalysis(frame_i)
-                #luminosity_threshold = round(absolute((mean(int_sample) - ori_mean) // 2))
-                frame_i.thresholding()
-                frame_list.append(frame_i.binary_image)
-                sum_i = frame_i.binary_image.sum()
-
-            self.start = t - 1
-            if len(frame_list) > 1:
-                self.origin, stats, centroids = cc(frame_list[-2])
-                self.origin[self.origin > 1] = 0
-            """
-            # Initialize the covering_intensity matrix as a reference for pixel fading
-            self.origin_idx = nonzero(self.origin)
-            if self.vars['origin_state'] == "fluctuating":
-                self.covering_intensity = self.origin * self.converted_video[0, :, :]
-            if self.vars['origin_state'] == "constant":
-                if self.vars['lighter_background']:
-                    self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
-            self.substantial_growth = 1.2 * self.origin.sum()
         ##
 
     def get_covering_duration(self, step):
@@ -366,13 +349,28 @@ class MotionAnalysis:
         self.substantial_time = self.start
         # To avoid noisy images to have deleterious effects, make sure that area area reaches the threshold thrice.
         occurrence = 0
+        if self.vars['drift_already_corrected']:
+            mask_coord = zeros((self.dims[0], 4), dtype=uint32)
+            for frame_i in arange(self.dims[0]):  # 100):#
+                true_pixels = nonzero(self.converted_video[frame_i, ...])
+                mask_coord[frame_i, :] = min(true_pixels[0]), max(true_pixels[0]), min(true_pixels[1]), max(
+                    true_pixels[1])
+        else:
+            mask_coord = None
         while logical_and(occurrence < 3, self.substantial_time < (self.dims[0] - step - 1)):
             self.substantial_time += step
-            growth_vision = OneImageAnalysis(self.converted_video[self.substantial_time, :, :])
-            # growth_vision.thresholding()
-            if self.vars['convert_for_motion']['logical'] != 'None':
-                growth_vision.image2 = self.converted_video2[self.substantial_time, ...]
-            growth_vision.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
+            growth_vision = self.frame_by_frame_segmentation(self.substantial_time, mask_coord)
+
+            # growth_vision = OneImageAnalysis(self.converted_video[self.substantial_time, :, :])
+            # # growth_vision.thresholding()
+            # if self.vars['convert_for_motion']['logical'] != 'None':
+            #     growth_vision.image2 = self.converted_video2[self.substantial_time, ...]
+            #
+            # growth_vision.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
+            #                            bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
+            #                            grid_segmentation=self.vars['grid_segmentation'],
+            #                            lighter_background=self.vars['lighter_background'])
+
             surfarea = sum(growth_vision.binary_image * self.borders)
             if surfarea > self.substantial_growth:
                 occurrence += 1
@@ -440,133 +438,33 @@ class MotionAnalysis:
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
         # Replace these 0 by normal background values before segmenting
-        if self.vars['drift_already_corrected']:
-            logging.info(f"Arena n°{self.statistics['arena']}. Adjust and segment each image to drift correction")
-            self.segmentation = zeros(self.dims, dtype=uint8)
-            # 1. Get the mask valid for a number of images around it (step).
-            mask_coord = zeros((self.dims[0], 4), dtype=uint32)
-            smoothed_vid = self.converted_video.copy()
-            if self.vars['convert_for_motion']['logical'] != 'None':
-                smoothed_vid2 = self.converted_video2.copy()
-            for frame_i in arange(self.dims[0]):#100):#
-                true_pixels = nonzero(self.converted_video[frame_i, ...])
-                mask_coord[frame_i, :] = min(true_pixels[0]), max(true_pixels[0]), min(true_pixels[1]), max(true_pixels[1])
-                smoothed_vid[frame_i, ...] = bracket_to_uint8_image_contrast(smoothed_vid[frame_i, ...])
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    smoothed_vid2[frame_i, ...] = bracket_to_uint8_image_contrast(smoothed_vid2[frame_i, ...])
-
-            for frame_i in arange(self.dims[0]):#20):#
-                # 1. Get the mask valid for a number of images around it (step).
-                if frame_i < self.step // 2:
-                    t_start = 0
-                    t_end = self.step
-                elif frame_i > (self.dims[0] - self.step // 2):
-                    t_start = self.dims[0] - self.step
-                    t_end = self.dims[0]
-                else:
-                    t_start = frame_i - (self.step // 2)
-                    t_end = frame_i + (self.step // 2)
-                min_y, max_y = max(mask_coord[t_start:t_end, 0]), min(mask_coord[t_start:t_end, 1])
-                min_x, max_x = max(mask_coord[t_start:t_end, 2]), min(mask_coord[t_start:t_end, 3])
-                # 3. Bracket the focal image
-                image_i = smoothed_vid[frame_i, min_y:(max_y + 1), min_x:(max_x + 1)].astype(float64)
-                image_i /= mean(image_i)
-                image_i = OneImageAnalysis(image_i)
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    image_i2 = smoothed_vid2[frame_i, min_y:(max_y + 1), min_x:(max_x + 1)]
-                    image_i2 /= mean(image_i2)
-                    image_i.image2 = image_i2
-                # image_i = bracket_to_uint8_image_contrast(image_i)
-                # frame_i = 0
-                image_i.bio_label = self.vars["bio_label"]
-                # true_image_mask = image_i.image != 0
-                # if frame_i == 0:
-                #     image_i.previous_binary_image = self.origin[min_y:(max_y + 1), min_x:(max_x + 1)]
-                # else:
-                #     image_i.previous_binary_image = self.segmentation[frame_i - 1, ...][min_y:(max_y + 1), min_x:(max_x + 1)]
-                image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
-                                     bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
-                if image_i.binary_image.sum() > self.segmentation[frame_i - 1, ...].sum() * (1 + self.vars['max_growth_per_frame']):
-                    image_i.binary_image = (image_i.image > (quantile(image_i.image, 0.9))).astype(uint8)
-                im = zeros(self.dims[1:], dtype=uint8)
-                im[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.image
-                image_i.image = im.copy()
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    im2 = zeros(self.dims[1:], dtype=uint8)
-                    im2[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.image2
-                    image_i.image2 = im2.copy()
-                bin_im = zeros(self.dims[1:], dtype=uint8)
-                bin_im[min_y:(max_y + 1), min_x:(max_x + 1)] = image_i.binary_image
-                image_i.binary_image = bin_im.copy()
-                self.segmentation[frame_i, ...] = image_i.binary_image
-
-                if self.vars['lose_accuracy_to_save_memory']:
-                    self.converted_video[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image)
-                else:
-                    self.converted_video[frame_i, ...] = image_i.image
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    if self.vars['lose_accuracy_to_save_memory']:
-                        self.converted_video2[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image2)
-                    else:
-                        self.converted_video2[frame_i, ...] = image_i.image2
-
-        elif self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
+        if self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
             logging.info(f"Arena n°{self.statistics['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
             self.segmentation = zeros(self.dims, dtype=uint8)
-            # but a background value instead of zeros at the border of the image
+            if self.vars['drift_already_corrected']:
+                logging.info(f"Arena n°{self.statistics['arena']}. Adjust images to drift correction and segment them")
+                # 1. Get the mask valid for a number of images around it (step).
+                mask_coord = zeros((self.dims[0], 4), dtype=uint32)
+                for frame_i in arange(self.dims[0]):#100):#
+                    true_pixels = nonzero(self.converted_video[frame_i, ...])
+                    mask_coord[frame_i, :] = min(true_pixels[0]), max(true_pixels[0]), min(true_pixels[1]), max(true_pixels[1])
+            else:
+                mask_coord = None
 
-            for frame_i in arange(self.dims[0]):#100):#
-                # frame_i = 0
-                image_i = self.converted_video[frame_i, ...].copy()
-                image_i = OneImageAnalysis(image_i)
-                image_i.bio_label = self.vars["bio_label"]
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    image_i.image2 = self.converted_video2[frame_i, ...].copy()
-                if frame_i == 0:
-                    image_i.previous_binary_image = self.origin
-                else:
-                    if self.vars['origin_state'] != "constant":
-                        image_i.previous_binary_image = self.segmentation[frame_i - 1, ...].copy()
-                image_i.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
-                                     bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"])
-                    # image_i.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
-                # See(frame.binary_image)
+            for t in arange(self.dims[0]):#20):#
+                analysisi = self.frame_by_frame_segmentation(t, mask_coord)
+                self.segmentation[t, ...] = analysisi.binary_image
+
                 if self.vars['lose_accuracy_to_save_memory']:
-                    self.converted_video[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image)
+                    self.converted_video[t, ...] = bracket_to_uint8_image_contrast(analysisi.image)
                 else:
-                    self.converted_video[frame_i, ...] = image_i.image
+                    self.converted_video[t, ...] = analysisi.image
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     if self.vars['lose_accuracy_to_save_memory']:
-                        self.converted_video2[frame_i, ...] = bracket_to_uint8_image_contrast(image_i.image2)
+                        self.converted_video2[t, ...] = bracket_to_uint8_image_contrast(analysisi.image2)
                     else:
-                        self.converted_video2[frame_i, ...] = image_i.image2
+                        self.converted_video2[t, ...] = analysisi.image2
 
-                # if self.vars['convert_for_motion']['logical'] != 'None':
-                #     image_i2 = OneImageAnalysis(self.converted_video2[frame_i, ...])
-                #     image_i2.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label2"])
-                #     if self.vars['convert_for_motion']['logical'] == 'Or':
-                #         image_i.binary_image = logical_or(image_i.binary_image, image_i2.binary_image)
-                #     elif self.vars['convert_for_motion']['logical'] == 'And':
-                #         image_i.binary_image = logical_and(image_i.binary_image, image_i2.binary_image)
-                #     elif self.vars['convert_for_motion']['logical'] == 'Xor':
-                #         image_i.binary_image = logical_xor(image_i.binary_image, image_i2.binary_image)
-                self.segmentation[frame_i, ...] = image_i.binary_image
-
-        # if self.vars['color_number'] > 2:
-        #     self.segmentation = zeros(self.dims, dtype=uint8)
-        #     for frame_i in arange(self.dims[0]):
-        #         image_i = OneImageAnalysis(self.converted_video[frame_i, ...])
-        #         image_i.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label"])
-        #         if self.vars['convert_for_motion']['logical'] != 'None':
-        #             image_i2 = OneImageAnalysis(self.converted_video2[frame_i, ...])
-        #             image_i2.kmeans(self.vars['color_number'], bio_label=self.vars["bio_label2"])
-        #             if self.vars['convert_for_motion']['logical'] == 'Or':
-        #                 image_i.binary_image = logical_or(image_i.binary_image, image_i2.binary_image)
-        #             elif self.vars['convert_for_motion']['logical'] == 'And':
-        #                 image_i.binary_image = logical_and(image_i.binary_image, image_i2.binary_image)
-        #             elif self.vars['convert_for_motion']['logical'] == 'Xor':
-        #                 image_i.binary_image = logical_xor(image_i.binary_image, image_i2.binary_image)
-        #         self.segmentation[frame_i, ...] = image_i.binary_image
         if self.vars['color_number'] == 2:
             luminosity_segmentation, l_threshold_over_time = self.lum_value_segmentation(self.converted_video, do_threshold_segmentation=self.vars['do_threshold_segmentation'] or compute_all_possibilities)
             self.converted_video = self.smooth_pixel_slopes(self.converted_video)
@@ -617,6 +515,72 @@ class MotionAnalysis:
                         self.segmentation = logical_or(luminosity_segmentation, gradient_segmentation)
                 self.segmentation = self.segmentation.astype(uint8)
         self.converted_video2 = None
+
+
+    def frame_by_frame_segmentation(self, t, mask_coord=None):
+
+        contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
+        if self.vars['convert_for_motion']['logical'] != 'None':
+            contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
+        # 1. Get the mask valid for a number of images around it (step).
+        if self.vars['drift_already_corrected']:
+            if t < self.step // 2:
+                t_start = 0
+                t_end = self.step
+            elif t > (self.dims[0] - self.step // 2):
+                t_start = self.dims[0] - self.step
+                t_end = self.dims[0]
+            else:
+                t_start = t - (self.step // 2)
+                t_end = t + (self.step // 2)
+            min_y, max_y = max(mask_coord[t_start:t_end, 0]), min(mask_coord[t_start:t_end, 1])
+            min_x, max_x = max(mask_coord[t_start:t_end, 2]), min(mask_coord[t_start:t_end, 3])
+            # 3. Bracket the focal image
+            image_i = contrasted_im[min_y:(max_y + 1), min_x:(max_x + 1)].astype(float64)
+            image_i /= mean(image_i)
+            image_i = OneImageAnalysis(image_i)
+            if self.vars['convert_for_motion']['logical'] != 'None':
+                image_i2 = contrasted_im2[min_y:(max_y + 1), min_x:(max_x + 1)]
+                image_i2 /= mean(image_i2)
+                image_i.image2 = image_i2
+            mask = (self.converted_video[t, ...] > 0).astype(uint8)
+        else:
+            mask = None
+        # 3. Bracket the focal image
+        if self.vars['grid_segmentation']:
+            int_variation_thresh = 100 - (ptp(contrasted_im) * 90 / 255)
+        else:
+            int_variation_thresh = None
+        analysisi = OneImageAnalysis(bracket_to_uint8_image_contrast(contrasted_im / mean(contrasted_im)))
+        if self.vars['convert_for_motion']['logical'] != 'None':
+            analysisi.image2 = bracket_to_uint8_image_contrast(contrasted_im2 / mean(contrasted_im2))
+
+        if t == 0:
+            analysisi.previous_binary_image = self.origin
+        else:
+            analysisi.previous_binary_image = self.segmentation[t - 1, ...].copy()
+
+        analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
+                               bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
+                               grid_segmentation=self.vars['grid_segmentation'],
+                               lighter_background=self.vars['lighter_background'],
+                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask)
+
+        # if self.vars['drift_already_corrected']:
+        #     im = zeros(self.dims[1:], dtype=uint8)
+        #     im[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.image
+        #     analysisi.image = im.copy()
+        #     if self.vars['convert_for_motion']['logical'] != 'None':
+        #         im2 = zeros(self.dims[1:], dtype=uint8)
+        #         im2[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.image2
+        #         analysisi.image2 = im2.copy()
+        #     bin_im = zeros(self.dims[1:], dtype=uint8)
+        #     bin_im[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.binary_image
+        #     analysisi.binary_image = bin_im.copy()
+        return analysisi
+
+        # 1. Get the mask valid for a number of images around it (step).
+
 
     def lum_value_segmentation(self, converted_video, do_threshold_segmentation):
         shape_motion_failed: bool = False
@@ -749,7 +713,10 @@ class MotionAnalysis:
                 converted_video[0, notoridx[0], notoridx[1]])
         necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 2 * 1.16415e-10
         available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-        derive = converted_video
+        if self.vars['lose_accuracy_to_save_memory']:
+            derive = converted_video.astype(float16)
+        else:
+            derive = converted_video.astype(float64)
         if necessary_memory > available_memory:
             converted_video = None
 
@@ -943,18 +910,21 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
+        new_shape = self.binary[self.t - 1, :, :].copy()
+        new_potentials = morphologyEx(new_potentials, MORPH_CLOSE, cross_33) # TO REMOVE!!!
+        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
+        new_shape = logical_or(new_shape, new_potentials).astype(uint8)
         # Add distant shapes within a radius, score every added pixels according to their distance
-        if self.vars['several_blob_per_arena']:
-            new_potentials *= self.borders
-            if self.vars['origin_state'] == "constant":
-                new_shape = logical_or(new_potentials, self.origin).astype(uint8)
-            else:
-                new_shape = new_potentials.copy()
-        else:
+        if not self.vars['several_blob_per_arena']:
+            # new_potentials *= self.borders
+            # if self.vars['origin_state'] == "constant":
+            #     new_shape = logical_or(new_potentials, self.origin).astype(uint8)
+            # else:
+            #     new_shape = new_potentials.copy()
+        # else:
             # Remove noise by opening and by keeping the shape within borders
-            new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
+            # new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
             ## Build the new shape state from the t-1 one
-            new_shape = self.binary[self.t - 1, :, :].copy()
             if new_shape.sum() == 0:
                 new_shape = new_potentials.copy()
             else:
@@ -1088,6 +1058,9 @@ class MotionAnalysis:
 
     def get_descriptors_from_binary(self, release_memory=True):
         ##
+        if self.vars['save_binary_masks']:
+            save(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                 smallest_memory_array(nonzero(self.binary), "uint"))
         if release_memory:
             self.substantial_image = None
             self.covering_intensity = None
@@ -1201,9 +1174,11 @@ class MotionAnalysis:
             colony_number = 0
             # time_descriptor_colony[27:(t+1), 0, :5]
             pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
+            previously_here = [0]
             for t in arange(self.dims[0]):#31):#
                 # t+=1
                 """ for each time step, compare each colony with the previously known picture of colonies. """
+                previous_colony_id_matrix = colony_id_matrix.copy()
                 # nb, shapes = connectedComponents(self.binary[t, :, :])
                 # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
                 # keeps the previous colony name.
@@ -1241,8 +1216,8 @@ class MotionAnalysis:
                             time_descriptor_colony = concatenate((time_descriptor_colony, zeros((self.dims[0], len(to_compute_from_sd), 100), dtype=float64)), axis=2)
                         self.statistics[f"appear_t_colony" + str(colony_number)] = t
                         nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                        self.statistics[f"appear_y_colony" + str(colony_number)] = str(centroids[1, 0])
-                        self.statistics[f"appear_x_colony" + str(colony_number)] = str(centroids[1, 1])
+                        self.statistics[f"appear_x_colony" + str(colony_number)] = str(centroids[1, 0])
+                        self.statistics[f"appear_y_colony" + str(colony_number)] = str(centroids[1, 1])
 
                     # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_names
                     elif len(colony_previous_names) > 0:
@@ -1272,8 +1247,8 @@ class MotionAnalysis:
                                                                             dtype=float64)), axis=2)
                             self.statistics["division_t_colony" + str(colony_number)] = t
                             nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                            self.statistics["division_y_colony" + str(colony_number)] = str(centroids[1, 0])
-                            self.statistics["division_x_colony" + str(colony_number)] = str(centroids[1, 1])
+                            self.statistics["division_x_colony" + str(colony_number)] = str(centroids[1, 0])
+                            self.statistics["division_y_colony" + str(colony_number)] = str(centroids[1, 1])
                         else:
                             # for col_name in colony_names:
                             #     colony_id_matrix[colony_id_matrix == col_name] = 0
@@ -1292,8 +1267,9 @@ class MotionAnalysis:
                             for colony_name in col_names:
                                 self.statistics["fusion_t_colony" + str(colony_name)] = t
                                 nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                                self.statistics["fusion_y_colony" + str(colony_number)] = str(centroids[1, 0])
-                                self.statistics["fusion_x_colony" + str(colony_number)] = str(centroids[1, 1])
+                                self.statistics["fusion_x_colony" + str(colony_number)] = str(centroids[1, 0])
+                                self.statistics["fusion_y_colony" + str(colony_number)] = str(centroids[1, 1])
+
                     updated_colony_names = append(updated_colony_names, colony_names)
                     # Compute the current colony descriptors
                     SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
@@ -1311,9 +1287,23 @@ class MotionAnalysis:
                     # Save all colony descriptors in the time_descriptor_colony array:
                     # if the current_colony has several colony names, repeat descriptors in each colony column
                     time_descriptor_colony[t, :, (colony_names - 1)] = tile(list(SD.descriptors.values()), (colony_names.size, 1))
+
                 # if any(colony_id_matrix == 3) | any(colony_id_matrix==4):
                 #     logging.info(f'here t = {t} and c = {colony}')
                 colony_id_matrix *= self.binary[t, :, :]
+                currently_here = unique(colony_id_matrix)
+                disappeared_colonies = ~(isin(previously_here, currently_here))
+                if any(disappeared_colonies):
+                    disappeared_colonies = previously_here[disappeared_colonies]
+                    for disappeared_colony in disappeared_colonies:
+                        self.statistics[f"disappear_t_colony" + str(colony_number)] = t - 1
+                        nb, small_shape, centroids, stats = connectedComponentsWithStats(
+                            (previous_colony_id_matrix == disappeared_colony).astype(uint8))
+                        self.statistics[f"disappear_x_colony" + str(colony_number)] = str(centroids[1, 0])
+                        self.statistics[f"disappear_y_colony" + str(colony_number)] = str(centroids[1, 1])
+                previously_here = currently_here.copy()
+
+
                 # logging.info(t)
                 # imshow("colony_id_matrix", resize(self.binary[t, ...] * 20, (300, 300)))
                 # waitKey(0)
@@ -1941,9 +1931,6 @@ class MotionAnalysis:
                                           self.vars["contour_color"], 255), 3)
 
     def save_video(self):
-        if self.vars['save_binary_masks']:
-            save(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                 smallest_memory_array(nonzero(self.binary), "uint"))
 
         if self.vars['save_processed_videos']:
             self.check_converted_video_type()
@@ -2076,11 +2063,14 @@ class MotionAnalysis:
                     stats = read_csv(file, header=0, sep=";")
                 for stat_name, stat_value in self.statistics.items():
                     if stat_name in stats.columns:
-                        stats.loc[(self.statistics['arena'] - 1), stat_name] = array(list(self.statistics[stat_name], dtype=uint32)
+                        stats.loc[(self.statistics['arena'] - 1), stat_name] = uint32(self.statistics[stat_name])
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
+            except Exception as e:
+                logging.error(f"{e}")
+                create_new_csv = True
             # if len(self.statistics) == len(stats.columns):
             #     try:
             #         with open(f"one_row_per_arena.csv", 'w') as file:
@@ -2136,6 +2126,9 @@ class MotionAnalysis:
                 #     create_new_csv = True
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
+            except Exception as e:
+                logging.error(f"{e}")
+                create_new_csv = True
         else:
             create_new_csv = True
         if create_new_csv:

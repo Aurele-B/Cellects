@@ -89,14 +89,15 @@ class NetworkDetection:
                                 if x_end < network.shape[1]:
                                     if np.any(cropped_binary_image[y_start:y_end, x_start:x_end]):
                                         potential_network = cropped_grayscale_image[y_start:y_end, x_start:x_end]
-                                        if ptp(potential_network[nonzero(potential_network)]) < int_variation_thresh:
-                                            self.homogeneities[y_start:y_end, x_start:x_end] += 1
-                                        threshold = get_otsu_threshold(potential_network)
-                                        if self.lighter_background:
-                                            net_coord = np.nonzero(potential_network < threshold)
-                                        else:
-                                            net_coord = np.nonzero(potential_network > threshold)
-                                        network[y_start + net_coord[0], x_start + net_coord[1]] += 1
+                                        if np.any(potential_network):
+                                            if ptp(potential_network[nonzero(potential_network)]) < int_variation_thresh:
+                                                self.homogeneities[y_start:y_end, x_start:x_end] += 1
+                                            threshold = get_otsu_threshold(potential_network)
+                                            if self.lighter_background:
+                                                net_coord = np.nonzero(potential_network < threshold)
+                                            else:
+                                                net_coord = np.nonzero(potential_network > threshold)
+                                            network[y_start + net_coord[0], x_start + net_coord[1]] += 1
 
         self.network = np.zeros(self.binary_image.shape, np.uint8)
         self.network[self.min_y:self.max_y, self.min_x:self.max_x] = (network >= (side_length // step)).astype(np.uint8)
