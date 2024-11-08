@@ -11,6 +11,8 @@ import cv2  # named opencv-python
 import multiprocessing.pool as mp
 from numba.typed import List as TList
 from numba.typed import Dict as TDict
+from numpy.core.numeric import ones_like
+
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import get_all_color_spaces, generate_color_space_combination, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
@@ -96,10 +98,13 @@ class OneImageAnalysis:
         # self.image = np.round(self.image).astype(np.uint8)
 
     def convert_and_segment(self, c_space_dict, color_number=2, biomask=None,
-                            backmask=None, subtract_background=None, subtract_background2=None):
+                            backmask=None, subtract_background=None, subtract_background2=None, grid_segmentation=False,
+                            lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):
 
         if self.already_greyscale:
-            self.segmentation(logical='None', color_number=2, biomask=biomask, backmask=backmask)
+            self.segmentation(logical='None', color_number=2, biomask=biomask, backmask=backmask,
+                              grid_segmentation=grid_segmentation, lighter_background=lighter_background,
+                              side_length=side_length, step=step, int_variation_thresh=int_variation_thresh, mask=mask)
         else:
             if len(self.all_c_spaces) == 0:
                 self.all_c_spaces = get_all_color_spaces(self.bgr)
@@ -116,7 +121,10 @@ class OneImageAnalysis:
             self.image = generate_color_space_combination(first_dict, self.all_c_spaces, subtract_background)
             if len(second_dict) > 0:
                 self.image2 = generate_color_space_combination(second_dict, self.all_c_spaces, subtract_background2)
-                self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask, backmask=backmask)
+                self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
+                                  backmask=backmask, grid_segmentation=grid_segmentation,
+                                  lighter_background=lighter_background, side_length=side_length, step=step,
+                                  int_variation_thresh=int_variation_thresh, mask=mask)
 
             else:
 
@@ -134,7 +142,9 @@ class OneImageAnalysis:
                 # self.image = 255 * (self.image / np.max(self.image))
 
                 self.segmentation(logical='None', color_number=color_number, biomask=biomask,
-                                  backmask=backmask)
+                                  backmask=backmask, grid_segmentation=grid_segmentation,
+                                  lighter_background=lighter_background, side_length=side_length, step=step,
+                                  int_variation_thresh=int_variation_thresh, mask=mask)
                 #
                 # if subtract_background is not None:
                 #     if self.image.sum() > subtract_background.sum():
@@ -147,13 +157,20 @@ class OneImageAnalysis:
                 # else:
                 #     self.binary_image = otsu_thresholding(self.image)
 
-    def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None):
+    def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None, grid_segmentation=False, lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):
         if (color_number > 2): #  and (biomask is not None or backmask is not None)
             # if logical != 'None':
             #     self.kmeans(color_number, biomask, backmask, logical)
                 # binary_image2 = self.binary_image.copy()
                 # self.bio_label2 = self.bio_label
             self.kmeans(color_number, biomask, backmask, logical, bio_label, bio_label2)
+        elif grid_segmentation:
+            if lighter_background is None:
+                self.binary_image = otsu_thresholding(self.image)
+                lighter_background = self.binary_image.sum() > (self.binary_image.size / 2)
+            if int_variation_thresh is None:
+                int_variation_thresh =100 - (np.ptp(self.image) * 90 / 255)
+            self.grid_segmentation(lighter_background, side_length, step, int_variation_thresh, mask)
         else:
             # logging.info("Segment the image using Otsu thresholding")
             self.binary_image = otsu_thresholding(self.image)
@@ -207,7 +224,7 @@ class OneImageAnalysis:
         logging.info("Generate background using the generate_subtract_background method of OneImageAnalysis class")
         if len(self.all_c_spaces) == 0 and not self.already_greyscale:
             self.all_c_spaces = get_all_color_spaces(self.bgr)
-        self.convert_and_segment(c_space_dict)
+        self.convert_and_segment(c_space_dict, grid_segmentation=False)
         # self.image = generate_color_space_combination(c_space_dict, self.all_c_spaces)
         disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
         disk = np.uint8(Ellipse((disk_size, disk_size)).create())
@@ -906,6 +923,87 @@ class OneImageAnalysis:
         binarization = np.zeros_like(self.binary_image)
         binarization[np.nonzero(self.binary_image == grey_idx)] = 1
         self.binary_image = binarization
+
+    def grid_segmentation(self, lighter_background, side_length=8, step=2, int_variation_thresh=20, mask=None):
+        """
+        Segment small squares of the images to detect local intensity valleys
+        This method segment the image locally using otsu thresholding on a rolling window
+        :param side_length: The size of the window to detect the blobs
+        :type side_length: uint8
+        :param step:
+        :type step: uint8
+        :return:
+        """
+        if len(self.image.shape) == 3:
+            print("Image is not Grayscale")
+        if mask is None:
+            min_y = 0
+            min_x = 0
+            y_size = self.image.shape[0]
+            x_size = self.image.shape[1]
+            max_y = y_size + 1
+            max_x = x_size + 1
+            mask = ones_like(self.image)
+        else:
+            y, x = np.nonzero(mask)
+            min_y = np.min(y)
+            if (min_y - 20) >= 0:
+                min_y -= 20
+            else:
+                min_y = 0
+            max_y = np.max(y) + 1
+            if (max_y + 20) < mask.shape[0]:
+                max_y += 20
+            else:
+                max_y = mask.shape[0] - 1
+            min_x = np.min(x)
+            if (min_x - 20) >= 0:
+                min_x -= 20
+            else:
+                min_x = 0
+            max_x = np.max(x) + 1
+            if (max_x + 20) < mask.shape[1]:
+                max_x += 20
+            else:
+                max_x = mask.shape[1] - 1
+            y_size = max_y - min_y
+            x_size = max_x - min_x
+        grid_image = np.zeros((y_size, x_size), np.uint64)
+        homogeneities = np.zeros((y_size, x_size), np.uint64)
+        cropped_mask = mask[min_y:max_y, min_x:max_x]
+        cropped_image = self.image[min_y:max_y, min_x:max_x]
+        # will be more efficient if it only loops over a zoom on self.mask == 1
+        for to_add in np.arange(0, side_length, step):
+            y_windows = np.arange(0, y_size, side_length)
+            x_windows = np.arange(0, x_size, side_length)
+            y_windows += to_add
+            x_windows += to_add
+            for y_start in y_windows:
+                # y_start = 4
+                if y_start < self.image.shape[0]:
+                    y_end = y_start + side_length
+                    if y_end < self.image.shape[0]:
+                        for x_start in x_windows:
+                            if x_start < self.image.shape[1]:
+                                x_end = x_start + side_length
+                                if x_end < self.image.shape[1]:
+                                    if np.any(cropped_mask[y_start:y_end, x_start:x_end]):
+                                        potential_detection = cropped_image[y_start:y_end, x_start:x_end]
+                                        if np.any(potential_detection):
+                                            if np.ptp(potential_detection[np.nonzero(potential_detection)]) < int_variation_thresh:
+                                                homogeneities[y_start:y_end, x_start:x_end] += 1
+
+                                            threshold = get_otsu_threshold(potential_detection)
+                                            if lighter_background:
+                                                net_coord = np.nonzero(potential_detection < threshold)
+                                            else:
+                                                net_coord = np.nonzero(potential_detection > threshold)
+                                            grid_image[y_start + net_coord[0], x_start + net_coord[1]] += 1
+
+        self.binary_image = np.zeros(self.image.shape, np.uint8)
+        self.binary_image[min_y:max_y, min_x:max_x] = (grid_image >= (side_length // step)).astype(np.uint8)
+        self.binary_image[min_y:max_y, min_x:max_x][homogeneities >= (((side_length // step) // 2) + 1)] = 0
+
 
     """
         III/ Use validated shapes to exclude from analysis the image parts that are far from them

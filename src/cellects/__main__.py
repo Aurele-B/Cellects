@@ -49,7 +49,7 @@ if __name__ == "__main__":
     run_cellects()
 
 """
-Remove: 
+Put CLOSE before: 
             new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
 
 """

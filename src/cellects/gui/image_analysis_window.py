@@ -640,6 +640,8 @@ class ImageAnalysisWindow(WindowType):
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
         self.distinct_colors_number.setVisible(is_checked and at_least_one_line_drawn and self.parent().po.all["more_than_two_colors"])
+        self.grid_segmentation.setVisible(is_checked)
+        self.grid_segmentation_label.setVisible(is_checked)
 
         for i in range(5):
             self.row1[i].setVisible(color_analysis and self.row1[0].currentText() != "None")
@@ -1217,6 +1219,29 @@ class ImageAnalysisWindow(WindowType):
         self.edit_layout.addWidget(self.csc_scroll_table)
         self.edit_layout.addItem(self.vertical_space)
 
+        # 6) Open the grid_segmentation row layout
+        self.grid_segmentation_widget = QtWidgets.QWidget()
+        self.grid_segmentation_layout = QtWidgets.QHBoxLayout()
+        try:
+            self.parent().po.vars["grid_segmentation"]
+        except KeyError:
+            self.parent().po.vars["grid_segmentation"] = False
+        self.grid_segmentation = Checkbox(self.parent().po.vars["grid_segmentation"])
+        self.grid_segmentation.setStyleSheet("margin-left:0%; margin-right:-10%;")
+        self.grid_segmentation.stateChanged.connect(self.grid_segmentation_option)
+
+        self.grid_segmentation_label = FixedText("Grid segmentation",
+                                                    tip="Segment small squares of the images to detect local intensity valleys\nThis method segment the image locally using otsu thresholding on a rolling window", night_mode=self.parent().po.all['night_mode'])
+        self.grid_segmentation_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        # self.more_than_two_colors_label.setFixedWidth(300)
+        self.grid_segmentation_label.setAlignment(QtCore.Qt.AlignLeft)
+
+        self.grid_segmentation_layout.addWidget(self.grid_segmentation)
+        self.grid_segmentation_layout.addWidget(self.grid_segmentation_label)
+        self.grid_segmentation_layout.addItem(self.horizontal_space)
+        self.grid_segmentation_widget.setLayout(self.grid_segmentation_layout)
+        self.edit_layout.addWidget(self.grid_segmentation_widget)
+
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
         self.more_than_2_colors_layout = QtWidgets.QHBoxLayout()
@@ -1236,6 +1261,8 @@ class ImageAnalysisWindow(WindowType):
         self.more_than_two_colors.setVisible(False)
         self.more_than_two_colors_label.setVisible(False)
         self.distinct_colors_number.setVisible(False)
+        self.grid_segmentation.setVisible(False)
+        self.grid_segmentation_label.setVisible(False)
 
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
@@ -1443,6 +1470,9 @@ class ImageAnalysisWindow(WindowType):
             self.csc_dict_is_empty = True
         else:
             self.csc_dict_is_empty = False
+
+    def grid_segmentation_option(self):
+        self.parent().po.vars["grid_segmentation"] = self.grid_segmentation.isChecked()
 
     def display_more_than_two_colors_option(self):
         """ should not do

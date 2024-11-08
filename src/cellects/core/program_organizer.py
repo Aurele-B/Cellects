@@ -608,12 +608,18 @@ class ProgramOrganizer:
     def fast_image_segmentation(self, is_first_image, biomask=None, backmask=None, spot_size=None):
         if is_first_image:
             self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                                 self.all["bio_mask"], self.all["back_mask"], subtract_background=None, subtract_background2=None)
+                                                 self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
+                                                 subtract_background2=None, grid_segmentation=False)
             if not self.first_image.drift_correction_already_adjusted:
                 self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
                 if self.vars['drift_already_corrected']:
-                    logging.info("Cellects detected that images has already been corrected for drift")
+                    logging.info("Cellects detected that the images have already been corrected for drift")
                     self.first_image.adjust_to_drift_correction(self.vars['convert_for_origin']['logical'])
+            if self.vars["grid_segmentation"]:
+                self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
+                                                     self.all["bio_mask"], self.all["back_mask"],
+                                                     subtract_background=None,
+                                                     subtract_background2=None, grid_segmentation=True)
 
             # self.first_image.binary_image = round(self.first_image.binary_image).astype(uint8)
             self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
@@ -652,8 +658,9 @@ class ProgramOrganizer:
             self.cropping(is_first_image=False)
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
-                                                self.first_image.subtract_background2)
-            if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted:
+                                                self.first_image.subtract_background2,
+                                                grid_segmentation=self.vars["grid_segmentation"])
+            if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
                 self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
             # if not self.last_image.cropped:
             #     self.last_image.crop_images(self.first_image.crop_coord)
@@ -1119,7 +1126,9 @@ class ProgramOrganizer:
         if self.vars['origin_state'] == "invisible":
             binary_image = self.first_image.binary_image.copy()
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                                 None, None, subtract_background=None, subtract_background2=None)
+                                                 None, None, subtract_background=None,
+                                                 subtract_background2=None,
+                                                 grid_segmentation=self.vars["grid_segmentation"])
             covered_values = self.first_image.image[nonzero(binary_image)]
             if self.vars['lighter_background']:
                 if max(covered_values) < 255:
