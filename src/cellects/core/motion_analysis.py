@@ -25,7 +25,7 @@ from numpy import (
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
     isin, repeat, tile, stack, concatenate, logical_and, logical_or,
     logical_xor, float16, less, greater, save, sign, uint8, int8, logical_not, load,
-    uint32, float64, expand_dims, min, max, any)
+    uint32, float64, expand_dims, min, max, any, row_stack, column_stack)
 from numpy.ma.core import ones_like, logical_not
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
@@ -302,7 +302,7 @@ class MotionAnalysis:
                 self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
             self.substantial_growth = 1.2 * self.origin.sum()
         else:
-            self.start = - 1
+            self.start = 0
             analysisi = OneImageAnalysis(self.converted_video[0, :, :])
             analysisi.binary_image = 0
             if self.vars['drift_already_corrected']:
@@ -314,8 +314,8 @@ class MotionAnalysis:
             else:
                 mask_coord = None
             while logical_and(sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
-                self.start += 1
                 analysisi = self.frame_by_frame_segmentation(self.start, mask_coord)
+                self.start += 1
 
                 # frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
                 # frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
@@ -1141,25 +1141,76 @@ class MotionAnalysis:
                 if isin('minor_axis_len', to_compute_from_sd):
                     self.whole_shape_descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
         else:
-            # # I/ Create a dataset, to test this script
-            # self.binary = zeros((8, 20, 20), dtype=uint8)
-            # self.dims = self.binary.shape
-            # self.binary[0, 4:8, 4:8] = 1
-            # self.binary[1, 4:14, 4:12] = 1
-            # self.binary[2, 7:14, 7:12] = 1
-            # # one new colony appear
-            # self.binary[3, 7:14, 7:12] = 1
-            # self.binary[3, 15:17, 14:17] = 1
-            # self.binary[4, 7:14, 7:12] = 1
-            # self.binary[4, 15:18, 14:18] = 1
-            # # The two colonies fuse
-            # self.binary[5, 8:18, 8:18] = 1
-            # self.binary[6, 4:18, 4:18] = 1
-            # # The big colony divide into 2 colonies
-            # self.binary[7, 4:10, 4:10] = 1
-            # self.binary[7, 14:18, 14:18] = 1
+            # Objective: create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies
+            # against time
+            self.statistics["first_move"] = 1
+            colony_id_matrix = zeros(self.dims[1:], dtype=uint64)
+            coord_colonies = zeros(4, dtype=uint32)
+            colony_number = 0
+            pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
+            for t in arange(self.dims[0]):  #31):#
+                # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
+                # keeps the previous colony name.
+                shapes, stats, centers = cc(self.binary[t, :, :])
 
-            # II/ Test the script
+                nb = stats.shape[0]
+                current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
+                logging.info(f"Arena n°{self.statistics['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
+                updated_colony_names = zeros(1, dtype=uint32)
+                for colony in (arange(nb - 1) + 1):  # 120)):# #92
+                    # colony = 1
+                    # colony+=1
+                    # logging.info(f'Colony number {colony}')
+                    current_colony_img = (shapes == colony).astype(uint8)
+
+                    # I/ Find out which names the current colony had at t-1
+                    colony_previous_names = unique(current_colony_img * colony_id_matrix)
+                    colony_previous_names = colony_previous_names[colony_previous_names != 0]
+                    # II/ Find out if the current colony name had already been analyzed at t
+                    # If there no match with the saved colony_id_matrix, its a new colony, lets add it
+                    if t == 1 or len(colony_previous_names) == 0:
+                        # logging.info("New colony")
+                        colony_number += 1
+                        colony_coord = array(nonzero(current_colony_img), dtype=uint32)
+                        colony_names = [colony_number]
+                    # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_name(s)
+                    else:
+                        # This colony already existed: The colony_previous_names becomes the current colony_names
+                        colony_names = colony_previous_names
+                        colony_coord = nonzero(current_colony_img)
+                        # If any of the current colony names already are in updated_colony_names, it means that a
+                        # consistent colony from t-1 split into several (at least 2) colonies at t.
+                        result_from_colony_division: bool = False
+                        for name in colony_names:
+                            if isin(name, updated_colony_names):
+                                result_from_colony_division = True
+                            if result_from_colony_division:
+                                break
+                        if result_from_colony_division:
+                            # logging.info("This colony emerged from the division of a parent colony")
+                            # We must add it as a new colony
+                            colony_number += 1
+                            colony_names = [colony_number]
+
+                    pixel_nb = len(colony_coord[0])
+                    colony_id_matrix[colony_coord] = colony_names[0]
+                    coord_colonies = row_stack((coord_colonies, column_stack((repeat(t, pixel_nb).astype(uint32),
+                        colony_coord[0], colony_coord[1], repeat(colony_names[0], pixel_nb).astype(uint32)))))
+                    updated_colony_names = append(updated_colony_names, colony_names)
+                colony_id_matrix *= self.binary[t, :, :]
+            coord_colonies = coord_colonies[1:, :]
+
+            if self.vars['save_binary_masks']:
+                save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                     smallest_memory_array(nonzero(self.binary), "uint"))
+
+            from numpy import array_equal, zeros_like
+            a = zeros_like(self.binary[t, ...])
+            coord_t = coord_colonies[coord_colonies[:, 0] == t, :]
+            a[coord_t[:, 1], coord_t[:,2]] = 1
+            See(a)
+            array_equal(self.binary[t, ...] > 0, a)
+            ####
 
             self.statistics["first_move"] = 1
             colony_id_matrix = zeros(self.dims[1:], dtype=uint64)
@@ -1203,7 +1254,6 @@ class MotionAnalysis:
                     colony_previous_names = unique(current_colony_img * colony_id_matrix)
                     colony_previous_names = colony_previous_names[colony_previous_names != 0]
                     # II/ Find out if the current colony names had already been analyzed at t
-
                     # If there no match with the saved colony_id_matrix, its a new colony, lets add it
                     if len(colony_previous_names) == 0:
                         # logging.info("here is a new colony")
@@ -1303,23 +1353,6 @@ class MotionAnalysis:
                         self.statistics[f"disappear_y_colony" + str(colony_number)] = str(centroids[1, 1])
                 previously_here = currently_here.copy()
 
-
-                # logging.info(t)
-                # imshow("colony_id_matrix", resize(self.binary[t, ...] * 20, (300, 300)))
-                # waitKey(0)
-                # destroyAllWindows()
-                # logging.info(unique(colony_id_matrix))
-                # imshow("colony_id_matrix", resize(colony_id_matrix *20, (300,300)))
-                # waitKey(0)
-                # destroyAllWindows()
-
-            # fuse = 0
-            # split = 0
-            # for k, v in self.statistics.items():
-            #     if k[:5] == 'fusio':
-            #         fuse += 1
-            #     elif k[:5] == 'divis':
-            #         split += 1
 
             # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
             self.whole_shape_descriptors = df()
