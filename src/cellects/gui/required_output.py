@@ -68,7 +68,7 @@ class RequiredOutput(WindowType):
 
         try:
             self.parent().po.vars['save_binary_masks']
-        except NameError:
+        except KeyError or NameError:
             self.parent().po.vars['save_binary_masks'] = False
         self.binary_mask = Checkbox(self.parent().po.vars['save_binary_masks'])
         self.binary_mask.stateChanged.connect(self.binary_mask_saving)
