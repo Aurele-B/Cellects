@@ -211,85 +211,41 @@ class NetworkDetection:
         self.skeleton = morphology.skeletonize(self.network)
 
 
-    def detect_nodes(self):
+    def get_nodes(self):
         """
-        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
         :return:
         """
-        # Nous calculons le nombre de voisins pour chaque pixel du squelette
         cnv = CompareNeighborsWithValue(self.skeleton, 8)
         cnv.is_equal(1, and_itself=True)
-        neighbor_counts = cnv.equal_neighbor_nb
 
-        # Identification des nœuds : pixels avec 1 ou plus de 2 voisins
-        nodes = ((neighbor_counts == 1) | (neighbor_counts > 2)) & self.skeleton
+        # All pixels having only one neighbor, and containing the value 1, is a termination for sure
+        sure_terminations = np.zeros_like(self.network)
+        sure_terminations[cnv.equal_neighbor_nb == 1] = 1
 
-        # Étiquetage des nœuds
-        labeled_nodes, num_labels = ndimage.label(nodes, structure=np.ones((3, 3), dtype=np.uint8))
+        # Create a kernel to dilate properly the known nodes.
+        square_33 = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=uint8)
+        # Initiate the nodes final matrix as a copy of the sure_terminations
+        self.nodes = sure_terminations.copy()
+        # All pixels that have neighbor_nb neighbors, none of which is already detected as a node.
+        for i, neighbor_nb in enumerate([8, 7, 6, 5, 4, 3]):
+            # All pixels having neighbor_nb neighbor are potential nodes
+            potential_node = np.zeros_like(self.skeleton)
+            potential_node[cnv.equal_neighbor_nb == neighbor_nb] = 1
+            # remove the false intersections that are a neighbor of a previously detected intersection
+            # Dilate nodes to make sure that no neighbors of the current potential nodes are already nodes.
+            dilated_previous_intersections = cv2.dilate(self.nodes, square_33)
+            potential_node *= (1 - dilated_previous_intersections)
+            self.nodes[nonzero(potential_node)] = 1
 
-        # Positions des nœuds
-        node_positions = ndimage.center_of_mass(nodes, labeled_nodes, range(1, num_labels + 1))
-        # Conversion des positions en entiers
-        node_positions = [tuple(map(int, pos)) for pos in node_positions]
-        # Création d'un mapping label -> position
-        label_to_position = {label: pos for label, pos in zip(range(1, num_labels + 1), node_positions)}
 
-        return labeled_nodes, label_to_position
-
-
-    def find_segments(self, labeled_nodes, label_to_position):
+    def get_graph(self):
         """
-        Function written By Houssam Henni, adapted for Cellects by Aurèle Boussard
         :return:
         """
-        # Suppression des nœuds du squelette
-        skeleton_wo_nodes = self.skeleton.copy()
-        skeleton_wo_nodes[labeled_nodes > 0] = 0
+        self.graph = self.skeleton.copy()
+        self.get_nodes()
+        self.graph[self.nodes > 0] = 2
 
-        # Détection des segments (composantes connectées sans les nœuds)
-        num_labels, labels = cv2.connectedComponents(skeleton_wo_nodes.astype(np.uint8))
-        segments = []
-
-        for label in range(1, num_labels):
-            segment_mask = (labels == label)
-            coords = np.column_stack(np.where(segment_mask))
-
-            # Dilatation du segment pour trouver les nœuds adjacents
-            dilated_segment = morphology.binary_dilation(segment_mask, morphology.disk(2))
-            overlapping_nodes = labeled_nodes * dilated_segment
-            node_labels = np.unique(overlapping_nodes[overlapping_nodes > 0])
-
-            if len(node_labels) >= 2:
-                # Si au moins deux nœuds sont connectés, on trouve les deux plus éloignés
-                node_positions = [label_to_position[n_label] for n_label in node_labels]
-                distances = np.sum((np.array(node_positions)[:, None] - np.array(node_positions)[None, :]) ** 2, axis=2)
-                idx_max = np.unravel_index(np.argmax(distances), distances.shape)
-                start_label = node_labels[idx_max[0]]
-                end_label = node_labels[idx_max[1]]
-                start_pos = label_to_position[start_label]
-                end_pos = label_to_position[end_label]
-                segments.append({
-                    'start_label': start_label,
-                    'end_label': end_label,
-                    'start_pos': start_pos,
-                    'end_pos': end_pos,
-                    'coords': coords
-                })
-            elif len(node_labels) == 1:
-                # Si un seul nœud est connecté, on trouve l'extrémité la plus éloignée
-                start_label = node_labels[0]
-                start_pos = label_to_position[start_label]
-                distances = np.sum((coords - np.array(start_pos)) ** 2, axis=1)
-                idx_max = np.argmax(distances)
-                end_pos = tuple(coords[idx_max])
-                segments.append({
-                    'start_label': start_label,
-                    'end_label': None,
-                    'start_pos': start_pos,
-                    'end_pos': end_pos,
-                    'coords': coords
-                })
-        return segments
 
     def extract_node_degrees(self, segments):
         """

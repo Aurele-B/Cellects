@@ -23,9 +23,9 @@ from numpy import (
     c_, char, floor, pad, append, round, ceil, uint64, float32, absolute, sum,
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
-    isin, repeat, tile, stack, concatenate, logical_and, logical_or,
+    isin, repeat, tile, stack, concatenate, logical_and, logical_or,vstack,
     logical_xor, float16, less, greater, save, sign, uint8, int8, logical_not, load,
-    uint32, float64, expand_dims, min, max, any, row_stack, column_stack)
+    uint32, float64, expand_dims, min, max, any, row_stack, column_stack, full)
 from numpy.ma.core import ones_like, logical_not
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
@@ -1145,17 +1145,33 @@ class MotionAnalysis:
             # against time
             self.statistics["first_move"] = 1
             colony_id_matrix = zeros(self.dims[1:], dtype=uint64)
-            coord_colonies = zeros(4, dtype=uint32)
+            coord_colonies = []
+            centroids = []
+
+            max_colonies = 0
+            for t in arange(self.dims[0]):
+                nb, shapes = connectedComponents(self.binary[t, :, :])
+                max_colonies = max((max_colonies, nb))
+
+            time_descriptor_colony = zeros((self.dims[0], len(to_compute_from_sd) * max_colonies * self.dims[0]),
+                                              dtype=float32)  # Adjust max_colonies
             colony_number = 0
+
             pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
-            for t in arange(self.dims[0]):  #31):#
+            for t in arange(self.dims[0]):  #21):#
+                # t=0
+                # t+=1
                 # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
                 # keeps the previous colony name.
                 shapes, stats, centers = cc(self.binary[t, :, :])
 
-                nb = stats.shape[0]
+                # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
+                nb = stats[stats[:, 4] >= 4].shape[0]
+
+                # nb = stats.shape[0]
                 current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
                 logging.info(f"Arena n°{self.statistics['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
+
                 updated_colony_names = zeros(1, dtype=uint32)
                 for colony in (arange(nb - 1) + 1):  # 120)):# #92
                     # colony = 1
@@ -1167,49 +1183,133 @@ class MotionAnalysis:
                     colony_previous_names = unique(current_colony_img * colony_id_matrix)
                     colony_previous_names = colony_previous_names[colony_previous_names != 0]
                     # II/ Find out if the current colony name had already been analyzed at t
-                    # If there no match with the saved colony_id_matrix, its a new colony, lets add it
-                    if t == 1 or len(colony_previous_names) == 0:
+                    # If there no match with the saved colony_id_matrix, assign colony ID
+                    if t == 0 or len(colony_previous_names) == 0:
                         # logging.info("New colony")
                         colony_number += 1
-                        colony_coord = array(nonzero(current_colony_img), dtype=uint32)
                         colony_names = [colony_number]
                     # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_name(s)
                     else:
-                        # This colony already existed: The colony_previous_names becomes the current colony_names
-                        colony_names = colony_previous_names
-                        colony_coord = nonzero(current_colony_img)
-                        # If any of the current colony names already are in updated_colony_names, it means that a
-                        # consistent colony from t-1 split into several (at least 2) colonies at t.
-                        result_from_colony_division: bool = False
-                        for name in colony_names:
-                            if isin(name, updated_colony_names):
-                                result_from_colony_division = True
-                            if result_from_colony_division:
-                                break
-                        if result_from_colony_division:
-                            # logging.info("This colony emerged from the division of a parent colony")
-                            # We must add it as a new colony
-                            colony_number += 1
-                            colony_names = [colony_number]
+                        colony_names = colony_previous_names.tolist()
+                    # Handle colony division if necessary
+                    if any(isin(updated_colony_names, colony_names)):
+                        colony_number += 1
+                        colony_names = [colony_number]
 
-                    pixel_nb = len(colony_coord[0])
-                    colony_id_matrix[colony_coord] = colony_names[0]
-                    coord_colonies = row_stack((coord_colonies, column_stack((repeat(t, pixel_nb).astype(uint32),
-                        colony_coord[0], colony_coord[1], repeat(colony_names[0], pixel_nb).astype(uint32)))))
+                    # Update colony ID matrix for the current frame
+                    coords = nonzero(current_colony_img)
+                    colony_id_matrix[coords[0], coords[1]] = colony_names[0]
+
+                    # Add coordinates to coord_colonies
+                    time_column = full(coords[0].shape, t, dtype=uint32)
+                    colony_column = full(coords[0].shape, colony_names[0], dtype=uint32)
+                    coord_colonies.append(column_stack((time_column, colony_column, coords[0], coords[1])))
+
+                    # Calculate centroid and add to centroids list
+                    centroid_x, centroid_y = centers[colony, :]
+                    centroids.append((t, colony_names[0], centroid_y, centroid_x))
+                    if colony_names[0] != colony_column[0]:
+                        print("here")
+                        break
+
+                    # Compute shape descriptors
+                    SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
+                    descriptors = list(SD.descriptors.values())
+                    # Adjust descriptors if output_in_mm is specified
+                    if self.vars['output_in_mm']:
+                        if 'area' in to_compute_from_sd:
+                            descriptors['area'] *= self.vars['average_pixel_size']
+                        if 'total_hole_area' in to_compute_from_sd:
+                            descriptors['total_hole_area'] *= self.vars['average_pixel_size']
+                        if 'perimeter' in to_compute_from_sd:
+                            descriptors['perimeter'] *= sqrt(self.vars['average_pixel_size'])
+                        if 'major_axis_len' in to_compute_from_sd:
+                            descriptors['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                        if 'minor_axis_len' in to_compute_from_sd:
+                            descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+
+                    # Store descriptors in time_descriptor_colony
+                    descriptor_index = (colony_names[0] - 1) * len(to_compute_from_sd)
+                    time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = descriptors
+
                     updated_colony_names = append(updated_colony_names, colony_names)
+
+                # Reset colony_id_matrix for the next frame
                 colony_id_matrix *= self.binary[t, :, :]
-            coord_colonies = coord_colonies[1:, :]
+
+            coord_colonies = vstack(coord_colonies)
+            centroids = array(centroids, dtype=float32)
+            time_descriptor_colony = time_descriptor_colony[:, :(colony_number*len(to_compute_from_sd))]
 
             if self.vars['save_binary_masks']:
-                save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                     smallest_memory_array(nonzero(self.binary), "uint"))
+                coord_colonies = df(coord_colonies, columns=["time", "colony", "y", "x"])
+                coord_colonies.to_csv(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
+                # save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", coord_colonies)
+            # save(f"colony_centroids{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", centroids)
+            centroids = df(centroids, columns=["time", "colony", "y", "x"])
+            centroids.to_csv(f"colony_centroids{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
+
+            # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
+            self.whole_shape_descriptors = df({'arena': self.statistics['arena'], 'time': timings, 'area_total': self.surfarea.astype(float64)})
+            if self.vars['output_in_mm']:
+                self.whole_shape_descriptors['area_total'] *= self.vars['average_pixel_size']
+            column_names = char.add(repeat(to_compute_from_sd, colony_number),
+                                    tile((arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
+            time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
+            self.whole_shape_descriptors = concat([self.whole_shape_descriptors, time_descriptor_colony], axis=1)
+
+            """
+                    #
+                    #     # This colony already existed: The colony_previous_names becomes the current colony_names
+                    #     colony_names = colony_previous_names.copy()
+                    #     colony_coord = array(nonzero(current_colony_img), dtype=uint32)
+                    #     # If any of the current colony names already are in updated_colony_names, it means that a
+                    #     # consistent colony from t-1 split into several (at least 2) colonies at t.
+                    #     result_from_colony_division: bool = False
+                    #     for name in colony_names:
+                    #         if isin(name, updated_colony_names):
+                    #             result_from_colony_division = True
+                    #         if result_from_colony_division:
+                    #             break
+                    #     if result_from_colony_division:
+                    #         # logging.info("This colony emerged from the division of a parent colony")
+                    #         # We must add it as a new colony
+                    #         colony_number += 1
+                    #         colony_names = [colony_number]
+                    #
+                    # pixel_nb = colony_coord.shape[1]
+                    # colony_id_matrix[colony_coord[0, :], colony_coord[1, :]] = colony_names[0]
+                    # coord_colonies = row_stack((coord_colonies, column_stack((repeat(t, pixel_nb).astype(uint32),
+                    #     colony_coord[0, :], colony_coord[1, :], repeat(colony_names[0], pixel_nb).astype(uint32)))))
+                    # updated_colony_names = append(updated_colony_names, colony_names)
+
+
+            
+
+            coord_colonies2 = coord_colonies[coord_colonies[:, 3] < 500, :]
+            save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}_col{max(coord_colonies2[:, 3])}.npy", coord_colonies2)
+
+            colist = []
+            for colony in unique(coord_colonies2[:, 3]):
+                colist.append(ptp(coord_colonies2[coord_colonies2[:, 3] == colony, 2]))
+            coord_colonies2[coord_colonies2[:, 3] == 36]
+            nonzero(array(colist)==270)
+            max(array(colist))
+
+            # shapes, stats, centers = cc((colony_id_matrix==36).astype(uint8))
 
             from numpy import array_equal, zeros_like
             a = zeros_like(self.binary[t, ...])
-            coord_t = coord_colonies[coord_colonies[:, 0] == t, :]
+            coord_t = coord_colonies[coord_colonies[:, 3] == 5, :]
             a[coord_t[:, 1], coord_t[:,2]] = 1
             See(a)
             array_equal(self.binary[t, ...] > 0, a)
+            b = zeros((31, self.dims[1], self.dims[2]), uint8)
+            for ti in range(31):
+                b[ti, coord_colonies[logical_and(coord_colonies[:, 0] == ti, coord_colonies[:, 3] == 5), 1], coord_colonies[logical_and(coord_colonies[:, 0] == ti, coord_colonies[:, 3] == 5), 2]] = 1
+
+            movie(b)
+            See(b[0,...])
             ####
 
             self.statistics["first_move"] = 1
@@ -1228,7 +1328,6 @@ class MotionAnalysis:
             previously_here = [0]
             for t in arange(self.dims[0]):#31):#
                 # t+=1
-                """ for each time step, compare each colony with the previously known picture of colonies. """
                 previous_colony_id_matrix = colony_id_matrix.copy()
                 # nb, shapes = connectedComponents(self.binary[t, :, :])
                 # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
@@ -1366,6 +1465,9 @@ class MotionAnalysis:
             column_names = char.add(repeat(to_compute_from_sd, colony_number), tile(arange(colony_number) + 1, len(to_compute_from_sd)).astype(str))
             time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
             self.whole_shape_descriptors = self.whole_shape_descriptors.join(time_descriptor_colony)
+            """
+
+
         if self.vars['do_fading']:
             self.whole_shape_descriptors['newly_explored_area'] = self.newly_explored_area
             if self.vars['output_in_mm']:
@@ -1417,9 +1519,7 @@ class MotionAnalysis:
 
                 # II) Once a pseudopod is deployed, look for a disk/ around the original shape
                 growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
-                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=cross_33,
-                                            iterations=10,
-                                            borderType=BORDER_CONSTANT, borderValue=0)
+                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=cross_33, iterations=10, borderType=BORDER_CONSTANT, borderValue=0)
                 isisotropic = sum(self.binary[:, :, :] * dilated_origin, (1, 2))
                 isisotropic *= growth_begining
                 # Ask if the dilated origin area is 90% covered during the growth beginning
@@ -1523,6 +1623,7 @@ class MotionAnalysis:
             # else:
             #     origin = ones(self.dims[1:], dtype=uint8)
             self.network_dynamics = zeros(self.dims, dtype=uint8)
+            self.graph = zeros(self.dims, dtype=uint8)
             # if len(self.converted_video.shape) == 3:
             #     self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
             self.check_converted_video_type()
@@ -1566,9 +1667,11 @@ class MotionAnalysis:
 
                     self.network_dynamics[t, ...] = nd.network
 
+                    nd.skeletonize()
+                    nd.get_graph()
+                    self.graph[t, ...] = nd.graph.copy()
+                    labeled_nodes, label_to_position = nd.detect_nodes()
                     # #### Houssam ####
-                    # nd.skeletonize()
-                    # labeled_nodes, label_to_position = nd.detect_nodes()
                     # segments = nd.find_segments(labeled_nodes, label_to_position)
                     # node_degrees = nd.extract_node_degrees(segments)
                     # # largeurs = nd.get_segment_width(self.binary[t, ...], segments, distance_map)
@@ -1587,9 +1690,13 @@ class MotionAnalysis:
             if show_seg:
                 destroyAllWindows()
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
+            self.graph = smallest_memory_array(nonzero(self.graph), "uint")
             if self.vars['save_binary_masks']:
                 save(f"coord_intra_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
+                save(f"coord_network_graph{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.graph)
+
             del self.network_dynamics
+            del self.graph
 
             # save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
             # del self.network_dynamics
