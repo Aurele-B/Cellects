@@ -201,8 +201,6 @@ class NetworkDetection:
             ordered_image, stats, centers = cc(self.network)
             self.network[ordered_image != 1] = 0
 
-
-    #### Houssam ####
     def skeletonize(self):
         """
         Skeletonize the network
@@ -229,7 +227,7 @@ class NetworkDetection:
         # All pixels that have neighbor_nb neighbors, none of which is already detected as a node.
         for i, neighbor_nb in enumerate([8, 7, 6, 5, 4, 3]):
             # All pixels having neighbor_nb neighbor are potential nodes
-            potential_node = np.zeros_like(self.skeleton)
+            potential_node = np.zeros_like(self.binary_image)
             potential_node[cnv.equal_neighbor_nb == neighbor_nb] = 1
             # remove the false intersections that are a neighbor of a previously detected intersection
             # Dilate nodes to make sure that no neighbors of the current potential nodes are already nodes.

@@ -1670,7 +1670,6 @@ class MotionAnalysis:
                     nd.skeletonize()
                     nd.get_graph()
                     self.graph[t, ...] = nd.graph.copy()
-                    labeled_nodes, label_to_position = nd.detect_nodes()
                     # #### Houssam ####
                     # segments = nd.find_segments(labeled_nodes, label_to_position)
                     # node_degrees = nd.extract_node_degrees(segments)
