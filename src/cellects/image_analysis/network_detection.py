@@ -72,7 +72,6 @@ class NetworkDetection:
         self.homogeneities = np.zeros((self.max_y - self.min_y, self.max_x - self.min_x), np.uint64)
         cropped_binary_image = self.binary_image[self.min_y:self.max_y, self.min_x:self.max_x]
         cropped_grayscale_image = self.grayscale_image[self.min_y:self.max_y, self.min_x:self.max_x]
-        # will be more efficient if it only loops over a zoom on self.binary_image == 1
         for to_add in np.arange(0, side_length, step):
             y_windows = np.arange(0, y_size, side_length)
             x_windows = np.arange(0, x_size, side_length)
