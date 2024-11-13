@@ -217,7 +217,7 @@ class NetworkDetection:
         cnv.is_equal(1, and_itself=True)
 
         # All pixels having only one neighbor, and containing the value 1, is a termination for sure
-        sure_terminations = np.zeros_like(self.network)
+        sure_terminations = np.zeros_like(self.binary_image)
         sure_terminations[cnv.equal_neighbor_nb == 1] = 1
 
         # Create a kernel to dilate properly the known nodes.
