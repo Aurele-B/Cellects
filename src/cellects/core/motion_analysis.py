@@ -1689,10 +1689,12 @@ class MotionAnalysis:
             if show_seg:
                 destroyAllWindows()
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
-            self.graph = smallest_memory_array(nonzero(self.graph), "uint")
+            edges = smallest_memory_array(nonzero(self.graph == 1), "uint")
+            vertices = smallest_memory_array(nonzero(self.graph == 2), "uint")
             if self.vars['save_binary_masks']:
-                save(f"coord_intra_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
-                save(f"coord_network_graph{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.graph)
+                save(f"coord_tubular_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
+                save(f"coord_network_edges{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
+                save(f"coord_network_vertices{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
 
             del self.network_dynamics
             del self.graph
