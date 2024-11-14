@@ -1637,7 +1637,7 @@ class MotionAnalysis:
                 if self.vars['lighter_background']:
                     self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
 
-            for t in arange(self.statistics["first_move"], self.dims[0]):  #, 200):#
+            for t in arange(self.statistics["first_move"], 20):#self.dims[0]):  #
                 # t = 10
                 # t = 200
                 if any(self.binary[t, ...]):

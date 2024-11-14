@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from numpy import nonzero, zeros_like, uint8, min, max, ptp
 from cv2 import connectedComponents, CV_16U
+from numpy.matlib import zeros
 from skimage import morphology
 from scipy import ndimage
 from collections import defaultdict
@@ -239,9 +240,11 @@ class NetworkDetection:
         """
         :return:
         """
-        self.graph = self.skeleton.copy()
+        self.graph = zeros_like(self.binary_image)
+        self.graph[nonzero(self.skeleton)] = 1
         self.get_nodes()
-        self.graph[self.nodes > 0] = 2
+        nodes_coord = nonzero(self.nodes)
+        self.graph[nodes_coord[0], nodes_coord[1]] = 2
 
 
     def extract_node_degrees(self, segments):
