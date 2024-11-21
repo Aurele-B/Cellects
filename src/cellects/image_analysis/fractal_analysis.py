@@ -5,11 +5,73 @@ This script contains the class for analyzing fractals out of a binary image
 
 
 import os
+from pickletools import uint8
+
 import numpy as np
 import cv2
 from scipy.optimize import curve_fit
+from scipy.stats import linregress
 from cellects.utils.formulas import linear_model
 from cellects.core.cellects_paths import DATA_DIR
+from cellects.image_analysis.morphological_operations import cross_33
+
+
+def box_counting(binary_image):
+    """
+    Let us take r, the side lengths of many boxes
+    And N(r), the number of pixels belonging to the shape contained in a box of side length r.
+    box_counting_dimension = log(N)/log(1/r)
+    The line of y=log(N(r)) vs x=log(1/r) has a slope equal to the box_counting_dimension
+    :param binary_image:
+    :return:
+    """
+    binary_idx = np.nonzero(binary_image)
+    if binary_idx[0].size:
+        min_y = np.min(binary_idx[0])
+        max_y = np.max(binary_idx[0])
+        min_x = np.min(binary_idx[1])
+        max_x = np.max(binary_idx[1])
+        zoomed_binary = binary_image[min_y:(max_y + 1), min_x: (max_x + 1)].copy()
+        zoomed_binary = cv2.morphologyEx(zoomed_binary, cv2.MORPH_GRADIENT, cross_33)
+        min_side = np.min(zoomed_binary.shape)
+        if min_side >= 2:
+            max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2
+            side_lengths = 2 ** np.arange(max_power, -1, -1)
+            box_counts = np.zeros(len(side_lengths), dtype=np.uint64)
+            # Loop through side_lengths and compute block counts
+            for idx, side_length in enumerate(side_lengths):
+                S = np.add.reduceat(
+                    np.add.reduceat(binary_image, np.arange(0, binary_image.shape[0], side_length), axis=0),
+                    np.arange(0, binary_image.shape[1], side_length),
+                    axis=1
+                )
+                box_counts[idx] = len(np.where(S > 0)[0])
+
+            valid_indices = box_counts > 0
+            if valid_indices.sum() >= 2:
+                log_box_counts = np.log(box_counts)
+                log_reciprocal_lengths = np.log(1 / side_lengths)
+                slope, intercept, r_value, p_value, stderr = linregress(log_reciprocal_lengths, log_box_counts)
+                # coefficients = np.polyfit(log_reciprocal_lengths, log_box_counts, 1)
+                box_counting_dimension = slope
+                box_nb = len(side_lengths)
+            else:
+                box_counting_dimension = 0
+                r_value = 0
+                box_nb = 0
+                print("Insufficient valid box counts for regression.")
+        else:
+            print("binary_image contains not enough pixels.")
+            box_counting_dimension = 0
+            r_value = 0
+            box_nb = 0
+    else:
+        print("binary_image contains no pixels.")
+        box_counting_dimension = 0
+        r_value = 0
+        box_nb = 0
+
+    return box_counting_dimension, r_value, box_nb
 
 
 class FractalAnalysis:
@@ -115,26 +177,37 @@ class FractalAnalysis:
         cv2.imwrite(image_save_path, self.fractal_mesh)
 
 
-if __name__ == "__main__":
-    # Dossier contenant les images envoyées
-    os.chdir(DATA_DIR)
-    # os.chdir("C:/Directory/Data/100")
-    # Lecture des images
-    binary_img = cv2.imread("binary_img.tif")
-    original_img = cv2.imread("original_img.tif")
-    # Instanciation d'un objet FractalAnalysis
-    self = FractalAnalysis(binary_img[:, :, 0])
-    # Detection des contours de l'image binaire
-    self.detect_fractal(threshold=100)
-    # Ajout (sur une image noire) des carrés contenants les contours de l'image binaire
-    self.extract_fractal(original_img)
+# if __name__ == "__main__":
+#
+#     coord = np.load("D:/Directory/Data/Audrey/dosier1/coord_specimen1_t720_y1475_x1477.npy")
+#     coord = coord[1:, coord[0, :] == 719]
+#     im = np.zeros((1475, 1477), np.uint8)
+#     im[coord[0, :],coord[1, :]] = 1
+#     binary_image = cv2.morphologyEx(im, cv2.MORPH_GRADIENT, cross_33)
+#
+#
+#
+#     # Dossier contenant les images envoyées
+#     os.chdir(DATA_DIR)
+#     # os.chdir("C:/Directory/Data/100")
+#     # Lecture des images
+#     binary_img = cv2.imread("binary_img.tif")
+#     original_img = cv2.imread("original_img.tif")
+#     # Instanciation d'un objet FractalAnalysis
+#     self = FractalAnalysis(binary_img[:, :, 0])
+#     # Detection des contours de l'image binaire
+#     self.detect_fractal(threshold=100)
+#     # Ajout (sur une image noire) des carrés contenants les contours de l'image binaire
+#     self.extract_fractal(original_img)
+#
+#     # Affichage de l'image ainsi obtenue
+#     cv2.imshow("fractal_mesh", cv2.resize(binary_img * 255, (1000, 1000)))
+#     cv2.imshow("fractal_mesh", cv2.resize(usage_example.fractal_mesh * 255, (1000, 1000)))
+#     cv2.waitKey(0)
+#     cv2.destroyAllWindows()
+#
+#     # Calcul de la dimension de Minkowski
+#     self.get_dimension()
+#     print(self.minkowski_dimension)
 
-    # Affichage de l'image ainsi obtenue
-    cv2.imshow("fractal_mesh", cv2.resize(binary_img * 255, (1000, 1000)))
-    cv2.imshow("fractal_mesh", cv2.resize(usage_example.fractal_mesh * 255, (1000, 1000)))
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
 
-    # Calcul de la dimension de Minkowski
-    self.get_dimension()
-    print(self.minkowski_dimension)
