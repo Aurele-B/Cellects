@@ -1377,7 +1377,6 @@ class RunAllThread(QtCore.QThread):
                     for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
 
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
-                        # l = [i, arena, self.parent().po.vars, True, False, False, None]
                         # l = [0, 1, self.parent().po.vars, True, False, False, None]
                         analysis_i = MotionAnalysis(l)
                         if not self.parent().po.vars['several_blob_per_arena']:
