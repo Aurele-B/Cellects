@@ -1381,15 +1381,19 @@ class RunAllThread(QtCore.QThread):
                         analysis_i = MotionAnalysis(l)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
-                            self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
+                            self.parent().po.update_one_row_per_arena(i, analysis_i.statistics.values())
+                            # self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
+
+
                             # Save descriptors in long_format
                             # NEW
                             # for descriptor in self.one_row_per_frame.keys():
                             #     self.one_row_per_frame.loc[i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'], descriptor] = analysis_i.whole_shape_descriptors[descriptor]
                             # Old
-                            self.parent().po.one_row_per_frame.iloc[
-                            i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
-                            :] = analysis_i.whole_shape_descriptors
+                            self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.whole_shape_descriptors)
+                            # self.parent().po.one_row_per_frame.iloc[
+                            # i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
+                            # :] = analysis_i.whole_shape_descriptors
 
                             # Save cytosol_oscillations
                         if not isna(analysis_i.statistics["first_move"]):
@@ -1403,13 +1407,6 @@ class RunAllThread(QtCore.QThread):
                                 else:
                                     self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
                                 # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
-                            if self.parent().po.vars['fractal_analysis']:
-                                fractal_i = df(analysis_i.fractal_boxes,
-                                    columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-                                if self.parent().po.fractal_box_sizes is None:
-                                    self.parent().po.fractal_box_sizes = fractal_i
-                                else:
-                                    self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, fractal_i))
                         # Save efficiency visualization
                         self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                                  analysis_i.efficiency_test_2)
@@ -1463,11 +1460,15 @@ class RunAllThread(QtCore.QThread):
                                 # print(isinstance(results_i, list))
                                 if not self.parent().po.vars['several_blob_per_arena']:
                                     # Save basic statistics
-                                    self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
+                                    self.parent().po.update_one_row_per_arena(i, results_i['one_row_per_arena'])
+                                    # self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
                                     # Save descriptors in long_format
-                                    self.parent().po.one_row_per_frame.iloc[
-                                    results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
-                                    :] = results_i['one_row_per_frame']
+                                    self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
+                                                                              results_i['arena'] * self.parent().po.vars['img_number'],
+                                                                              results_i['one_row_per_frame'])
+                                    # self.parent().po.one_row_per_frame.iloc[
+                                    # results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
+                                    # :] = results_i['one_row_per_frame']
                                 if not isna(results_i['first_move']):
                                     # Save cytosol_oscillations
                                     if self.parent().po.vars['oscilacyto_analysis']:
@@ -1477,12 +1478,6 @@ class RunAllThread(QtCore.QThread):
                                             self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
                                         # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
 
-                                    # Save fractal
-                                    if self.parent().po.vars['fractal_analysis']:
-                                        if self.parent().po.fractal_box_sizes is None:
-                                            self.parent().po.fractal_box_sizes = results_i['fractal_box_sizes']
-                                        else:
-                                            self.parent().po.fractal_box_sizes = concat((self.parent().po.fractal_box_sizes, results_i['fractal_box_sizes']))
                                 # Save efficiency visualization
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])

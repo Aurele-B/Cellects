@@ -1699,8 +1699,17 @@ class MotionAnalysis:
 
             if self.vars['fractal_analysis']:
                 box_counting_dimensions = box_counting_dimensions[1:, :]
-                box_counting_dimensions = df(box_counting_dimensions, columns=["inner_network_size", "dimension", "r_value", "box_nb", "inner_network_dimension", "inner_net_r_value", "inner_net_box_nb"])
-                box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';', index=False, lineterminator='\n')
+                self.whole_shape_descriptors["inner_network_size"] = box_counting_dimensions[:, 0]
+                self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 1]
+                self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 3]
+                self.whole_shape_descriptors["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
+                self.whole_shape_descriptors["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
+                self.whole_shape_descriptors["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
+                if self.vars['output_in_mm']:
+                    self.whole_shape_descriptors["inner_network_size"] *= self.vars['average_pixel_size']
+                # box_counting_dimensions = df(box_counting_dimensions, columns=["inner_network_size", "fractal_dimension", "fractal_r_value", "fractal_box_nb", "inner_network_fractal_dimension", "inner_network_fractal_r_value", "inner_network_fractal_box_nb"])
+                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';', index=False, lineterminator='\n')
 
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
             edges = smallest_memory_array(nonzero(self.graph == 1), "uint")
@@ -2005,14 +2014,16 @@ class MotionAnalysis:
             logging.info(f"Arena n°{self.statistics['arena']}. Starting fractal analysis.")
 
             if not self.vars['network_detection']:
-                box_counting_dimensions = zeros(self.dims[0], dtype=float64)
+                box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
                 for t in arange(self.dims[0]):
-                    box_counting_dimensions[t], r_value, box_nb = box_counting(self.binary[t, ...])
+                    box_counting_dimensions[t, :] = box_counting(self.binary[t, ...])
                 box_counting_dimensions = box_counting_dimensions[1:]
                 box_counting_dimensions = df(box_counting_dimensions, columns=["dimension"])
                 box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';',
                                                index=False, lineterminator='\n')
-
+                self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 0]
+                self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 1]
+                self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
 
 
             """
@@ -2417,27 +2428,3 @@ class MotionAnalysis:
                 except PermissionError:
                     logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
 
-        # IV/ Update/Create fractal_box_sizes.csv
-        if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
-            fractal_i = df(self.fractal_boxes, columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-            if os.path.isfile("fractal_box_sizes.csv"):
-                try:
-                    with open(f"fractal_box_sizes.csv", 'r') as file:
-                        fractal_box_sizes = read_csv(file, header=0, sep=";")
-                    with open(f"fractal_box_sizes.csv", 'w') as file:
-                        fractal_box_sizes_before = fractal_box_sizes[fractal_box_sizes['arena'] < self.statistics['arena']]
-                        fractal_box_sizes_after = fractal_box_sizes[fractal_box_sizes['arena'] > self.statistics['arena']]
-                        fractal_box_sizes = concat((fractal_box_sizes_before, fractal_i, fractal_box_sizes_after))
-                        fractal_box_sizes.to_csv(file, sep=';', index=False, lineterminator='\n')
-
-                        # fractal_box_sizes = fractal_box_sizes[fractal_box_sizes['arena'] != self.statistics['arena']]
-                        # fractal_box_sizes = concat((fractal_box_sizes, fractal_i))
-                        # fractal_box_sizes.to_csv(file, sep=';', index=False, lineterminator='\n')
-                except PermissionError:
-                    logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
-            else:
-                try:
-                    with open(f"fractal_box_sizes.csv", 'w') as file:
-                        fractal_i.to_csv(file, sep=';', index=False, lineterminator='\n')
-                except PermissionError:
-                    logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
