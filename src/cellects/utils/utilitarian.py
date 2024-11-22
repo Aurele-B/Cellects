@@ -116,7 +116,7 @@ class PercentAndTimeTracker:
 
         if self.current_step > 0:
             elapsed_time = default_timer() - self.starting_time
-            if element_number is None or self.current_step < 15:
+            if element_number is None or element_number == 0 or self.current_step < 15:
                 if self.current_step < self.core_number:
                     current_prop = self.core_number / self.total
                 else:
