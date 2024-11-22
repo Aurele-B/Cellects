@@ -50,7 +50,7 @@ class ProgramOrganizer:
         if os.path.isfile(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl')):
             os.remove(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl'))
         # self.delineation_number = 0
-        self.one_arenate_done: bool = False
+        self.one_arena_done: bool = False
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
         self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
@@ -71,8 +71,10 @@ class ProgramOrganizer:
         self.vars['convert_for_motion'] = None
         self.current_combination_id = 0
         self.data_list = []
+        self.one_row_per_arena = None
+        self.one_row_per_frame = None
         self.one_row_per_oscillating_cluster = None
-        self.fractal_box_sizes = None
+        # self.fractal_box_sizes = None
 
     def save_variable_dict(self):
         logging.info("Save the parameters dictionaries in the Cellects folder")
@@ -1145,7 +1147,7 @@ class ProgramOrganizer:
         #self.delineate_each_arena()
         #self.choose_color_space_combination()
         add_to_c = 1
-        self.one_arenate_done = True
+        self.one_arena_done = True
         i = nonzero(self.vars['analyzed_individuals'] == arena)[0][0]
         self.converted_video = zeros(
             (len(self.data_list), self.bot[i] - self.top[i] + add_to_c, self.right[i] - self.left[i] + add_to_c),
@@ -1280,40 +1282,51 @@ class ProgramOrganizer:
         if self.cores > self.sample_number:
             self.cores = self.sample_number
         return round(absolute(available_memory - necessary_memory), 3)
-    
+
+
+    def update_one_row_per_arena(self, i, table_to_add):
+        if not self.vars['several_blob_per_arena']:
+            if self.one_row_per_arena is None:
+                # if self.vars['iso_digi_analysis']:
+                #     self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 5), dtype=float),
+                #                                 columns=['arena', 'first_move', 'iso_digi_transi',
+                #                                          'is_growth_isotropic',
+                #                                          'final_area'])
+                # else:
+                #     self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
+                #                                 columns=['arena', 'first_move', 'final_area'])
+                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
+                                            columns=table_to_add.keys())
+            self.one_row_per_arena.iloc[i, :] = table_to_add
+
+
+    def update_one_row_per_frame(self, i, j, table_to_add):
+        if not self.vars['several_blob_per_arena']:
+            if self.one_row_per_frame is None:
+                # descriptors = list()
+                # #  Temporarily useful: start
+                # if 'network_detection' in self.vars['descriptors'].keys():
+                #     del self.vars['descriptors']["network_detection"]
+                # #  Temporarily useful: end
+                # not_to_consider = ['first_move', 'iso_digi_transi', 'is_growth_isotropic',
+                #                    'final_area']  # , 'network_detection'
+                # for name, do_compute in self.vars['descriptors'].items():
+                #     if do_compute and not isin(name, not_to_consider):
+                #         descriptors.append(name)
+                # self.one_row_per_frame = df(index=range(len(self.vars['analyzed_individuals']) *
+                #                                         self.vars['img_number']),
+                #                             columns=['arena', 'time'] + descriptors)
+
+                self.one_row_per_frame = df(index=range(len(self.vars['analyzed_individuals']) *
+                                                        self.vars['img_number']),
+                                            columns=table_to_add.keys())
+
+            self.one_row_per_frame.iloc[i:j, :] = table_to_add
+
+
     def instantiate_tables(self):
         self.update_output_list()
         logging.info("Instantiate results tables and validation images")
-        if not self.vars['several_blob_per_arena']:
-            if self.vars['iso_digi_analysis']:
-                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 5), dtype=float),
-                                              columns=['arena', 'first_move', 'iso_digi_transi', 'is_growth_isotropic',
-                                                       'final_area'])
-            else:
-                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
-                                              columns=['arena', 'first_move', 'final_area'])
-
-            descriptors = list()
-
-            #  Temporarily useful: start
-            if 'network_detection' in self.vars['descriptors'].keys():
-                del self.vars['descriptors']["network_detection"]
-            #  Temporarily useful: end
-
-            not_to_consider = ['first_move', 'iso_digi_transi', 'is_growth_isotropic', 'final_area']  #, 'network_detection'
-            for name, do_compute in self.vars['descriptors'].items():
-                if do_compute and not isin(name, not_to_consider):
-                    descriptors.append(name)
-
-            self.one_row_per_frame = df(index=range(len(self.vars['analyzed_individuals']) *
-                                               self.vars['img_number']),
-                                        columns=['arena', 'time'] + descriptors)
-
-            # self.one_row_per_frame = df(zeros((len(self.vars['analyzed_individuals']) *
-            #                                    self.vars['img_number'],
-            #                                    len(descriptors) + 2)),
-            #                             columns=['arena', 'time'] + descriptors)
-
         self.one_row_per_oscillating_cluster = None
         self.fractal_box_sizes = None
         # if self.vars['oscilacyto_analysis']:
@@ -1369,16 +1382,6 @@ class ProgramOrganizer:
             except PermissionError:
                 logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
                 self.message_from_thread.emit(f"Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-        if self.vars['fractal_analysis']:
-            try:
-                if self.fractal_box_sizes is None:
-                    self.fractal_box_sizes = df(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-                self.fractal_box_sizes.to_csv("fractal_box_sizes.csv", sep=";", index=False,
-                                                            lineterminator='\n')
-            except PermissionError:
-                logging.error("Never let fractal_box_sizes.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let fractal_box_sizes.csv open when Cellects runs")
-
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:
