@@ -1297,7 +1297,7 @@ class ProgramOrganizer:
                 #                                 columns=['arena', 'first_move', 'final_area'])
                 self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
                                             columns=table_to_add.keys())
-            self.one_row_per_arena.iloc[i, :] = table_to_add
+            self.one_row_per_arena.iloc[i, :] = table_to_add.values()
 
 
     def update_one_row_per_frame(self, i, j, table_to_add):

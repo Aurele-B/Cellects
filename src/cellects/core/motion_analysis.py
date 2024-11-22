@@ -1871,11 +1871,10 @@ class MotionAnalysis:
                     if t > self.lost_frames:
                         # Sum the number of connected components minus the background to get the number of clusters
                         cluster_number[t] = in_stats.shape[0] + ef_stats.shape[0]
-                        current_percentage, eta = pat_tracker.get_progress(t, element_number=cluster_number[t] )
-                        logging.info(f"Arena n°{self.statistics['arena']}, Oscillatory cluster computation: {current_percentage}%{eta}")
                         updated_cluster_names = [0]
                         if cluster_number[t] > 0:
-
+                            current_percentage, eta = pat_tracker.get_progress(t, element_number=cluster_number[t])
+                            logging.info(f"Arena n°{self.statistics['arena']}, Oscillatory cluster computation: {current_percentage}%{eta}")
                             if self.vars['fractal_analysis']:
                                 # New analysis to get the surface dynamic of every oscillatory cluster: Part 2 openning:
                                 network_at_t = zeros(self.dims[1:], dtype=uint8)

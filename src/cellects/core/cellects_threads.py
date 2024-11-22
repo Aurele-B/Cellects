@@ -1381,7 +1381,7 @@ class RunAllThread(QtCore.QThread):
                         analysis_i = MotionAnalysis(l)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
-                            self.parent().po.update_one_row_per_arena(i, analysis_i.statistics.values())
+                            self.parent().po.update_one_row_per_arena(i, analysis_i.statistics)
                             # self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
 
 
