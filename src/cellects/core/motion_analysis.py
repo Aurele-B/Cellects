@@ -1698,7 +1698,6 @@ class MotionAnalysis:
                 destroyAllWindows()
 
             if self.vars['fractal_analysis']:
-                box_counting_dimensions = box_counting_dimensions[1:, :]
                 self.whole_shape_descriptors["inner_network_size"] = box_counting_dimensions[:, 0]
                 self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 1]
                 self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
@@ -1718,7 +1717,6 @@ class MotionAnalysis:
                 save(f"coord_tubular_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
                 save(f"coord_network_edges{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
                 save(f"coord_network_vertices{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
-
             del self.graph
 
             # save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
@@ -2016,13 +2014,12 @@ class MotionAnalysis:
                 box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
                 for t in arange(self.dims[0]):
                     box_counting_dimensions[t, :] = box_counting(self.binary[t, ...])
-                box_counting_dimensions = box_counting_dimensions[1:]
-                box_counting_dimensions = df(box_counting_dimensions, columns=["dimension"])
-                box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';',
-                                               index=False, lineterminator='\n')
                 self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
+                # box_counting_dimensions = df(box_counting_dimensions, columns=["dimension"])
+                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';',
+                #                                index=False, lineterminator='\n')
 
 
             """
