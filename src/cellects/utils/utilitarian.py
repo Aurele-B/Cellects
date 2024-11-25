@@ -182,7 +182,10 @@ def smallest_memory_array(array_object, array_type='uint'):
     if isinstance(array_object, ndarray):
         value_max = array_object.max()
     else:
-        value_max = max(((array_object[0].max(), array_object[0].max())))
+        if len(array_object[0]) > 0:
+            value_max = max((array_object[0].max(), array_object[1].max()))
+        else:
+            value_max = 0
 
     if array_type == 'uint':
         if value_max <= iinfo(uint8).max:

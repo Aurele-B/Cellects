@@ -18,9 +18,16 @@ from cellects.image_analysis.morphological_operations import cross_33
 
 def box_counting(binary_image, contours=True):
     """
-    Let us take r, the side lengths of many boxes
-    And N(r), the number of pixels belonging to the shape contained in a box of side length r.
-    box_counting_dimension = log(N)/log(1/r)
+    Let us take:
+    - s: the side lengths of many boxes
+    - N(s): the number of pixels belonging to the shape contained in a box of side length s.
+    - c: a constant
+    - D: the fractal dimension
+
+    N(s) = C(1/s)^D
+    log(N(s)) = D*log(1/s) + log(C)
+
+    box_counting_dimension = log(N)/log(1/s)
     The line of y=log(N(r)) vs x=log(1/r) has a slope equal to the box_counting_dimension
     :param binary_image:
     :return:
