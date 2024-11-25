@@ -16,7 +16,7 @@ from cellects.core.cellects_paths import DATA_DIR
 from cellects.image_analysis.morphological_operations import cross_33
 
 
-def box_counting(binary_image):
+def box_counting(binary_image, contours=True):
     """
     Let us take r, the side lengths of many boxes
     And N(r), the number of pixels belonging to the shape contained in a box of side length r.
@@ -32,7 +32,8 @@ def box_counting(binary_image):
         min_x = np.min(binary_idx[1])
         max_x = np.max(binary_idx[1])
         zoomed_binary = binary_image[min_y:(max_y + 1), min_x: (max_x + 1)].copy()
-        zoomed_binary = cv2.morphologyEx(zoomed_binary, cv2.MORPH_GRADIENT, cross_33)
+        if contours:
+            zoomed_binary = cv2.morphologyEx(zoomed_binary, cv2.MORPH_GRADIENT, cross_33)
         min_side = np.min(zoomed_binary.shape)
         if min_side >= 2:
             max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2

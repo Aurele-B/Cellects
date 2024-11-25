@@ -1675,8 +1675,8 @@ class MotionAnalysis:
 
                     if self.vars['fractal_analysis']:
                         box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
-                        box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[t, 3] = box_counting(self.binary[t, ...])
-                        box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(self.network_dynamics[t, ...])
+                        box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[t, 3] = box_counting(self.binary[t, ...], contours=True)
+                        box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(self.network_dynamics[t, ...], contours=False)
 
                     # #### Houssam ####
                     # segments = nd.find_segments(labeled_nodes, label_to_position)
@@ -1917,9 +1917,9 @@ class MotionAnalysis:
                                     # Save the current cluster areas:
                                     inner_network = current_cluster_img * network_at_t
                                     inner_network_area = inner_network.sum()
-                                    box_count_dim, r_value, box_nb = box_counting(current_cluster_img)
+                                    box_count_dim, r_value, box_nb = box_counting(current_cluster_img, contours=True)
                                     if any(inner_network):
-                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(inner_network)
+                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(inner_network, contours=False)
                                     else:
                                         inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = 0, 0, 0
                                     # Calculate centroid and add to centroids list
@@ -2013,7 +2013,7 @@ class MotionAnalysis:
             if not self.vars['network_detection']:
                 box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
                 for t in arange(self.dims[0]):
-                    box_counting_dimensions[t, :] = box_counting(self.binary[t, ...])
+                    box_counting_dimensions[t, :] = box_counting(self.binary[t, ...], contours=True)
                 self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
