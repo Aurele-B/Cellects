@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""Genereate the Image analysis window of the user interface of Cellects"""
 import logging
 import time
-
+from copy import deepcopy
 from numpy import (
     array, int8, uint8, uint16, zeros, nonzero,  isin,
     stack, concatenate, arange, sort, all)
@@ -586,8 +586,8 @@ class ImageAnalysisWindow(WindowType):
             self.visualize.setVisible(True)
             self.visualize_label.setVisible(True)
         else:
-            self.parent().po.current_image = image.copy()
-        self.drawn_image = self.parent().po.current_image.copy()
+            self.parent().po.current_image = deepcopy(image)
+        self.drawn_image = deepcopy(self.parent().po.current_image)
         self.display_image.update_image(self.parent().po.current_image)
 
         self.arena_mask = None
@@ -906,7 +906,7 @@ class ImageAnalysisWindow(WindowType):
                 self.message.setText('Choose a color space, modify a channel and visualize')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
-            self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
+            self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
             self.thread["FirstImageAnalysis"].start()
             self.thread["FirstImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
             self.thread["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
@@ -920,7 +920,7 @@ class ImageAnalysisWindow(WindowType):
                 self.message.setText('Choose a color space, increase a channel and visualize')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
             else:
-                self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                 self.thread["LastImageAnalysis"].start()
                 self.thread["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
                 self.thread["LastImageAnalysis"].message_when_thread_finished.connect(
@@ -946,9 +946,9 @@ class ImageAnalysisWindow(WindowType):
                 self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
 
                 if self.is_first_image_flag:
-                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
+                    self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
                 else:
-                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                    self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                 option_number = len(im_combinations)
 
                 if option_number > 1:
@@ -1050,7 +1050,7 @@ class ImageAnalysisWindow(WindowType):
             self.parent().po.current_image = stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
-            self.drawn_image = self.parent().po.current_image.copy()
+            self.drawn_image = deepcopy(self.parent().po.current_image)
 
             # Update image display
             if self.thread["UpdateImage"].isRunning():
@@ -1665,13 +1665,13 @@ class ImageAnalysisWindow(WindowType):
                 else:
                     # if self.parent().po.vars['origin_state'] != 'invisible':
                     #     self.parent().po.vars['origin_state'] = "fluctuating"
-                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
-                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                    self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
+                    self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                     self.go_to_next_widget()
                 self.asking_last_image_flag = False
         else:
             if is_yes:
-                self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                 self.go_to_next_widget()
 
     def first_im_parameters(self):

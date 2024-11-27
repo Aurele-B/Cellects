@@ -12,6 +12,7 @@
     - acf_fft
     - moving_average
 """
+from copy import deepcopy
 from numpy import sum, round, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
 
@@ -270,7 +271,7 @@ def moving_average(vector, step):
     """
     substep = array((- int(floor((step - 1) / 2)), int(ceil((step - 1) / 2))))
     sums = zeros(vector.shape)
-    n_okays = sums.copy()
+    n_okays = deepcopy(sums)
     true_numbers = logical_not(isnan(vector))
     vector[logical_not(true_numbers)] = 0
     for step_i in arange(substep[1] + 1):

@@ -4,6 +4,7 @@
 
 import logging
 import os
+from copy import deepcopy
 from numpy import min, max, all, any, uint8, uint32, round, concatenate, int8, nonzero, isin, array, all
 from PySide6 import QtWidgets, QtCore
 from cellects.gui.custom_widgets import (
@@ -334,14 +335,28 @@ class AdvancedParameters(WindowType):
         self.fractal_widget = QtWidgets.QWidget()
         self.fractal_widget.setStyleSheet(boxstylesheet)
 
-        self.fractal_threshold_detection = Spinbox(min=0, max=1000, val=self.parent().po.vars['fractal_threshold_detection'], decimals=0,
+        try:
+            self.parent().po.vars['fractal_box_side_threshold']
+        except KeyError or NameError:
+            self.parent().po.vars['fractal_box_side_threshold'] = 32
+        self.fractal_box_side_threshold = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_box_side_threshold'], decimals=0,
                                           night_mode=self.parent().po.all['night_mode'])
-        self.fractal_threshold_detection_label = FixedText('Fractal threshold detection',
-                                                  tip="Increase/decrease to adjust the mesh size (visible on last_image_fractal_mesh.tif)",
+        self.fractal_box_side_threshold_label = FixedText('Fractal box side threshold',
+                                                  tip="Increase/decrease to adjust the minimal side length (pixels) of an image\nto compute the Minkowski dimension using the box counting method.",
                                                   night_mode=self.parent().po.all['night_mode'])
-        self.fractal_layout.addWidget(self.fractal_threshold_detection, 3, 0)
-
-        self.fractal_layout.addWidget(self.fractal_threshold_detection_label, 3, 1)
+        self.fractal_layout.addWidget(self.fractal_box_side_threshold, 3, 0)
+        self.fractal_layout.addWidget(self.fractal_box_side_threshold_label, 3, 1)
+        try:
+            self.parent().po.vars['fractal_zoom_step']
+        except KeyError or NameError:
+            self.parent().po.vars['fractal_zoom_step'] = 0
+        self.fractal_zoom_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_zoom_step'], decimals=0,
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.fractal_zoom_step_label = FixedText('Fractal zoom step',
+                                                  tip="When using the box counting method to compute the Minkowski dimension\nThe zoom step is the side length (pixels) difference between each zoom level.\nWhen set to 0, the default zoom step is all possible powers of two.",
+                                                  night_mode=self.parent().po.all['night_mode'])
+        self.fractal_layout.addWidget(self.fractal_zoom_step, 4, 0)
+        self.fractal_layout.addWidget(self.fractal_zoom_step_label, 4, 1)
 
         self.fractal_widget.setLayout(self.fractal_layout)
         self.left_col_layout.addWidget(self.fractal_widget)
@@ -1112,7 +1127,8 @@ class AdvancedParameters(WindowType):
             self.parent().po.vars['first_detection_method'] = self.appearing_selection.currentText()
             self.parent().po.vars['oscillation_period'] = self.oscillation_period.value()
             self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
-            self.parent().po.vars['fractal_threshold_detection'] = self.fractal_threshold_detection.value()
+            self.parent().po.vars['fractal_box_side_threshold'] = int(self.fractal_box_side_threshold.value())
+            self.parent().po.vars['fractal_zoom_step'] = int(self.fractal_zoom_step.value())
 
             self.parent().po.vars['network_detection_threshold'] = int(round(self.network_detection_threshold.value()))
             self.parent().po.vars['network_mesh_side_length'] = int(round(self.mesh_side_length.value()))
@@ -1147,7 +1163,7 @@ class AdvancedParameters(WindowType):
 
             self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
 
-            previous_csc = self.parent().po.vars['convert_for_motion'].copy()
+            previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
             self.save_user_defined_csc()
             print(self.parent().po.vars['convert_for_motion'])
             if self.parent().po.first_exp_ready_to_run:

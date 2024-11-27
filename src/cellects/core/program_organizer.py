@@ -5,7 +5,7 @@ import logging
 import os
 import pickle
 import sys
-from glob import glob
+from copy import deepcopy
 from cv2 import (
     connectedComponentsWithStats, connectedComponents, VideoCapture,
     CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH,
@@ -83,7 +83,7 @@ class ProgramOrganizer:
         # soft_path = syspath[potentials_paths[0][-1]]
         # self.untype_csc_dict()
         self.all['vars'] = self.vars
-        all_vars = self.all.copy()
+        all_vars = deepcopy(self.all)
         if not self.all['keep_masks_for_all_folders']:
             all_vars['bio_mask'] = None
             all_vars['back_mask'] = None
@@ -301,8 +301,8 @@ class ProgramOrganizer:
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:
-            folder_list = self.all['folder_list'].copy()
-            sample_number_per_folder = self.all['sample_number_per_folder'].copy()
+            folder_list = deepcopy(self.all['folder_list'])
+            sample_number_per_folder = deepcopy(self.all['sample_number_per_folder'])
 
         if os.path.isfile('Data to run Cellects quickly.pkl'):
             pickle_rick = PickleRick()
@@ -883,40 +883,6 @@ class ProgramOrganizer:
         if self.vars['subtract_background']:
             self.first_image.generate_subtract_background(self.vars['convert_for_motion'])
 
-            # # self.first_image.generate_subtract_background(self.vars['convert_for_origin'])
-            # biomask = None
-            # backmask = None
-            # # self.last_image.generate_color_space_combination(self.vars['convert_for_motion'])
-            # # (self.first_image.subtract_background - self.last_image.image.astype(np.float64))
-            # self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-            #                                     biomask, backmask)
-            # if self.last_image.image.sum() > self.first_image.subtract_background.sum():
-            #     self.last_image.image -= self.first_image.subtract_background
-            # else:
-            #     self.last_image.image = self.first_image.subtract_background - self.last_image.image
-            # # add (resp. subtract) the most negative (resp. smallest) value to the whole matrix to get a min = 0
-            # self.last_image.image -= min(self.last_image.image)
-            # # Make analysable this image by bracketing its values between 0 and 255 and converting it to uint8
-            # self.last_image.image = 255 * (self.last_image.image / max(self.last_image.image))
-            # # self.image = generate_color_space_combination(self.vars['convert_for_motion'], self.last_image.all_c_spaces, self.first_image.subtract_background)
-            #
-            # self.last_image.segmentation(logical=None, color_number=self.vars["color_number"], biomask=biomask,
-            #                   backmask=backmask)
-            #
-            # self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-            #                                     biomask, backmask, self.first_image.subtract_background,
-            #                                     self.first_image.subtract_background2)
-            # (self.last_image.binary_image)
-
-            # self.type_csc_dict() # Update too early if convert_and_segment is computed after
-            # get_cropped_subtract_background = OneImageAnalysis(self.first_image.bgr)
-            # # get_cropped_subtract_background.generate_subtract_background(self.vars['convert_for_origin'])
-            # get_cropped_subtract_background.generate_subtract_background(self.vars['convert_for_motion'])
-            # self.first_image.subtract_background = get_cropped_subtract_background.subtract_background.copy()
-            # if self.vars['convert_for_motion']['logical']  != 'None':
-            #     get_cropped_subtract_background.generate_subtract_background(self.vars['convert_for_motion2'])
-            #     self.first_image.subtract_background2 = get_cropped_subtract_background.subtract_background.copy()
-
     def get_origins_and_backgrounds_lists(self):
         logging.info("Create origins and background lists")
         if self.top is None:
@@ -1126,7 +1092,7 @@ class ProgramOrganizer:
             if self.last_image.bgr[among[0], among[1], ...].mean() > self.last_image.bgr[not_among[0], not_among[1], ...].mean():
                 self.vars['contour_color'] = 255
         if self.vars['origin_state'] == "invisible":
-            binary_image = self.first_image.binary_image.copy()
+            binary_image = deepcopy(self.first_image.binary_image)
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                  None, None, subtract_background=None,
                                                  subtract_background2=None,
@@ -1170,7 +1136,7 @@ class ProgramOrganizer:
         prev_img = None
         for image_i, image_name in enumerate(self.data_list):
             img = self.videos.read_and_rotate(image_name, prev_img)
-            prev_img = img.copy()
+            prev_img = deepcopy(img)
             # if self.videos.first_image.crop_coord is not None:
             #     img = img[self.videos.first_image.crop_coord[0]:self.videos.first_image.crop_coord[1],
             #               self.videos.first_image.crop_coord[2]:self.videos.first_image.crop_coord[3], :]
@@ -1232,9 +1198,8 @@ class ProgramOrganizer:
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
         self.vars['descriptors']['cluster_number'] = self.vars['oscilacyto_analysis']
         self.vars['descriptors']['mean_cluster_area'] = self.vars['oscilacyto_analysis']
-        self.vars['descriptors']['minkowski_dimension'] = self.vars['fractal_analysis']
-        self.vars['descriptors']['node_number'] = self.vars['network_detection']
-        self.vars['descriptors']['edge_number'] = self.vars['network_detection']
+        self.vars['descriptors']['vertices_number'] = self.vars['network_detection']
+        self.vars['descriptors']['edges_number'] = self.vars['network_detection']
         self.vars['descriptors']['newly_explored_area'] = self.vars['do_fading']
         """                             if self.vars['descriptors_means']:
                     self.vars['output_list'] += [f'{descriptor}_mean']
@@ -1392,10 +1357,10 @@ class ProgramOrganizer:
             self.first_image.bgr)
         # self.save_analysis_parameters.to_csv("analysis_parameters.csv", sep=";")
 
-        software_settings = self.vars.copy()
+        software_settings = deepcopy(self.vars)
         for key in ['descriptors', 'analyzed_individuals', 'exif', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             software_settings.pop(key, None)
-        global_settings = self.all.copy()
+        global_settings = deepcopy(self.all)
         for key in ['analyzed_individuals', 'night_mode', 'expert_mode', 'is_auto', 'arena', 'video_option', 'compute_all_options', 'vars', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             global_settings.pop(key, None)
         software_settings.update(global_settings)

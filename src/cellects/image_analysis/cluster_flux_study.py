@@ -100,7 +100,10 @@ class ClusterFluxStudy:
                 minimal_distance = 1
             else:
                 if cluster_size > 200:
-                    cluster_img = nonzero(morphologyEx(cluster_img, MORPH_GRADIENT, cross_33))
+
+                    eroded_cluster_img = erode(cluster_img, cross_33)
+                    cluster_img = nonzero(cluster_img - eroded_cluster_img)
+                    # cluster_img = nonzero(morphologyEx(cluster_img, MORPH_GRADIENT, cross_33))
                     contours[cluster_img] = 2
                 else:
                     contours[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 2

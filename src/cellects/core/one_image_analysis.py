@@ -6,6 +6,7 @@ OneImageAnalysis is a class containing many tools to analyze one image
 
 import logging
 import os
+from copy import deepcopy
 import numpy as np
 import cv2  # named opencv-python
 import multiprocessing.pool as mp
@@ -722,7 +723,7 @@ class OneImageAnalysis:
             # The while loop until one col space remains or the removal of one implies a strong enough area change
             previous_c_space = list(potentials.keys())[-1]
             for c_space in potentials.keys():
-                try_potentials = potentials.copy()
+                try_potentials = deepcopy(potentials)
                 try_potentials.pop(c_space)
                 if i > 0:
                     try_potentials.pop(previous_c_space)
@@ -1149,7 +1150,7 @@ class OneImageAnalysis:
             logging.info("Crop using the crop_images method of OneImageAnalysis class")
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
-            self.bgr = self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...].copy()
+            self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])
             if len(self.all_c_spaces) > 0:
                 self.all_c_spaces = get_all_color_spaces(self.bgr)
             if self.im_combinations is not None:

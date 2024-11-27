@@ -5,6 +5,7 @@ They are threads to process the first image and save the selected combinations s
 """
 import threading
 import logging
+from copy import deepcopy
 from numpy import min, max, any, argmin, logical_and, pi, square, mean, median, float32, logical_not, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from cellects.image_analysis.image_segmentation import otsu_thresholding, generate_color_space_combination
@@ -57,7 +58,7 @@ class ProcessFirstImage:
             previous_sum = combination_features[i, 5]
             for j in possibilities[::-1]:
                 csc_dict2 = saved_color_space_list[j]
-                csc_dict = self.csc_dict.copy()
+                csc_dict = deepcopy(self.csc_dict)
                 keys = list(csc_dict.keys())
 
                 k2 = list(csc_dict2.keys())[0]
@@ -79,7 +80,7 @@ class ProcessFirstImage:
                     if previous_shape_number >= self.shape_number and self.total_area > previous_sum * 0.9:
                         previous_shape_number = self.shape_number
                         previous_sum = self.total_area
-                        self.csc_dict = csc_dict.copy()
+                        self.csc_dict = deepcopy(csc_dict)
                         self.unaltered_concomp_nb = combination_features[i, 3]
                         self.parent.save_combination_features(self)
                         logging.info(str(saved_color_space_list[i]) + "-->" + str(self.csc_dict ))
@@ -210,7 +211,7 @@ class ProcessFirstImage:
                     do_not_delete = do_not_delete[do_not_delete != 0]
         if not self.several_blob_per_arena and self.spot_size is not None:
             counter = 0
-            self.shapes2 = self.shapes.copy()
+            self.shapes2 = deepcopy(self.shapes)
             while self.shape_number != self.sample_number and counter < len(self.parent.spot_size_confints):
                 self.shape_selection(horizontal_size=self.spot_size, shape=self.parent.spot_shapes[counter],
                                      confint=self.parent.spot_size_confints[counter], do_not_delete=do_not_delete)
