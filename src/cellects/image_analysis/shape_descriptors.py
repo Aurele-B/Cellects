@@ -9,6 +9,7 @@
         attribute a None value to the variable that store it
         add a if condition in the for loop to compute that variable when its name appear in the wanted_descriptors_list
 """
+from copy import deepcopy
 from numpy import square, sqrt, empty, zeros, float64, uint8, argmax, sum, pi
 from cv2 import convexHull, arcLength, contourArea, minAreaRect, moments, findContours, RETR_TREE, CHAIN_APPROX_NONE, connectedComponents, CV_16U
 from cellects.utils.utilitarian import translate_dict
@@ -36,9 +37,9 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
                'major_axis_len': True, 'minor_axis_len': True, 'axes_orientation': True
                                }
 
-descriptors = from_shape_descriptors_class.copy()
+descriptors = deepcopy(from_shape_descriptors_class)
 descriptors.update({'cluster_number': False, 'mean_cluster_area': False, 'minkowski_dimension': False,
-                    'node_number': False, 'edge_number': False})
+                    'vertices_number': False, 'edges_number': False})
 
 
 

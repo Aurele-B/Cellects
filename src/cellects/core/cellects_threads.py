@@ -2,12 +2,14 @@
 """ADD DETAIL OF THE MODULE"""
 
 import logging
+from copy import deepcopy
 from multiprocessing import Queue, Process, Manager
 import os
 import time
 from glob import glob
 from timeit import default_timer
-from cv2 import (connectedComponents, connectedComponentsWithStats, imwrite, dilate, morphologyEx, MORPH_GRADIENT, FONT_HERSHEY_SIMPLEX, putText)
+from copy import deepcopy
+from cv2 import (connectedComponents, connectedComponentsWithStats, erode, dilate, morphologyEx, MORPH_GRADIENT, FONT_HERSHEY_SIMPLEX, putText)
 from numba.typed import Dict as TDict
 from numpy import (
     min, max, all, any, pi, min, round, mean, diff, square,
@@ -148,7 +150,7 @@ class UpdateImageThread(QtCore.QThread):
             # 2) The back_mask and bio_mask
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
-            self.parent().imageanalysiswindow.drawn_image = self.parent().po.current_image.copy()
+            self.parent().imageanalysiswindow.drawn_image = deepcopy(self.parent().po.current_image)
             if self.parent().imageanalysiswindow.drawn_image.size < 1000000:
                 contour_width = 3
             else:
@@ -166,7 +168,10 @@ class UpdateImageThread(QtCore.QThread):
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
                 # if not self.parent().imageanalysiswindow.is_first_image_flag:
-                binary_idx = morphologyEx(binary_idx, MORPH_GRADIENT, cross_33)
+
+                eroded_binary = erode(binary_idx, cross_33)
+                binary_idx = binary_idx - eroded_binary
+                # binary_idx = morphologyEx(binary_idx, MORPH_GRADIENT, cross_33)
                 binary_idx = dilate(binary_idx, kernel=cross_33, iterations=contour_width)
                 binary_idx = nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
@@ -263,7 +268,7 @@ class UpdateImageThread(QtCore.QThread):
                 # Just add the mask to drawn_image as quick as possible
                 # Add user defined masks
                 # Take the drawn image and add the temporary mask to it
-                image = self.parent().imageanalysiswindow.drawn_image.copy()
+                image = deepcopy(self.parent().imageanalysiswindow.drawn_image)
                 if self.parent().imageanalysiswindow.back1_bio2 == 0:
                     # logging.info("Dynamic drawing of the arena outline")
                     if self.parent().po.vars['arena_shape'] == 'circle':
@@ -746,7 +751,7 @@ class OneArenaThread(QtCore.QThread):
                 is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                 img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
                 # img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                prev_img = img.copy()
+                prev_img = deepcopy(img)
                 if self.parent().po.first_image.cropped:
                     img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
                           self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3], :]
@@ -788,9 +793,9 @@ class OneArenaThread(QtCore.QThread):
                 self.videos_in_ram = self.parent().po.converted_video
             else:
                 if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
-                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy()]
+                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video)]
                 else:
-                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy(), self.parent().po.converted_video2.copy()]
+                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video), deepcopy(self.parent().po.converted_video2)]
 
             # videos = [self.parent().po.video.copy(), self.parent().po.converted_video.copy()]
         else:
@@ -799,9 +804,9 @@ class OneArenaThread(QtCore.QThread):
         l = [i, arena, self.parent().po.vars, False, False, False, self.videos_in_ram]
         self.parent().po.motion = MotionAnalysis(l)
         if self.videos_in_ram is None:
-            self.parent().po.converted_video = self.parent().po.motion.converted_video.copy()
+            self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                self.parent().po.converted_video2 = self.parent().po.motion.converted_video2.copy()
+                self.parent().po.converted_video2 = deepcopy(self.parent().po.motion.converted_video2)
         self.parent().po.motion.get_origin_shape()
 
         if self.parent().po.motion.dims[0] >= 40:
@@ -825,9 +830,9 @@ class OneArenaThread(QtCore.QThread):
 
     def detection(self):
         self.message_from_thread_starting.emit(f"Quick video segmentation")
-        self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
+        self.parent().po.motion.converted_video = deepcopy(self.parent().po.converted_video)
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-            self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
+            self.parent().po.motion.converted_video2 = deepcopy(self.parent().po.converted_video2)
         # self.parent().po.motion.detection(compute_all_possibilities=True)
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         if self.parent().po.all['compute_all_options']:
@@ -900,7 +905,7 @@ class OneArenaThread(QtCore.QThread):
                 analysis_i.update_shape(False)
                 contours = nonzero(
                     morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT, cross_33))
-                current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
+                current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
                 # else:
                 #     current_image = round(self.parent().po.motion.converted_video[analysis_i.t - 1, :, :]).astype(uint8)
                 #     current_image = stack((current_image, current_image, current_image), axis=2)
@@ -946,7 +951,7 @@ class VideoReaderThread(QtCore.QThread):
         self.setParent(parent)
 
     def run(self):
-        video_analysis = self.parent().po.motion.visu.copy()
+        video_analysis = deepcopy(self.parent().po.motion.visu)
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
         if self.parent().po.load_quick_full > 0:
@@ -980,7 +985,7 @@ class VideoReaderThread(QtCore.QThread):
             mask = morphologyEx(video_mask[t, ...], MORPH_GRADIENT, cross_33)
             mask = stack((mask, mask, mask), axis=2)
             # current_image[current_image > 0] = self.parent().po.vars['contour_color']
-            current_image = video_analysis[t, ...].copy()
+            current_image = deepcopy(video_analysis[t, ...])
             current_image[mask > 0] = self.parent().po.vars['contour_color']
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
@@ -1291,7 +1296,7 @@ class RunAllThread(QtCore.QThread):
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                            prev_img = img.copy()
+                            prev_img = deepcopy(img)
                             if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                                 img = img[:, :, 0]
 

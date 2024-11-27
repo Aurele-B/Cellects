@@ -5,6 +5,8 @@
 
 import os
 import logging
+from copy import deepcopy
+
 from numpy import arange, any, round, uint8, int8, int16, int64, uint64, save, array, zeros, zeros_like, \
     nonzero, less, greater_equal, logical_and, logical_or, repeat, floor, ceil, unique, \
     delete, linspace, all, mean, sum, absolute, where, append, in1d, \
@@ -49,8 +51,8 @@ class OneVideoPerBlob:
         self.small_kernel = array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=uint8)
         self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-        self.unchanged_ordered_fimg = self.ordered_first_image.copy()
-        self.modif_validated_shapes = self.first_image.validated_shapes.copy()
+        self.unchanged_ordered_fimg = deepcopy(self.ordered_first_image)
+        self.modif_validated_shapes = deepcopy(self.first_image.validated_shapes)
         self.standard = - 1
         counter = 0
         while any(less(self.standard, 0)) and counter < 20:
@@ -104,7 +106,10 @@ class OneVideoPerBlob:
         """
         from timeit import default_timer
         tic = default_timer()
-        shapes = cv2.morphologyEx(self.modif_validated_shapes, cv2.MORPH_GRADIENT, cross_33)
+        shapes = deepcopy(self.modif_validated_shapes)
+        eroded_shapes = cv2.erode(self.modif_validated_shapes, cross_33)
+        shapes = shapes - eroded_shapes
+        # shapes = cv2.morphologyEx(self.modif_validated_shapes, cv2.MORPH_GRADIENT, cross_33)
         x_min = self.ordered_stats[:, 0]
         y_min = self.ordered_stats[:, 1]
         x_max = self.ordered_stats[:, 0] + self.ordered_stats[:, 2]
@@ -167,7 +172,7 @@ class OneVideoPerBlob:
         self.standard[:, 3] = self.right + int8(ceil(add_to_x))
 
         # Monitor if one bounding box gets out of picture shape
-        out_of_pic = self.standard.copy()
+        out_of_pic = deepcopy(self.standard)
         out_of_pic[:, 1] = self.ordered_first_image.shape[0] - out_of_pic[:, 1] - 1
         out_of_pic[:, 3] = self.ordered_first_image.shape[1] - out_of_pic[:, 3] - 1
 
@@ -266,7 +271,7 @@ class OneVideoPerBlob:
         ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
         #self.ordered_first_image = self.ordered_first_image.astype(uint8)
-        previous_ordered_image_i = self.ordered_first_image.copy()
+        previous_ordered_image_i = deepcopy(self.ordered_first_image)
         if img_list.dtype.type is str_:
             img_to_display = self.read_and_rotate(img_list[sample_numbers[1] - 1], self.first_image.bgr)
             # img_to_display = readim(img_list[sample_numbers[1] - 1], self.raw_images)
@@ -279,8 +284,8 @@ class OneVideoPerBlob:
         for step_i in arange(1, sample_size):
             print(step_i)
 
-            previously_ordered_centroids = ordered_centroids.copy()
-            image_i = self.motion_list[step_i].copy()
+            previously_ordered_centroids = deepcopy(ordered_centroids)
+            image_i = deepcopy(self.motion_list[step_i])
             image_i = cv2.dilate(image_i, self.small_kernels, iterations=5)
 
             # Display the segmentation result for all shapes at this frame
@@ -296,7 +301,7 @@ class OneVideoPerBlob:
             for shape_i in range(self.first_image.shape_number):
                 shape_to_expand = zeros(image_i.shape, dtype=uint8)
                 shape_to_expand[previous_ordered_image_i == (shape_i + 1)] = 1
-                without_shape_i = previous_ordered_image_i.copy()
+                without_shape_i = deepcopy(previous_ordered_image_i)
                 without_shape_i[previous_ordered_image_i == (shape_i + 1)] = 0
                 test_shape = expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_shape_i,
                                                                                ordered_centroids[shape_i, :],
@@ -414,7 +419,7 @@ class OneVideoPerBlob:
 
 
     def print_bounding_boxes(self, display_or_return=0):
-        imtoshow = self.first_image.bgr.copy()
+        imtoshow = deepcopy(self.first_image.bgr)
         segments = zeros((2, 1), dtype=uint8)
         for i in arange(self.first_image.shape_number):
             j = i * 4
@@ -567,7 +572,7 @@ class OneVideoPerBlob:
                 # image_i = 0; image_name = img_list[image_i]
                 # print(str(image_i), end=' ')
                 img = self.read_and_rotate(image_name, prev_img)
-                prev_img = img.copy()
+                prev_img = deepcopy(img)
                 if not in_colors and reduce_image_dim:
                     img = img[:, :, 0]
                 # if not in_colors:
@@ -681,9 +686,9 @@ class OneVideoPerBlob:
             if not os.path.exists(image_name):
                 raise FileNotFoundError(image_name)
             img = self.read_and_rotate(image_name, prev_img)
-            prev_img = img.copy()
+            prev_img = deepcopy(img)
             for blob_i in arange(self.first_image.shape_number):
-                blob_img = img.copy()
+                blob_img = deepcopy(img)
                 if self.first_image.crop_coord is not None:
                     blob_img = blob_img[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
                                self.first_image.crop_coord[2]:self.first_image.crop_coord[3], :]

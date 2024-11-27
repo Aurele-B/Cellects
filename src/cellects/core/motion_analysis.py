@@ -13,7 +13,7 @@ from gc import collect
 # from scipy import signal as si
 from timeit import default_timer
 from time import sleep
-from copy import deepcopy as dcopy
+from copy import deepcopy
 from cv2 import (
     connectedComponents, connectedComponentsWithStats, MORPH_CROSS,
     getStructuringElement, CV_16U, erode, dilate, morphologyEx, MORPH_OPEN,
@@ -33,7 +33,7 @@ from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.network_detection import NetworkDetection
-from cellects.image_analysis.fractal_analysis import FractalAnalysis, box_counting
+from cellects.image_analysis.fractal_analysis import FractalAnalysis, box_counting, prepare_box_counting
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
@@ -559,7 +559,7 @@ class MotionAnalysis:
         if t == 0:
             analysisi.previous_binary_image = self.origin
         else:
-            analysisi.previous_binary_image = self.segmentation[t - 1, ...].copy()
+            analysisi.previous_binary_image = deepcopy(self.segmentation[t - 1, ...])
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
@@ -567,17 +567,6 @@ class MotionAnalysis:
                                lighter_background=self.vars['lighter_background'],
                                side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask)
 
-        # if self.vars['drift_already_corrected']:
-        #     im = zeros(self.dims[1:], dtype=uint8)
-        #     im[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.image
-        #     analysisi.image = im.copy()
-        #     if self.vars['convert_for_motion']['logical'] != 'None':
-        #         im2 = zeros(self.dims[1:], dtype=uint8)
-        #         im2[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.image2
-        #         analysisi.image2 = im2.copy()
-        #     bin_im = zeros(self.dims[1:], dtype=uint8)
-        #     bin_im[min_y:(max_y + 1), min_x:(max_x + 1)] = analysisi.binary_image
-        #     analysisi.binary_image = bin_im.copy()
         return analysisi
 
         # 1. Get the mask valid for a number of images around it (step).
@@ -817,7 +806,7 @@ class MotionAnalysis:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .npy videos and Data to run Cellects quickly.pkl and re-run")
 
         if self.vars['origin_state'] == "invisible":
-            self.binary[self.start - 1, :, :] = self.origin.copy()
+            self.binary[self.start - 1, :, :] = deepcopy(self.origin)
             self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = self.converted_video[self.start, self.origin_idx[0], self.origin_idx[1]]
         else:
             if self.vars['origin_state'] == "fluctuating":
@@ -849,7 +838,6 @@ class MotionAnalysis:
         if self.vars['ring_correction']:
             self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = zeros(self.dims[1:], dtype=uint8)
-            # cannot_fading = self.holes.copy()
             self.pixel_ring_depth += 2
             self.update_ring_width()
 
@@ -911,23 +899,14 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
-        new_shape = self.binary[self.t - 1, :, :].copy()
-        new_potentials = morphologyEx(new_potentials, MORPH_CLOSE, cross_33) # TO REMOVE!!!
-        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
+        new_shape = deepcopy(self.binary[self.t - 1, :, :])
+        new_potentials = morphologyEx(new_potentials, MORPH_CLOSE, cross_33)
+        new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders
         new_shape = logical_or(new_shape, new_potentials).astype(uint8)
         # Add distant shapes within a radius, score every added pixels according to their distance
         if not self.vars['several_blob_per_arena']:
-            # new_potentials *= self.borders
-            # if self.vars['origin_state'] == "constant":
-            #     new_shape = logical_or(new_potentials, self.origin).astype(uint8)
-            # else:
-            #     new_shape = new_potentials.copy()
-        # else:
-            # Remove noise by opening and by keeping the shape within borders
-            # new_potentials = morphologyEx(new_potentials, MORPH_OPEN, cross_33) * self.borders # TO REMOVE!!!
-            ## Build the new shape state from the t-1 one
             if new_shape.sum() == 0:
-                new_shape = new_potentials.copy()
+                new_shape = deepcopy(new_potentials)
             else:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
                 # If max_distance is non nul look for distant shapes
@@ -935,7 +914,7 @@ class MotionAnalysis:
                                                      self.vars['max_distant_shape_size'])
                 pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
 
-                new_shape = pads.expanded_shape.copy()
+                new_shape = deepcopy(pads.expanded_shape)
                 new_shape[new_shape > 1] = 1
                 if logical_and(self.t > self.step, self.t < self.dims[0]):
                     if any(pads.expanded_shape > 5):
@@ -944,7 +923,7 @@ class MotionAnalysis:
                         self.binary[(self.step):(self.t + 1), :, :] = \
                             pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
                                                       self.segmentation[(self.step):(self.t + 1), :, :])
-                        new_shape = self.binary[self.t, :, :].copy()
+                        new_shape = deepcopy(self.binary[self.t, :, :])
                 pads = None
 
             # Fill holes
@@ -1043,7 +1022,7 @@ class MotionAnalysis:
 
         if show_seg:
             if self.visu is not None:
-                im_to_display = self.visu[self.t, ...].copy()
+                im_to_display = deepcopy(self.visu[self.t, ...])
                 contours = nonzero(morphologyEx(self.binary[self.t, :, :], MORPH_GRADIENT, cross_33))
                 if self.vars['lighter_background']:
                     im_to_display[contours[0], contours[1]] = 0
@@ -1073,7 +1052,7 @@ class MotionAnalysis:
             collect()
         if self.vars['do_fading']:
             self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
-            self.already_explored_area = self.origin.copy()
+            self.already_explored_area = deepcopy(self.origin)
             for self.t in range(self.dims[0]):
                 self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
                 self.already_explored_area = logical_or(self.already_explored_area, self.binary[self.t, :, :])
@@ -1255,215 +1234,6 @@ class MotionAnalysis:
             time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
             self.whole_shape_descriptors = concat([self.whole_shape_descriptors, time_descriptor_colony], axis=1)
 
-            """
-                    #
-                    #     # This colony already existed: The colony_previous_names becomes the current colony_names
-                    #     colony_names = colony_previous_names.copy()
-                    #     colony_coord = array(nonzero(current_colony_img), dtype=uint32)
-                    #     # If any of the current colony names already are in updated_colony_names, it means that a
-                    #     # consistent colony from t-1 split into several (at least 2) colonies at t.
-                    #     result_from_colony_division: bool = False
-                    #     for name in colony_names:
-                    #         if isin(name, updated_colony_names):
-                    #             result_from_colony_division = True
-                    #         if result_from_colony_division:
-                    #             break
-                    #     if result_from_colony_division:
-                    #         # logging.info("This colony emerged from the division of a parent colony")
-                    #         # We must add it as a new colony
-                    #         colony_number += 1
-                    #         colony_names = [colony_number]
-                    #
-                    # pixel_nb = colony_coord.shape[1]
-                    # colony_id_matrix[colony_coord[0, :], colony_coord[1, :]] = colony_names[0]
-                    # coord_colonies = row_stack((coord_colonies, column_stack((repeat(t, pixel_nb).astype(uint32),
-                    #     colony_coord[0, :], colony_coord[1, :], repeat(colony_names[0], pixel_nb).astype(uint32)))))
-                    # updated_colony_names = append(updated_colony_names, colony_names)
-
-
-            
-
-            coord_colonies2 = coord_colonies[coord_colonies[:, 3] < 500, :]
-            save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}_col{max(coord_colonies2[:, 3])}.npy", coord_colonies2)
-
-            colist = []
-            for colony in unique(coord_colonies2[:, 3]):
-                colist.append(ptp(coord_colonies2[coord_colonies2[:, 3] == colony, 2]))
-            coord_colonies2[coord_colonies2[:, 3] == 36]
-            nonzero(array(colist)==270)
-            max(array(colist))
-
-            # shapes, stats, centers = cc((colony_id_matrix==36).astype(uint8))
-
-            from numpy import array_equal, zeros_like
-            a = zeros_like(self.binary[t, ...])
-            coord_t = coord_colonies[coord_colonies[:, 3] == 5, :]
-            a[coord_t[:, 1], coord_t[:,2]] = 1
-            See(a)
-            array_equal(self.binary[t, ...] > 0, a)
-            b = zeros((31, self.dims[1], self.dims[2]), uint8)
-            for ti in range(31):
-                b[ti, coord_colonies[logical_and(coord_colonies[:, 0] == ti, coord_colonies[:, 3] == 5), 1], coord_colonies[logical_and(coord_colonies[:, 0] == ti, coord_colonies[:, 3] == 5), 2]] = 1
-
-            movie(b)
-            See(b[0,...])
-            ####
-
-            self.statistics["first_move"] = 1
-            colony_id_matrix = zeros(self.dims[1:], dtype=uint64)
-            # updated_colony_id_matrix = zeros(self.dims[1:], dtype=uint32)
-            # colony_dictionary = {}
-            # colony_dictionary['arena'] = [self.statistics['arena']] * self.dims[0]
-            # colony_dictionary['time'] = timings
-            # colony_dictionary['area_total'] = self.surfarea.astype(float64)
-            time_descriptor_colony = zeros((self.dims[0], len(to_compute_from_sd), 100), dtype=float64)
-            # if self.vars['output_in_mm']:
-            #     colony_dictionary['area_total'] *= self.vars['average_pixel_size']
-            colony_number = 0
-            # time_descriptor_colony[27:(t+1), 0, :5]
-            pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
-            previously_here = [0]
-            for t in arange(self.dims[0]):#31):#
-                # t+=1
-                previous_colony_id_matrix = colony_id_matrix.copy()
-                # nb, shapes = connectedComponents(self.binary[t, :, :])
-                # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
-                # keeps the previous colony name.
-                shapes, stats, centers = cc(self.binary[t, :, :])
-                # Consider that shapes bellow 3 pixels are noise. Given they are ranked by decreasing order,
-                # the loop will stop at nb and not compute them
-                nb = stats[stats[:, 4] >= self.vars["first_move_threshold"]].shape[0]
-                current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
-                logging.info(f"Arena n°{self.statistics['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
-                # logging.info(nb)
-                updated_colony_names = zeros(1, dtype=uint64)
-                for colony in (arange(nb - 1) + 1):#120)):# #92
-                    # colony+=1
-                    # logging.info(f'Colony number {colony}')
-                    current_colony_img = (shapes == colony).astype(uint8)
-                    # if current_colony_img.sum() > 3:
-                    # nb, shapes, stats, centro = connectedComponentsWithStats(self.binary[t, :, :])
-                    # logging.info(nb)
-                    # if nb > 2:
-                    #     break
-                    # I/ Find out which names the current colony had at t-1
-                    colony_previous_names = unique(current_colony_img * colony_id_matrix)
-                    colony_previous_names = colony_previous_names[colony_previous_names != 0]
-                    # II/ Find out if the current colony names had already been analyzed at t
-                    # If there no match with the saved colony_id_matrix, its a new colony, lets add it
-                    if len(colony_previous_names) == 0:
-                        # logging.info("here is a new colony")
-                        colony_number += 1
-                        colony_names = array(colony_number)
-                        colony_id_matrix[nonzero(current_colony_img)] = colony_names
-                        # for descriptor in descriptors:
-                        #     colony_dictionary[descriptor + "_colony" + str(colony_number)] = zeros(self.dims[0], dtype=float64)
-                        if colony_number > time_descriptor_colony.shape[2]:
-                            time_descriptor_colony = concatenate((time_descriptor_colony, zeros((self.dims[0], len(to_compute_from_sd), 100), dtype=float64)), axis=2)
-                        self.statistics[f"appear_t_colony" + str(colony_number)] = t
-                        nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                        self.statistics[f"appear_x_colony" + str(colony_number)] = str(centroids[1, 0])
-                        self.statistics[f"appear_y_colony" + str(colony_number)] = str(centroids[1, 1])
-
-                    # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_names
-                    elif len(colony_previous_names) > 0:
-                        # logging.info("This colony already existed")
-                        # The colony_previous_names becomes the current colony_names
-                        colony_names = colony_previous_names
-                        # logging.info(f'Do this colony was 3 or 4: {isin([3,4], colony_names)}')
-                        # If any of the current colony names already are in updated_colony_names, it means that a
-                        # consistent colony from t-1 split into several (at least 2) colonies at t.
-                        result_from_colony_division: bool = False
-                        for name in colony_names:
-                            if isin(name, updated_colony_names):
-                                result_from_colony_division = True
-                            if result_from_colony_division:
-                                break
-                        if result_from_colony_division:
-                            # logging.info("This colony emerged from the division of a parent colony")
-                            # We must add it as a new colony
-                            colony_number += 1
-                            colony_names = array(colony_number)
-                            colony_id_matrix[nonzero(current_colony_img)] = colony_names
-                            # for descriptor in descriptors:
-                            #     colony_dictionary[descriptor + "_colony" + str(colony_number)] = zeros(self.dims[0], dtype=float64)
-                            if colony_number > time_descriptor_colony.shape[2]:
-                                time_descriptor_colony = concatenate((time_descriptor_colony,
-                                                                      zeros((self.dims[0], len(to_compute_from_sd), 100),
-                                                                            dtype=float64)), axis=2)
-                            self.statistics["division_t_colony" + str(colony_number)] = t
-                            nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                            self.statistics["division_x_colony" + str(colony_number)] = str(centroids[1, 0])
-                            self.statistics["division_y_colony" + str(colony_number)] = str(centroids[1, 1])
-                        else:
-                            # for col_name in colony_names:
-                            #     colony_id_matrix[colony_id_matrix == col_name] = 0
-                            colony_id_matrix[nonzero(current_colony_img)] = colony_names[0]
-
-                        # and we will update the descriptors of that(these) colony(ies) using that(these) name(s).
-                        # If there is more than 1 match, all these saved colonies merged together
-                        if len(colony_previous_names) > 1:
-                            # logging.info("This colony emerged from the fusion of several parent colonies")
-                            # If there is more than one match: two colonies fused.
-                            # -> Update all these colonies and store when they fused
-                            if colony_names.size == 1:
-                                col_names = [colony_names]
-                            else:
-                                col_names = colony_names
-                            for colony_name in col_names:
-                                self.statistics["fusion_t_colony" + str(colony_name)] = t
-                                nb, small_shape, centroids, stats = connectedComponentsWithStats(current_colony_img)
-                                self.statistics["fusion_x_colony" + str(colony_number)] = str(centroids[1, 0])
-                                self.statistics["fusion_y_colony" + str(colony_number)] = str(centroids[1, 1])
-
-                    updated_colony_names = append(updated_colony_names, colony_names)
-                    # Compute the current colony descriptors
-                    SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
-                    if self.vars['output_in_mm']:
-                        if isin('area', to_compute_from_sd):
-                            SD.descriptors['area'] *= self.vars['average_pixel_size']
-                        if isin('total_hole_area', to_compute_from_sd):
-                            SD.descriptors['total_hole_area'] *= self.vars['average_pixel_size']
-                        if isin('perimeter', to_compute_from_sd):
-                            SD.descriptors['perimeter'] *= sqrt(self.vars['average_pixel_size'])
-                        if isin('major_axis_len', to_compute_from_sd):
-                            SD.descriptors['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
-                        if isin('minor_axis_len', to_compute_from_sd):
-                            SD.descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
-                    # Save all colony descriptors in the time_descriptor_colony array:
-                    # if the current_colony has several colony names, repeat descriptors in each colony column
-                    time_descriptor_colony[t, :, (colony_names - 1)] = tile(list(SD.descriptors.values()), (colony_names.size, 1))
-
-                # if any(colony_id_matrix == 3) | any(colony_id_matrix==4):
-                #     logging.info(f'here t = {t} and c = {colony}')
-                colony_id_matrix *= self.binary[t, :, :]
-                currently_here = unique(colony_id_matrix)
-                disappeared_colonies = ~(isin(previously_here, currently_here))
-                if any(disappeared_colonies):
-                    disappeared_colonies = previously_here[disappeared_colonies]
-                    for disappeared_colony in disappeared_colonies:
-                        self.statistics[f"disappear_t_colony" + str(colony_number)] = t - 1
-                        nb, small_shape, centroids, stats = connectedComponentsWithStats(
-                            (previous_colony_id_matrix == disappeared_colony).astype(uint8))
-                        self.statistics[f"disappear_x_colony" + str(colony_number)] = str(centroids[1, 0])
-                        self.statistics[f"disappear_y_colony" + str(colony_number)] = str(centroids[1, 1])
-                previously_here = currently_here.copy()
-
-
-            # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
-            self.whole_shape_descriptors = df()
-            self.whole_shape_descriptors['arena'] = [self.statistics['arena']] * self.dims[0]
-            self.whole_shape_descriptors['time'] = timings
-            self.whole_shape_descriptors['area_total'] = self.surfarea.astype(float64)
-            if self.vars['output_in_mm']:
-                self.whole_shape_descriptors['area_total'] *= self.vars['average_pixel_size']
-            time_descriptor_colony = time_descriptor_colony[:, :, :colony_number]
-            time_descriptor_colony = concatenate(stack(time_descriptor_colony, axis=1), axis=1)
-            column_names = char.add(repeat(to_compute_from_sd, colony_number), tile(arange(colony_number) + 1, len(to_compute_from_sd)).astype(str))
-            time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
-            self.whole_shape_descriptors = self.whole_shape_descriptors.join(time_descriptor_colony)
-            """
-
 
         if self.vars['do_fading']:
             self.whole_shape_descriptors['newly_explored_area'] = self.newly_explored_area
@@ -1637,6 +1407,7 @@ class MotionAnalysis:
 
             if self.vars['fractal_analysis']:
                 box_counting_dimensions = zeros((self.dims[0], 7), dtype=float64)
+            vertices_and_edges = zeros((self.dims[0], 2), dtype=uint32)
 
 
             for t in arange(self.statistics["first_move"], self.dims[0]):  #20):#
@@ -1671,12 +1442,15 @@ class MotionAnalysis:
 
                     nd.skeletonize()
                     nd.get_graph()
-                    self.graph[t, ...] = nd.graph.copy()
+                    vertices_and_edges[t, :] = nd.vertices_number, nd.edges_number
+                    self.graph[t, ...] = deepcopy(nd.graph)
 
                     if self.vars['fractal_analysis']:
                         box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
-                        box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[t, 3] = box_counting(self.binary[t, ...], contours=True)
-                        box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(self.network_dynamics[t, ...], contours=False)
+                        zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars['fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
+                        box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[t, 3] = box_counting(zoomed_binary, side_lengths)
+                        zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...], side_threshold=self.vars['fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=False)
+                        box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(zoomed_binary, side_lengths)
 
                     # #### Houssam ####
                     # segments = nd.find_segments(labeled_nodes, label_to_position)
@@ -1684,8 +1458,10 @@ class MotionAnalysis:
                     # # largeurs = nd.get_segment_width(self.binary[t, ...], segments, distance_map)
                     # #### Houssam ####
 
-                    imtoshow = self.visu[t, ...].copy()
-                    net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, cross_33))
+                    imtoshow = deepcopy(self.visu[t, ...])
+                    eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
+                    net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
+                    # net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, cross_33))
                     imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
 
                     # Remember to uncomment this when done!!! For visualization.
@@ -1693,10 +1469,11 @@ class MotionAnalysis:
                         imshow("", resize(imtoshow, (1000, 1000)))
                         waitKey(1)
                     else:
-                        self.visu[t, ...] = imtoshow.copy()
+                        self.visu[t, ...] = deepcopy(imtoshow)
             if show_seg:
                 destroyAllWindows()
-
+            self.whole_shape_descriptors["vertices_number"] = vertices_and_edges[:, 0]
+            self.whole_shape_descriptors["edges_number"] = vertices_and_edges[:, 1]
             if self.vars['fractal_analysis']:
                 self.whole_shape_descriptors["inner_network_size"] = box_counting_dimensions[:, 0]
                 self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 1]
@@ -1820,9 +1597,11 @@ class MotionAnalysis:
             # New analysis to get the surface dynamic of every oscillatory cluster: Part 1 ending
             pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
             for t in arange(self.dims[0]):#arange(60): #
-                contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33)
+                # contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33)
+                eroded_binary = erode(self.binary[t, :, :], cross_33)
+                contours = self.binary[t, :, :] - eroded_binary
                 contours_idx = nonzero(contours)
-                imtoshow = self.converted_video[t, ...].copy()
+                imtoshow = deepcopy(self.converted_video[t, ...])
                 imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
                 if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
                     if self.statistics["is_growth_isotropic"] == 1:
@@ -1917,9 +1696,14 @@ class MotionAnalysis:
                                     # Save the current cluster areas:
                                     inner_network = current_cluster_img * network_at_t
                                     inner_network_area = inner_network.sum()
-                                    box_count_dim, r_value, box_nb = box_counting(current_cluster_img, contours=True)
+                                    zoomed_binary, side_lengths = prepare_box_counting(current_cluster_img, side_threshold=self.vars['fractal_box_side_threshold'],
+                                                                                       zoom_step=self.vars['fractal_zoom_step'], contours=True)
+                                    box_count_dim, r_value, box_nb = box_counting(zoomed_binary, side_lengths)
+
                                     if any(inner_network):
-                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(inner_network, contours=False)
+                                        zoomed_binary, side_lengths = prepare_box_counting(inner_network, side_threshold=self.vars['fractal_box_side_threshold'],
+                                                                                            zoom_step=self.vars['fractal_zoom_step'], contours=False)
+                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(zoomed_binary, side_lengths)
                                     else:
                                         inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = 0, 0, 0
                                     # Calculate centroid and add to centroids list
@@ -1948,8 +1732,8 @@ class MotionAnalysis:
                             mean_cluster_area[t] = mean(concatenate((in_stats[:, 4], ef_stats[:, 4])))
 
                             # Prepare the image for display
-                            in_idx = influx.copy()
-                            ef_idx = efflux.copy()
+                            in_idx = deepcopy(influx)
+                            ef_idx = deepcopy(efflux)
                             in_idx *= dotted_image
                             ef_idx *= dotted_image
                             in_idx = nonzero(in_idx)
@@ -1959,8 +1743,8 @@ class MotionAnalysis:
                             imtoshow[ef_idx[0], ef_idx[1], 1:] = 0  # Blue: efflux, intensity decrease
                             imtoshow[ef_idx[0], ef_idx[1], 0] = 204
 
-                oscillations_video[t, :, :] = dcopy(oscillations_image)
-                self.converted_video[t, ...] = dcopy(imtoshow)
+                oscillations_video[t, :, :] = deepcopy(oscillations_image)
+                self.converted_video[t, ...] = deepcopy(imtoshow)
                 if show_seg:
                     imtoshow = resize(imtoshow, (540, 540))
                     imshow("shape_motion", imtoshow)
@@ -2013,7 +1797,10 @@ class MotionAnalysis:
             if not self.vars['network_detection']:
                 box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
                 for t in arange(self.dims[0]):
-                    box_counting_dimensions[t, :] = box_counting(self.binary[t, ...], contours=True)
+                    zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
+                                                                       side_threshold=self.vars['fractal_box_side_threshold'],
+                                                                       zoom_step=self.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, :] = box_counting(zoomed_binary, side_lengths)
                 self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
@@ -2165,21 +1952,25 @@ class MotionAnalysis:
             if len(self.converted_video.shape) == 3:
                 self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video),
                                              axis=3)
-            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, ...].copy()
-            self.efficiency_test_2 = self.converted_video[last_good_detection, ...].copy()
+            self.efficiency_test_1 = deepcopy(self.converted_video[after_one_tenth_of_time, ...])
+            self.efficiency_test_2 = deepcopy(self.converted_video[last_good_detection, ...])
         else:
-            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
-            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
+            self.efficiency_test_1 = deepcopy(self.visu[after_one_tenth_of_time, :, :, :])
+            self.efficiency_test_2 = deepcopy(self.visu[last_good_detection, :, :, :])
 
         position = (25, self.dims[1] // 2)
         text = str(self.statistics['arena'])
-        contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, cross_33))
+        eroded_binary = erode(self.binary[after_one_tenth_of_time, :, :], cross_33)
+        contours = nonzero(self.binary[after_one_tenth_of_time, :, :] - eroded_binary)
+        # contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, cross_33))
         self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
         self.efficiency_test_1 = putText(self.efficiency_test_1, text, position, FONT_HERSHEY_SIMPLEX, 1,
                                         (self.vars["contour_color"], self.vars["contour_color"],
                                          self.vars["contour_color"], 255), 3)
 
-        contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, cross_33))
+        eroded_binary = erode(self.binary[last_good_detection, :, :], cross_33)
+        contours = nonzero(self.binary[last_good_detection, :, :] - eroded_binary)
+        # contours = nonzero(morphologyEx(self.binary[last_good_detection, :, :], MORPH_GRADIENT, cross_33))
         self.efficiency_test_2[contours[0], contours[1], :] = self.vars['contour_color']
         self.efficiency_test_2 = putText(self.efficiency_test_2, text, position, FONT_HERSHEY_SIMPLEX, 1,
                                          (self.vars["contour_color"], self.vars["contour_color"],
@@ -2197,7 +1988,10 @@ class MotionAnalysis:
                 self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video),
                                                 axis=3)
             for t in arange(self.dims[0]):
-                contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33))
+
+                eroded_binary = erode(self.binary[t, :, :], cross_33)
+                contours = nonzero(self.binary[t, :, :] - eroded_binary)
+                # contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33))
                 self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
                 if "iso_digi_transi" in self.statistics.keys():
                     if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):

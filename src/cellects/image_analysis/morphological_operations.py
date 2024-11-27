@@ -22,6 +22,7 @@ It contains the following functions:
     - Ellipse
 """
 import logging
+from copy import deepcopy
 from numpy import square, round, vstack, repeat, append, sqrt, apply_along_axis, arange, zeros_like, zeros, argsort, uint8, min, any, \
     float32, linspace, dstack, not_equal, row_stack, column_stack, quantile, transpose, concatenate, logical_and, logical_or, uint64, nonzero, ceil, sum, uint32, uint16, \
     fromfunction, greater_equal, logical_xor, equal, ptp, max, min, sort, unique, where, greater, minimum, less_equal, count_nonzero, argwhere, array, ones, int8
@@ -230,7 +231,7 @@ def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
     if with_erosion > 0:
         original_shape = erode(original_shape, kernel, iterations=with_erosion,
                                    borderType=BORDER_CONSTANT, borderValue=0)
-    expand = original_shape.copy()
+    expand = deepcopy(original_shape)
     if max_distance is not None:
         if max_distance > min(original_shape.shape) / 2:
             max_distance = (min(original_shape.shape) // 2).astype(uint32)
@@ -359,7 +360,7 @@ def reduce_image_size_for_speed(image_of_2_shapes):
     :param image_of_2_shapes: a uint8 numpy array with 0 as background, 1 for one shape and 2 for the other
     :return: Return the smallest rectangle containing 1 and 2 simultaneously
     """
-    sub_image = image_of_2_shapes.copy()
+    sub_image = deepcopy(image_of_2_shapes)
     y_size, x_size = sub_image.shape
     images_list = [sub_image]
     good_images = [0]
@@ -494,7 +495,7 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image, y_boundaries, get_o
 
         # Then use the boundaries of each Y peak to sort these shapes row by row
         if y_boundaries is not None:
-            binary_image = output.copy()
+            binary_image = deepcopy(output)
             binary_image[nonzero(binary_image)] = 1
             y_starts, y_ends = argwhere(y_boundaries == - 1), argwhere(y_boundaries == 1)
 
@@ -560,7 +561,7 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_s
     or got too close from a neighbor
     """
 
-    without_shape = without_shape_i.copy()
+    without_shape = deepcopy(without_shape_i)
     # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
     centroid_distances = sqrt(square(ref_centroids[1:, 0] - shape_original_centroid[0]) + square(
         ref_centroids[1:, 1] - shape_original_centroid[1]))
@@ -585,10 +586,10 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_s
 
     # Compare the distance between the contour of the shape and its centroid with this contout with the centroids of neighbors
     # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
-    previous_shape_to_expand = shape_to_expand.copy()
+    previous_shape_to_expand = deepcopy(shape_to_expand)
     while logical_and(any(less_equal(itself_maxdist, neighbor_mindist)),
                          count_nonzero(shape_to_expand * without_shape) == 0):
-        previous_shape_to_expand = shape_to_expand.copy()
+        previous_shape_to_expand = deepcopy(shape_to_expand)
         # Dilate the shape by the kernel size
         shape_to_expand = dilate(shape_to_expand, kernel, iterations=1,
                                      borderType=BORDER_CONSTANT | BORDER_ISOLATED)
@@ -668,7 +669,7 @@ def expand_to_fill_holes(binary_video, holes):
         for t in arange(len(distance_against_time)):
             new_order, stats, centers = cc((holes >= distance_against_time[t]).astype(uint8))
             for comp_i in arange(1, stats.shape[0]):
-                past_image = binary_video[holes_time_start + t, :, :].copy()
+                past_image = deepcopy(binary_video[holes_time_start + t, :, :])
                 with_new_comp = new_order == comp_i
                 past_image[with_new_comp] = 1
                 nb_comp, image_garbage = connectedComponents(past_image)

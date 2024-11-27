@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Contains the class: ProgressivelyAddDistantShapes"""
+from copy import deepcopy
+
 from numpy import isin, argmax, delete, arange, zeros, uint8, max, min, any, logical_and, logical_or, uint64, nonzero, sum, unique, append, empty, uint32
 from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
 from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
@@ -54,7 +56,7 @@ class ProgressivelyAddDistantShapes:
                 self.new_order[not_one_idx[0], not_one_idx[1]] = 1
                 self.new_order[one_idx[0], one_idx[1]] = main_shape_label
                 # Do the same for stats
-                not_one_stats = self.stats[main_shape_label, :].copy()
+                not_one_stats = deepcopy(self.stats[main_shape_label, :])
                 self.stats[main_shape_label, :] = self.stats[1, :]
                 self.stats[1, :] = not_one_stats
             else:
@@ -70,10 +72,10 @@ class ProgressivelyAddDistantShapes:
             if min_shape_size is not None or max_shape_size is not None:
                 if min_shape_size is not None:
                     small_shapes = self.stats[:, 4] < min_shape_size
-                    extreme_shapes = small_shapes.copy()
+                    extreme_shapes = deepcopy(small_shapes)
                 if max_shape_size is not None:
                     large_shapes = self.stats[:, 4] > max_shape_size
-                    extreme_shapes = large_shapes.copy()
+                    extreme_shapes = deepcopy(large_shapes)
                 if min_shape_size is not None and max_shape_size is not None:
                     extreme_shapes = nonzero(logical_or(small_shapes, large_shapes))[0]
                 is_main_in_it = isin(extreme_shapes, 1)
@@ -148,13 +150,13 @@ class ProgressivelyAddDistantShapes:
         simple_disk = cross_33
         kernel = Ellipse((5, 5)).create().astype(uint8)
         # Dilate the main shape, progressively to infer in what order other shapes should be expanded toward it
-        main_shape = self.main_shape.copy()
-        new_order = self.new_order.copy()
+        main_shape = deepcopy(self.main_shape)
+        new_order = deepcopy(self.new_order)
         order_of_shapes_to_expand = empty(0, dtype=uint32)
         nb = 3
         while nb > 2:
             main_shape = dilate(main_shape, kernel)
-            connections = main_shape.copy()
+            connections = deepcopy(main_shape)
             connections *= new_order
             new_connections = unique(connections)[2:]
             new_order[isin(new_order, new_connections)] = 1
@@ -163,7 +165,7 @@ class ProgressivelyAddDistantShapes:
             connections[other_shapes > 0] = 1
             nb, connections = connectedComponents(connections)
 
-        expanded_main = self.main_shape.copy()
+        expanded_main = deepcopy(self.main_shape)
         max_field_feelings = empty(0, dtype=uint32)
         max_field_feeling = 0
         # Loop over each shape to connect, from the nearest to the furthest to the main shape
@@ -236,7 +238,7 @@ class ProgressivelyAddDistantShapes:
             image_garbage = (self.expanded_shape >= distance_against_time[t]).astype(uint8)
             new_order, stats, centers = cc(image_garbage)
             for comp_i in arange(1, stats.shape[0]):
-                past_image = self.binary_video[time_start + t, :, :].copy()
+                past_image = deepcopy(self.binary_video[time_start + t, :, :])
                 with_new_comp = new_order == comp_i
                 past_image[with_new_comp] = 1
                 nb_comp, image_garbage = connectedComponents(past_image)

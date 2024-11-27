@@ -5,11 +5,13 @@ This script contains the class for detecting networks out of a grayscale image o
 
 import cv2
 import numpy as np
-from numpy import nonzero, zeros_like, uint8, min, max, ptp
-from cv2 import connectedComponents, CV_16U
+from copy import deepcopy
+from numpy import nonzero, zeros_like, uint8, min, max, ptp,uint64
+from cv2 import connectedComponents, connectedComponentsWithStats, CV_16U
 from numpy.matlib import zeros
 from skimage import morphology
 from scipy import ndimage
+from copy import deepcopy as dcopy
 from collections import defaultdict
 from cellects.image_analysis.image_segmentation import get_otsu_threshold
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
@@ -185,11 +187,6 @@ class NetworkDetection:
         # Force connection of the disconnected parts of the network
         if np.any(self.network):
             ordered_image, stats, centers = cc(self.network)
-            # if self.lighter_background:
-            #     intensity_valley = 255 - self.grayscale_image.copy()
-            # else:
-            #     intensity_valley = self.grayscale_image.copy()
-            # new
             pads = ProgressivelyAddDistantShapes(self.network, ordered_image==1, maximal_distance_connection)
             # If max_distance is non nul look for distant shapes
             # pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False, intensity_valley=intensity_valley)
@@ -223,7 +220,7 @@ class NetworkDetection:
         # Create a kernel to dilate properly the known nodes.
         square_33 = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=uint8)
         # Initiate the nodes final matrix as a copy of the sure_terminations
-        self.nodes = sure_terminations.copy()
+        nodes = deepcopy(sure_terminations)
         # All pixels that have neighbor_nb neighbors, none of which is already detected as a node.
         for i, neighbor_nb in enumerate([8, 7, 6, 5, 4, 3]):
             # All pixels having neighbor_nb neighbor are potential nodes
@@ -231,9 +228,16 @@ class NetworkDetection:
             potential_node[cnv.equal_neighbor_nb == neighbor_nb] = 1
             # remove the false intersections that are a neighbor of a previously detected intersection
             # Dilate nodes to make sure that no neighbors of the current potential nodes are already nodes.
-            dilated_previous_intersections = cv2.dilate(self.nodes, square_33)
+            dilated_previous_intersections = cv2.dilate(nodes, square_33)
             potential_node *= (1 - dilated_previous_intersections)
-            self.nodes[nonzero(potential_node)] = 1
+            nodes[nonzero(potential_node)] = 1
+
+        self.labeled_nodes, num_labels = ndimage.label(nodes, structure=np.ones((3, 3), dtype=np.uint8))
+        node_positions = ndimage.center_of_mass(nodes, self.labeled_nodes, range(1, num_labels + 1))
+        node_positions = np.round(np.asarray(node_positions), 0).astype(uint64)
+        self.node_positions = np.column_stack((np.arange(1, num_labels + 1, dtype=np.uint64), node_positions))
+
+        self.vertices_number = (self.labeled_nodes > 0).sum()
 
 
     def get_graph(self):
@@ -241,10 +245,180 @@ class NetworkDetection:
         :return:
         """
         self.graph = zeros_like(self.binary_image)
-        self.graph[nonzero(self.skeleton)] = 1
+        skeleton_coord = nonzero(self.skeleton)
+        self.graph[skeleton_coord[0], skeleton_coord[1]] = 1
         self.get_nodes()
-        nodes_coord = nonzero(self.nodes)
+        nodes_coord = nonzero(self.labeled_nodes)
         self.graph[nodes_coord[0], nodes_coord[1]] = 2
+        edges = zeros_like(self.binary_image)
+        edges[skeleton_coord[0], skeleton_coord[1]] = 1
+        edges[nodes_coord[0], nodes_coord[1]] = 0
+        nb, shapes = connectedComponents(edges)
+        self.edges_number = nb - 1
+
+
+    def visualize(self):
+        nodes_coord = nonzero(self.labeled_nodes)
+        # nodes_coord = nonzero(potential_node)
+        # nodes_coord = nonzero(sure_terminations)
+        image = np.stack((self.skeleton, self.skeleton, self.skeleton), axis=2)
+        image[nodes_coord[0], nodes_coord[1], :] = (0, 0, 255)
+        # See(image)
+
+
+    def find_segments(self):
+        """
+        Find segments in the skeletonized network.
+        """
+        # Remove nodes from the skeleton to obtain segments without nodes
+        skeleton_wo_nodes = deepcopy(self.skeleton)
+        skeleton_wo_nodes[self.labeled_nodes > 0] = 0
+
+        # Detection of segments (connected components without nodes)
+        num_labels, labels = cv2.connectedComponents(skeleton_wo_nodes.astype(np.uint8))
+        # Ensure labels are int32 to handle more than 255 labels
+        labels = labels.astype(np.int32)
+        self.segments = []
+
+        for label in range(1, num_labels):
+            segment_mask = (labels == label)
+            coords = np.column_stack(np.where(segment_mask))
+
+            # Dilate the segment to find adjacent nodes
+            dilated_segment = morphology.binary_dilation(segment_mask, morphology.disk(2))
+            overlapping_nodes = self.labeled_nodes * dilated_segment
+            node_labels = np.unique(overlapping_nodes[overlapping_nodes > 0])
+
+            if len(node_labels) >= 2:
+                # If at least two nodes are connected, find the two farthest apart
+                node_positions = [self.label_to_position[n_label] for n_label in node_labels]
+                distances = np.sum(
+                    (np.array(node_positions)[:, None] - np.array(node_positions)[None, :]) ** 2,
+                    axis=2
+                )
+                idx_max = np.unravel_index(np.argmax(distances), distances.shape)
+                start_label = node_labels[idx_max[0]]
+                end_label = node_labels[idx_max[1]]
+                start_pos = self.label_to_position[start_label]
+                end_pos = self.label_to_position[end_label]
+            elif len(node_labels) == 1:
+                # If only one node is connected, find the farthest extremity
+                start_label = node_labels[0]
+                start_pos = self.label_to_position[start_label]
+                distances = np.sum((coords - np.array(start_pos)) ** 2, axis=1)
+                idx_max = np.argmax(distances)
+                end_pos = tuple(coords[idx_max])
+                end_label = None
+            else:
+                # No connected nodes, isolated segment
+                continue
+
+            # Include the positions of the nodes in the segment's coordinates
+            coords = np.vstack([coords, start_pos])
+            if end_label is not None:
+                coords = np.vstack([coords, end_pos])
+            # Remove duplicates
+            coords = np.unique(coords, axis=0)
+
+            self.segments.append({
+                'start_label': start_label,
+                'end_label': end_label,
+                'start_pos': start_pos,
+                'end_pos': end_pos,
+                'coords': coords
+            })
+
+
+    def get_segment_width(self, binary_image, segment, vein_mask):
+        """
+        Measure the width of a segment using float types for measurements.
+
+        :param binary_image: The binary image of the network
+        :param segment: The segment dictionary containing segment information
+        :param vein_mask: The mask of the vein corresponding to the segment
+        :return: A dictionary containing width measurements
+        """
+        coords = segment['coords']
+        distances = []
+        epsilon = 1e-6  # To avoid division by zero
+        min_length = 3.0  # Minimum length of the perpendicular line
+        coords_length = len(coords)
+        distance_map = ndimage.distance_transform_edt(vein_mask)
+
+        for i in range(coords_length):
+            y, x = coords[i]
+            if distance_map[int(y), int(x)] == 0:
+                continue
+            # Handle special cases for dy, dx
+            if coords_length == 1:
+                dy, dx = 0.0, 0.0
+            elif i == 0:
+                dy = float(coords[i + 1][0] - y)
+                dx = float(coords[i + 1][1] - x)
+            elif i == coords_length - 1:
+                dy = float(y - coords[i - 1][0])
+                dx = float(x - coords[i - 1][1])
+            else:
+                dy = float(coords[i + 1][0] - coords[i - 1][0])
+                dx = float(coords[i + 1][1] - coords[i - 1][1])
+            norm = np.hypot(dx, dy)
+            if norm < epsilon:
+                continue
+            perp_dx = -dy / norm
+            perp_dy = dx / norm
+            length = max(distance_map[int(y), int(x)] * 2.0, min_length)
+            r0 = y - perp_dy * length / 2.0
+            c0 = x - perp_dx * length / 2.0
+            r1 = y + perp_dy * length / 2.0
+            c1 = x + perp_dx * length / 2.0
+            # Ensure indices are within image bounds
+            r0 = np.clip(r0, 0, binary_image.shape[0] - 1)
+            c0 = np.clip(c0, 0, binary_image.shape[1] - 1)
+            r1 = np.clip(r1, 0, binary_image.shape[0] - 1)
+            c1 = np.clip(c1, 0, binary_image.shape[1] - 1)
+            line_length = int(np.hypot(r1 - r0, c1 - c0))
+            if line_length == 0:
+                continue
+            line_coords = np.linspace(0, 1, line_length)
+            rr = r0 + line_coords * (r1 - r0)
+            cc = c0 + line_coords * (c1 - c0)
+            # Check indices are within image bounds
+            valid_idx = (rr >= 0) & (rr < binary_image.shape[0]) & (cc >= 0) & (cc < binary_image.shape[1])
+            rr = rr[valid_idx]
+            cc = cc[valid_idx]
+            # Interpolate profile values
+            from scipy.ndimage import map_coordinates
+            profile = map_coordinates(binary_image.astype(float), [rr, cc], order=1, mode='constant', cval=0.0)
+            # Determine width from the interpolated profile
+            threshold = 0.5  # can be adjusted later.Not a real issue
+            width = np.sum(profile > threshold) * (length / line_length)  # Adjust based on actual length
+            distances.append(width)
+        if distances:
+            widths = {
+                'average_width': np.mean(distances),
+                'width_node_A': distances[0],
+                'width_node_B': distances[-1],
+                'middle_width': distances[len(distances) // 2],
+                'minimum_width': np.min(distances),
+                'maximum_width': np.max(distances)
+            }
+            return widths
+        else:
+            # Estimate width from the distance map if no measurements were made
+            median_distance = np.median(distance_map[coords[:, 0].astype(int), coords[:, 1].astype(int)])
+            if median_distance > 0:
+                estimated_width = median_distance * 2.0
+                widths = {
+                    'average_width': estimated_width,
+                    'width_node_A': estimated_width,
+                    'width_node_B': estimated_width,
+                    'middle_width': estimated_width,
+                    'minimum_width': estimated_width,
+                    'maximum_width': estimated_width
+                }
+                return widths
+            else:
+                return None
 
 
     def extract_node_degrees(self, segments):
@@ -314,3 +488,25 @@ class NetworkDetection:
             return None
 
         #### Houssam ####
+
+
+# if __name__ == "__main__":
+#
+#     coord = np.load("D:/Directory/Data/Audrey/dosier1/coord_specimen1_t720_y1475_x1477.npy")
+#     coord = coord[1:, coord[0, :] == 719]
+#     im = np.zeros((1475, 1477), np.uint8)
+#     im[coord[0, :],coord[1, :]] = 1
+#
+#     net_coord = np.load("D:/Directory/Data/Audrey/dosier1/coord_intra_network2_t400_y1475_x1477.npy")
+#     net_coord = net_coord[1:, net_coord[0, :] == 399]
+#     im_net = np.zeros((1475, 1477), np.uint8)
+#     im_net[net_coord[0, :], net_coord[1, :]] = 1
+#
+#     self = NetworkDetection(im, im, True)
+#     self.network = im_net
+#     self.skeletonize()
+#     self.skeleton = self.skeleton[500:650, 600:750]
+#     self.binary_image = im[500:650, 600:750]
+#     self.get_graph()
+
+
