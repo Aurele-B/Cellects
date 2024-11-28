@@ -229,22 +229,19 @@ def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
     """
     kernel = cross_33
     if with_erosion > 0:
-        original_shape = erode(original_shape, kernel, iterations=with_erosion,
-                                   borderType=BORDER_CONSTANT, borderValue=0)
+        original_shape = erode(original_shape, kernel, iterations=with_erosion, borderType=BORDER_CONSTANT, borderValue=0)
     expand = deepcopy(original_shape)
     if max_distance is not None:
         if max_distance > min(original_shape.shape) / 2:
             max_distance = (min(original_shape.shape) // 2).astype(uint32)
         gravity_field = zeros(original_shape.shape, uint32)
         for gravi in arange(max_distance):
-            expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT,
-                                borderValue=0)
+            expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT, borderValue=0)
             gravity_field[logical_xor(expand, original_shape)] += 1
     else:
         gravity_field = zeros(original_shape.shape, uint32)
         while any(equal(original_shape + expand, 0)):
-            expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT,
-                                borderValue=0)
+            expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT, borderValue=0)
             gravity_field[logical_xor(expand, original_shape)] += 1
     return gravity_field
 
@@ -360,7 +357,7 @@ def reduce_image_size_for_speed(image_of_2_shapes):
     :param image_of_2_shapes: a uint8 numpy array with 0 as background, 1 for one shape and 2 for the other
     :return: Return the smallest rectangle containing 1 and 2 simultaneously
     """
-    sub_image = deepcopy(image_of_2_shapes)
+    sub_image = image_of_2_shapes.copy()
     y_size, x_size = sub_image.shape
     images_list = [sub_image]
     good_images = [0]
