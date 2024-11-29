@@ -115,17 +115,17 @@ class MotionAnalysis:
                     self.detection()
                     self.initialize_post_processing()
                     ###
-                    if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy"):
-                        binary_coord = load(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
-                        self.binary = zeros((self.dims[0], self.dims[1], self.dims[2]), dtype=uint8)
-                        self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
-                    else:
+                    # if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy"):
+                    #     binary_coord = load(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
+                    #     self.binary = zeros((self.dims[0], self.dims[1], self.dims[2]), dtype=uint8)
+                    #     self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
+                    # else:
                     ###
-                        self.t = self.start
-                        # print_progress = ForLoopCounter(self.start)
-                        # self.binary = self.segmentation # HERE
-                        while self.t < self.binary.shape[0]:  #200:  #
-                            self.update_shape(show_seg)
+                    self.t = self.start
+                    # print_progress = ForLoopCounter(self.start)
+                    # self.binary = self.segmentation # HERE
+                    while self.t < self.binary.shape[0]:  #200:  #
+                        self.update_shape(show_seg)
                 #
             if self.start is None:
                 self.binary = repeat(expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
