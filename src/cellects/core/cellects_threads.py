@@ -3,6 +3,7 @@
 
 import logging
 from copy import deepcopy
+import weakref
 from multiprocessing import Queue, Process, Manager
 import os
 import time
@@ -803,6 +804,8 @@ class OneArenaThread(QtCore.QThread):
             self.videos_in_ram = None
         l = [i, arena, self.parent().po.vars, False, False, False, self.videos_in_ram]
         self.parent().po.motion = MotionAnalysis(l)
+        r = weakref.ref(self.parent().po.motion)
+
         if self.videos_in_ram is None:
             self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
@@ -873,6 +876,7 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.newly_explored_area = zeros((self.parent().po.motion.dims[0], 5), uint64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
+            r = weakref.ref(analysis_i)
             analysis_i.segmentation = zeros(analysis_i.converted_video.shape[:3], dtype=uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
@@ -1340,6 +1344,8 @@ class RunAllThread(QtCore.QThread):
                     self.parent().po.save_variable_dict()
                     self.parent().po.save_data_to_run_cellects_quickly()
                     analysis_status["message"] = f"Video writing complete."
+                    if self.parent().po.videos is not None:
+                        del self.parent().po.videos
                     return analysis_status
                 else:
                     analysis_status["continue"] = False
@@ -1362,6 +1368,8 @@ class RunAllThread(QtCore.QThread):
                     return analysis_status
             else:
                 return analysis_status
+
+
         else:
             logging.info(f"Cellects is not writing videos: unnecessary")
             analysis_status["message"] = f"Cellects is not writing videos: unnecessary"
@@ -1384,9 +1392,10 @@ class RunAllThread(QtCore.QThread):
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
                         # l = [0, 1, self.parent().po.vars, True, False, False, None]
                         analysis_i = MotionAnalysis(l)
+                        r = weakref.ref(analysis_i)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
-                            self.parent().po.update_one_row_per_arena(i, analysis_i.statistics)
+                            self.parent().po.update_one_row_per_arena(i, analysis_i.one_descriptor_per_arena)
                             # self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
 
 
@@ -1395,13 +1404,13 @@ class RunAllThread(QtCore.QThread):
                             # for descriptor in self.one_row_per_frame.keys():
                             #     self.one_row_per_frame.loc[i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'], descriptor] = analysis_i.whole_shape_descriptors[descriptor]
                             # Old
-                            self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.whole_shape_descriptors)
+                            self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
                             # self.parent().po.one_row_per_frame.iloc[
                             # i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
                             # :] = analysis_i.whole_shape_descriptors
 
                             # Save cytosol_oscillations
-                        if not isna(analysis_i.statistics["first_move"]):
+                        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
                             if self.parent().po.vars['oscilacyto_analysis']:
                                 oscil_i = df(
                                     c_[repeat(arena,
@@ -1514,20 +1523,21 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
     grouped_results = []
     for i in range(lower_bound, upper_bound):
         analysis_i = MotionAnalysis([i, i + 1, vars, True, True, False, None])
+        r = weakref.ref(analysis_i)
         results_i = dict()
-        results_i['arena'] = analysis_i.statistics['arena']
-        results_i['i'] = analysis_i.statistics['arena'] - 1
+        results_i['arena'] = analysis_i.one_descriptor_per_arena['arena']
+        results_i['i'] = analysis_i.one_descriptor_per_arena['arena'] - 1
         arena = results_i['arena']
         i = arena - 1
         if not vars['several_blob_per_arena']:
             # Save basic statistics
-            results_i['one_row_per_arena'] = analysis_i.statistics.values()
+            results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena.values()
             # Save descriptors in long_format
-            results_i['one_row_per_frame'] = analysis_i.whole_shape_descriptors
+            results_i['one_row_per_frame'] = analysis_i.one_row_per_frame
             # Save cytosol_oscillations
 
-        results_i['first_move'] = analysis_i.statistics["first_move"]
-        if not isna(analysis_i.statistics["first_move"]):
+        results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
+        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
             if vars['oscilacyto_analysis']:
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
                 results_i['one_row_per_oscillating_cluster'] = df(

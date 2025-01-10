@@ -154,6 +154,9 @@ Additional notes:
 - As using the width of the specimens decreases the first image detection efficiency, we recommend choosing the width of the image. However, if the width of the specimens is known with more accuracy than the width of the image, we recommend choosing the width of the specimens.
 - By default, distances and surfaces are in pixels (Cellects store the size of one pixel in a file called software_settings.csv). They can automatically be converted in mm (²) by checking the corresponding checkbox in the advanced parameters window (see Fig. 8).
 
+### Scale size
+The *Scale size* is the length (in mm) of the item(s) used for scaling. 
+
 ### Select and draw
 *Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are specimens (Cell) 
 and others are background (Back). 
@@ -187,7 +190,9 @@ gets a detection result for each, and applies the chosen logical operator betwee
 E.g. If the two detections using hsv(0, 1, 0) and lab(0, 0, 1) show some noise 
 (many little dots appear on the detection), using the logical operator AND between them will reduce it. 
 If detection is insufficient for both, using the logical operator OR can allow one detection to complement the other. 
-- Use an algorithm (k-means) that categorizes the image into more than 2 categories. 
+- Grid segmentation: segment small parts of the image using a rolling window both on the y and x axes. Only pixels that
+are robustly detected are considered to be part of the specimen. This segmentation uses Otsu thresholding.
+- More than two colors: use an algorithm (k-means) that categorizes the image into more than 2 categories. 
 The *Heterogeneous background* option appears after the use of the Select and draw option. 
 If the detection remains not good enough after having drawn a few specimens and the problematic parts of the background, 
 the user should try this algorithm. The user should first check the Heterogeneous background option, 
@@ -224,9 +229,8 @@ the analysis corresponding to each option. For instance, in Fig. 3, the central 
 and a message below informs the user that this option detected 6 distinct spots in 6 arenas. 
 Since these two numbers are equal there is only one specimen per arena, the user should click the *Yes* button.
 
-Otherwise, the user can improve the analysis by setting the arena shape, 
-the spot shape(i.e. the shape of each cell to look for in the first image), or 
-the spot size (i.e. the horizontal size of  each cell). The user can also draw more specimens or background using 
+Otherwise, the user can improve the analysis by setting the *arena shape*, the *spot shape*, or 
+the *spot size*. The user can also draw more specimens or background using 
 the *Select and draw tool* or even use the Visualize button to set up manually a color space combination.
 
 Once the magenta/pink contours correspond to the right position of all cells and the right number of detected spots, 
@@ -234,8 +238,18 @@ the user can click the *Yes* button (on the left of the question “*Does the co
 After having clicked on the *Yes* button, an orange working message appears, 
 Cellects is automatically looking for the coordinates of the contour of each arena. 
 
+### Arena shape
+Useful for the video detection, tells whether the specimen(s) can move in a circular or rectangular arena.
+
+### Spot shape
+Initial shape of the specimen(s) inside arena(s).
+
+### Spot size
+Initial horizontal size of the specimen(s) inside arena(s). If similar across all specimens, can be used as a scale.
+
 ### Video delimitation
-After some time, the result of the automatic video delimitation appears in blue in the image at the center of the window
+After having validated the initial detection of the specimen(s), the result of the automatic video delimitation appears
+in blue in the image at the center of the window.
 (See the image at the center of Fig. 4). If the video delimitation is correct, click the *Yes* button. 
 If it does not, clicking the *No* button will lead the user to another choice: 
 “*Click Yes to try a slower but more efficient delineation algorithm, No to do it manually*”. 
@@ -250,20 +264,20 @@ To manually draw each arena, the user has to use a tool similar to c) *Select an
 
 #### <u>**Figure 4**: Cellects image analysis window, after arena delineation, differences between first and last image</u>
 
-### Whether starting area differs from growing area
-In our example (Fig. 4), the specimens start upon an oat gel while the rest of the arena 
-is only made with transparent agar gel. Therefore, the starting area is not exactly of the same color as 
-the growing area (the rest of the arena). That is why this checkbox is checked. 
-
-In all other cases, i.e. when the substrate upon which the specimen grows or moves has the same color everywhere: 
-uncheck that option.
-
 ### Last image question
 If the user thinks that the parameters used to detect specimens on the first image might not work for all the images, 
 the user can fine tune these parameters and see whether they work to detect specimens on the last image.
 
 Clicking *Yes* allows the user to display and analyze the first image and then to go to the video tracking window. 
 Clicking *No* will directly lead to the video tracking window.
+
+### Check if the starting area differs from growing area
+In our example (Fig. 4), the specimens start upon an oat gel while the rest of the arena 
+is only made with transparent agar gel. Therefore, the starting area is not exactly of the same color as 
+the growing area (the rest of the arena).
+
+In all other cases, i.e. when the substrate upon which the specimen grows or moves has the same color everywhere: 
+uncheck that option.
 
 ## Tune parameters of the video tracking window
 <img
@@ -398,6 +412,10 @@ Basically, it takes the first image and subtracts it to every following image be
 It is mostly useful when the cells are not yet visible in the first image, and according to the setup, 
 that may improve or degrade the analysis.
 
+### Keep Cell and Back drawings for all folders
+During the first image analysis, if the user drew cell and back to help detection.
+Keep this information for all folders (if checked). Only use this information for the current folder (if unchecked)
+
 ### Correct errors around initial shape
 Only apply this algorithm when there are good reasons to think that detection will be less efficient around the 
 initial shape than everywhere else in the arena. This algorithm compensates for this lack of efficiency by 
@@ -405,6 +423,11 @@ artificially filling potential gaps around the initial shape during growth.
 
 In addition, we discourage the use of this option if the growth substrate has the same opacity everywhere 
 (i.e. if it does not differ between the starting region and the growth region).
+
+### Prevent fast growth near periphery
+During video analysis, the borders of the arena may create wrong detection.
+Remove the detection of the specimen(s) that move too fast near periphery (if checked).
+Do not change the detection (if unchecked).
 
 ### Connect distant shapes
 Only apply this algorithm when there is a large light intensity variation within the specimen and 
@@ -419,12 +442,23 @@ Applying this will improve the chances to correctly detect arenas when all cells
 
 Uncheck that option only when specimens move strongly and in many directions.
 
-### Automatic size threshold for appearance or motion
+### Appearing cell/colony parameters
 Allows the user to set a minimal size threshold (in pixels) to consider that an appearing shape is, for instance, a colony of bacteria.
+Also give the choice between two selection methods of appearing detection: based on size or on the position in the arena.
 
-### Oscillatory parameter
+### Oscillatory parameters
 The user can ask Cellects to proceed an oscillatory analysis of the specimens (See Fig. 9: the required output window). 
 The oscillatory period is a parameter allowing Cellects to know what kind of oscillatory process to look for in the variations of luminosity.
+The *Minimal oscillating cluster size* parameters sets a threshold to consider small oscillating areas as noise.
+
+### Fractal parameters
+Currently under development...
+
+### Network parameters
+*Network detection threshold* is an intensity minimal difference to detect the cytoplasmic tubular network 
+of P. polycephalum.
+*Mesh side length* is the horizontal and vertical size (in pixels) of the rolling window used to detect the network.
+*Mesh step length* is the step length (in pixels) of the rolling window used to detect the network.
 
 ### Spatio-temporal scaling
 These parameters are very important as they allow the user to set the spatiotemporal scale. 
@@ -490,6 +524,11 @@ Change the background of the application, from bright to dark
 
 #### <u>**Figure 9**: required output window</u>
 
+### Save presence coordinates
+Selecting one of these options will save very large .npy files containing 
+all corresponding coordinates (time, y, x).
+
+### Save descriptors
 Selecting one descriptor will save it in .csv files at the end of the analysis (*Run all*).  
 At the time of the creation of this user manual, the available required outputs are: area, perimeter, circularity, 
 rectangularity, total hole area, solidity, convexity, eccentricity, euler number, standard deviation over x and y, 

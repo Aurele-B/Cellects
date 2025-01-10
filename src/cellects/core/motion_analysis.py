@@ -8,12 +8,14 @@ It loads a video, check origin shape, get the average covering duration of a pix
 
 import logging
 import os
+import weakref
 from gc import collect
 # from scipy.stats import linregress
 # from scipy import signal as si
 from timeit import default_timer
 from time import sleep
 from copy import deepcopy
+import h5py
 from cv2 import (
     connectedComponents, connectedComponentsWithStats, MORPH_CROSS,
     getStructuringElement, CV_16U, erode, dilate, morphologyEx, MORPH_OPEN,
@@ -43,7 +45,7 @@ from cellects.utils.formulas import (bracket_to_uint8_image_contrast, eudist, mo
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
-from cellects.utils.load_display_save import write_video, video2numpy
+from cellects.utils.load_display_save import write_video, video2numpy, vstack_h5_array, remove_h5_key
 
 
 class MotionAnalysis:
@@ -55,8 +57,8 @@ class MotionAnalysis:
         :param convert_for_motion: The dict specifying the linear combination
                                    of color channels (rgb_hsv_lab) to use
         """
-        self.statistics = {}
-        self.statistics['arena'] = l[1]
+        self.one_descriptor_per_arena = {}
+        self.one_descriptor_per_arena['arena'] = l[1]
         vars = l[2]
         detect_shape = l[3]
         analyse_shape = l[4]
@@ -66,7 +68,7 @@ class MotionAnalysis:
         self.binary = None
         self.origin_idx = None
         self.smoothing_flag: bool = False
-        logging.info(f"Start the motion analysis of the arena n°{self.statistics['arena']}")
+        logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
         # self.origin = self.vars['first_image'][self.vars['top'][l[0]]:(
@@ -115,8 +117,8 @@ class MotionAnalysis:
                     self.detection()
                     self.initialize_post_processing()
                     ###
-                    # if os.path.isfile(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy"):
-                    #     binary_coord = load(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
+                    # if os.path.isfile(f"coord_specimen{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy"):
+                    #     binary_coord = load(f"coord_specimen{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
                     #     self.binary = zeros((self.dims[0], self.dims[1], self.dims[2]), dtype=uint8)
                     #     self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
                     # else:
@@ -126,6 +128,7 @@ class MotionAnalysis:
                     # self.binary = self.segmentation # HERE
                     while self.t < self.binary.shape[0]:  #200:  #
                         self.update_shape(show_seg)
+                    ###
                 #
             if self.start is None:
                 self.binary = repeat(expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
@@ -149,7 +152,7 @@ class MotionAnalysis:
                     self.save_results()
 
     def load_images_and_videos(self, videos_already_in_ram, i):
-        logging.info(f"Arena n°{self.statistics['arena']}. Load images and videos")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
         # pickle_rick = PickleRick()
         # data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
         # try:
@@ -163,12 +166,12 @@ class MotionAnalysis:
         #         logging.info(f"Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
 
         # if data_to_run_cellects_quickly is None or not 'background_and_origin_list' in data_to_run_cellects_quickly:
-        #     logging.info(f"Arena n°{self.statistics['arena']}. Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
+        #     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
         # self.origin = data_to_run_cellects_quickly['background_and_origin_list'][0][i]# self.vars['origins_list'][i]
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
         if videos_already_in_ram is None:
             true_frame_width = self.origin.shape[1]
-            vid_name = f"ind_{self.statistics['arena']}.npy"
+            vid_name = f"ind_{self.one_descriptor_per_arena['arena']}.npy"
             if len(self.vars['background_list']) == 0:
                 self.background = None
             else:
@@ -206,7 +209,7 @@ class MotionAnalysis:
 
     def get_converted_video(self):
         if not self.vars['already_greyscale']:
-            logging.info(f"Arena n°{self.statistics['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
             first_dict = TDict()
             second_dict = TDict()
             c_spaces = []
@@ -294,7 +297,7 @@ class MotionAnalysis:
                 drift_matrix[frame, :, :] = frame_i.binary_image
 
     def get_origin_shape(self):
-        logging.info(f"Arena n°{self.statistics['arena']}. Make sure of origin shape")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Make sure of origin shape")
         if self.vars['origin_state'] == "constant":
             self.start = 1
             self.origin_idx = nonzero(self.origin)
@@ -345,7 +348,7 @@ class MotionAnalysis:
         ##
 
     def get_covering_duration(self, step):
-        logging.info(f"Arena n°{self.statistics['arena']}. Find a frame with a significant growth/motion and determine the number of frames necessary for a pixel to get covered")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Find a frame with a significant growth/motion and determine the number of frames necessary for a pixel to get covered")
         ## Find the time at which growth reached a substantial growth.
         self.substantial_time = self.start
         # To avoid noisy images to have deleterious effects, make sure that area area reaches the threshold thrice.
@@ -417,9 +420,9 @@ class MotionAnalysis:
             # If this analysis fails put a deterministic step
             if len(cover_lengths[cover_lengths > 0]) > 0:
                 self.step = (round(mean(cover_lengths[cover_lengths > 0])).astype(uint32) // 2) + 1
-                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
             else:
-                logging.info(f"Arena n°{self.statistics['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value is 1 for video length < 40 and 10 otherwise")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value is 1 for video length < 40 and 10 otherwise")
 
             # Make sure to avoid a step overestimation
             if self.step > self.dims[0] // 20:
@@ -440,10 +443,10 @@ class MotionAnalysis:
         # If images contain a drift correction (zeros at borders of the image,
         # Replace these 0 by normal background values before segmenting
         if self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
-            logging.info(f"Arena n°{self.statistics['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
             self.segmentation = zeros(self.dims, dtype=uint8)
             if self.vars['drift_already_corrected']:
-                logging.info(f"Arena n°{self.statistics['arena']}. Adjust images to drift correction and segment them")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Adjust images to drift correction and segment them")
                 # 1. Get the mask valid for a number of images around it (step).
                 mask_coord = zeros((self.dims[0], 4), dtype=uint32)
                 for frame_i in arange(self.dims[0]):#100):#
@@ -493,26 +496,26 @@ class MotionAnalysis:
                         gradient_segmentation = logical_xor(gradient_segmentation, gradient_segmentation2)
 
             if compute_all_possibilities:
-                logging.info(f"Arena n°{self.statistics['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['max_growth_per_frame']}")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['max_growth_per_frame']}")
                 self.luminosity_segmentation = nonzero(luminosity_segmentation)
                 self.gradient_segmentation = nonzero(gradient_segmentation)
                 self.logical_and = nonzero(logical_and(luminosity_segmentation, gradient_segmentation))
                 self.logical_or = nonzero(logical_or(luminosity_segmentation, gradient_segmentation))
             elif not self.vars['frame_by_frame_segmentation']:
                 if self.vars['do_threshold_segmentation'] and not self.vars['do_slope_segmentation']:
-                    logging.info(f"Arena n°{self.statistics['arena']}. Detect with luminosity threshold segmentation algorithm")
+                    logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity threshold segmentation algorithm")
                     self.segmentation = luminosity_segmentation
                 if self.vars['do_slope_segmentation']:# and not self.vars['do_threshold_segmentation']: NEW
-                    logging.info(f"Arena n°{self.statistics['arena']}. Detect with luminosity slope segmentation algorithm")
+                    logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity slope segmentation algorithm")
                     # gradient_segmentation[:(self.lost_frames + 1), ...] = luminosity_segmentation[:(self.lost_frames + 1), ...]
                     if not self.vars['do_threshold_segmentation']:# NEW
                         self.segmentation = gradient_segmentation
                 if logical_and(self.vars['do_threshold_segmentation'], self.vars['do_slope_segmentation']):
                     if self.vars['true_if_use_light_AND_slope_else_OR']:
-                        logging.info(f"Arena n°{self.statistics['arena']}. Detection resuts from threshold AND slope segmentation algorithms")
+                        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold AND slope segmentation algorithms")
                         self.segmentation = logical_and(luminosity_segmentation, gradient_segmentation)
                     else:
-                        logging.info(f"Arena n°{self.statistics['arena']}. Detection resuts from threshold OR slope segmentation algorithms")
+                        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold OR slope segmentation algorithms")
                         self.segmentation = logical_or(luminosity_segmentation, gradient_segmentation)
                 self.segmentation = self.segmentation.astype(uint8)
         self.converted_video2 = None
@@ -799,7 +802,7 @@ class MotionAnalysis:
 
     def initialize_post_processing(self):
         ## Initialization
-        logging.info(f"Arena n°{self.statistics['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['ring_correction']}, Connect distant shapes: {self.vars['ease_connect_distant_shape'] > 0}, How to select appearing cell(s): {self.vars['first_detection_method']}")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['ring_correction']}, Connect distant shapes: {self.vars['ease_connect_distant_shape'] > 0}, How to select appearing cell(s): {self.vars['first_detection_method']}")
 
         self.binary = zeros(self.dims[:3], dtype=uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
@@ -909,6 +912,7 @@ class MotionAnalysis:
                 new_shape = deepcopy(new_potentials)
             else:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
+                r = weakref.ref(pads)
                 # If max_distance is non nul look for distant shapes
                 pads.consider_shapes_sizes(self.vars['min_distant_shape_size'],
                                                      self.vars['max_distant_shape_size'])
@@ -1035,12 +1039,20 @@ class MotionAnalysis:
             waitKey(1)
         self.t += 1
 
+    def save_coord_specimen_and_contour(self):
+        if self.vars['save_coord_specimen']:
+            save(f"coord_specimen{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                 smallest_memory_array(nonzero(self.binary), "uint"))
+        if self.vars['save_coord_contour']:
+            contours = zeros(self.dims[:3], uint8)
+            for frame in range(self.dims[0]):
+                eroded_binary = erode(self.binary[frame, ...], cross_33, borderType=BORDER_CONSTANT, borderValue=0)
+                contours[frame, ...] = self.binary[frame, ...] - eroded_binary
+            save(f"coord_contour{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                 smallest_memory_array(nonzero(contours), "uint"))
 
     def get_descriptors_from_binary(self, release_memory=True):
         ##
-        if self.vars['save_binary_masks']:
-            save(f"coord_specimen{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                 smallest_memory_array(nonzero(self.binary), "uint"))
         if release_memory:
             self.substantial_image = None
             self.covering_intensity = None
@@ -1050,6 +1062,7 @@ class MotionAnalysis:
             self.rays = None
             self.holes = None
             collect()
+        self.save_coord_specimen_and_contour()
         if self.vars['do_fading']:
             self.newly_explored_area = zeros(self.dims[0], dtype=uint64)
             self.already_explored_area = deepcopy(self.origin)
@@ -1080,13 +1093,13 @@ class MotionAnalysis:
         if self.compute_solidity_separately:
             self.solidity = zeros(self.dims[0], dtype=float64)
         if not self.vars['several_blob_per_arena']:
-            self.whole_shape_descriptors = df(zeros((self.dims[0], 2 + len(all_descriptors))),
+            self.one_row_per_frame = df(zeros((self.dims[0], 2 + len(all_descriptors))),
                                               columns=['arena', 'time'] + all_descriptors)
-            self.whole_shape_descriptors['arena'] = [self.statistics['arena']] * self.dims[0]
-            self.whole_shape_descriptors['time'] = timings
+            self.one_row_per_frame['arena'] = [self.one_descriptor_per_arena['arena']] * self.dims[0]
+            self.one_row_per_frame['time'] = timings
             # solidity must be added if detect growth transition is computed
             origin = self.binary[0, :, :]
-            self.statistics["first_move"] = NA
+            self.one_descriptor_per_arena["first_move"] = NA
 
             for t in arange(self.dims[0]):
                 SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
@@ -1094,9 +1107,9 @@ class MotionAnalysis:
 
                 # NEW
                 for descriptor in to_compute_from_sd:
-                    self.whole_shape_descriptors.loc[t, descriptor] = SD.descriptors[descriptor]
+                    self.one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
                 # Old
-                # self.whole_shape_descriptors.iloc[t, 2: 2 + len(descriptors)] = SD.descriptors.values()
+                # self.one_row_per_frame.iloc[t, 2: 2 + len(descriptors)] = SD.descriptors.values()
 
 
                 if self.compute_solidity_separately:
@@ -1104,26 +1117,26 @@ class MotionAnalysis:
                     self.solidity[t] = solidity.descriptors["solidity"]
                     # self.solidity[t] = list(solidity.descriptors.values())[0]
                 # I) Find a first pseudopod [aim: time]
-                if isna(self.statistics["first_move"]):
+                if isna(self.one_descriptor_per_arena["first_move"]):
                     if self.surfarea[t] >= (origin.sum() + self.vars['first_move_threshold']):
-                        self.statistics["first_move"] = t
+                        self.one_descriptor_per_arena["first_move"] = t
 
             # Apply the scale to the variables
             if self.vars['output_in_mm']:
                 if isin('area', to_compute_from_sd):
-                    self.whole_shape_descriptors['area'] *= self.vars['average_pixel_size']
+                    self.one_row_per_frame['area'] *= self.vars['average_pixel_size']
                 if isin('total_hole_area', to_compute_from_sd):
-                    self.whole_shape_descriptors['total_hole_area'] *= self.vars['average_pixel_size']
+                    self.one_row_per_frame['total_hole_area'] *= self.vars['average_pixel_size']
                 if isin('perimeter', to_compute_from_sd):
-                    self.whole_shape_descriptors['perimeter'] *= sqrt(self.vars['average_pixel_size'])
+                    self.one_row_per_frame['perimeter'] *= sqrt(self.vars['average_pixel_size'])
                 if isin('major_axis_len', to_compute_from_sd):
-                    self.whole_shape_descriptors['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                    self.one_row_per_frame['major_axis_len'] *= sqrt(self.vars['average_pixel_size'])
                 if isin('minor_axis_len', to_compute_from_sd):
-                    self.whole_shape_descriptors['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
+                    self.one_row_per_frame['minor_axis_len'] *= sqrt(self.vars['average_pixel_size'])
         else:
             # Objective: create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies
             # against time
-            self.statistics["first_move"] = 1
+            self.one_descriptor_per_arena["first_move"] = 1
             max_colonies = 0
             for t in arange(self.dims[0]):
                 nb, shapes = connectedComponents(self.binary[t, :, :])
@@ -1149,7 +1162,7 @@ class MotionAnalysis:
 
                 # nb = stats.shape[0]
                 current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
-                logging.info(f"Arena n°{self.statistics['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
 
                 updated_colony_names = zeros(1, dtype=uint32)
                 for colony in (arange(nb - 1) + 1):  # 120)):# #92
@@ -1217,28 +1230,28 @@ class MotionAnalysis:
             centroids = array(centroids, dtype=float32)
             time_descriptor_colony = time_descriptor_colony[:, :(colony_number*len(to_compute_from_sd))]
 
-            if self.vars['save_binary_masks']:
+            if self.vars['save_coord_specimen']:
                 coord_colonies = df(coord_colonies, columns=["time", "colony", "y", "x"])
-                coord_colonies.to_csv(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
-                # save(f"coord_colonies{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", coord_colonies)
-            # save(f"colony_centroids{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", centroids)
+                coord_colonies.to_csv(f"coord_colonies{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
+                # save(f"coord_colonies{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", coord_colonies)
+            # save(f"colony_centroids{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.npy", centroids)
             centroids = df(centroids, columns=["time", "colony", "y", "x"])
-            centroids.to_csv(f"colony_centroids{self.statistics['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
+            centroids.to_csv(f"colony_centroids{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
 
             # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
-            self.whole_shape_descriptors = df({'arena': self.statistics['arena'], 'time': timings, 'area_total': self.surfarea.astype(float64)})
+            self.one_row_per_frame = df({'arena': self.one_descriptor_per_arena['arena'], 'time': timings, 'area_total': self.surfarea.astype(float64)})
             if self.vars['output_in_mm']:
-                self.whole_shape_descriptors['area_total'] *= self.vars['average_pixel_size']
+                self.one_row_per_frame['area_total'] *= self.vars['average_pixel_size']
             column_names = char.add(repeat(to_compute_from_sd, colony_number),
                                     tile((arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
             time_descriptor_colony = df(time_descriptor_colony, columns=column_names)
-            self.whole_shape_descriptors = concat([self.whole_shape_descriptors, time_descriptor_colony], axis=1)
+            self.one_row_per_frame = concat([self.one_row_per_frame, time_descriptor_colony], axis=1)
 
 
         if self.vars['do_fading']:
-            self.whole_shape_descriptors['newly_explored_area'] = self.newly_explored_area
+            self.one_row_per_frame['newly_explored_area'] = self.newly_explored_area
             if self.vars['output_in_mm']:
-                self.whole_shape_descriptors['newly_explored_area'] *= self.vars['average_pixel_size']
+                self.one_row_per_frame['newly_explored_area'] *= self.vars['average_pixel_size']
                 # for colony_name in colony_names:
             #     for descriptor in descriptors:
             #         colony_dictionary[descriptor + "_colony" + str(colony_name)][t] = SD.descriptors[descriptor]
@@ -1274,44 +1287,45 @@ class MotionAnalysis:
                 else : apply the with_unexpected_motion_algorithm
             """
 
-            # Fill the whole_shape_descriptors table
-            # self.whole_shape_descriptors = df.from_dict(colony_dictionary)
+            # Fill the one_row_per_frame table
+            # self.one_row_per_frame = df.from_dict(colony_dictionary)
 
     def detect_growth_transitions(self):
         ##
         if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena']:
-            self.statistics["iso_digi_transi"] = NA
-            if not isna(self.statistics["first_move"]):
-                logging.info(f"Arena n°{self.statistics['arena']}. Starting growth transition analysis.")
+            self.one_descriptor_per_arena["iso_digi_transi"] = NA
+            if not isna(self.one_descriptor_per_arena["first_move"]):
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting growth transition analysis.")
 
                 # II) Once a pseudopod is deployed, look for a disk/ around the original shape
                 growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
-                dilated_origin = dilate(self.binary[self.statistics["first_move"], :, :], kernel=cross_33, iterations=10, borderType=BORDER_CONSTANT, borderValue=0)
+                dilated_origin = dilate(self.binary[self.one_descriptor_per_arena["first_move"], :, :], kernel=cross_33, iterations=10, borderType=BORDER_CONSTANT, borderValue=0)
                 isisotropic = sum(self.binary[:, :, :] * dilated_origin, (1, 2))
                 isisotropic *= growth_begining
                 # Ask if the dilated origin area is 90% covered during the growth beginning
                 isisotropic = isisotropic > 0.9 * dilated_origin.sum()
                 if any(isisotropic):
-                    self.statistics["is_growth_isotropic"] = 1
+                    self.one_descriptor_per_arena["is_growth_isotropic"] = 1
                     # Determine a solidity reference to look for a potential breaking of the isotropic growth
                     if self.compute_solidity_separately:
-                        solidity_reference = mean(self.solidity[:self.statistics["first_move"]])
+                        solidity_reference = mean(self.solidity[:self.one_descriptor_per_arena["first_move"]])
                         different_solidity = self.solidity < (0.9 * solidity_reference)
+                        del self.solidity
                     else:
                         solidity_reference = mean(
-                            self.whole_shape_descriptors.iloc[:(self.statistics["first_move"]), :]["solidity"])
-                        different_solidity = self.whole_shape_descriptors["solidity"].values < (0.9 * solidity_reference)
+                            self.one_row_per_frame.iloc[:(self.one_descriptor_per_arena["first_move"]), :]["solidity"])
+                        different_solidity = self.one_row_per_frame["solidity"].values < (0.9 * solidity_reference)
                     # Make sure that isotropic breaking not occur before isotropic growth
                     if any(different_solidity):
-                        self.statistics["iso_digi_transi"] = nonzero(different_solidity)[0][0] * self.time_interval
+                        self.one_descriptor_per_arena["iso_digi_transi"] = nonzero(different_solidity)[0][0] * self.time_interval
                 else:
-                    self.statistics["is_growth_isotropic"] = 0
+                    self.one_descriptor_per_arena["is_growth_isotropic"] = 0
             else:
-                self.statistics["is_growth_isotropic"] = NA
+                self.one_descriptor_per_arena["is_growth_isotropic"] = NA
 
             """
-            if logical_or(self.statistics["iso_digi_transi"] != 0, overlap.sum() > ):
-                self.statistics["is_growth_isotropic"] = True
+            if logical_or(self.one_descriptor_per_arena["iso_digi_transi"] != 0, overlap.sum() > ):
+                self.one_descriptor_per_arena["is_growth_isotropic"] = True
             # [aim: isotropic phase occurrence]
 
             growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
@@ -1321,42 +1335,42 @@ class MotionAnalysis:
             solid_growth = logical_and(growth_begining, similar_solidity)
             # 
             if any(logical_not(solid_growth)):
-                self.statistics["iso_digi_transi"] = sum(solid_growth)
+                self.one_descriptor_per_arena["iso_digi_transi"] = sum(solid_growth)
 
 
 
             best_isotropic_candidate = self.binary[solid_growth, :, :][-1]
             # Use the largest side of the bounding box as a reference to calculate how we should iterate dilatation
-            self.whole_shape_descriptors[solid_growth, :]
+            self.one_row_per_frame[solid_growth, :]
             dilated_origin = dilate(self.shape_evolution.binary, kernel=cross_33, iterations=10,
                                         borderType=BORDER_CONSTANT, borderValue=0)
             if sum(best_isotropic_candidate * dilated_origin) > 0.95 * dilated_origin.sum():
                 self.isotropic_phase = True
                 self.isotropic_start = nonzero(solid_growth)[0][-1]
 
-            nonzero(self.whole_shape_descriptors[t, 4] > (0.6 * self.whole_shape_descriptors[0, 4]))[0]
+            nonzero(self.one_row_per_frame[t, 4] > (0.6 * self.one_row_per_frame[0, 4]))[0]
             for t in arange(self.shape_evolution.start, self.shape_evolution.binary.shape[2]):
 
                 new_shapes = self.shape_evolution.binary[:, :, t] - origin
                 # if the newly added area is inferior to the original suface
                 if sum(new_shapes) < sum(origin):
                     # If the solidity of the current shape is similar to the one at the beginning
-                    if self.whole_shape_descriptors[t, 4] > (0.6 * self.whole_shape_descriptors[0, 4]):
+                    if self.one_row_per_frame[t, 4] > (0.6 * self.one_row_per_frame[0, 4]):
                         SD = ShapeDescriptors(new_shapes, ["perimeter"])
                         # If the perimeter of the added shape is superior to the perimeter of the shape at the beginning
-                        if SD.results[0] > self.whole_shape_descriptors[t, 0]:  # will require to be more specific
+                        if SD.results[0] > self.one_row_per_frame[t, 0]:  # will require to be more specific
                             self.isotropic_phase = True
                             self.isotropic_start = t
 
             # III) Look for solidity changes showing the breaking of isotropic growth [aim: time]
             if self.isotropic_phase:
                 self.isotropic_breaking = \
-                nonzero(self.whole_shape_descriptors[:, 4] < (0.8 * self.whole_shape_descriptors[0, 4]))[0]
+                nonzero(self.one_row_per_frame[:, 4] < (0.8 * self.one_row_per_frame[0, 4]))[0]
             # IV) Isolate secondary pseudopods and save their shape descriptors just before some of them change
             # drastically
             previous_t = 0
             for t in arange(self.shape_evolution.start, self.shape_evolution.binary.shape[2]):
-                if self.whole_shape_descriptors[t, 4] < 0.9 * self.whole_shape_descriptors[previous_t, 4]:
+                if self.one_row_per_frame[t, 4] < 0.9 * self.one_row_per_frame[previous_t, 4]:
                     added_material = self.shape_evolution.binary[:, :, t] - self.shape_evolution.binary[:, :,
                                                                             previous_t]
                     new_order, stats, centers = cc(added_material)
@@ -1383,39 +1397,25 @@ class MotionAnalysis:
 
 
     def networks_detection(self, show_seg=False):
-        if not isna(self.statistics["first_move"]) and not self.vars['several_blob_per_arena'] and self.vars['network_detection']:
-            logging.info(f"Arena n°{self.statistics['arena']}. Starting network detection.")
-            # self.network_dynamics = load(f"coord_tubular_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
-            # if self.vars['origin_state'] == 'constant':
-            #     origin = (1 - self.origin)
-            # else:
-            #     origin = ones(self.dims[1:], dtype=uint8)
+        if not isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
+            # self.network_dynamics = load(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
             self.network_dynamics = zeros(self.dims, dtype=uint8)
-            self.graph = zeros(self.dims, dtype=uint8)
-            # if len(self.converted_video.shape) == 3:
-            #     self.converted_video = stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
             self.check_converted_video_type()
-            # self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
-            self.covering_intensity = zeros(self.dims[1:], dtype=float64)
-            if self.vars['origin_state'] == "fluctuating":
-                self.covering_intensity = self.origin * self.converted_video[0, :, :]
             if self.vars['origin_state'] == "constant":
                 if self.origin_idx is None:
                     self.origin_idx = nonzero(self.origin)
-                if self.vars['lighter_background']:
-                    self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
 
             if self.vars['fractal_analysis']:
                 box_counting_dimensions = zeros((self.dims[0], 7), dtype=float64)
             vertices_and_edges = zeros((self.dims[0], 2), dtype=uint32)
 
-
-            for t in arange(self.statistics["first_move"], self.dims[0]):  #20):#
-                # t = 10
+            for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  #20):#
+                # t = self.one_descriptor_per_arena["first_move"]
                 # t = 200
                 if any(self.binary[t, ...]):
                     nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'])
-
+                    r = weakref.ref(nd)
                     nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
                                        step=self.vars['network_mesh_step_length'],
                                        int_variation_thresh=self.vars['network_detection_threshold'])
@@ -1443,7 +1443,6 @@ class MotionAnalysis:
                     nd.skeletonize()
                     nd.get_graph()
                     vertices_and_edges[t, :] = nd.vertices_number, nd.edges_number
-                    self.graph[t, ...] = deepcopy(nd.graph)
 
                     if self.vars['fractal_analysis']:
                         box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
@@ -1452,16 +1451,17 @@ class MotionAnalysis:
                         zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...], side_threshold=self.vars['fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=False)
                         box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(zoomed_binary, side_lengths)
 
-                    # #### Houssam ####
-                    # segments = nd.find_segments(labeled_nodes, label_to_position)
-                    # node_degrees = nd.extract_node_degrees(segments)
-                    # # largeurs = nd.get_segment_width(self.binary[t, ...], segments, distance_map)
-                    # #### Houssam ####
+                    # self.graph[t, ...] = deepcopy(nd.graph)
 
-                    imtoshow = deepcopy(self.visu[t, ...])
+                    imtoshow = self.visu[t, ...]
                     eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
                     net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
-                    # net_coord = nonzero(morphologyEx(self.network_dynamics[t, ...], MORPH_GRADIENT, cross_33))
+
+                    edges = nonzero(nd.graph == 1)
+                    vertices = nonzero(nd.graph == 2)
+                    self.network_dynamics[t, edges[0], edges[1]] = 2
+                    self.network_dynamics[t, vertices[0], vertices[1]] = 3
+
                     imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
 
                     # Remember to uncomment this when done!!! For visualization.
@@ -1469,52 +1469,34 @@ class MotionAnalysis:
                         imshow("", resize(imtoshow, (1000, 1000)))
                         waitKey(1)
                     else:
-                        self.visu[t, ...] = deepcopy(imtoshow)
+                        self.visu[t, ...] = imtoshow
             if show_seg:
                 destroyAllWindows()
-            self.whole_shape_descriptors["vertices_number"] = vertices_and_edges[:, 0]
-            self.whole_shape_descriptors["edges_number"] = vertices_and_edges[:, 1]
+            self.one_row_per_frame["vertices_number"] = vertices_and_edges[:, 0]
+            self.one_row_per_frame["edges_number"] = vertices_and_edges[:, 1]
             if self.vars['fractal_analysis']:
-                self.whole_shape_descriptors["inner_network_size"] = box_counting_dimensions[:, 0]
-                self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 1]
-                self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
-                self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 3]
-                self.whole_shape_descriptors["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
-                self.whole_shape_descriptors["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
-                self.whole_shape_descriptors["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
+                self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
+                self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
+                self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 3]
+                self.one_row_per_frame["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
+                self.one_row_per_frame["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
+                self.one_row_per_frame["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
                 if self.vars['output_in_mm']:
-                    self.whole_shape_descriptors["inner_network_size"] *= self.vars['average_pixel_size']
+                    self.one_row_per_frame["inner_network_size"] *= self.vars['average_pixel_size']
                 # box_counting_dimensions = df(box_counting_dimensions, columns=["inner_network_size", "fractal_dimension", "fractal_r_value", "fractal_box_nb", "inner_network_fractal_dimension", "inner_network_fractal_r_value", "inner_network_fractal_box_nb"])
-                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';', index=False, lineterminator='\n')
+                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.one_descriptor_per_arena['arena']}.csv", sep=';', index=False, lineterminator='\n')
 
+            edges = smallest_memory_array(nonzero(self.network_dynamics == 2), "uint")
+            vertices = smallest_memory_array(nonzero(self.network_dynamics == 3), "uint")
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
-            edges = smallest_memory_array(nonzero(self.graph == 1), "uint")
-            vertices = smallest_memory_array(nonzero(self.graph == 2), "uint")
-            if self.vars['save_binary_masks']:
-                save(f"coord_tubular_network{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
-                save(f"coord_network_edges{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
-                save(f"coord_network_vertices{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
-            del self.graph
+            # edges = smallest_memory_array(nonzero(self.graph == 1), "uint")
+            # vertices = smallest_memory_array(nonzero(self.graph == 2), "uint")
+            if self.vars['save_coord_network']:
+                save(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
+                save(f"coord_network_edges{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
+                save(f"coord_network_vertices{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
 
-            # save(f"coord_network{self.statistics['arena']}.npy", self.network_dynamics)
-            # del self.network_dynamics
-            # save(f"coord_binary{self.statistics['arena']}.npy", smallest_memory_array(nonzero(self.binary), "uint"))
-
-            # self.network_dynamics += self.binary
-            # save(f"video_of_network{self.statistics['arena']}.npy", self.network_dynamics)
-                # self.network_dynamics = nonzero(self.network_dynamics)
-                # d = {}
-                # d["time_coord"] = self.network_dynamics[0]
-                # d["y_coord"] = self.network_dynamics[1]
-                # d["x_coord"] = self.network_dynamics[2]
-                # PickleRick().write_file(d, f"network_dynamics{self.statistics['arena']}.pkl")
-                #
-                # self.network_dynamics = nonzero(self.binary)
-                # d = {}
-                # d["time_coord"] = self.network_dynamics[0]
-                # d["y_coord"] = self.network_dynamics[1]
-                # d["x_coord"] = self.network_dynamics[2]
-                # PickleRick().write_file(d, f"plasmodia_dynamics{self.statistics['arena']}.pkl")
 
     def memory_allocation_for_cytoscillations(self):
         try:
@@ -1552,106 +1534,159 @@ class MotionAnalysis:
 
 
     def study_cytoscillations(self, show_seg):
-        if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
-            logging.info(f"Arena n°{self.statistics['arena']}. Starting oscillation analysis.")
-            oscillations_video = None
-            staring_time = default_timer()
-            current_time = staring_time
-            while oscillations_video is None and (current_time - staring_time) < 600:
-                oscillations_video = self.memory_allocation_for_cytoscillations()
-                if oscillations_video is None:
-                    sleep(30)
-                    current_time = default_timer()
+        if isna(self.one_descriptor_per_arena["first_move"]):
+            if not self.vars['lose_accuracy_to_save_memory']:
+                self.check_converted_video_type()
+            if self.vars['oscilacyto_analysis']:
+                self.one_row_per_frame['mean_cluster_area'] = NA
+                self.one_row_per_frame['cluster_number'] = NA
+        else:
+            if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting oscillation analysis.")
+                oscillations_video = None
+                staring_time = default_timer()
+                current_time = staring_time
+                while oscillations_video is None and (current_time - staring_time) < 600:
+                    oscillations_video = self.memory_allocation_for_cytoscillations()
+                    if oscillations_video is None:
+                        sleep(30)
+                        current_time = default_timer()
 
-            mean_cluster_area = zeros(oscillations_video.shape[0])
-            cluster_number = zeros(oscillations_video.shape[0])
-            named_cluster_number = 0
-            dotted_image = ones(self.converted_video.shape[1:3], uint8)
-            for cy in arange(dotted_image.shape[0]):
-                if cy % 2 != 0:
-                    dotted_image[cy, :] = 0
-            for cx in arange(dotted_image.shape[1]):
-                if cx % 2 != 0:
-                    dotted_image[:, cx] = 0
-            within_range = (1 - self.binary[0, :, :]) * self.borders
+                within_range = (1 - self.binary[0, :, :]) * self.borders
+                oscillations_video *= ((self.binary * within_range) == 0)
+                # oscillations_video[nonzero(within_range)] = 0
+                del within_range
+                oscillations_video += 1
+                oscillations_video = oscillations_video.astype(uint8)
 
-            # To get the median oscillatory period of each oscillating cluster,
-            # we create a dict containing two lists (for influx and efflux)
-            # Each list element correspond to a cluster and stores :
-            # All pixel coordinates of that cluster, their corresponding lifespan, their time of disappearing
-            # Row number will give the size. Euclidean distance between pix coord, the wave distance
-            self.clusters_final_data = empty((0, 6), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance", cy, cx]
-            # self.clusters_final_data = empty((0, 4), dtype=float32)# ["mean_pixel_period", "phase", "total_size", "edge_distance"]
-            period_tracking = zeros(self.converted_video.shape[1:3], dtype=uint32)
-            efflux_study = ClusterFluxStudy(self.converted_video.shape[:3])
-            influx_study = ClusterFluxStudy(self.converted_video.shape[:3])
-            if self.start is None:
-                self.start = 0
+                dotted_image = ones(self.converted_video.shape[1:3], uint8)
+                for cy in arange(dotted_image.shape[0]):
+                    if cy % 2 != 0:
+                        dotted_image[cy, :] = 0
+                for cx in arange(dotted_image.shape[1]):
+                    if cx % 2 != 0:
+                        dotted_image[:, cx] = 0
 
-            # New analysis to get the surface dynamic of every oscillatory cluster: Part 1 openning
-            # max_clusters = 10000000
-            if self.vars['fractal_analysis']:
-                oscillating_clusters_temporal_dynamics = zeros(13,  dtype=float64)  # time, cluster_id, flow, centroid_y, centroid_x, area, inner_network_area, box_count_dim, inner_network_box_count_dim
+                if self.start is None:
+                    self.start = 0
 
-            cluster_id_matrix = zeros(self.dims[1:], dtype=uint64)
-            # New analysis to get the surface dynamic of every oscillatory cluster: Part 1 ending
-            pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
-            for t in arange(self.dims[0]):#arange(60): #
-                # contours = morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33)
-                eroded_binary = erode(self.binary[t, :, :], cross_33)
-                contours = self.binary[t, :, :] - eroded_binary
-                contours_idx = nonzero(contours)
-                imtoshow = deepcopy(self.converted_video[t, ...])
-                imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
-                if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
-                    if self.statistics["is_growth_isotropic"] == 1:
-                        if t < self.statistics["iso_digi_transi"]:
-                            imtoshow[contours_idx[0], contours_idx[1], 2] = 255
-                oscillations_image = zeros(self.dims[1:], uint8)
-                if t >= self.start:
-                    # Add in or ef if a pixel has at least 4 neighbor in or ef
-                    neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=int8)
-                    neigh_comp.is_inf(0, and_itself=False)
-                    neigh_comp.is_sup(0, and_itself=False)
-                    # Not verified if influx is really influx (resp efflux)
-                    influx = neigh_comp.sup_neighbor_nb * self.binary[t, :, :] * within_range
-                    efflux = neigh_comp.inf_neighbor_nb * self.binary[t, :, :] * within_range
-                    # Only keep pixels having at least 4 positive (resp. negative) neighbors
-                    influx[influx <= 4] = 0
-                    efflux[efflux <= 4] = 0
-                    influx[influx > 4] = 1
-                    efflux[efflux > 4] = 1
+                for t in arange(self.dims[0]):#arange(11): #
+                    eroded_binary = erode(self.binary[t, :, :], cross_33)
+                    contours = self.binary[t, :, :] - eroded_binary
+                    contours_idx = nonzero(contours)
+                    imtoshow = deepcopy(self.converted_video[t, ...])
+                    imtoshow[contours_idx[0], contours_idx[1], :] = self.vars['contour_color']
+                    if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not isna(self.one_descriptor_per_arena["iso_digi_transi"]):
+                        if self.one_descriptor_per_arena["is_growth_isotropic"] == 1:
+                            if t < self.one_descriptor_per_arena["iso_digi_transi"]:
+                                imtoshow[contours_idx[0], contours_idx[1], 2] = 255
+                    oscillations_image = zeros(self.dims[1:], uint8)
+                    if t >= self.start:
+                        # Add in or ef if a pixel has at least 4 neighbor in or ef
+                        neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=int8)
+                        neigh_comp.is_inf(1, and_itself=False)
+                        neigh_comp.is_sup(1, and_itself=False)
+                        # Not verified if influx is really influx (resp efflux)
+                        influx = neigh_comp.sup_neighbor_nb
+                        efflux = neigh_comp.inf_neighbor_nb
 
-                    influx, in_stats, in_centroids = cc(influx)
-                    efflux, ef_stats, ef_centroids = cc(efflux)
-                    # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
-                    in_smalls = nonzero(in_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
-                    if len(in_smalls) > 0:
-                        influx[isin(influx, in_smalls)] = 0
-                        in_stats = in_stats[:in_smalls[0], :]
-                        in_centroids = in_centroids[:in_smalls[0], :]
-                    in_stats = in_stats[1:]
-                    in_centroids = in_centroids[1:]
-                    ef_smalls = nonzero(ef_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
-                    if len(ef_smalls) > 0:
-                        efflux[isin(efflux, ef_smalls)] = 0
-                        ef_stats = ef_stats[:(ef_smalls[0]), :]
-                        ef_centroids = ef_centroids[:(ef_smalls[0]), :]
-                    ef_stats = ef_stats[1:]
-                    ef_centroids = ef_centroids[1:]
+                        # # Add in or ef if a pixel has at least 4 neighbor in or ef
+                        # neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=int8)
+                        # neigh_comp.is_inf(0, and_itself=False)
+                        # neigh_comp.is_sup(0, and_itself=False)
+                        # # Not verified if influx is really influx (resp efflux)
+                        # influx = neigh_comp.sup_neighbor_nb * self.binary[t, :, :] * within_range
+                        # efflux = neigh_comp.inf_neighbor_nb * self.binary[t, :, :] * within_range
 
-                    in_idx = nonzero(influx)  # NEW
-                    ef_idx = nonzero(efflux)  # NEW
-                    oscillations_image[in_idx[0], in_idx[1]] = 1  # NEW
-                    oscillations_image[ef_idx[0], ef_idx[1]] = 2  # NEW
+                        # Only keep pixels having at least 4 positive (resp. negative) neighbors
+                        influx[influx <= 4] = 0
+                        efflux[efflux <= 4] = 0
+                        influx[influx > 4] = 1
+                        efflux[efflux > 4] = 1
+                        if any(influx) or any(efflux):
+                            influx, in_stats, in_centroids = cc(influx)
+                            efflux, ef_stats, ef_centroids = cc(efflux)
+                            # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
+                            in_smalls = nonzero(in_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
+                            if len(in_smalls) > 0:
+                                influx[isin(influx, in_smalls)] = 0
+                                in_stats = in_stats[:in_smalls[0], :]
+                                in_centroids = in_centroids[:in_smalls[0], :]
+                            ef_smalls = nonzero(ef_stats[:, 4] < self.vars['minimal_oscillating_cluster_size'])[0]
+                            if len(ef_smalls) > 0:
+                                efflux[isin(efflux, ef_smalls)] = 0
+                                ef_stats = ef_stats[:(ef_smalls[0]), :]
+                                ef_centroids = ef_centroids[:(ef_smalls[0]), :]
+                            in_idx = nonzero(influx)  # NEW
+                            ef_idx = nonzero(efflux)  # NEW
+                            oscillations_image[in_idx[0], in_idx[1]] = 1  # NEW
+                            oscillations_image[ef_idx[0], ef_idx[1]] = 2  # NEW
+                            # Prepare the image for display
+                            influx *= dotted_image
+                            efflux *= dotted_image
+                            in_idx = nonzero(influx)
+                            ef_idx = nonzero(efflux)
+                            imtoshow[in_idx[0], in_idx[1], :2] = 153  # Green: influx, intensity increase
+                            imtoshow[in_idx[0], in_idx[1], 2] = 0
+                            imtoshow[ef_idx[0], ef_idx[1], 1:] = 0  # Blue: efflux, intensity decrease
+                            imtoshow[ef_idx[0], ef_idx[1], 0] = 204
+                    oscillations_video[t, :, :] = oscillations_image
+                    self.converted_video[t, ...] = imtoshow
+                    if show_seg:
+                        im_to_show = resize(imtoshow, (540, 540))
+                        imshow("shape_motion", im_to_show)
+                        waitKey(1)
+                if show_seg:
+                    destroyAllWindows()
+                if self.vars['save_coord_thickening_slimming']:
+                    save(f"coord_thickening{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))
+                    save(f"coord_slimming{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))
 
-                    if t > self.lost_frames:
+
+                if self.vars['oscilacyto_analysis']:
+                    # To get the median oscillatory period of each oscillating cluster,
+                    # we create a dict containing two lists (for influx and efflux)
+                    # Each list element correspond to a cluster and stores :
+                    # All pixel coordinates of that cluster, their corresponding lifespan, their time of disappearing
+                    # Row number will give the size. Euclidean distance between pix coord, the wave distance
+                    self.clusters_final_data = empty((0, 6),
+                                                     dtype=float32)  # ["mean_pixel_period", "phase", "total_size", "edge_distance", cy, cx]
+                    period_tracking = zeros(self.converted_video.shape[1:3], dtype=uint32)
+                    efflux_study = ClusterFluxStudy(self.converted_video.shape[:3])
+                    influx_study = ClusterFluxStudy(self.converted_video.shape[:3])
+
+                    if self.start is None:
+                        self.start = 0
+                    if self.vars['fractal_analysis']:
+                        if os.path.exists(f"oscillating_clusters_temporal_dynamics.h5"):
+                            remove_h5_key(f"oscillating_clusters_temporal_dynamics.h5",
+                                          f"arena{self.one_descriptor_per_arena['arena']}")
+                    cluster_id_matrix = zeros(self.dims[1:], dtype=uint64)
+                    named_cluster_number = 0
+                    mean_cluster_area = zeros(oscillations_video.shape[0])
+                    pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
+                    for t in arange(max((self.start, self.lost_frames)), self.dims[0]):  # arange(21): #
+                        eroded_binary = erode(self.binary[t, :, :], cross_33)
+                        contours = self.binary[t, :, :] - eroded_binary
+                        # contours_idx = nonzero(contours)
+                        oscillations_image = oscillations_video[t, ...]
+                        influx = (oscillations_image == 1).astype(uint8)
+                        efflux = (oscillations_image == 2).astype(uint8)
+                        in_idx = nonzero(influx)  # NEW
+                        ef_idx = nonzero(efflux)
+                        influx, in_stats, in_centroids = cc(influx)
+                        efflux, ef_stats, ef_centroids = cc(efflux)
+                        in_stats = in_stats[1:]
+                        in_centroids = in_centroids[1:]
+                        ef_stats = ef_stats[1:]
+                        ef_centroids = ef_centroids[1:]
                         # Sum the number of connected components minus the background to get the number of clusters
-                        cluster_number[t] = in_stats.shape[0] + ef_stats.shape[0]
+                        oscillating_cluster_number = in_stats.shape[0] + ef_stats.shape[0]
                         updated_cluster_names = [0]
-                        if cluster_number[t] > 0:
-                            current_percentage, eta = pat_tracker.get_progress(t, element_number=cluster_number[t])
-                            logging.info(f"Arena n°{self.statistics['arena']}, Oscillatory cluster computation: {current_percentage}%{eta}")
+                        if oscillating_cluster_number > 0:
+                            current_percentage, eta = pat_tracker.get_progress(t, element_number=oscillating_cluster_number)
+                            logging.info(
+                                f"Arena n°{self.one_descriptor_per_arena['arena']}, Oscillatory cluster computation: {current_percentage}%{eta}")
                             if self.vars['fractal_analysis']:
                                 # New analysis to get the surface dynamic of every oscillatory cluster: Part 2 openning:
                                 network_at_t = zeros(self.dims[1:], dtype=uint8)
@@ -1663,7 +1698,9 @@ class MotionAnalysis:
                                 shapes[ef_idx[0], ef_idx[1]] = max_in + efflux[ef_idx[0], ef_idx[1]]
                                 centers = vstack((in_centroids, ef_centroids))
                                 # shapes, stats, centers = cc(oscillations_image)
-                                for cluster in (arange(cluster_number[t] - 1, dtype=uint32) + 1):  # 120)):# #92
+                                cluster_dynamic = zeros((int(oscillating_cluster_number) - 1, 13), dtype=float64)
+                                for clust_i in arange(oscillating_cluster_number - 1, dtype=uint32):  # 120)):# #92
+                                    cluster = clust_i + 1
                                     # cluster = 1
                                     # print(cluster)
                                     current_cluster_img = (shapes == cluster).astype(uint8)
@@ -1696,24 +1733,49 @@ class MotionAnalysis:
                                     # Save the current cluster areas:
                                     inner_network = current_cluster_img * network_at_t
                                     inner_network_area = inner_network.sum()
-                                    zoomed_binary, side_lengths = prepare_box_counting(current_cluster_img, side_threshold=self.vars['fractal_box_side_threshold'],
-                                                                                       zoom_step=self.vars['fractal_zoom_step'], contours=True)
+                                    zoomed_binary, side_lengths = prepare_box_counting(current_cluster_img,
+                                                                                       side_threshold=self.vars[
+                                                                                           'fractal_box_side_threshold'],
+                                                                                       zoom_step=self.vars[
+                                                                                           'fractal_zoom_step'],
+                                                                                       contours=True)
                                     box_count_dim, r_value, box_nb = box_counting(zoomed_binary, side_lengths)
 
                                     if any(inner_network):
-                                        zoomed_binary, side_lengths = prepare_box_counting(inner_network, side_threshold=self.vars['fractal_box_side_threshold'],
-                                                                                            zoom_step=self.vars['fractal_zoom_step'], contours=False)
-                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(zoomed_binary, side_lengths)
+                                        zoomed_binary, side_lengths = prepare_box_counting(inner_network,
+                                                                                           side_threshold=self.vars[
+                                                                                               'fractal_box_side_threshold'],
+                                                                                           zoom_step=self.vars[
+                                                                                               'fractal_zoom_step'],
+                                                                                           contours=False)
+                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(
+                                            zoomed_binary, side_lengths)
                                     else:
                                         inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = 0, 0, 0
                                     # Calculate centroid and add to centroids list
                                     centroid_x, centroid_y = centers[cluster, :]
-                                    curr_tempo_dyn = array((t, cluster_names[0], flow, centroid_y, centroid_x, current_cluster_img.sum(), inner_network_area, box_count_dim, r_value, box_nb, inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb), dtype=float64)
+                                    if self.vars['output_in_mm']:
+                                        cluster_dynamic[clust_i, :] = array(
+                                            (t * self.time_interval, cluster_names[0], flow, centroid_y, centroid_x,
+                                             current_cluster_img.sum() * self.vars['average_pixel_size'],
+                                             inner_network_area * self.vars['average_pixel_size'], box_count_dim, r_value,
+                                             box_nb, inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb),
+                                            dtype=float64)
+                                    else:
+                                        cluster_dynamic[clust_i, :] = array((t, cluster_names[0], flow, centroid_y,
+                                                                             centroid_x, current_cluster_img.sum(),
+                                                                             inner_network_area, box_count_dim, r_value,
+                                                                             box_nb, inner_network_box_count_dim,
+                                                                             inner_net_r_value, inner_net_box_nb),
+                                                                            dtype=float64)
                                     # time, cluster_id, flow, centroid_y, centroid_x, area, inner_network_area, box_counting_dimension
 
-                                    oscillating_clusters_temporal_dynamics = vstack((oscillating_clusters_temporal_dynamics, curr_tempo_dyn))
+                                    # oscillating_clusters_temporal_dynamics = vstack((oscillating_clusters_temporal_dynamics, curr_tempo_dyn))
 
                                     updated_cluster_names = append(updated_cluster_names, cluster_names)
+                                vstack_h5_array(f"oscillating_clusters_temporal_dynamics.h5",
+                                                cluster_dynamic, key=f"arena{self.one_descriptor_per_arena['arena']}")
+
                                 # Reset cluster_id_matrix for the next frame
                                 cluster_id_matrix *= self.binary[t, :, :]
 
@@ -1722,90 +1784,45 @@ class MotionAnalysis:
                             # clusters_id = efflux_clusters_id
                             # alive_clusters_in_flux = alive_clusters_in_efflux
                             # cluster_total_number = cluster_total_number_efflux
-                            period_tracking, self.clusters_final_data = efflux_study.update_flux(t, contours, efflux, period_tracking, self.clusters_final_data)
-                            period_tracking, self.clusters_final_data = influx_study.update_flux(t, contours, influx, period_tracking, self.clusters_final_data)
+                            period_tracking, self.clusters_final_data = efflux_study.update_flux(t, contours, efflux,
+                                                                                                 period_tracking,
+                                                                                                 self.clusters_final_data)
+                            period_tracking, self.clusters_final_data = influx_study.update_flux(t, contours, influx,
+                                                                                                 period_tracking,
+                                                                                                 self.clusters_final_data)
                             # See(period_tracking.astype(uint8) * 50)
                             # See(influx.astype(uint8) * 50)
 
                             # Get standardized area
                             # area_standardization = (sum(self.binary[t, :, :]).astype(int64) - sum(self.binary[0, :, :]).astype(int64))
                             mean_cluster_area[t] = mean(concatenate((in_stats[:, 4], ef_stats[:, 4])))
+                    if self.vars['output_in_mm']:
+                        self.clusters_final_data[:, 1] *= self.time_interval # phase
+                        self.clusters_final_data[:, 2] *= self.vars['average_pixel_size']  # size
+                        self.clusters_final_data[:, 3] *= sqrt(self.vars['average_pixel_size'])  # distance
+                        self.one_row_per_frame['mean_cluster_area'] = mean_cluster_area * self.vars['average_pixel_size']
+                    self.one_row_per_frame['cluster_number'] = named_cluster_number
 
-                            # Prepare the image for display
-                            in_idx = deepcopy(influx)
-                            ef_idx = deepcopy(efflux)
-                            in_idx *= dotted_image
-                            ef_idx *= dotted_image
-                            in_idx = nonzero(in_idx)
-                            ef_idx = nonzero(ef_idx)
-                            imtoshow[in_idx[0], in_idx[1], :2] = 153  # Green: influx, intensity increase
-                            imtoshow[in_idx[0], in_idx[1], 2] = 0
-                            imtoshow[ef_idx[0], ef_idx[1], 1:] = 0  # Blue: efflux, intensity decrease
-                            imtoshow[ef_idx[0], ef_idx[1], 0] = 204
-
-                oscillations_video[t, :, :] = deepcopy(oscillations_image)
-                self.converted_video[t, ...] = deepcopy(imtoshow)
-                if show_seg:
-                    imtoshow = resize(imtoshow, (540, 540))
-                    imshow("shape_motion", imtoshow)
-                    waitKey(1)
-
-
-            if self.vars['fractal_analysis']:
-                # coord_cluster = vstack(coord_cluster)
-                oscillating_clusters_temporal_dynamics = oscillating_clusters_temporal_dynamics[1:, :]
-                if self.vars['output_in_mm']:
-                    oscillating_clusters_temporal_dynamics[:, 0] *= self.time_interval # phase
-                    oscillating_clusters_temporal_dynamics[:, 5] *= self.vars['average_pixel_size']  # size
-                    oscillating_clusters_temporal_dynamics[:, 6] *= self.vars['average_pixel_size']  # size
-                oscillating_clusters_temporal_dynamics = df(oscillating_clusters_temporal_dynamics, columns=["time", "cluster_id", "flow", "centroid_y", "centroid_x", "area", "inner_network_area", "box_counting_dimension", "r_value", "box_nb", "inner_network_box_counting_dimension", "inner_net_r_value", "inner_net_box_nb"])
-                oscillating_clusters_temporal_dynamics.to_csv(f"oscillating_clusters_temporal_dynamics{self.statistics['arena']}.csv", sep=';', index=False, lineterminator='\n')
-
-
-            if self.vars['output_in_mm']:
-                self.clusters_final_data[:, 1] *= self.time_interval # phase
-                self.clusters_final_data[:, 2] *= self.vars['average_pixel_size']  # size
-                self.clusters_final_data[:, 3] *= sqrt(self.vars['average_pixel_size'])  # distance
-                self.whole_shape_descriptors['mean_cluster_area'] = mean_cluster_area * self.vars['average_pixel_size']
-            self.whole_shape_descriptors['cluster_number'] = named_cluster_number
-
-            if self.vars['save_binary_masks']:
-                save(f"coord_thickening{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))
-                save(f"coord_slimming{self.statistics['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))
-            # save(f"coord_influx{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 1), "uint"))  # NEW
-            # save(f"coord_efflux{self.statistics['arena']}.npy", smallest_memory_array(nonzero(oscillations_video == 2), "uint"))  # NEW
-            # del self.cytoscillations
-            del oscillations_video
-
-        else:
-            if not self.vars['lose_accuracy_to_save_memory']:
-                self.converted_video -= min(self.converted_video)
-                self.converted_video = 255 * (self.converted_video / max(self.converted_video))
-                self.converted_video = round(self.converted_video).astype(uint8)
-        if isna(self.statistics["first_move"]):
-            # self.magnitudes_and_frequencies = [0, 0]
-            if self.vars['oscilacyto_analysis']:
-                self.whole_shape_descriptors['mean_cluster_area'] = NA
-                self.whole_shape_descriptors['cluster_number'] = NA
-                # self.statistics["max_magnitude"] = 'NA'
-                # self.statistics["frequency_of_max_magnitude"] = 'NA'
+                del oscillations_video
+                if self.vars['fractal_analysis']:
+                    del self.network_dynamics
 
     def fractal_descriptions(self):
-        if not isna(self.statistics["first_move"]) and self.vars['fractal_analysis']:
-            logging.info(f"Arena n°{self.statistics['arena']}. Starting fractal analysis.")
+        if not isna(self.one_descriptor_per_arena["first_move"]) and self.vars['fractal_analysis']:
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
 
-            if not self.vars['network_detection']:
+            if not self.vars['save_coord_network'] and not self.vars['network_analysis']:
                 box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
                 for t in arange(self.dims[0]):
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
                                                                        side_threshold=self.vars['fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, :] = box_counting(zoomed_binary, side_lengths)
-                self.whole_shape_descriptors["fractal_dimension"] = box_counting_dimensions[:, 0]
-                self.whole_shape_descriptors["fractal_box_nb"] = box_counting_dimensions[:, 1]
-                self.whole_shape_descriptors["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
+                self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
+                self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
                 # box_counting_dimensions = df(box_counting_dimensions, columns=["dimension"])
-                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.statistics['arena']}.csv", sep=';',
+                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.one_descriptor_per_arena['arena']}.csv", sep=';',
                 #                                index=False, lineterminator='\n')
 
 
@@ -1815,8 +1832,8 @@ class MotionAnalysis:
                 if len(self.vars['background_list']) == 0:
                     self.background = None
                 else:
-                    self.background = self.vars['background_list'][self.statistics['arena'] - 1]
-                self.visu = video2numpy(f"ind_{self.statistics['arena']}.npy", None, self.background, true_frame_width)
+                    self.background = self.vars['background_list'][self.one_descriptor_per_arena['arena'] - 1]
+                self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy", None, self.background, true_frame_width)
                 if len(self.visu.shape) == 3:
                     self.visu = stack((self.visu, self.visu, self.visu), axis=3)
 
@@ -1833,17 +1850,17 @@ class MotionAnalysis:
                 fractan.detect_fractal(threshold=self.vars['fractal_threshold_detection'])
                 fractan.extract_fractal(self.visu[t, ...])
                 fractan.get_dimension()
-                self.whole_shape_descriptors.loc[t, 'minkowski_dimension'] = fractan.minkowski_dimension
-                # self.whole_shape_descriptors['minkowski_dimension'].iloc[t] = fractan.minkowski_dimension
+                self.one_row_per_frame.loc[t, 'minkowski_dimension'] = fractan.minkowski_dimension
+                # self.one_row_per_frame['minkowski_dimension'].iloc[t] = fractan.minkowski_dimension
                 self.fractal_boxes = concatenate((self.fractal_boxes,
-                                            c_[repeat(self.statistics['arena'], len(fractan.fractal_box_widths)),
+                                            c_[repeat(self.one_descriptor_per_arena['arena'], len(fractan.fractal_box_widths)),
                                             repeat(t, len(fractan.fractal_box_widths)), fractan.fractal_box_lengths,
                                             fractan.fractal_box_widths]), axis=0)
 
             if self.vars['output_in_mm']:
                 self.fractal_boxes[:, 2:] *= sqrt(self.vars['average_pixel_size'])
             # Save an illustration of the fractals of the last image
-            fractan.save_fractal_mesh(f"last_image_fractal_mesh{self.statistics['arena']}.tif")
+            fractan.save_fractal_mesh(f"last_image_fractal_mesh{self.one_descriptor_per_arena['arena']}.tif")
             """
 
     def get_descriptors_summary(self):
@@ -1852,29 +1869,29 @@ class MotionAnalysis:
                                  "standard_deviation_x", "skewness_y", "skewness_x", "kurtosis_y", "kurtosis_x",
                                  "major_axis_len", "minor_axis_len", "axes_orientation"]
 
-        self.statistics["final_area"] = self.binary[-1, :, :].sum()
+        self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
 
 
         # for k, v in self.vars['descriptors'].items():
         #     if isin(k, potential_descriptors):
         #         # if machin isin potential_descriptors
         #         if v[1]: #Calculate mean and sd from first move
-        #             if self.statistics["first_move"] != 'NA':
-        #                 self.statistics[f'{k}_mean'] = \
-        #                 self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][k].mean()
-        #                 self.statistics[f'{k}_std'] = \
-        #                 self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][k].std()
+        #             if self.one_descriptor_per_arena["first_move"] != 'NA':
+        #                 self.one_descriptor_per_arena[f'{k}_mean'] = \
+        #                 self.one_row_per_frame.iloc[self.one_descriptor_per_arena["first_move"]:, :][k].mean()
+        #                 self.one_descriptor_per_arena[f'{k}_std'] = \
+        #                 self.one_row_per_frame.iloc[self.one_descriptor_per_arena["first_move"]:, :][k].std()
         #             else:
-        #                 self.statistics[f'{k}_mean'] = 'NA'
-        #                 self.statistics[f'{k}_std'] = 'NA'
+        #                 self.one_descriptor_per_arena[f'{k}_mean'] = 'NA'
+        #                 self.one_descriptor_per_arena[f'{k}_std'] = 'NA'
         #
         #         if v[2]: # Calculate linear regression
-        #             if self.statistics["first_move"] != 'NA':
+        #             if self.one_descriptor_per_arena["first_move"] != 'NA':
         #                 # Calculate slope and intercept of descriptors' value against time
-        #                 X = self.whole_shape_descriptors[k].values[self.statistics["first_move"]:]
+        #                 X = self.one_row_per_frame[k].values[self.one_descriptor_per_arena["first_move"]:]
         #                 natural_noise = 0.1 * ptp(X)
         #                 left, right = find_major_incline(X, natural_noise)
-        #                 T = self.whole_shape_descriptors['time'].values[self.statistics["first_move"]:]
+        #                 T = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena["first_move"]:]
         #                 if right == 1:
         #                     X = X[left:]
         #                     T = T[left:]
@@ -1883,43 +1900,43 @@ class MotionAnalysis:
         #                     X = X[left:-right]
         #                     T = T[left:-right]
         #                 reg = linregress(T, X)
-        #                 self.statistics[f"{k}_reg_start"] = self.statistics["first_move"] + left
-        #                 self.statistics[f"{k}_reg_end"] = self.dims[0] - right
-        #                 self.statistics[f"{k}_slope"] = reg.slope
-        #                 self.statistics[f"{k}_intercept"] = reg.intercept
+        #                 self.one_descriptor_per_arena[f"{k}_reg_start"] = self.one_descriptor_per_arena["first_move"] + left
+        #                 self.one_descriptor_per_arena[f"{k}_reg_end"] = self.dims[0] - right
+        #                 self.one_descriptor_per_arena[f"{k}_slope"] = reg.slope
+        #                 self.one_descriptor_per_arena[f"{k}_intercept"] = reg.intercept
         #             else:
-        #                 self.statistics[f"{k}_reg_start"] = 'NA'
-        #                 self.statistics[f"{k}_reg_end"] = 'NA'
-        #                 self.statistics[f"{k}_slope"] = 'NA'
-        #                 self.statistics[f"{k}_intercept"] = 'NA'
+        #                 self.one_descriptor_per_arena[f"{k}_reg_start"] = 'NA'
+        #                 self.one_descriptor_per_arena[f"{k}_reg_end"] = 'NA'
+        #                 self.one_descriptor_per_arena[f"{k}_slope"] = 'NA'
+        #                 self.one_descriptor_per_arena[f"{k}_intercept"] = 'NA'
 
 
         """
-        self.statistics["final_area"] = self.binary[-1, :, :].sum()
+        self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
         hour_to_frame = int(self.vars['when_to_measure_area_after_first_move'] * 60 / self.time_interval)
-        if self.statistics["first_move"] != 'NA':
+        if self.one_descriptor_per_arena["first_move"] != 'NA':
             if self.vars['oscilacyto_analysis']:
                 descriptors = self.vars['descriptors_list'] + ['cluster_number', 'mean_cluster_area']
             for descriptor in descriptors:
                 # I/ Get the area after a given time after first move
                 stat_name = (f"{descriptor}_{self.vars['when_to_measure_area_after_first_move']}h_after_first_move")
-                if (self.statistics["first_move"] + hour_to_frame) < self.dims[0]:
-                    self.statistics[stat_name] = self.whole_shape_descriptors[descriptor].values[self.statistics["first_move"] + hour_to_frame]
+                if (self.one_descriptor_per_arena["first_move"] + hour_to_frame) < self.dims[0]:
+                    self.one_descriptor_per_arena[stat_name] = self.one_row_per_frame[descriptor].values[self.one_descriptor_per_arena["first_move"] + hour_to_frame]
                 else:
-                    self.statistics[stat_name] = self.dims[0]
+                    self.one_descriptor_per_arena[stat_name] = self.dims[0]
 
                 if self.vars['descriptors_means']:
                      # Calculate the mean value of each descriptors after first move
-                    self.statistics[f'{descriptor}_mean'] = self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][
+                    self.one_descriptor_per_arena[f'{descriptor}_mean'] = self.one_row_per_frame.iloc[self.one_descriptor_per_arena["first_move"]:, :][
                         descriptor].mean()
-                    self.statistics[f'{descriptor}_std'] = self.whole_shape_descriptors.iloc[self.statistics["first_move"]:, :][
+                    self.one_descriptor_per_arena[f'{descriptor}_std'] = self.one_row_per_frame.iloc[self.one_descriptor_per_arena["first_move"]:, :][
                         descriptor].std()
                 if self.vars['descriptors_regressions']:
                     # Calculate slope and intercept of descriptors' value against time
-                    X = self.whole_shape_descriptors[descriptor].values[self.statistics["first_move"]:]
+                    X = self.one_row_per_frame[descriptor].values[self.one_descriptor_per_arena["first_move"]:]
                     natural_noise = 0.1 * ptp(X)
                     left, right = find_major_incline(X, natural_noise)
-                    T = self.whole_shape_descriptors['time'].values[self.statistics["first_move"]:]
+                    T = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena["first_move"]:]
                     if right == 1:
                         X = X[left:]
                         T = T[left:]
@@ -1929,10 +1946,10 @@ class MotionAnalysis:
                         T = T[left:-right]
 
                     reg = linregress(T, X)
-                    self.statistics[f"{descriptor}_reg_start"] = self.statistics["first_move"] + left
-                    self.statistics[f"{descriptor}_reg_end"] = self.dims[0] - right
-                    self.statistics[f"{descriptor}_slope"] = reg.slope
-                    self.statistics[f"{descriptor}_intercept"] = reg.intercept
+                    self.one_descriptor_per_arena[f"{descriptor}_reg_start"] = self.one_descriptor_per_arena["first_move"] + left
+                    self.one_descriptor_per_arena[f"{descriptor}_reg_end"] = self.dims[0] - right
+                    self.one_descriptor_per_arena[f"{descriptor}_slope"] = reg.slope
+                    self.one_descriptor_per_arena[f"{descriptor}_intercept"] = reg.intercept
         """
 
     def save_efficiency_tests(self):
@@ -1959,7 +1976,7 @@ class MotionAnalysis:
             self.efficiency_test_2 = deepcopy(self.visu[last_good_detection, :, :, :])
 
         position = (25, self.dims[1] // 2)
-        text = str(self.statistics['arena'])
+        text = str(self.one_descriptor_per_arena['arena'])
         eroded_binary = erode(self.binary[after_one_tenth_of_time, :, :], cross_33)
         contours = nonzero(self.binary[after_one_tenth_of_time, :, :] - eroded_binary)
         # contours = nonzero(morphologyEx(self.binary[after_one_tenth_of_time, :, :], MORPH_GRADIENT, cross_33))
@@ -1993,39 +2010,40 @@ class MotionAnalysis:
                 contours = nonzero(self.binary[t, :, :] - eroded_binary)
                 # contours = nonzero(morphologyEx(self.binary[t, :, :], MORPH_GRADIENT, cross_33))
                 self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
-                if "iso_digi_transi" in self.statistics.keys():
-                    if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.statistics["iso_digi_transi"]):
-                        if self.statistics["is_growth_isotropic"] == 1:
-                            if t < self.statistics["iso_digi_transi"]:
+                if "iso_digi_transi" in self.one_descriptor_per_arena.keys():
+                    if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not isna(self.one_descriptor_per_arena["iso_digi_transi"]):
+                        if self.one_descriptor_per_arena["is_growth_isotropic"] == 1:
+                            if t < self.one_descriptor_per_arena["iso_digi_transi"]:
                                 self.converted_video[t, contours[0], contours[1], :] = 0, 0, 255
-                # if self.statistics["iso_digi_transi"] != 'NA':
-                #     if self.statistics["is_growth_isotropic"] == 1:
-                #         before_transition = contours[0] < self.statistics["iso_digi_transi"]
+                # if self.one_descriptor_per_arena["iso_digi_transi"] != 'NA':
+                #     if self.one_descriptor_per_arena["is_growth_isotropic"] == 1:
+                #         before_transition = contours[0] < self.one_descriptor_per_arena["iso_digi_transi"]
                 #         self.converted_video[contours[0][before_transition], contours[1][before_transition], contours[2][before_transition], 2] = 255
             del self.binary
             del self.surfarea
             del self.borders
             del self.origin
             del self.origin_idx
-            del self.covering_intensity
+            del self.mean_intensity_per_frame
+            del self.erodila_disk
             collect()
             if self.visu is None:
                 true_frame_width = self.dims[2]
                 if len(self.vars['background_list']) == 0:
                     self.background = None
                 else:
-                    self.background = self.vars['background_list'][self.statistics['arena'] - 1]
-                self.visu = video2numpy(f"ind_{self.statistics['arena']}.npy", None, self.background, true_frame_width)
+                    self.background = self.vars['background_list'][self.one_descriptor_per_arena['arena'] - 1]
+                self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy", None, self.background, true_frame_width)
                 if len(self.visu.shape) == 3:
                     self.visu = stack((self.visu, self.visu, self.visu), axis=3)
             self.converted_video = concatenate((self.visu, self.converted_video), axis=2)
             # self.visu = None
 
-            if any(self.whole_shape_descriptors['time'] > 0):
+            if any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
                 for t in arange(self.dims[0]):
                     image = self.converted_video[t, ...]
-                    text = str(self.whole_shape_descriptors['time'][t]) + " min"
+                    text = str(self.one_row_per_frame['time'][t]) + " min"
                     image = putText(image,  # numpy array on which text is written
                                     text,  # text
                                     position,  # position at which writing has to start
@@ -2034,7 +2052,7 @@ class MotionAnalysis:
                                     (self.vars["contour_color"], self.vars["contour_color"], self.vars["contour_color"], 255),  #(209, 80, 0, 255),  # repeat(self.vars["contour_color"], 3),# font color
                                     2)  # font stroke
                     self.converted_video[t, ...] = image
-            vid_name = f"ind_{self.statistics['arena']}{self.vars['videos_extension']}"
+            vid_name = f"ind_{self.one_descriptor_per_arena['arena']}{self.vars['videos_extension']}"
             write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
             # self.converted_video = None
 
@@ -2043,10 +2061,10 @@ class MotionAnalysis:
         self.save_video()
         if self.vars['several_blob_per_arena']:
             try:
-                with open(f"one_row_per_frame_arena{self.statistics['arena']}.csv", 'w') as file:
-                    self.whole_shape_descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
+                with open(f"one_row_per_frame_arena{self.one_descriptor_per_arena['arena']}.csv", 'w') as file:
+                    self.one_row_per_frame.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
-                logging.error(f"Never let one_row_per_frame_arena{self.statistics['arena']}.csv open when Cellects runs")
+                logging.error(f"Never let one_row_per_frame_arena{self.one_descriptor_per_arena['arena']}.csv open when Cellects runs")
 
             create_new_csv: bool = False
             if os.path.isfile("one_row_per_arena.csv"):
@@ -2056,14 +2074,14 @@ class MotionAnalysis:
                 except PermissionError:
                     logging.error("Never let one_row_per_arena.csv open when Cellects runs")
 
-                if len(self.statistics) == len(stats.columns) - 1:
+                if len(self.one_descriptor_per_arena) == len(stats.columns) - 1:
                     try:
                         with open(f"one_row_per_arena.csv", 'w') as file:
-                            stats.iloc[(self.statistics['arena'] - 1), 1:] = self.statistics.values()
+                            stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), 1:] = self.one_descriptor_per_arena.values()
                             # if len(self.vars['analyzed_individuals']) == 1:
-                            #     stats = df(self.statistics, index=[0])
+                            #     stats = df(self.one_descriptor_per_arena, index=[0])
                             # else:
-                            #     stats = df.from_dict(self.statistics)
+                            #     stats = df.from_dict(self.one_descriptor_per_arena)
                         # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
                             stats.to_csv(file, sep=';', index=False, lineterminator='\n')
                     except PermissionError:
@@ -2074,34 +2092,34 @@ class MotionAnalysis:
                 create_new_csv = True
             if create_new_csv:
                 with open(f"one_row_per_arena.csv", 'w') as file:
-                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
-                               columns=list(self.statistics.keys()))
-                    stats.iloc[(self.statistics['arena'] - 1), :] = array(list(self.statistics.values()), dtype=uint32)
+                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
+                               columns=list(self.one_descriptor_per_arena.keys()))
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = array(list(self.one_descriptor_per_arena.values()), dtype=uint32)
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
 
-            # if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+            # if self.one_descriptor_per_arena["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
             #     oscil_i = df(
-            #         c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
+            #         c_[repeat(self.one_descriptor_per_arena['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
             #         columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance'])
             #     self.one_row_per_oscillating_cluster = concat((self.one_row_per_oscillating_cluster, oscil_i))
-        # if self.statistics["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
-        #     savetxt(f"oscillation_cluster{self.statistics['arena']}.csv", self.clusters_final_data,
+        # if self.one_descriptor_per_arena["first_move"] != 'NA' and self.vars['oscilacyto_analysis']:
+        #     savetxt(f"oscillation_cluster{self.one_descriptor_per_arena['arena']}.csv", self.clusters_final_data,
         #                     fmt='%1.9f', delimiter=',')
 
-        # savetxt(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", self.magnitudes_and_frequencies,
+        # savetxt(f"magnitudes_and_frequencies_{self.one_descriptor_per_arena['arena']}.csv", self.magnitudes_and_frequencies,
         #         fmt='%1.9f', delimiter=',')
 
 
-        # save(f"stats_{self.statistics['arena']}.npy", self.statistics)
+        # save(f"stats_{self.one_descriptor_per_arena['arena']}.npy", self.one_descriptor_per_arena)
         # if self.vars['descriptors_in_long_format']:
-        #     self.whole_shape_descriptors.to_csv(f"shape_descriptors_{self.statistics['arena']}.csv", sep=";", index=False, lineterminator='\n')
+        #     self.one_row_per_frame.to_csv(f"shape_descriptors_{self.one_descriptor_per_arena['arena']}.csv", sep=";", index=False, lineterminator='\n')
 
-        if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.statistics['arena']}.npy"):
-            os.remove(f"ind_{self.statistics['arena']}.npy")
+        if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
+            os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")
 
     def change_results_of_one_arena(self):
         self.save_video()
-        # with open(f"magnitudes_and_frequencies_{self.statistics['arena']}.csv", 'w') as file:
+        # with open(f"magnitudes_and_frequencies_{self.one_descriptor_per_arena['arena']}.csv", 'w') as file:
         #     savetxt(file, self.magnitudes_and_frequencies, fmt='%1.9f', delimiter=';')
 
         # I/ Update/Create one_row_per_arena.csv
@@ -2110,9 +2128,9 @@ class MotionAnalysis:
             try:
                 with open(f"one_row_per_arena.csv", 'r') as file:
                     stats = read_csv(file, header=0, sep=";")
-                for stat_name, stat_value in self.statistics.items():
+                for stat_name, stat_value in self.one_descriptor_per_arena.items():
                     if stat_name in stats.columns:
-                        stats.loc[(self.statistics['arena'] - 1), stat_name] = uint32(self.statistics[stat_name])
+                        stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = uint32(self.one_descriptor_per_arena[stat_name])
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
@@ -2120,10 +2138,10 @@ class MotionAnalysis:
             except Exception as e:
                 logging.error(f"{e}")
                 create_new_csv = True
-            # if len(self.statistics) == len(stats.columns):
+            # if len(self.one_descriptor_per_arena) == len(stats.columns):
             #     try:
             #         with open(f"one_row_per_arena.csv", 'w') as file:
-            #             stats.iloc[(self.statistics['arena'] - 1), :] = self.statistics.values()
+            #             stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
             #             # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
             #             stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             #     except PermissionError:
@@ -2136,9 +2154,9 @@ class MotionAnalysis:
             logging.info("Create a new one_row_per_arena.csv file")
             try:
                 with open(f"one_row_per_arena.csv", 'w') as file:
-                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.statistics))),
-                               columns=list(self.statistics.keys()))
-                    stats.iloc[(self.statistics['arena'] - 1), :] = array(list(self.statistics.values()), dtype=uint32)
+                    stats = df(zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
+                               columns=list(self.one_descriptor_per_arena.keys()))
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = array(list(self.one_descriptor_per_arena.values()), dtype=uint32)
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
@@ -2149,27 +2167,27 @@ class MotionAnalysis:
             try:
                 with open(f"one_row_per_frame.csv", 'r') as file:
                     descriptors = read_csv(file, header=0, sep=";")
-                for stat_name, stat_value in self.whole_shape_descriptors.items():
+                for stat_name, stat_value in self.one_row_per_frame.items():
                     if stat_name in descriptors.columns:
-                        descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0] - 1), stat_name] = self.whole_shape_descriptors.loc[:, stat_name].values[:]
+                        descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0] - 1), stat_name] = self.one_row_per_frame.loc[:, stat_name].values[:]
                 with open(f"one_row_per_frame.csv", 'w') as file:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
                 # with open(f"one_row_per_frame.csv", 'w') as file:
                 #     for descriptor in descriptors.keys():
                 #         descriptors.loc[
-                #         ((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]),
-                #         descriptor] = self.whole_shape_descriptors[descriptor]
+                #         ((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]),
+                #         descriptor] = self.one_row_per_frame[descriptor]
                 #     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
 
 
 
-                # if len(self.whole_shape_descriptors.columns) == len(descriptors.columns):
+                # if len(self.one_row_per_frame.columns) == len(descriptors.columns):
                 #     with open(f"one_row_per_frame.csv", 'w') as file:
                 #         # NEW
                 #         for descriptor in descriptors.keys():
-                #             descriptors.loc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), descriptor] = self.whole_shape_descriptors[descriptor]
+                #             descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]), descriptor] = self.one_row_per_frame[descriptor]
                 #         # Old
-                #         # descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
+                #         # descriptors.iloc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]), :] = self.one_row_per_frame
                 #         descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
                 # else:
                 #     create_new_csv = True
@@ -2184,29 +2202,29 @@ class MotionAnalysis:
             logging.info("Create a new one_row_per_frame.csv file")
             try:
                 with open(f"one_row_per_frame.csv", 'w') as file:
-                    descriptors = df(zeros((len(self.vars['analyzed_individuals']) * self.dims[0], len(self.whole_shape_descriptors.columns))),
-                               columns=list(self.whole_shape_descriptors.keys()))
-                    descriptors.iloc[((self.statistics['arena'] - 1) * self.dims[0]):((self.statistics['arena']) * self.dims[0]), :] = self.whole_shape_descriptors
+                    descriptors = df(zeros((len(self.vars['analyzed_individuals']) * self.dims[0], len(self.one_row_per_frame.columns))),
+                               columns=list(self.one_row_per_frame.keys()))
+                    descriptors.iloc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]), :] = self.one_row_per_frame
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
 
         # III/ Update/Create one_row_per_oscillating_cluster.csv
-        if not isna(self.statistics["first_move"]) and self.vars['oscilacyto_analysis']:
+        if not isna(self.one_descriptor_per_arena["first_move"]) and self.vars['oscilacyto_analysis']:
             oscil_i = df(
-                c_[repeat(self.statistics['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
+                c_[repeat(self.one_descriptor_per_arena['arena'], self.clusters_final_data.shape[0]), self.clusters_final_data],
                 columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
             if os.path.isfile("one_row_per_oscillating_cluster.csv"):
                 try:
                     with open(f"one_row_per_oscillating_cluster.csv", 'r') as file:
                         one_row_per_oscillating_cluster = read_csv(file, header=0, sep=";")
                     with open(f"one_row_per_oscillating_cluster.csv", 'w') as file:
-                        one_row_per_oscillating_cluster_before = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] < self.statistics['arena']]
-                        one_row_per_oscillating_cluster_after = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] > self.statistics['arena']]
+                        one_row_per_oscillating_cluster_before = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] < self.one_descriptor_per_arena['arena']]
+                        one_row_per_oscillating_cluster_after = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] > self.one_descriptor_per_arena['arena']]
                         one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster_before, oscil_i, one_row_per_oscillating_cluster_after))
                         one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
 
-                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.statistics['arena']]
+                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.one_descriptor_per_arena['arena']]
                         # one_row_per_oscillating_cluster = concat((one_row_per_oscillating_cluster, oscil_i))
                         # one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:

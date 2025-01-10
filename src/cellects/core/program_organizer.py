@@ -14,14 +14,14 @@ from numba.typed import Dict as TDict
 from pandas import DataFrame as df
 from numpy import (
     median, stack, ceil, all, any, equal, pi, min, round, mean, diff, sum, multiply, square,
-    sqrt, zeros, array, arange, ones_like, isin, sort, repeat, uint8, uint32, unique,
+    sqrt, zeros, array, arange, ones_like, isin, sort, repeat, uint8, uint32, unique, vstack, hstack,
     uint16, uint64, delete, savetxt, nonzero, max, absolute, load, logical_or)
 from psutil import virtual_memory
 from pathlib import Path
 from cellects.image_analysis.extract_exif import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image
+from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.image_analysis.morphological_operations import Ellipse, cross_33
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
@@ -232,7 +232,6 @@ class ProgramOrganizer:
             self = MotionAnalysis(l)
         self.get_descriptors_from_binary()
         self.detect_growth_transitions()
-        self.vars['save_binary_masks'] = True
         self.networks_detection(show_seg)
         self.study_cytoscillations(show_seg)
 
@@ -1194,12 +1193,12 @@ class ProgramOrganizer:
                 self.vars['descriptors']['axes_orientation'] = self.all['descriptors'][descriptor]
             else:
                 if isin(descriptor, list(from_shape_descriptors_class.keys())):
-                # if not isin(descriptor, ['iso_digi_analysis', 'oscilacyto_analysis', 'network_detection', 'fractal_analysis']):
+                # if not isin(descriptor, ['iso_digi_analysis', 'oscilacyto_analysis', 'network_analysis', 'fractal_analysis']):
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
         self.vars['descriptors']['cluster_number'] = self.vars['oscilacyto_analysis']
         self.vars['descriptors']['mean_cluster_area'] = self.vars['oscilacyto_analysis']
-        self.vars['descriptors']['vertices_number'] = self.vars['network_detection']
-        self.vars['descriptors']['edges_number'] = self.vars['network_detection']
+        self.vars['descriptors']['vertices_number'] = self.vars['network_analysis']
+        self.vars['descriptors']['edges_number'] = self.vars['network_analysis']
         self.vars['descriptors']['newly_explored_area'] = self.vars['do_fading']
         """                             if self.vars['descriptors_means']:
                     self.vars['output_list'] += [f'{descriptor}_mean']
@@ -1220,10 +1219,10 @@ class ProgramOrganizer:
                 video_bit_number -= 56
         if self.vars['already_greyscale']:
             video_bit_number -= 64
-        if self.vars['oscilacyto_analysis']:
+        if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
             video_bit_number += 16
             image_bit_number += 128
-        if self.vars['network_detection']:
+        if self.vars['save_coord_network'] or self.vars['network_analysis']:
             video_bit_number += 8
             image_bit_number += 64
 
@@ -1329,11 +1328,13 @@ class ProgramOrganizer:
         if not self.vars['several_blob_per_arena']:
             try:
                 self.one_row_per_arena.to_csv("one_row_per_arena.csv", sep=";", index=False, lineterminator='\n')
+                del self.one_row_per_arena
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
                 self.message_from_thread.emit(f"Never let one_row_per_arena.csv open when Cellects runs")
             try:
                 self.one_row_per_frame.to_csv("one_row_per_frame.csv", sep=";", index=False, lineterminator='\n')
+                del self.one_row_per_frame
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
                 self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
@@ -1344,9 +1345,25 @@ class ProgramOrganizer:
                                                                        'edge_distance'])
                 self.one_row_per_oscillating_cluster.to_csv("one_row_per_oscillating_cluster.csv", sep=";", index=False,
                                                             lineterminator='\n')
+                del self.one_row_per_oscillating_cluster
             except PermissionError:
                 logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
                 self.message_from_thread.emit(f"Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
+
+            if self.vars['fractal_analysis']:
+                if os.path.isfile(f"oscillating_clusters_temporal_dynamics.h5"):
+                    array_names = get_h5_keys(f"oscillating_clusters_temporal_dynamics.h5")
+                    arena_fractal_dynamics = read_h5_array(f"oscillating_clusters_temporal_dynamics.h5", key=array_names[0])
+                    arena_fractal_dynamics = hstack((repeat(uint32(array_names[0][-1]), arena_fractal_dynamics.shape[0]), arena_fractal_dynamics))
+                    for array_name in array_names[1:]:
+                        fractal_dynamics = read_h5_array(f"oscillating_clusters_temporal_dynamics.h5", key=array_name)
+                        fractal_dynamics = hstack((repeat(uint32(array_name[-1]), fractal_dynamics.shape[0]), fractal_dynamics))
+                        arena_fractal_dynamics = vstack((arena_fractal_dynamics, fractal_dynamics))
+                    arena_fractal_dynamics = df(arena_fractal_dynamics, columns=["arena", "time", "cluster_id", "flow", "centroid_y", "centroid_x", "area", "inner_network_area", "box_count_dim", "inner_network_box_count_dim"])
+                    arena_fractal_dynamics.to_csv(f"oscillating_clusters_temporal_dynamics.csv", sep=";", index=False,
+                                                                lineterminator='\n')
+                    del arena_fractal_dynamics
+                    os.remove(f"oscillating_clusters_temporal_dynamics.h5")
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:
@@ -1370,6 +1387,7 @@ class ProgramOrganizer:
         except PermissionError:
             logging.error("Never let software_settings.csv open when Cellects runs")
             self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
+
 
 
 # if __name__ == "__main__":

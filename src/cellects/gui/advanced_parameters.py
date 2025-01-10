@@ -90,7 +90,7 @@ class AdvancedParameters(WindowType):
 
         self.keep_masks_for_all_folders = Checkbox(self.parent().po.all['keep_masks_for_all_folders'])
         self.keep_masks_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
-                                               tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep these informations for all folders (if checked)\n- Only use these informations for the current folder (if unchecked)",
+                                               tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep this information for all folders (if checked)\n- Only use this information for the current folder (if unchecked)",
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.ring_correction = Checkbox(self.parent().po.vars['ring_correction'])
@@ -100,7 +100,7 @@ class AdvancedParameters(WindowType):
 
         self.prevent_fast_growth_near_periphery = Checkbox(self.parent().po.vars['prevent_fast_growth_near_periphery'])
         self.prevent_fast_growth_near_periphery_label = FixedText('Prevent fast growth near periphery',
-                                               tip="During video analysis, the borders of the arena may create wrong detection\n- Remove fast growing detection near periphery (if checked)\n- Do not change the detection (if unchecked)",
+                                               tip="During video analysis, the borders of the arena may create wrong detection\n- Remove the detection of the specimen(s) that move too fast near periphery (if checked)\n- Do not change the detection (if unchecked)",
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery.stateChanged.connect(self.prevent_fast_growth_near_periphery_check)
@@ -327,7 +327,7 @@ class AdvancedParameters(WindowType):
 
         # V/ Fifth box: Fractal parameters:#
         # IV/A/ Title
-        self.fractal_label = FixedText('Fractal parameter:', tip="",
+        self.fractal_label = FixedText('Fractal parameters:', tip="",
                                               night_mode=self.parent().po.all['night_mode'])
         self.left_col_layout.addWidget(self.fractal_label)
 
@@ -767,7 +767,7 @@ class AdvancedParameters(WindowType):
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
         # self.logical_operator_between_combination_result.cha
-        self.logical_operator_label = FixedText("Logical operator", align='c', tip="Between selected color space combinations",
+        self.logical_operator_label = FixedText("Logical operator", halign='c', tip="Between selected color space combinations",
                                                 night_mode=self.parent().po.all['night_mode'])
 
         self.row21 = self.one_csc_editing()
