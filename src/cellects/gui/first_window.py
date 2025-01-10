@@ -184,7 +184,7 @@ class FirstWindow(WindowType):
         self.last_row_layout = QtWidgets.QHBoxLayout()
 
         # Message
-        self.message = FixedText('', align='r', night_mode=self.parent().po.all['night_mode'])
+        self.message = FixedText('', halign='r', night_mode=self.parent().po.all['night_mode'])
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
         # Next button
         self.next = PButton('Next', night_mode=self.parent().po.all['night_mode'])

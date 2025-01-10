@@ -11,7 +11,7 @@ from cv2 import (
 from numpy import (
     append, float32, sum, mean, zeros, empty, array, nonzero, unique,
     isin, logical_or, logical_not, greater, uint8,
-    uint32, min, any)
+    uint32, min, any, zeros)
 from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes
 
 
@@ -90,7 +90,8 @@ class ClusterFluxStudy:
         still_alive_clusters = isin(self.pixels_data[1, :], unique(self.clusters_id))
         clusters_to_archive = unique(self.pixels_data[1, logical_not(still_alive_clusters)])
         # store their data in clusters_final_data
-        for cluster in clusters_to_archive:
+        clusters_data = zeros((len(clusters_to_archive), 6), dtype=float32)
+        for clust_i, cluster in enumerate(clusters_to_archive):
             cluster_bool = self.pixels_data[1, :] == cluster
             cluster_size = sum(cluster_bool)
             cluster_img = zeros(self.dims[1:], dtype=uint8)
@@ -112,11 +113,11 @@ class ClusterFluxStudy:
                 minimal_distance = get_minimal_distance_between_2_shapes(contours)
             data_to_save = array([[mean(self.pixels_data[0, cluster_bool]), t,
                                    cluster_size, minimal_distance, centro[1, 0], centro[1, 1]]], dtype=float32)
-            # data_to_save = array([[mean(self.pixels_data[0, cluster_bool]), t,
-            #                        cluster_size, minimal_distance]], dtype=float32)
-            clusters_final_data = append(clusters_final_data, data_to_save,
-                                         axis=0)  # ["mean_pixel_period", "total_size", "death_time"]
+            clusters_data[clust_i,:] = data_to_save
+            # clusters_final_data = append(clusters_final_data, data_to_save,
+            #                              axis=0)  # ["mean_pixel_period", "total_size", "death_time"]
         # and remove their data from pixels_data
+        clusters_final_data = append(clusters_final_data, clusters_data, axis=0)
         self.pixels_data = self.pixels_data[:, still_alive_clusters]
 
         return period_tracking, clusters_final_data

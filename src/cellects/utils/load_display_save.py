@@ -10,8 +10,9 @@ import logging
 import os
 import pickle
 import time
+import h5py
 from timeit import default_timer
-from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, stack, nonzero
+from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate
 from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_some_color_spaces
@@ -344,3 +345,71 @@ def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
             img = clockwise
     return img
 
+
+def vstack_h5_array(file_name, table, key="data"):
+    """
+        Append a DataFrame to an HDF5 file. If the file or dataset doesn't exist, it creates them.
+        :param file_name: str, path to the HDF5 file
+        :param table: pd.DataFrame, the DataFrame to append
+        :param key: str, the dataset key in the HDF5 file
+    """
+    if os.path.exists(file_name):
+        # Open the file in append mode
+        with h5py.File(file_name, 'a') as h5f:
+            if key in h5f:
+                # Append to the existing dataset
+                existing_data = h5f[key][:]
+                new_data = vstack((existing_data, table))
+                del h5f[key]
+                h5f.create_dataset(key, data=new_data)
+            else:
+                # Create a new dataset if the key doesn't exist
+                h5f.create_dataset(key, data=table)
+    else:
+        with h5py.File(file_name, 'w') as h5f:
+            h5f.create_dataset(key, data=table)
+
+
+def read_h5_array(file_name, key="data"):
+    """
+    Reads a NumPy array from a specified key in an HDF5 file.
+
+    :param file_name: str, path to the HDF5 file
+    :param key: str, name of the array to read
+    :return: np.ndarray, the data from the specified key
+    """
+    try:
+        with h5py.File(file_name, 'r') as h5f:
+            if key in h5f:
+                data = h5f[key][:]
+                return data
+            else:
+                raise KeyError(f"Dataset '{key}' not found in file '{file_name}'.")
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file '{file_name}' does not exist.")
+
+
+def get_h5_keys(file_name):
+    try:
+        with h5py.File(file_name, 'r') as h5f:
+            all_keys = list(h5f.keys())
+            return all_keys
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file '{file_name}' does not exist.")
+
+
+def remove_h5_key(file_name, key="data"):
+    """
+    Removes a specific key from an HDF5 file.
+
+    :param file_name: str, path to the HDF5 file
+    :param key: str, name of the dataset to remove
+    """
+    try:
+        with h5py.File(file_name, 'a') as h5f:  # Open in append mode to modify the file
+            if key in h5f:
+                del h5f[key]
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file '{file_name}' does not exist.")
+    except Exception as e:
+        raise RuntimeError(f"An error occurred: {e}")

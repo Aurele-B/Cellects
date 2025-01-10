@@ -62,13 +62,8 @@ class ImageAnalysisWindow(WindowType):
         ## Title
         self.title_label = FixedText('One Image Analysis', police=30, night_mode=self.parent().po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        self.Vlayout.addWidget(self.title_label)
-        self.Vlayout.addItem(self.vertical_space)
-
-        # 1) Open the first row layout
-        self.first_row_widget = QtWidgets.QWidget()
-        self.first_row_layout = QtWidgets.QHBoxLayout()
-
+        # self.Vlayout.addWidget(self.title_label)
+        # self.Vlayout.addItem(self.vertical_space)
         # self.visibility_cb = Checkbox(self.parent().po.vars['origin_state'] == "invisible")
         # self.visibility_cb.stateChanged.connect(self.visibility_check)
         # self.visibility_label = FixedText('Cells are not visible on the first image', tip="Check if to calibrate the analysis on another image")
@@ -80,27 +75,23 @@ class ImageAnalysisWindow(WindowType):
         self.image_number = Spinbox(min=1, max=self.parent().po.vars['img_number'], val=self.parent().po.all['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
         self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
-        self.first_row_layout.addWidget(self.image_number_label)
-        self.first_row_layout.addWidget(self.image_number)
-        self.first_row_layout.addWidget(self.read)
-        self.first_row_layout.addItem(self.horizontal_space)
 
         self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
         self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
-        self.one_blob_per_arena_label = FixedText("One cell/colony per arena",
+        self.one_blob_per_arena_label = FixedText("One cell/colony per arena", valign="c",
                                                   tip="Check if there is always only one cell/colony per arena.\nUncheck if each experimental arena can contain several disconnected cells/colonies.",
                                                   night_mode=self.parent().po.all['night_mode'])
 
-        self.first_row_layout.addWidget(self.one_blob_per_arena)
-        self.first_row_layout.addWidget(self.one_blob_per_arena_label)
-        self.first_row_layout.addItem(self.horizontal_space)
 
-        self.scale_with_label = FixedText('Scale with',
+        self.scale_with_label = FixedText('Scale with:', valign="c",
                                         tip="What, on the image, should be considered to calculate pixel size in mm",
                                         night_mode=self.parent().po.all['night_mode'])
         self.scale_with = Combobox(["Image horizontal size", "Cell(s) horizontal size"], night_mode=self.parent().po.all['night_mode'])
         self.scale_with.setFixedWidth(280)
         self.scale_with.setCurrentIndex(self.parent().po.all['scale_with_image_or_cells'])
+        self.scale_size_label = FixedText('Scale size:', valign="c",
+                                          tip="True size (in mm) of the item(s) used for scaling",
+                                          night_mode=self.parent().po.all['night_mode'])
         if self.parent().po.all['scale_with_image_or_cells'] == 0:
             self.horizontal_size = Spinbox(min=0, max=100000,
                                         val=self.parent().po.all['image_horizontal_size_in_mm'],
@@ -113,16 +104,54 @@ class ImageAnalysisWindow(WindowType):
         self.scale_with.currentTextChanged.connect(self.scale_with_changed)
         self.scale_unit_label = FixedText(' mm', night_mode=self.parent().po.all['night_mode'])
 
-        # Set their positions on layout
-    # self.first_row_layout.addWidget(self.visibility_cb)
-    # self.first_row_layout.addWidget(self.visibility_label)
+        # 1) Open the first row layout
+        self.row1_widget = QtWidgets.QWidget()
+        self.row1_layout = QtWidgets.QHBoxLayout()
+        self.row1_col1_widget = QtWidgets.QWidget()
+        self.row1_col1_layout = QtWidgets.QVBoxLayout()
+        self.row1_col2_widget = QtWidgets.QWidget()
+        self.row1_col2_layout = QtWidgets.QVBoxLayout()
 
-        self.first_row_layout.addWidget(self.scale_with_label)
-        self.first_row_layout.addWidget(self.scale_with)
-        self.first_row_layout.addWidget(self.horizontal_size)
-        self.first_row_layout.addWidget(self.scale_unit_label)
-        self.first_row_widget.setLayout(self.first_row_layout)
-        self.Vlayout.addWidget(self.first_row_widget)
+        self.im_number_widget = QtWidgets.QWidget()
+        self.im_number_layout = QtWidgets.QHBoxLayout()
+        self.im_number_layout.addWidget(self.image_number_label)
+        self.im_number_layout.addWidget(self.image_number)
+        self.im_number_layout.addWidget(self.read)
+        self.im_number_widget.setLayout(self.im_number_layout)
+        self.row1_col1_layout.addWidget(self.im_number_widget)
+
+        self.specimen_number_widget = QtWidgets.QWidget()
+        self.specimen_number_layout = QtWidgets.QHBoxLayout()
+        self.specimen_number_layout.addWidget(self.one_blob_per_arena)
+        self.specimen_number_layout.addWidget(self.one_blob_per_arena_label)
+        self.specimen_number_widget.setLayout(self.specimen_number_layout)
+        self.row1_col1_layout.addWidget(self.specimen_number_widget)
+        self.row1_col1_widget.setLayout(self.row1_col1_layout)
+        self.row1_layout.addWidget(self.row1_col1_widget)
+
+        self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addWidget(self.title_label)
+        self.row1_layout.addItem(self.horizontal_space)
+
+        self.scale_with_widget = QtWidgets.QWidget()
+        self.scale_with_layout = QtWidgets.QHBoxLayout()
+        self.scale_with_layout.addWidget(self.scale_with_label)
+        self.scale_with_layout.addWidget(self.scale_with)
+        self.scale_with_widget.setLayout(self.scale_with_layout)
+        self.row1_col2_layout.addWidget(self.scale_with_widget)
+
+        self.scale_size_widget = QtWidgets.QWidget()
+        self.scale_size_layout = QtWidgets.QHBoxLayout()
+        self.scale_size_layout.addWidget(self.scale_size_label)
+        self.scale_size_layout.addWidget(self.horizontal_size)
+        self.scale_size_widget.setLayout(self.scale_size_layout)
+        self.row1_col2_layout.addWidget(self.scale_size_widget)
+        self.row1_col2_widget.setLayout(self.row1_col2_layout)
+        self.row1_layout.addWidget(self.row1_col2_widget)
+
+        self.row1_widget.setLayout(self.row1_layout)
+        self.Vlayout.addWidget(self.row1_widget)
+        self.Vlayout.addItem(self.vertical_space)
         self.Vlayout.setSpacing(0)
 
         # 2) Open the central row layout
@@ -151,8 +180,6 @@ class ImageAnalysisWindow(WindowType):
         self.pbuttons_layout.addWidget(self.background)
         self.pbuttons_widget.setLayout(self.pbuttons_layout)
         self.user_drawn_lines_layout.addWidget(self.pbuttons_widget)
-
-
 
         self.pbuttons_tables_widget = QtWidgets.QWidget()
         self.pbuttons_tables_layout = QtWidgets.QHBoxLayout()
@@ -224,7 +251,7 @@ class ImageAnalysisWindow(WindowType):
         # self.central_row_layout.columnStretch(2)
 
         # Need to create this before self.generate_csc_editing()
-        self.message = FixedText("", align="r", night_mode=self.parent().po.all['night_mode'])
+        self.message = FixedText("", halign="r", night_mode=self.parent().po.all['night_mode'])
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
         # 2)c) The csc editing
@@ -1098,7 +1125,7 @@ class ImageAnalysisWindow(WindowType):
         self.advanced_mode_cb = Checkbox(self.parent().po.all['expert_mode'])
         self.advanced_mode_cb.setStyleSheet("margin-left:0%; margin-right:0%;")
         self.advanced_mode_cb.stateChanged.connect(self.advanced_mode_check)
-        self.advanced_mode_label = FixedText('Advanced mode', align='l',
+        self.advanced_mode_label = FixedText('Advanced mode', halign='l',
                                              tip="Display the color space combination corresponding to the selected option",
                                              night_mode=self.parent().po.all['night_mode'])
         self.advanced_mode_label.setAlignment(QtCore.Qt.AlignTop)
@@ -1122,12 +1149,12 @@ class ImageAnalysisWindow(WindowType):
         # 2) Titles
         self.edit_labels_widget = QtWidgets.QWidget()
         self.edit_labels_layout = QtWidgets.QHBoxLayout()
-        self.space_label = FixedText('Space', align='l',
+        self.space_label = FixedText('Space', halign='l',
                                     tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
                                     night_mode=self.parent().po.all['night_mode'])
-        self.c1 = FixedText('  C1', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        self.c2 = FixedText('  C2', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        self.c3 = FixedText('  C3', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        self.c1 = FixedText('  C1', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        self.c2 = FixedText('  C2', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        self.c3 = FixedText('  C3', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
         self.edit_labels_layout.addWidget(self.c1)
@@ -1770,6 +1797,7 @@ class ImageAnalysisWindow(WindowType):
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
         self.asking_last_image_flag = True
+        self.title_label.setVisible(False)
         self.step = 2
 
     def start_last_image(self):
@@ -1800,7 +1828,10 @@ class ImageAnalysisWindow(WindowType):
         self.advanced_mode_label.setVisible(True)
         self.visualize_label.setVisible(True)
         self.visualize.setVisible(True)
-        self.first_row_widget.setVisible(False)
+        self.row1_widget.setVisible(False)
+        self.title_label.setVisible(True)
+        # self.row1_col1_widget.setVisible(False)
+        # self.row1_col2_widget.setVisible(False)
 
     def go_to_next_widget(self):
         if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['FinalizeImageAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():

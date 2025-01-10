@@ -2,7 +2,7 @@
 """This module contains all modified/simplified widgets from PySide6
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtGui import QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
+from PySide6.QtGui import Qt, QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 import numpy as np
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
 
@@ -300,7 +300,8 @@ class Spinbox(QtWidgets.QWidget):
         self._layout.setSpacing(0)
 
         self._line_edit = QtWidgets.QLineEdit(self)
-        self._line_edit.setAlignment(QtCore.Qt.AlignRight)
+        self._line_edit.setAlignment(QtCore.Qt.AlignLeft)
+        # self._line_edit.setAlignment(QtCore.Qt.AlignRight)
         self._layout.addWidget(self._line_edit)
 
         button_layout = QtWidgets.QVBoxLayout()
@@ -554,15 +555,22 @@ class EditText(QtWidgets.QLineEdit):
 
 
 class FixedText(QtWidgets.QLabel):
-    def __init__(self, text, police=None, align='l', tip=None, night_mode=False):
+    def __init__(self, text, police=None, halign='l', valign="c", tip=None, night_mode=False):
         super().__init__()
         self.setText(text)
-        if align == 'l':
+        if halign == 'l':
             self.setAlignment(QtCore.Qt.AlignLeft)
-        elif align == 'r':
+        elif halign == 'r':
             self.setAlignment(QtCore.Qt.AlignRight)
         else:
             self.setAlignment(QtCore.Qt.AlignCenter)
+        if valign == 't':
+            self.setAlignment(Qt.AlignTop)
+        elif valign == 'b':
+            self.setAlignment(Qt.AlignBottom)
+        else:
+            self.setAlignment(Qt.AlignVCenter)
+
         if police is not None:
             if police > 23:
                 # self.setStyleSheet("font: %s; margin-bottom: %s" % (titlefont, "30%;"))

@@ -8,10 +8,8 @@ import numpy as np
 from copy import deepcopy
 from numpy import nonzero, zeros_like, uint8, min, max, ptp,uint64
 from cv2 import connectedComponents, connectedComponentsWithStats, CV_16U
-from numpy.matlib import zeros
 from skimage import morphology
 from scipy import ndimage
-from copy import deepcopy as dcopy
 from collections import defaultdict
 from cellects.image_analysis.image_segmentation import get_otsu_threshold
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
@@ -491,22 +489,27 @@ class NetworkDetection:
 
 
 # if __name__ == "__main__":
+#     from cellects.core.one_image_analysis import OneImageAnalysis
+#     from cellects.image_analysis.image_segmentation import get_all_color_spaces, generate_color_space_combination
+#     import os
+#     from numba.typed import Dict as TDict
+#     os.chdir("D:\Directory\Data\Audrey\dosier1")
+#     visu = np.load("ind_2.npy")
+#     visu = visu [-1 ,...]
+#     oia = OneImageAnalysis(visu)
+#     all_c_spaces = get_all_color_spaces(visu)
+#     c_space = TDict()
+#     c_space["lab"] = np.array((0, 0, 1))
+#     c_space["luv"] = np.array((0, 0, 1))
+#     greyscale = generate_color_space_combination(c_space, all_c_spaces)
 #
-#     coord = np.load("D:/Directory/Data/Audrey/dosier1/coord_specimen1_t720_y1475_x1477.npy")
-#     coord = coord[1:, coord[0, :] == 719]
-#     im = np.zeros((1475, 1477), np.uint8)
-#     im[coord[0, :],coord[1, :]] = 1
+#     cell_coord = np.load("coord_specimen2_t720_y1475_x1477.npy")
+#     cell_coord = cell_coord[1:, cell_coord[0, :] == 719]
+#     cell = np.zeros((1475, 1477), np.uint8)
+#     cell[cell_coord[0, :],cell_coord[1, :]] = 1
 #
-#     net_coord = np.load("D:/Directory/Data/Audrey/dosier1/coord_intra_network2_t400_y1475_x1477.npy")
-#     net_coord = net_coord[1:, net_coord[0, :] == 399]
-#     im_net = np.zeros((1475, 1477), np.uint8)
-#     im_net[net_coord[0, :], net_coord[1, :]] = 1
-#
-#     self = NetworkDetection(im, im, True)
-#     self.network = im_net
-#     self.skeletonize()
-#     self.skeleton = self.skeleton[500:650, 600:750]
-#     self.binary_image = im[500:650, 600:750]
-#     self.get_graph()
+#     self = NetworkDetection(greyscale, cell, False)
+#     self.segment_locally(side_length=4, step=2, int_variation_thresh=10)
+#     See(self.network)
 
 
