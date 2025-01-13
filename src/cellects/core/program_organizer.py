@@ -1259,7 +1259,7 @@ class ProgramOrganizer:
                 # else:
                 #     self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), 3), dtype=float),
                 #                                 columns=['arena', 'first_move', 'final_area'])
-                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), table_to_add.shape[1]), dtype=float),
+                self.one_row_per_arena = df(zeros((len(self.vars['analyzed_individuals']), len(table_to_add)), dtype=float),
                                             columns=table_to_add.keys())
             self.one_row_per_arena.iloc[i, :] = table_to_add.values()
 
