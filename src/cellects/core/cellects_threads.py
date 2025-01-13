@@ -1531,7 +1531,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
         i = arena - 1
         if not vars['several_blob_per_arena']:
             # Save basic statistics
-            results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena.values()
+            results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena
             # Save descriptors in long_format
             results_i['one_row_per_frame'] = analysis_i.one_row_per_frame
             # Save cytosol_oscillations

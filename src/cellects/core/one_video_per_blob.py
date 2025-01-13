@@ -16,6 +16,7 @@ import psutil
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.utils.load_display_save import readim
+from cellects.utils.formulas import sum_of_abs_differences
 
 
 class OneVideoPerBlob:
