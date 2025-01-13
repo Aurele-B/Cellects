@@ -36,7 +36,7 @@ hidden_imports_screeninfo = collect_submodules('screeninfo')
 all_hidden_imports = hiddenimports_coloredlogs + hidden_imports_exif + hidden_imports_ExifRead + hidden_imports_opencv_python + hidden_imports_plum_py + hidden_imports_python_dateutil + hidden_imports_screeninfo
 
 a = Analysis(['__main__.py'],
-             pathex=[CELLECTS_DIR, "C:/Directory/Scripts/Python/CellectsEnv"],
+             pathex=[CELLECTS_DIR, "D:/Directory/Scripts/Python/CellectsEnvi"],
              binaries=[],
              datas=[(CONFIG_DIR, 'config'), (ICONS_DIR, 'icons'), (CORE_DIR, 'core'), (GUI_DIR, 'gui'), (IMAGE_ANALYSIS_DIR, 'image_analysis'), (UTILS_DIR, 'utils')],
              hiddenimports=all_hidden_imports,
