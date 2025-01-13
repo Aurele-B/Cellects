@@ -1474,7 +1474,7 @@ class RunAllThread(QtCore.QThread):
                                 # print(isinstance(results_i, list))
                                 if not self.parent().po.vars['several_blob_per_arena']:
                                     # Save basic statistics
-                                    self.parent().po.update_one_row_per_arena(i, results_i['one_row_per_arena'])
+                                    self.parent().po.update_one_row_per_arena(results_i['i'], results_i['one_row_per_arena'])
                                     # self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
                                     # Save descriptors in long_format
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
