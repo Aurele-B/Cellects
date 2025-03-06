@@ -15,7 +15,7 @@ from timeit import default_timer
 from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate
 from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_some_color_spaces
+from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
 from cellects.utils.utilitarian import translate_dict
 
@@ -147,7 +147,8 @@ def See(image, img_name="", size=None, keep_display=0):
         image *= 255 // img_content_diversity
     imshow(img_name, image)
     waitKey(keep_display)
-    destroyAllWindows()
+    if not keep_display:
+        destroyAllWindows()
 
 
 def write_video(np_array, vid_name, is_color=True, fps=40):
@@ -209,10 +210,14 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
         if conversion_dict is not None:
             converted_video = zeros((video.shape[0], video.shape[1], frame_width), dtype=uint8)
             for counter in arange(video.shape[0]):
-                csc = video[counter, :, :frame_width, :]
-                csc = OneImageAnalysis(csc)
-                csc.generate_color_space_combination(conversion_dict, background)
-                converted_video[counter, ...] = csc.image.astype(uint8)
+                img = video[counter, :, :frame_width, :]
+                greyscale_image, greyscale_image2 = generate_color_space_combination(img, list(conversion_dict.keys()),
+                                                                                     conversion_dict, background=background,
+                                                                                     convert_to_uint8=True)
+                converted_video[counter, ...] = greyscale_image
+                # csc = OneImageAnalysis(csc)
+                # csc.generate_color_space_combination(conversion_dict, background)
+                # converted_video[counter, ...] = csc.image.astype(uint8)
         video = video[:, :, :frame_width, ...]
     else:
 
@@ -237,8 +242,8 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
             video[counter, ...] = frame
             if conversion_dict is not None:
                 conversion_dict = translate_dict(conversion_dict)
-                c_spaces = get_some_color_spaces(frame, conversion_dict)
-                csc = generate_color_space_combination(conversion_dict, c_spaces, subtract_background=background)
+                c_spaces = get_color_spaces(frame, list(conversion_dict.keys()))
+                csc = combine_color_spaces(conversion_dict, c_spaces, subtract_background=background)
                 converted_video[counter, ...] = csc
             counter += 1
         cap.release()

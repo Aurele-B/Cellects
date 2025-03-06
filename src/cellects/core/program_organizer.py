@@ -18,6 +18,7 @@ from numpy import (
     uint16, uint64, delete, savetxt, nonzero, max, absolute, load, logical_or)
 from psutil import virtual_memory
 from pathlib import Path
+from cellects.image_analysis.image_segmentation import generate_color_space_combination
 from cellects.image_analysis.extract_exif import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
@@ -1133,6 +1134,8 @@ class ProgramOrganizer:
                         second_dict[k[:-1]] = v
                         c_spaces.append(k[:-1])
         prev_img = None
+        background = None
+        background2 = None
         for image_i, image_name in enumerate(self.data_list):
             img = self.videos.read_and_rotate(image_name, prev_img)
             prev_img = deepcopy(img)
@@ -1149,18 +1152,24 @@ class ProgramOrganizer:
                     self.converted_video[image_i, ...] = img
             else:
                 self.visu[image_i, ...] = img
-                csc = OneImageAnalysis(img)
                 if self.vars['subtract_background']:
+                    background = self.vars['background_list'][i]
                     if self.vars['convert_for_motion']['logical'] != 'None':
-                        csc.generate_color_space_combination(c_spaces, first_dict, second_dict, self.vars['background_list'][i], self.vars['background_list2'][i])
-                    else:
-                        csc.generate_color_space_combination(c_spaces, first_dict, second_dict, self.vars['background_list'][i], None)
-                else:
-                    csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                # self.converted_video[image_i, ...] = csc.image
-                self.converted_video[image_i, ...] = csc.image
+                        background2 = self.vars['background_list2'][i]
+                greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces, first_dict,
+                                                                                     second_dict, background, background2,
+                                                                                     self.vars[
+                                                                                         'lose_accuracy_to_save_memory'])
+                self.converted_video[image_i, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
-                    self.converted_video2[image_i, ...] = csc.image2
+                    self.converted_video2[image_i, ...] = greyscale_image2
+                # csc = OneImageAnalysis(img)
+                # else:
+                #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
+                # # self.converted_video[image_i, ...] = csc.image
+                # self.converted_video[image_i, ...] = csc.image
+                # if self.vars['convert_for_motion']['logical'] != 'None':
+                #     self.converted_video2[image_i, ...] = csc.image2
 
         # write_video(self.visu, f"ind_{arena}{self.vars['videos_extension']}", is_color=True, fps=1)
 

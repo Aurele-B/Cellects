@@ -20,6 +20,7 @@ It contains the following functions:
     - expand_smalls_toward_biggest
     - change_thresh_until_one
     - Ellipse
+    - get_rolling_window_coordinates_list
 """
 import logging
 from copy import deepcopy
@@ -346,6 +347,7 @@ def find_median_shape(binary_3d_matrix):
     median_shape = zeros(binary_2d_matrix.shape, dtype=uint8)
     median_shape[greater_equal(binary_2d_matrix, binary_3d_matrix.shape[0] // 2)] = 1
     return median_shape
+
 
 @njit()
 def reduce_image_size_for_speed(image_of_2_shapes):
@@ -729,3 +731,25 @@ class Ellipse:
         # if self.vsize % 2 == 0:
         #     self.vsize += 1
         return fromfunction(self.ellipse_fun, (self.vsize, self.hsize))
+
+
+def get_rolling_window_coordinates_list(height, width, side_length, window_step, allowed_pixels=None):
+    y_remain = height % side_length
+    x_remain = width % side_length
+    y_nb = height // side_length
+    x_nb = width // side_length
+    y_coord = arange(y_nb + 1, dtype=uint64) * side_length
+    x_coord = arange(x_nb + 1, dtype=uint64) * side_length
+    y_coord[-1] += y_remain
+    x_coord[-1] += x_remain
+    window_coords = []
+    for y_i in range(len(y_coord) - 1):
+        for x_i in range(len(x_coord) - 1):
+            for add_to_y in arange(0, side_length, window_step, dtype=uint64):
+                y_max = min((height, y_coord[y_i + 1] + add_to_y)).astype(uint64)
+                for add_to_x in arange(0, side_length, window_step, dtype=uint64):
+                    x_max = min((width, x_coord[x_i + 1] + add_to_x)).astype(uint64)
+                    if allowed_pixels is None or any(allowed_pixels[(y_coord[y_i] + add_to_y):y_max, (x_coord[x_i] + add_to_x):x_max]):
+                        window_coords.append([y_coord[y_i] + add_to_y, y_max, x_coord[x_i] + add_to_x, x_max])
+    return window_coords
+

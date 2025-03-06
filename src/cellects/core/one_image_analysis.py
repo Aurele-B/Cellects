@@ -15,7 +15,7 @@ from numba.typed import Dict as TDict
 from numpy.core.numeric import ones_like
 
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import get_all_color_spaces, generate_color_space_combination, otsu_thresholding, get_otsu_threshold
+from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
@@ -74,23 +74,24 @@ class OneImageAnalysis:
     def generate_color_space_combination(self, c_spaces, first_dict, second_dict, background=None, background2=None):
 
         # logging.info(f"Generate the color space combination {first_dict}")
-        self.all_c_spaces = TDict()
-        self.all_c_spaces['bgr'] = self.bgr.astype(np.float64)
-        if np.isin('lab', c_spaces):
-            self.all_c_spaces['lab'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LAB).astype(np.float64)
-        if np.isin('hsv', c_spaces):
-            self.all_c_spaces['hsv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HSV).astype(np.float64)
-        if np.isin('luv', c_spaces):
-            self.all_c_spaces['luv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LUV).astype(np.float64)
-        if np.isin('hls', c_spaces):
-            self.all_c_spaces['hls'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HLS).astype(np.float64)
-        if np.isin('yuv', c_spaces):
-            self.all_c_spaces['yuv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2YUV).astype(np.float64)
+        self.all_c_spaces = get_color_spaces(self.bgr, c_spaces)
+        # self.all_c_spaces = TDict()
+        # self.all_c_spaces['bgr'] = self.bgr.astype(np.float64)
+        # if np.isin('lab', c_spaces):
+        #     self.all_c_spaces['lab'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LAB).astype(np.float64)
+        # if np.isin('hsv', c_spaces):
+        #     self.all_c_spaces['hsv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HSV).astype(np.float64)
+        # if np.isin('luv', c_spaces):
+        #     self.all_c_spaces['luv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LUV).astype(np.float64)
+        # if np.isin('hls', c_spaces):
+        #     self.all_c_spaces['hls'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HLS).astype(np.float64)
+        # if np.isin('yuv', c_spaces):
+        #     self.all_c_spaces['yuv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2YUV).astype(np.float64)
 
-        self.image = generate_color_space_combination(first_dict, self.all_c_spaces, background)
+        self.image = combine_color_spaces(first_dict, self.all_c_spaces, background)
         if len(second_dict) > 0:
             logging.info(f"Coupled with the color space combination {second_dict}")
-            self.image2 = generate_color_space_combination(second_dict, self.all_c_spaces, background2)
+            self.image2 = combine_color_spaces(second_dict, self.all_c_spaces, background2)
         # if deleted later:
         # -do not put as uint16, converted_video before gradient
         # -put as uint8, converted_video before imtoshow
@@ -108,7 +109,7 @@ class OneImageAnalysis:
                               side_length=side_length, step=step, int_variation_thresh=int_variation_thresh, mask=mask)
         else:
             if len(self.all_c_spaces) == 0:
-                self.all_c_spaces = get_all_color_spaces(self.bgr)
+                self.all_c_spaces = get_color_spaces(self.bgr)
             # if c_space_dict['logical'] != 'None':
             first_dict = TDict()
             second_dict = TDict()
@@ -119,9 +120,9 @@ class OneImageAnalysis:
                     else:
                         second_dict[k[:-1]] = v
             logging.info(first_dict)
-            self.image = generate_color_space_combination(first_dict, self.all_c_spaces, subtract_background)
+            self.image = combine_color_spaces(first_dict, self.all_c_spaces, subtract_background)
             if len(second_dict) > 0:
-                self.image2 = generate_color_space_combination(second_dict, self.all_c_spaces, subtract_background2)
+                self.image2 = combine_color_spaces(second_dict, self.all_c_spaces, subtract_background2)
                 self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
                                   backmask=backmask, grid_segmentation=grid_segmentation,
                                   lighter_background=lighter_background, side_length=side_length, step=step,
@@ -224,7 +225,7 @@ class OneImageAnalysis:
     def generate_subtract_background(self, c_space_dict):
         logging.info("Generate background using the generate_subtract_background method of OneImageAnalysis class")
         if len(self.all_c_spaces) == 0 and not self.already_greyscale:
-            self.all_c_spaces = get_all_color_spaces(self.bgr)
+            self.all_c_spaces = get_color_spaces(self.bgr)
         self.convert_and_segment(c_space_dict, grid_segmentation=False)
         # self.image = generate_color_space_combination(c_space_dict, self.all_c_spaces)
         disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
@@ -307,7 +308,7 @@ class OneImageAnalysis:
     def find_first_im_csc(self, sample_number=None, several_blob_per_arena=True,  spot_shape=None, spot_size=None, kmeans_clust_nb=None, biomask=None, backmask=None, color_space_dictionaries=None, carefully=False):
         logging.info(f"Prepare color space lists, dictionaries and matrices")
         if len(self.all_c_spaces) == 0:
-            self.all_c_spaces = get_all_color_spaces(self.bgr)
+            self.all_c_spaces = get_color_spaces(self.bgr)
         if color_space_dictionaries is None:
             if carefully:
                 colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
@@ -600,7 +601,7 @@ class OneImageAnalysis:
                                 subtract_background=None, kmeans_clust_nb=None, biomask=None, backmask=None,
                                 color_space_dictionaries=None, carefully=False):
         if len(self.all_c_spaces) == 0:
-            self.all_c_spaces = get_all_color_spaces(self.bgr)
+            self.all_c_spaces = get_color_spaces(self.bgr)
         if color_space_dictionaries is None:
             if carefully:
                 colorspace_list = TList(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
@@ -634,7 +635,7 @@ class OneImageAnalysis:
         # One channel processing
         potentials = TDict()
         for csc_dict in color_space_dictionaries:
-            self.image = generate_color_space_combination(csc_dict, self.all_c_spaces, subtract_background)
+            self.image = combine_color_spaces(csc_dict, self.all_c_spaces, subtract_background)
             # self.generate_color_space_combination(c_space_dict, subtract_background)
             if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                 self.kmeans(kmeans_clust_nb, biomask, backmask)
@@ -683,7 +684,7 @@ class OneImageAnalysis:
             # Add a combination of all selected channels :
             self.saved_color_space_list.append(potentials)
             # all_potential_combinations.append(potentials)
-            self.image = generate_color_space_combination(potentials, self.all_c_spaces, subtract_background)
+            self.image = combine_color_spaces(potentials, self.all_c_spaces, subtract_background)
             # self.generate_color_space_combination(potentials, subtract_background)
             if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                 self.kmeans(kmeans_clust_nb, biomask, backmask)
@@ -727,7 +728,7 @@ class OneImageAnalysis:
                 try_potentials.pop(c_space)
                 if i > 0:
                     try_potentials.pop(previous_c_space)
-                self.image = generate_color_space_combination(try_potentials, self.all_c_spaces, subtract_background)
+                self.image = combine_color_spaces(try_potentials, self.all_c_spaces, subtract_background)
                 # self.generate_color_space_combination(try_potentials, subtract_background)
                 if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                     self.kmeans(kmeans_clust_nb, biomask, backmask)
@@ -1152,7 +1153,7 @@ class OneImageAnalysis:
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])
             if len(self.all_c_spaces) > 0:
-                self.all_c_spaces = get_all_color_spaces(self.bgr)
+                self.all_c_spaces = get_color_spaces(self.bgr)
             if self.im_combinations is not None:
                 for i in np.arange(len(self.im_combinations)):
                     self.im_combinations[i]["binary_image"] = self.im_combinations[i]["binary_image"][crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3]]

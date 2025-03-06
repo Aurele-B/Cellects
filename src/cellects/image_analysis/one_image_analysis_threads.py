@@ -8,7 +8,7 @@ import logging
 from copy import deepcopy
 from numpy import min, max, any, argmin, logical_and, pi, square, mean, median, float32, logical_not, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
-from cellects.image_analysis.image_segmentation import otsu_thresholding, generate_color_space_combination
+from cellects.image_analysis.image_segmentation import otsu_thresholding, combine_color_spaces
 
 
 class ProcessFirstImage:
@@ -32,7 +32,7 @@ class ProcessFirstImage:
         self.backmask = l[9]
         if get_one_channel_result:
             self.csc_dict = l[3]
-            self.image = generate_color_space_combination(self.csc_dict, self.all_c_spaces)
+            self.image = combine_color_spaces(self.csc_dict, self.all_c_spaces)
             if kmeans_clust_nb is None:
                 self.binary_image = otsu_thresholding(self.image)
             else:
@@ -70,7 +70,7 @@ class ProcessFirstImage:
                         csc_dict[k2] += v2 * factor
                     else:
                         csc_dict[k2] = v2 * factor
-                    self.image = generate_color_space_combination(csc_dict, self.all_c_spaces)
+                    self.image = combine_color_spaces(csc_dict, self.all_c_spaces)
                     if kmeans_clust_nb is None:
                         self.binary_image = otsu_thresholding(self.image)
                     else:
