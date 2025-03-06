@@ -22,7 +22,7 @@ from pandas import concat, NA, isna
 from PySide6 import QtCore
 
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.image_analysis.image_segmentation import generate_color_space_combination
 from cellects.utils.load_display_save import read_and_rotate, PickleRick
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
@@ -746,6 +746,8 @@ class OneArenaThread(QtCore.QThread):
                             second_dict[k[:-1]] = v
                             c_spaces.append(k[:-1])
             prev_img = None
+            background = None
+            background2 = None
             pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
             for image_i, image_name in enumerate(self.parent().po.data_list):
                 current_percentage, eta = pat_tracker.get_progress()
@@ -767,27 +769,46 @@ class OneArenaThread(QtCore.QThread):
                         self.parent().po.converted_video[image_i, ...] = img
                 else:
                     self.parent().po.visu[image_i, ...] = img
-                    csc = OneImageAnalysis(img)
+
                     if self.parent().po.vars['subtract_background']:
+                        background = self.parent().po.vars['background_list'][i]
                         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                            csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                                                                 self.parent().po.vars['background_list'][i],
-                                                                 self.parent().po.vars['background_list2'][i])
-                        else:
-                            csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                                                                 self.parent().po.vars['background_list'][i], None)
-                    else:
-                        csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                    # self.parent().po.converted_video[image_i, ...] = csc.image
-                    if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                        self.parent().po.converted_video[image_i, ...] = bracket_to_uint8_image_contrast(csc.image)
-                    else:
-                        self.parent().po.converted_video[image_i, ...] = csc.image
+                            background2 = self.parent().po.vars['background_list2'][i]
+                    greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces,
+                                                                                         first_dict,
+                                                                                         second_dict,background,background2,
+                                                                                         self.parent().po.vars[
+                                                                                             'lose_accuracy_to_save_memory'])
+                    self.parent().po.converted_video[image_i, ...] = greyscale_image
                     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                        if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                            self.parent().po.converted_video2[image_i, ...] = bracket_to_uint8_image_contrast(csc.image2)
-                        else:
-                            self.parent().po.converted_video2[image_i, ...] = csc.image2
+                        self.parent().po.converted_video2[image_i, ...] = greyscale_image2
+
+
+
+                    # csc = OneImageAnalysis(img)
+                    # if self.parent().po.vars['subtract_background']:
+                    #     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
+                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
+                    #                                              self.parent().po.vars['background_list'][i],
+                    #                                              self.parent().po.vars['background_list2'][i])
+                    #     else:
+                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
+                    #                                              self.parent().po.vars['background_list'][i], None)
+                    # else:
+                    #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
+                    # # self.parent().po.converted_video[image_i, ...] = csc.image
+                    # if self.parent().po.vars['lose_accuracy_to_save_memory']:
+                    #     self.parent().po.converted_video[image_i, ...] = bracket_to_uint8_image_contrast(csc.image)
+                    # else:
+                    #     self.parent().po.converted_video[image_i, ...] = csc.image
+                    # if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
+                    #     if self.parent().po.vars['lose_accuracy_to_save_memory']:
+                    #         self.parent().po.converted_video2[image_i, ...] = bracket_to_uint8_image_contrast(csc.image2)
+                    #     else:
+                    #         self.parent().po.converted_video2[image_i, ...] = csc.image2
+
+
+
             # self.parent().po.load_one_arena(arena)
             save_loaded_video = True
             if self.parent().po.vars['already_greyscale']:
@@ -1428,7 +1449,7 @@ class RunAllThread(QtCore.QThread):
                         current_percentage, eta = pat_tracker.get_progress()
                         self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
                                                      "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
-
+                        del analysis_i
                     logging.info(f"Sequential analysis lasted {(default_timer() - tiii)/ 60} minutes")
                 else:
                     self.message_from_thread.emit(

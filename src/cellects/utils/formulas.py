@@ -11,6 +11,7 @@
     - SlopeDeviation
     - acf_fft
     - moving_average
+    - max_cum_sum_from_rolling_window
 """
 from copy import deepcopy
 from numpy import sum, round, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
@@ -283,3 +284,7 @@ def moving_average(vector, step):
                         true_numbers.size - (2 * step_i))]
     vector = sums / n_okays
     return vector
+
+
+def max_cum_sum_from_rolling_window(side_length, window_step):
+    return square(ceil(side_length / window_step))

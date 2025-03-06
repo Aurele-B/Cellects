@@ -34,7 +34,7 @@ from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
-from cellects.image_analysis.network_detection import NetworkDetection
+from cellects.image_analysis.network_detection import network_detection
 from cellects.image_analysis.fractal_analysis import FractalAnalysis, box_counting, prepare_box_counting
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
@@ -42,7 +42,7 @@ from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.morphological_operations import (cross_33, find_major_incline, Ellipse,
     CompareNeighborsWithValue, image_borders, draw_me_a_sun, make_gravity_field, cc, expand_to_fill_holes)
 from cellects.utils.formulas import (bracket_to_uint8_image_contrast, eudist, moving_average)
-from cellects.image_analysis.image_segmentation import segment_with_lum_value
+from cellects.image_analysis.image_segmentation import segment_with_lum_value, generate_color_space_combination
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
 from cellects.utils.load_display_save import write_video, video2numpy, vstack_h5_array, remove_h5_key
@@ -237,23 +237,31 @@ class MotionAnalysis:
             # when doing background subtraction, the first and the second image are equal
             for counter in arange(self.visu.shape[0]):
                 if self.vars['subtract_background'] and counter == 0:
-                    csc = self.visu[1, ...]
+                    img = self.visu[1, ...]
                 else:
-                    csc = self.visu[counter, ...]
-                csc = OneImageAnalysis(csc)
-                if self.vars['subtract_background']:
-                    csc.generate_color_space_combination(c_spaces, first_dict, second_dict, self.background, self.background2)
-                else:
-                    csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                if self.vars['lose_accuracy_to_save_memory']:
-                    self.converted_video[counter, ...] = bracket_to_uint8_image_contrast(csc.image)
-                else:
-                    self.converted_video[counter, ...] = csc.image
+                    img = self.visu[counter, ...]
+                greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces, first_dict,
+                                                                                     second_dict, self.background,
+                                                                                     self.background2,
+                                                                                     self.vars['lose_accuracy_to_save_memory'])
+                self.converted_video[counter, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
-                    if self.vars['lose_accuracy_to_save_memory']:
-                        self.converted_video2[counter, ...] = bracket_to_uint8_image_contrast(csc.image2)
-                    else:
-                        self.converted_video2[counter, ...] = csc.image2
+                    self.converted_video2[counter, ...] = greyscale_image2
+
+                # csc = OneImageAnalysis(csc)
+                # if self.vars['subtract_background']:
+                #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, self.background, self.background2)
+                # else:
+                #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
+                # if self.vars['lose_accuracy_to_save_memory']:
+                #     self.converted_video[counter, ...] = bracket_to_uint8_image_contrast(csc.image)
+                # else:
+                #     self.converted_video[counter, ...] = csc.image
+                # if self.vars['convert_for_motion']['logical'] != 'None':
+                #     if self.vars['lose_accuracy_to_save_memory']:
+                #         self.converted_video2[counter, ...] = bracket_to_uint8_image_contrast(csc.image2)
+                #     else:
+                #         self.converted_video2[counter, ...] = csc.image2
 
     def drift_correction(self):
         """
@@ -1400,102 +1408,93 @@ class MotionAnalysis:
         if not isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
             # self.network_dynamics = load(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
-            self.network_dynamics = zeros(self.dims, dtype=uint8)
+
             self.check_converted_video_type()
-            if self.vars['origin_state'] == "constant":
-                if self.origin_idx is None:
-                    self.origin_idx = nonzero(self.origin)
+            self.network_dynamics = network_detection(self.binary, self.converted_video, self.origin,
+                                                      self.vars['origin_state'], self.vars['lighter_background'],
+                                                      sliding_sum_step=10, int_variation_thresh=self.vars['network_detection_threshold'],
+                                                      side_length=self.vars['network_mesh_side_length'],
+                                                      window_step=self.vars['network_mesh_step_length'])
+            #
+            # self.network_dynamics = zeros(self.dims, dtype=uint8)
+            # if self.vars['origin_state'] == "constant":
+            #     if self.origin_idx is None:
+            #         self.origin_idx = nonzero(self.origin)
+            #
+            # vertices_and_edges = zeros((self.dims[0], 2), dtype=uint32)
+            # previous_network = zeros(self.dims[:2], dtype=uint8)
+            # pat_tracker = PercentAndTimeTracker(self.dims[0])
+            # for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  #20):#
+            #     # t = self.one_descriptor_per_arena["first_move"]
+            #     # t = 200
+            #     current_percentage, eta = pat_tracker.get_progress(t)
+            #     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}, Network detection: {current_percentage}%{eta}")
+            #     if any(self.binary[t, ...]):
+            #         network = detect_network(self.binary[t, ...], self.converted_video[t, ...], previous_network, step=5,
+            #                                  int_variation_thresh=self.vars['network_detection_threshold'],
+            #                                  lighter_background=False)
+            #
+            #         nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'])
+            #         nd.network = network
+            #         r = weakref.ref(nd)
+            #         # nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
+            #         #                    step=self.vars['network_mesh_step_length'],
+            #         #                    int_variation_thresh=self.vars['network_detection_threshold'])
+            #         # nd.selects_elongated_or_holed_shapes(hole_surface_ratio=0.1, eccentricity=0.65)
+            #
+            #         if t > 0:
+            #             nd.add_pixels_to_the_network(nonzero(self.network_dynamics[t - 1, ...]))
+            #             if self.vars['do_fading'] and (t > self.step + self.lost_frames):
+            #                 # Remove the faded areas
+            #                 remove_faded_pixels = 1 - self.binary[t - 1, ...]
+            #                 nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=False)
+            #                 # nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
+            #
+            #         # Add the origin as a part of the network:
+            #         if self.vars['origin_state'] == 'constant':
+            #             nd.add_pixels_to_the_network(self.origin_idx)
+            #
+            #         # Connect all network pieces together:
+            #         nd.connect_network(maximal_distance_connection=self.max_distance)  # int(4*max(self.dims[1:3])//5))
+            #
+            #         self.network_dynamics[t, ...] = nd.network
+            #         previous_network = nd.network
+            #         nd.skeletonize()
+            #         nd.get_graph()
+            #         vertices_and_edges[t, :] = nd.vertices_number, nd.edges_number
+            #
+            #         # self.graph[t, ...] = deepcopy(nd.graph)
+            #
+            #         imtoshow = self.visu[t, ...]
+            #         eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
+            #         net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
+            #
+            #         edges = nonzero(nd.graph == 1)
+            #         vertices = nonzero(nd.graph == 2)
+            #         self.network_dynamics[t, edges[0], edges[1]] = 2
+            #         self.network_dynamics[t, vertices[0], vertices[1]] = 3
+            #
+            #         imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+            #
+            #         # Remember to uncomment this when done!!! For visualization.
+            #         if show_seg:
+            #             imshow("", resize(imtoshow, (1000, 1000)))
+            #             waitKey(1)
+            #         else:
+            #             self.visu[t, ...] = imtoshow
+            # if show_seg:
+            #     destroyAllWindows()
 
-            if self.vars['fractal_analysis']:
-                box_counting_dimensions = zeros((self.dims[0], 7), dtype=float64)
-            vertices_and_edges = zeros((self.dims[0], 2), dtype=uint32)
 
-            for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  #20):#
-                # t = self.one_descriptor_per_arena["first_move"]
-                # t = 200
-                if any(self.binary[t, ...]):
-                    nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'])
-                    r = weakref.ref(nd)
-                    nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
-                                       step=self.vars['network_mesh_step_length'],
-                                       int_variation_thresh=self.vars['network_detection_threshold'])
-                    # See(nd.binary_image)
-                    # See(nd.network)
-                    nd.selects_elongated_or_holed_shapes(hole_surface_ratio=0.1, eccentricity=0.65)
-                    # nd.segment_globally()
-
-                    if t > 0:
-                        nd.add_pixels_to_the_network(nonzero(self.network_dynamics[t - 1, ...]))
-                        if self.vars['do_fading'] and (t > self.step + self.lost_frames):
-                            # Remove the faded areas
-                            remove_faded_pixels = 1 - self.binary[t - 1, ...]
-                            nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
-
-                    # Add the origin as a part of the network:
-                    if self.vars['origin_state'] == 'constant':
-                        nd.add_pixels_to_the_network(self.origin_idx)
-
-                    # Connect all network pieces together:
-                    nd.connect_network(maximal_distance_connection=self.max_distance)  # int(4*max(self.dims[1:3])//5))
-
-                    self.network_dynamics[t, ...] = nd.network
-
-                    nd.skeletonize()
-                    nd.get_graph()
-                    vertices_and_edges[t, :] = nd.vertices_number, nd.edges_number
-
-                    if self.vars['fractal_analysis']:
-                        box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
-                        zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars['fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
-                        box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[t, 3] = box_counting(zoomed_binary, side_lengths)
-                        zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...], side_threshold=self.vars['fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=False)
-                        box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[t, 6] = box_counting(zoomed_binary, side_lengths)
-
-                    # self.graph[t, ...] = deepcopy(nd.graph)
-
-                    imtoshow = self.visu[t, ...]
-                    eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
-                    net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
-
-                    edges = nonzero(nd.graph == 1)
-                    vertices = nonzero(nd.graph == 2)
-                    self.network_dynamics[t, edges[0], edges[1]] = 2
-                    self.network_dynamics[t, vertices[0], vertices[1]] = 3
-
-                    imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
-
-                    # Remember to uncomment this when done!!! For visualization.
-                    if show_seg:
-                        imshow("", resize(imtoshow, (1000, 1000)))
-                        waitKey(1)
-                    else:
-                        self.visu[t, ...] = imtoshow
-            if show_seg:
-                destroyAllWindows()
-            self.one_row_per_frame["vertices_number"] = vertices_and_edges[:, 0]
-            self.one_row_per_frame["edges_number"] = vertices_and_edges[:, 1]
-            if self.vars['fractal_analysis']:
-                self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
-                self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
-                self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
-                self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 3]
-                self.one_row_per_frame["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
-                self.one_row_per_frame["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
-                self.one_row_per_frame["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
-                if self.vars['output_in_mm']:
-                    self.one_row_per_frame["inner_network_size"] *= self.vars['average_pixel_size']
-                # box_counting_dimensions = df(box_counting_dimensions, columns=["inner_network_size", "fractal_dimension", "fractal_r_value", "fractal_box_nb", "inner_network_fractal_dimension", "inner_network_fractal_r_value", "inner_network_fractal_box_nb"])
-                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.one_descriptor_per_arena['arena']}.csv", sep=';', index=False, lineterminator='\n')
-
-            edges = smallest_memory_array(nonzero(self.network_dynamics == 2), "uint")
-            vertices = smallest_memory_array(nonzero(self.network_dynamics == 3), "uint")
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
-            # edges = smallest_memory_array(nonzero(self.graph == 1), "uint")
-            # vertices = smallest_memory_array(nonzero(self.graph == 2), "uint")
+            # self.one_row_per_frame["vertices_number"] = vertices_and_edges[:, 0]
+            # self.one_row_per_frame["edges_number"] = vertices_and_edges[:, 1]
+            # edges = smallest_memory_array(nonzero(self.network_dynamics == 2), "uint")
+            # vertices = smallest_memory_array(nonzero(self.network_dynamics == 3), "uint")
             if self.vars['save_coord_network']:
                 save(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
-                save(f"coord_network_edges{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
-                save(f"coord_network_vertices{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
+                # save(f"coord_network_edges{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
+                # save(f"coord_network_vertices{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
 
 
     def memory_allocation_for_cytoscillations(self):
@@ -1804,28 +1803,61 @@ class MotionAnalysis:
                     self.one_row_per_frame['cluster_number'] = named_cluster_number
 
                 del oscillations_video
-                if self.vars['fractal_analysis']:
-                    del self.network_dynamics
+
 
     def fractal_descriptions(self):
         if not isna(self.one_descriptor_per_arena["first_move"]) and self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
 
-            if not self.vars['save_coord_network'] and not self.vars['network_analysis']:
+            if self.vars['network_analysis']:
+                box_counting_dimensions = zeros((self.dims[0], 7), dtype=float64)
+            else:
                 box_counting_dimensions = zeros((self.dims[0], 3), dtype=float64)
-                for t in arange(self.dims[0]):
+
+            for t in arange(self.dims[0]):
+                if self.vars['network_analysis']:
+                    box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
+                    zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars[
+                        'fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
+                        t, 3] = box_counting(zoomed_binary, side_lengths)
+                    zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...],
+                                                                       side_threshold=self.vars[
+                                                                           'fractal_box_side_threshold'],
+                                                                       zoom_step=self.vars['fractal_zoom_step'],
+                                                                       contours=False)
+                    box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[
+                        t, 6] = box_counting(zoomed_binary, side_lengths)
+                else:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
                                                                        side_threshold=self.vars['fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, :] = box_counting(zoomed_binary, side_lengths)
+
+            if self.vars['network_analysis']:
+                self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
+                self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
+                self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 3]
+                self.one_row_per_frame["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
+                self.one_row_per_frame["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
+                self.one_row_per_frame["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
+                if self.vars['output_in_mm']:
+                    self.one_row_per_frame["inner_network_size"] *= self.vars['average_pixel_size']
+            else:
                 self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+                # box_counting_dimensions = df(box_counting_dimensions, columns=["inner_network_size", "fractal_dimension", "fractal_r_value", "fractal_box_nb", "inner_network_fractal_dimension", "inner_network_fractal_r_value", "inner_network_fractal_box_nb"])
+                # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.one_descriptor_per_arena['arena']}.csv", sep=';', index=False, lineterminator='\n')
+
+
                 # box_counting_dimensions = df(box_counting_dimensions, columns=["dimension"])
                 # box_counting_dimensions.to_csv(f"box_counting_dimensions{self.one_descriptor_per_arena['arena']}.csv", sep=';',
                 #                                index=False, lineterminator='\n')
 
-
+            if self.vars['network_analysis'] or self.vars['save_coord_network']:
+                del self.network_dynamics
             """
             if self.visu is None:
                 true_frame_width = self.origin.shape[1]

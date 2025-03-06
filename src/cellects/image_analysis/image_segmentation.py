@@ -9,9 +9,10 @@ from numpy import min, max, all, any, zeros_like, argmin, logical_and, pi, squar
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from numba import njit
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
-def get_all_color_spaces(bgr_image):
+def get_color_spaces(bgr_image, space_names=""):
     """
     Create a typed dictonary containing the bgr image converted into:
     lab, hsv, luv, hls and yuv
@@ -20,57 +21,28 @@ def get_all_color_spaces(bgr_image):
     """
     c_spaces = TDict()
     c_spaces['bgr'] = bgr_image.astype(float64)
-    c_spaces['lab'] = cvtColor(bgr_image, COLOR_BGR2LAB).astype(float64)
-    c_spaces['hsv'] = cvtColor(bgr_image, COLOR_BGR2HSV).astype(float64)
-    c_spaces['luv'] = cvtColor(bgr_image, COLOR_BGR2LUV).astype(float64)
-    c_spaces['hls'] = cvtColor(bgr_image, COLOR_BGR2HLS).astype(float64)
-    c_spaces['yuv'] = cvtColor(bgr_image, COLOR_BGR2YUV).astype(float64)
-    return c_spaces
-
-
-def get_some_color_spaces(bgr_image, spaces):
-    """
-    Create a typed dictonary containing the bgr image converted into:
-    lab, hsv, luv, hls and yuv
-    :param bgr_image: 3D matrix of a bgr image, the two first dims are coordinates, the last is color.
-    :return: dict[str, float64]
-    """
-    c_spaces = TDict()
-    c_spaces['bgr'] = bgr_image.astype(float64)
-    for space in spaces.keys():
-        if space == 'lab':
+    if len(space_names) == 0:
+        c_spaces['lab'] = cvtColor(bgr_image, COLOR_BGR2LAB).astype(float64)
+        c_spaces['hsv'] = cvtColor(bgr_image, COLOR_BGR2HSV).astype(float64)
+        c_spaces['luv'] = cvtColor(bgr_image, COLOR_BGR2LUV).astype(float64)
+        c_spaces['hls'] = cvtColor(bgr_image, COLOR_BGR2HLS).astype(float64)
+        c_spaces['yuv'] = cvtColor(bgr_image, COLOR_BGR2YUV).astype(float64)
+    else:
+        if isin('lab', space_names):
             c_spaces['lab'] = cvtColor(bgr_image, COLOR_BGR2LAB).astype(float64)
-        if space == 'hsv':
+        if isin('hsv', space_names):
             c_spaces['hsv'] = cvtColor(bgr_image, COLOR_BGR2HSV).astype(float64)
-        if space == 'luv':
+        if isin('luv', space_names):
             c_spaces['luv'] = cvtColor(bgr_image, COLOR_BGR2LUV).astype(float64)
-        if space == 'hls':
+        if isin('hls', space_names):
             c_spaces['hls'] = cvtColor(bgr_image, COLOR_BGR2HLS).astype(float64)
-        if space == 'yuv':
+        if isin('yuv', space_names):
             c_spaces['yuv'] = cvtColor(bgr_image, COLOR_BGR2YUV).astype(float64)
     return c_spaces
 
 
-def filter_mexican_hat(image):
-    """
-    Create a mexican hat filter.
-    Other filters are:
-    - GaussianBlur(image, (size, size), BORDER_DEFAULT)
-    - medianBlur(image, ksize=size)
-    - Sharpen an image = filter2D(image, -1, array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
-    - A blurring that conserve edges = bilateralFilter(image, d=size, sigmaColor=sigma, sigmaSpace=sigma)# 5, 75, 75 9, 150, 150
-    - Extract edges = Laplacian(image, ddepth=depth, ksize=(size, size))
-    :param image:
-    :type image: uint8
-    :return: the filtered image
-    :rtype image: uint8
-    """
-    return filter2D(image, -1, array(
-        [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
-
-
 @njit()
-def generate_color_space_combination(c_space_dict, all_c_spaces, subtract_background=None):
+def combine_color_spaces(c_space_dict, all_c_spaces, subtract_background=None):
     """
     Compute a linear combination of some channels of some color spaces.
     Subtract background if needed.
@@ -105,6 +77,37 @@ def generate_color_space_combination(c_space_dict, all_c_spaces, subtract_backgr
         image = 255 * (image / max_im)
     return image
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
+
+
+def generate_color_space_combination(bgr_image, c_spaces, first_dict, second_dict={}, background=None, background2=None, convert_to_uint8=False):
+    all_c_spaces = get_color_spaces(bgr_image, c_spaces)
+    greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+    if convert_to_uint8:
+        greyscale_image = bracket_to_uint8_image_contrast(greyscale_image)
+    greyscale_image2 = None
+    if len(second_dict) > 0:
+        greyscale_image2 = combine_color_spaces(second_dict, all_c_spaces, background2)
+        if convert_to_uint8:
+            greyscale_image2 = bracket_to_uint8_image_contrast(greyscale_image2)
+    return greyscale_image, greyscale_image2
+
+
+def filter_mexican_hat(image):
+    """
+    Create a mexican hat filter.
+    Other filters are:
+    - GaussianBlur(image, (size, size), BORDER_DEFAULT)
+    - medianBlur(image, ksize=size)
+    - Sharpen an image = filter2D(image, -1, array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+    - A blurring that conserve edges = bilateralFilter(image, d=size, sigmaColor=sigma, sigmaSpace=sigma)# 5, 75, 75 9, 150, 150
+    - Extract edges = Laplacian(image, ddepth=depth, ksize=(size, size))
+    :param image:
+    :type image: uint8
+    :return: the filtered image
+    :rtype image: uint8
+    """
+    return filter2D(image, -1, array(
+        [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
 
 
 @njit()

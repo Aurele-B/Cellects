@@ -1,7 +1,7 @@
 import logging
 import os
 
-from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, \
+from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, logical_and, \
     iinfo, uint16, uint32, uint64, ndarray, int64, linalg, floor, max, gradient, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
 
 import pickle
