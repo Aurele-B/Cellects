@@ -1,3 +1,6 @@
+[project]
+name = "Cellects"
+
 [tool.poetry]
 name = "Cellects"
 version = "1.0.0"
