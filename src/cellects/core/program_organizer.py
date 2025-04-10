@@ -447,36 +447,6 @@ class ProgramOrganizer:
             pickle_rick = PickleRick()
             pickle_rick.write_file(data_to_run_cellects_quickly, 'Data to run Cellects quickly.pkl')
 
-        # with open('Data to run Cellects quickly.pkl', 'wb') as file:
-        #     pickle.dump(data_to_run_cellects_quickly, file)
-
-        # if os.path.isfile('Data to run Cellects quickly.pkl'):
-        #     logging.info("Update -Data to run Cellects quickly.pkl- in the user chosen directory")
-        #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #         data_to_run_cellects_quickly = pickle.load(fileopen)
-        # else:
-        #     logging.info("Create Data to run Cellects quickly.pkl in the user chosen directory")
-        #     data_to_run_cellects_quickly = {}
-        # if self.data_to_save['first_image']:
-        #     if self.all['overwrite_cellects_data'] or (not 'validated_shapes' in data_to_run_cellects_quickly):
-        #         data_to_run_cellects_quickly['validated_shapes'] = self.first_image.im_combinations[self.current_combination_id]['binary_image']
-        #         data_to_run_cellects_quickly['shape_number'] = self.first_image.im_combinations[self.current_combination_id]['shape_number']
-        #         # data_to_run_cellects_quickly['converted_image'] = self.first_image.im_combinations[self.current_combination_id]['converted_image']
-        # if self.data_to_save['coordinates']:
-        #     if self.all['overwrite_cellects_data'] or (not 'coordinates' in data_to_run_cellects_quickly):
-        #         data_to_run_cellects_quickly['coordinates'] = self.list_coordinates()
-        # if self.data_to_save['exif']:
-        #     if self.all['overwrite_cellects_data'] or (not 'exif' in data_to_run_cellects_quickly):
-        #         data_to_run_cellects_quickly['exif'] = self.extract_exif()
-        # if self.data_to_save['background_and_origin_list']:
-        #     if self.all['overwrite_cellects_data'] or (not 'background_and_origin_list' in data_to_run_cellects_quickly):
-        #         data_to_run_cellects_quickly['background_and_origin_list'] = [self.vars['origin_list'], self.vars['background_list'], self.vars['background_list2']]
-        #
-        # if self.all['overwrite_cellects_data'] or (not 'all' in data_to_run_cellects_quickly):
-        #     data_to_run_cellects_quickly['all'] = self.all
-        # with open('Data to run Cellects quickly.pkl', 'wb') as file:
-        #     pickle.dump(data_to_run_cellects_quickly, file)
-
     def list_coordinates(self):
         if self.first_image.crop_coord is None:
             self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0,
