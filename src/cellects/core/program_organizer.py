@@ -171,7 +171,7 @@ class ProgramOrganizer:
         # dd = DefaultDicts()
         # self.all = dd.all
         # self.vars = dd.vars
-        self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
+        self.all['global_pathway'] = "/Users/Directory/Data/dossier1"
         self.all['first_folder_sample_number'] = 6
         # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
         # self.all['first_folder_sample_number'] = 6
@@ -233,7 +233,7 @@ class ProgramOrganizer:
             self = MotionAnalysis(l)
         self.get_descriptors_from_binary()
         self.detect_growth_transitions()
-        self.networks_detection(show_seg)
+        # self.networks_detection(show_seg)
         self.study_cytoscillations(show_seg)
 
         # for i, arena in enumerate(self.vars['analyzed_individuals']):
@@ -767,6 +767,7 @@ class ProgramOrganizer:
             self.vars['average_pixel_size'] = square(
                 self.all['starting_blob_hsize_in_mm'] /
                 mean(self.first_image.stats[1:, 2]))
+            # mean(self.first_image.stats[1:, 4])
         if self.all['set_spot_size']:
             self.starting_blob_hsize_in_pixels = (
                 self.all['starting_blob_hsize_in_mm'] /
