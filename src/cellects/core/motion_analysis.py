@@ -1552,7 +1552,8 @@ class MotionAnalysis:
                         current_time = default_timer()
 
                 within_range = (1 - self.binary[0, :, :]) * self.borders
-                oscillations_video *= ((self.binary * within_range) == 0)
+                within_range = self.binary * within_range
+                oscillations_video *= within_range
                 # oscillations_video[nonzero(within_range)] = 0
                 del within_range
                 oscillations_video += 1
@@ -1630,7 +1631,7 @@ class MotionAnalysis:
                             imtoshow[ef_idx[0], ef_idx[1], 1:] = 0  # Blue: efflux, intensity decrease
                             imtoshow[ef_idx[0], ef_idx[1], 0] = 204
                     oscillations_video[t, :, :] = oscillations_image
-                    self.converted_video[t, ...] = imtoshow
+                    self.converted_video[t, ...] = deepcopy(imtoshow)
                     if show_seg:
                         im_to_show = resize(imtoshow, (540, 540))
                         imshow("shape_motion", im_to_show)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """This module contains all modified/simplified widgets from PySide6
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
+import os
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import Qt, QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 import numpy as np
@@ -10,9 +11,13 @@ from cv2 import cvtColor, COLOR_BGR2RGB, resize
 buttonfont = QFont("Segoe UI Semibold", 17, QFont.Bold)
 # titlesize = 40
 
-titlefont = f"Baskerville Old Face" #"40pt Baskerville Old Face"
+if os.name == 'nt':
+    titlefont = f"Baskerville Old Face" #"40pt Baskerville Old Face"
+    textfont = "Century Gothic"
+else:
+    titlefont = "Times New Roman"
+    textfont = "Times New Roman"
 textsize = 15
-textfont = "Century Gothic"
 
 backgroundcolor = "rgb(255,255,255)"
 textColor = "rgb(0, 0, 0)"

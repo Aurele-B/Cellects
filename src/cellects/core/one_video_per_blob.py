@@ -537,7 +537,7 @@ class OneVideoPerBlob:
             else:
                 arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
             # print(arena)
-            if self.parent().po.videos.use_list_of_vid:
+            if self.use_list_of_vid:
                 video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
             else:
                 video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
