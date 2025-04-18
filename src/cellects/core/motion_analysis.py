@@ -1485,7 +1485,10 @@ class MotionAnalysis:
             # if show_seg:
             #     destroyAllWindows()
 
-
+            for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):
+                eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
+                net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
+                self.visu[t, net_coord[0], net_coord[1], :] = (34, 34, 158)
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
             # self.one_row_per_frame["vertices_number"] = vertices_and_edges[:, 0]
             # self.one_row_per_frame["edges_number"] = vertices_and_edges[:, 1]

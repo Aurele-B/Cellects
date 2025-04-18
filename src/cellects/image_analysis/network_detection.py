@@ -412,9 +412,9 @@ def network_detection(binary_video, converted_video, origin, origin_state, light
 if __name__ == "__main__":
     # 1. Prepare the data
     # 1.a. Generate converted_video and sliding_cumulated_sum
-    video_nb = 3
-    for video_nb in np.array((5, 6), int):
-        os.chdir("D:\Directory\Data\Audrey\dosier1")
+    video_nb = 2
+    for video_nb in np.arange(1,7):
+        os.chdir("E:\Disque_D\Directory\Data\Audrey\dossier1")
         visu = np.load(f"ind_{video_nb}.npy")
         dims = visu.shape[:3]
         binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
