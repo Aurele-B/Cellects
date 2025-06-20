@@ -1,6 +1,5 @@
 
-import os
-from pathlib import Path
+
 from cellects.utils.utilitarian import *
 import matplotlib
 matplotlib.use('QtAgg')
@@ -12,7 +11,6 @@ from cellects.image_analysis.fractal_functions import *
 from cellects.image_analysis.image_segmentation import *
 
 
-square_33 = np.ones((3, 3), np.uint8)
 """
 Prepare data
 """

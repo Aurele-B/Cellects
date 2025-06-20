@@ -13,10 +13,9 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import pandas as pd
-from morphological_operations import make_gravity_field, cross_33, cc, CompareNeighborsWithValue, get_contours, get_all_line_coordinates
+from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates
 from cellects.utils.formulas import *
 from numba.typed import Dict as TDict
-square_33 = np.ones((3, 3), np.uint8)
 
 
 def get_graph_from_vertices_and_edges(vertices, edges):
@@ -301,7 +300,7 @@ def save_network_as_csv(full_network, skeleton, vertices_table, edges_table, edg
 
     pd.DataFrame(edges_labels, columns=["vertex1", "vertex2"]).to_csv(pathway / f"edges_labels_imshape={full_network.shape}.csv", index=False)
     pd.DataFrame(vertices_table, columns=["vertex_id", "y_coord", "x_coord", "is_leaf"]).to_csv(pathway / f"vertices_coord_imshape={full_network.shape}.csv", index=False)
-    pd.DataFrame(edges_table, columns=["edge_id", "y_coord", "x_coord", "width", "height"]).to_csv(pathway / f"vertices_coord_imshape={full_network.shape}.csv", index=False)
+    pd.DataFrame(edges_table, columns=["edge_id", "y_coord", "x_coord", "width", "height"]).to_csv(pathway / f"skeleton_coord_imshape={full_network.shape}.csv", index=False)
 
 
 def save_graph_image(binary_im, full_network, numbered_edges, distances, origin, vertices_table, pathway):
