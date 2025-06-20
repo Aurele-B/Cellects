@@ -38,50 +38,56 @@ cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
 
 
 class CompareNeighborsWithValue:
-    def __init__(self, matrix, connectivity, data_type=int8):
+    def __init__(self, array, connectivity=None, data_type=int8):
         """
-        Summarize each pixel (cell) of a 2D matrix by comparing its neighbors to a value.
+        Summarize each pixel (cell) of a 2D array by comparing its neighbors to a value.
         This comparison can be equal, inferior or superior.
         Neighbors can be the 4 or the 8 nearest pixels based on the value of connectivity.
-        :param matrix: a 2D matrix
-        :type matrix: must be less permissive than data_type
-        :param connectivity: 4 or 8
+        :param array: a 1 or 2D array
+        :type array: must be less permissive than data_type
+        :param connectivity: 4 or 8, if different, only compute diagonal
         :type connectivity: uint8
         :param data_type: the data type used for computation
         :type data_type: type
         """
-        matrix = matrix.astype(data_type)
-        self.matrix = matrix
+        array = array.astype(data_type)
+        self.array = array
         self.connectivity = connectivity
-        # Build 4 window of the original matrix, each missing one of the four borders
-        # Grow each window with a copy of the last border at the opposite of the side a border have been deleted
-        self.on_the_right = column_stack((matrix[:, 1:], matrix[:, -1]))
-        self.on_the_left = column_stack((matrix[:, 0], matrix[:, :-1]))
-        self.on_the_bot = row_stack((matrix[1:, :], matrix[-1, :]))
-        self.on_the_top = row_stack((matrix[0, :], matrix[:-1, :]))
-        if self.connectivity == 8:
-            self.on_the_topleft = matrix[:-1, :-1]
-            self.on_the_topright = matrix[:-1, 1:]
-            self.on_the_botleft = matrix[1:, :-1]
-            self.on_the_botright = matrix[1:, 1:]
+        if len(self.array.shape) == 1:
+            self.on_the_right = append(array[1:], array[-1])
+            self.on_the_left = append(array[0], array[:-1])
+        else:
+            # Build 4 window of the original array, each missing one of the four borders
+            # Grow each window with a copy of the last border at the opposite of the side a border have been deleted
 
-            self.on_the_topleft = row_stack((self.on_the_topleft[0, :], self.on_the_topleft))
-            self.on_the_topleft = column_stack((self.on_the_topleft[:, 0], self.on_the_topleft))
+            if self.connectivity == 4 or self.connectivity == 8:
+                self.on_the_right = column_stack((array[:, 1:], array[:, -1]))
+                self.on_the_left = column_stack((array[:, 0], array[:, :-1]))
+                self.on_the_bot = vstack((array[1:, :], array[-1, :]))
+                self.on_the_top = vstack((array[0, :], array[:-1, :]))
+            if self.connectivity != 4:
+                self.on_the_topleft = array[:-1, :-1]
+                self.on_the_topright = array[:-1, 1:]
+                self.on_the_botleft = array[1:, :-1]
+                self.on_the_botright = array[1:, 1:]
 
-            self.on_the_topright = row_stack((self.on_the_topright[0, :], self.on_the_topright))
-            self.on_the_topright = column_stack((self.on_the_topright, self.on_the_topright[:, -1]))
+                self.on_the_topleft = vstack((self.on_the_topleft[0, :], self.on_the_topleft))
+                self.on_the_topleft = column_stack((self.on_the_topleft[:, 0], self.on_the_topleft))
 
-            self.on_the_botleft = row_stack((self.on_the_botleft, self.on_the_botleft[-1, :]))
-            self.on_the_botleft = column_stack((self.on_the_botleft[:, 0], self.on_the_botleft))
+                self.on_the_topright = vstack((self.on_the_topright[0, :], self.on_the_topright))
+                self.on_the_topright = column_stack((self.on_the_topright, self.on_the_topright[:, -1]))
 
-            self.on_the_botright = row_stack((self.on_the_botright, self.on_the_botright[-1, :]))
-            self.on_the_botright = column_stack((self.on_the_botright, self.on_the_botright[:, -1]))
+                self.on_the_botleft = vstack((self.on_the_botleft, self.on_the_botleft[-1, :]))
+                self.on_the_botleft = column_stack((self.on_the_botleft[:, 0], self.on_the_botleft))
+
+                self.on_the_botright = vstack((self.on_the_botright, self.on_the_botright[-1, :]))
+                self.on_the_botright = column_stack((self.on_the_botright, self.on_the_botright[:, -1]))
 
     def is_equal(self, value, and_itself=False):
         """
         Give, for each pixel, the number neighboring pixels having the value "value"
         :param value: any number. The equal_neighbor_nb matrix will contain, for each pixel,
-        the number of number neighboring pixels having that value.
+        the number of neighboring pixels having that value.
         :param and_itself: When False, the resulting number of neighbors fitting the condition is displayed normally.
         When True, when the focal pixel does not fit the condition, it receives the value 0.
         In other words, the resulting number of neighbors fitting the condition is displayed
@@ -90,20 +96,27 @@ class CompareNeighborsWithValue:
         :return: each cell of equal_neighbor_nb is the number of neighboring pixels having the value "value"
         :rtype: uint8
         """
-        if self.connectivity == 4:
-            self.equal_neighbor_nb = dstack((equal(self.on_the_right, value), equal(self.on_the_left, value),
-                                                equal(self.on_the_bot, value), equal(self.on_the_top, value)))
-        elif self.connectivity == 8:
-            self.equal_neighbor_nb = dstack(
-                (equal(self.on_the_right, value), equal(self.on_the_left, value),
-                 equal(self.on_the_bot, value), equal(self.on_the_top, value),
-                 equal(self.on_the_topleft, value), equal(self.on_the_topright, value),
-                 equal(self.on_the_botleft, value), equal(self.on_the_botright, value)))
 
-        self.equal_neighbor_nb = sum(self.equal_neighbor_nb, 2, dtype=uint8)
+        if len(self.array.shape) == 1:
+            self.equal_neighbor_nb = self.on_the_right + self.on_the_left
+        else:
+            if self.connectivity == 4:
+                self.equal_neighbor_nb = dstack((equal(self.on_the_right, value), equal(self.on_the_left, value),
+                                                 equal(self.on_the_bot, value), equal(self.on_the_top, value)))
+            elif self.connectivity == 8:
+                self.equal_neighbor_nb = dstack(
+                    (equal(self.on_the_right, value), equal(self.on_the_left, value),
+                     equal(self.on_the_bot, value), equal(self.on_the_top, value),
+                     equal(self.on_the_topleft, value), equal(self.on_the_topright, value),
+                     equal(self.on_the_botleft, value), equal(self.on_the_botright, value)))
+            else:
+                self.equal_neighbor_nb = dstack(
+                    (equal(self.on_the_topleft, value), equal(self.on_the_topright, value),
+                     equal(self.on_the_botleft, value), equal(self.on_the_botright, value)))
+            self.equal_neighbor_nb = sum(self.equal_neighbor_nb, 2, dtype=uint8)
 
         if and_itself:
-            self.equal_neighbor_nb[not_equal(self.matrix, value)] = 0
+            self.equal_neighbor_nb[not_equal(self.array, value)] = 0
 
     def is_sup(self, value, and_itself=False):
         """
@@ -118,18 +131,24 @@ class CompareNeighborsWithValue:
         :return: each cell of sup_neighbor_nb is the number of neighboring pixels having a value higher than "value"
         :rtype: uint8
         """
-        if self.connectivity == 4:
-            self.sup_neighbor_nb = dstack((self.on_the_right > value, self.on_the_left > value,
-                                              self.on_the_bot > value, self.on_the_top > value))
-        elif self.connectivity == 8:
-            self.sup_neighbor_nb = dstack((self.on_the_right > value, self.on_the_left > value,
-                                              self.on_the_bot > value, self.on_the_top > value,
-                                              self.on_the_topleft > value, self.on_the_topright > value,
-                                              self.on_the_botleft > value, self.on_the_botright > value))
+        if len(self.array.shape) == 1:
+            self.sup_neighbor_nb = (self.on_the_right > value).astype(self.array.dtype) + (self.on_the_left > value).astype(self.array.dtype)
+        else:
+            if self.connectivity == 4:
+                self.sup_neighbor_nb = dstack((self.on_the_right > value, self.on_the_left > value,
+                                               self.on_the_bot > value, self.on_the_top > value))
+            elif self.connectivity == 8:
+                self.sup_neighbor_nb = dstack((self.on_the_right > value, self.on_the_left > value,
+                                               self.on_the_bot > value, self.on_the_top > value,
+                                               self.on_the_topleft > value, self.on_the_topright > value,
+                                               self.on_the_botleft > value, self.on_the_botright > value))
+            else:
+                self.sup_neighbor_nb = dstack((self.on_the_topleft > value, self.on_the_topright > value,
+                                               self.on_the_botleft > value, self.on_the_botright > value))
 
-        self.sup_neighbor_nb = sum(self.sup_neighbor_nb, 2, dtype=uint8)
+            self.sup_neighbor_nb = sum(self.sup_neighbor_nb, 2, dtype=uint8)
         if and_itself:
-            self.sup_neighbor_nb[less_equal(self.matrix, value)] = 0
+            self.sup_neighbor_nb[less_equal(self.array, value)] = 0
 
     def is_inf(self, value, and_itself=False):
         """
@@ -144,18 +163,24 @@ class CompareNeighborsWithValue:
         :return: each cell of sup_neighbor_nb is the number of neighboring pixels having a value lower than "value"
         :rtype: uint8
         """
-        if self.connectivity == 4:
-            self.inf_neighbor_nb = dstack((self.on_the_right < value, self.on_the_left < value,
-                                              self.on_the_bot < value, self.on_the_top < value))
-        elif self.connectivity == 8:
-            self.inf_neighbor_nb = dstack((self.on_the_right < value, self.on_the_left < value,
-                                              self.on_the_bot < value, self.on_the_top < value,
-                                              self.on_the_topleft < value, self.on_the_topright < value,
-                                              self.on_the_botleft < value, self.on_the_botright < value))
+        if len(self.array.shape) == 1:
+            self.inf_neighbor_nb = (self.on_the_right < value).astype(self.array.dtype) + (self.on_the_left < value).astype(self.array.dtype)
+        else:
+            if self.connectivity == 4:
+                self.inf_neighbor_nb = dstack((self.on_the_right < value, self.on_the_left < value,
+                                               self.on_the_bot < value, self.on_the_top < value))
+            elif self.connectivity == 8:
+                self.inf_neighbor_nb = dstack((self.on_the_right < value, self.on_the_left < value,
+                                               self.on_the_bot < value, self.on_the_top < value,
+                                               self.on_the_topleft < value, self.on_the_topright < value,
+                                               self.on_the_botleft < value, self.on_the_botright < value))
+            else:
+                self.inf_neighbor_nb = dstack((self.on_the_topleft < value, self.on_the_topright < value,
+                                               self.on_the_botleft < value, self.on_the_botright < value))
 
-        self.inf_neighbor_nb = sum(self.inf_neighbor_nb, 2, dtype=uint8)
+            self.inf_neighbor_nb = sum(self.inf_neighbor_nb, 2, dtype=uint8)
         if and_itself:
-            self.inf_neighbor_nb[greater_equal(self.matrix, value)] = 0
+            self.inf_neighbor_nb[greater_equal(self.array, value)] = 0
 
 
 def cc(binary_img):
@@ -245,6 +270,83 @@ def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
             expand = dilate(expand, kernel, iterations=1, borderType=BORDER_CONSTANT, borderValue=0)
             gravity_field[logical_xor(expand, original_shape)] += 1
     return gravity_field
+
+
+@njit()
+def get_line_points(start, end):
+    """
+    Get all integer coordinates along a line from start to end.
+    Uses a simple line drawing algorithm similar to Bresenham's.
+    start, end = start_point, end_point
+    Args:
+        start: tuple (x, y) - starting point
+        end: tuple (x, y) - ending point
+
+    Returns:
+        numpy array of shape (n, 2) with all integer coordinates
+    """
+    x0, y0 = start
+    x1, y1 = end
+
+    # Calculate differences
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+
+    # Determine step direction
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+
+    # Initialize
+    err = dx - dy
+    points = []
+    x, y = x0, y0
+
+    while True:
+        points.append([x, y])
+
+        # Check if we've reached the end
+        if x == x1 and y == y1:
+            break
+
+        # Calculate error for next step
+        e2 = 2 * err
+
+        if e2 > -dy:
+            err -= dy
+            x += sx
+
+        if e2 < dx:
+            err += dx
+            y += sy
+
+    return array(points)
+
+
+def get_all_line_coordinates(start_point, end_points):
+    """
+    Get coordinates for lines from one point to many points.
+    Automatically determines the right number of points for continuous lines.
+    start_point, end_points = origin_centroid, skel_coord
+    Args:
+        start_point: tuple (x, y) - starting point
+        end_points: list of tuples - ending points
+
+    Returns:
+        list of numpy arrays, each containing coordinates for one line
+    """
+    if not isinstance(start_point.dtype, float):
+        start_point = start_point.astype(float)
+    if not isinstance(end_points.dtype, float):
+        end_points = end_points.astype(float)
+
+    #lines = start_point
+    lines = []
+    for end_point in end_points: # end_point = end_points[0]
+        line_coords = get_line_points(start_point, end_point)
+        lines.append(array(line_coords, dtype=uint64))
+        # lines = np.vstack((lines, line_coords))
+    # lines = lines.astype(np.uint64)
+    return lines
 
 
 def get_every_coord_between_2_points(point_A, point_B):
@@ -753,3 +855,8 @@ def get_rolling_window_coordinates_list(height, width, side_length, window_step,
                         window_coords.append([y_coord[y_i] + add_to_y, y_max, x_coord[x_i] + add_to_x, x_max])
     return window_coords
 
+
+def get_contours(binary_image):
+    eroded_binary = erode(binary_image, cross_33)
+    contours = binary_image - eroded_binary
+    return contours

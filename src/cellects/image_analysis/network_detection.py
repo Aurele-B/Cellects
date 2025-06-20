@@ -409,12 +409,13 @@ def network_detection(binary_video, converted_video, origin, origin_state, light
     networks = tracking_noise_correction(networks, 2)
     return networks
 
+
 if __name__ == "__main__":
     # 1. Prepare the data
     # 1.a. Generate converted_video and sliding_cumulated_sum
     video_nb = 3
-    for video_nb in np.array((5, 6), int):
-        os.chdir("D:\Directory\Data\Audrey\dosier1")
+    for video_nb in np.arange(1, 7): #  np.array((5, 6), int):
+        os.chdir("D:\Directory\Data\Audrey")
         visu = np.load(f"ind_{video_nb}.npy")
         dims = visu.shape[:3]
         binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
@@ -439,3 +440,9 @@ if __name__ == "__main__":
                                      sliding_sum_step=10, int_variation_thresh=int_variation_thresh,
                                      side_length=side_length, window_step=window_step)
         np.save(f"new_net_detection{video_nb}.npy", networks)
+
+    # video_nb = 2
+    # for video_nb in np.array((2, 4), int):
+    #     os.chdir("/Users/Directory/Data/dossier1")
+    #     visu = np.load(f"ind_{video_nb}.npy")
+    #     write_video(visu, f"simple_video{video_nb}.mp4", is_color=True, fps=40)
