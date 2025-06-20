@@ -16,6 +16,14 @@ from glob import glob
 
 
 @njit()
+def equal_along_first_axis(array_in_1, array_in_2):
+    array_out = zeros_like(array_in_1)
+    for i, value in enumerate(array_in_2):
+        array_out[i, ...] = array_in_1[i, ...] == value
+    return array_out
+
+
+@njit()
 def greater_along_first_axis(array_in_1, array_in_2):
     array_out = zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
