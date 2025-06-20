@@ -35,6 +35,7 @@ from cellects.image_analysis.image_segmentation import get_otsu_threshold
 
 
 cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
+square_33 = ones((3, 3), uint8)
 
 
 class CompareNeighborsWithValue:

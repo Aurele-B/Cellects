@@ -15,7 +15,7 @@ from scipy import ndimage
 import cv2
 import numpy as np
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, otsu_thresholding
-from cellects.image_analysis.morphological_operations import make_gravity_field, cross_33, cc, CompareNeighborsWithValue, get_rolling_window_coordinates_list
+from cellects.image_analysis.morphological_operations import make_gravity_field, cross_33, square_33, cc, CompareNeighborsWithValue, get_rolling_window_coordinates_list
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.load_display_save import See
 from cellects.utils.formulas import max_cum_sum_from_rolling_window
@@ -37,7 +37,6 @@ def get_vertices_from_skeleton(skeleton):
     sure_terminations[cnv.equal_neighbor_nb == 1] = 1
 
     # Create a kernel to dilate properly the known vertices.
-    square_33 = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8)
     # Initiate the vertices final matrix as a copy of the sure_terminations
     vertices = deepcopy(sure_terminations)
     # All pixels that have neighbor_nb neighbors, none of which is already detected as a vertex.

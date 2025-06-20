@@ -10,8 +10,8 @@ import numpy as np
 import cv2
 from scipy.optimize import curve_fit
 from scipy.stats import linregress
-from formulas import linear_model
-from utils import cross_33
+from cellects.utils.formulas import (linear_model)
+from cellects.image_analysis.morphological_operations import cross_33
 
 
 def display_boxes(binary_image, box_diameter):
