@@ -9,6 +9,7 @@ from skimage import morphology
 from numba.typed import Dict as TDict
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.fractal_functions import *
+from cellects.image_analysis.image_segmentation import *
 
 
 square_33 = np.ones((3, 3), np.uint8)
