@@ -1,10 +1,9 @@
-
+import cv2
 
 from cellects.utils.utilitarian import *
 import matplotlib
-matplotlib.use('QtAgg')
+# matplotlib.use('QtAgg')
 from matplotlib import pyplot as plt
-from skimage import morphology
 from numba.typed import Dict as TDict
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.fractal_functions import *
@@ -25,7 +24,7 @@ visu = np.load(f"ind_{video_nb}.npy")
 first_dict = TDict()
 first_dict["lab"] = np.array((0, 0, 1))
 first_dict["luv"] = np.array((0, 0, 1))
-im_nb = -1
+im_nb = -1 #  -1   466
 binary_im = binary_video[im_nb, ...]
 greyscale_img, _ = generate_color_space_combination(visu[im_nb, ...], list(first_dict.keys()), first_dict, convert_to_uint8=True)
 # a = np.array((net_coord))
@@ -39,40 +38,27 @@ net_vid[net_coord[0], net_coord[1], net_coord[2]] = 1
 
 # See(net_vid[im_nb, ...], keep_display=1)
 
+# 0-pad the contour of the image:
+pad_network = np.pad(net_vid[im_nb, ...], [(1, ), (1, )], mode='constant')
+pad_origin = np.pad(origin, [(1, ), (1, )], mode='constant')
+
 # MAYBE REMOVE : Make sure that the network is only one connected component
-full_network, stats, centers = cc(net_vid[im_nb, ...])
-full_network[full_network > 1] = 0
-network_contour = get_contours(full_network)
-
+pad_network, stats, centers = cc(pad_network)
+pad_network[pad_network > 1] = 0
+# np.save(f"/Users/Directory/Scripts/mathematica/training/full_network_rep{video_nb}_IMG_4328.npy", full_network)
+pad_net_contour = get_contours(pad_network)
 # Compute medial axis
-skeleton, distances = morphology.medial_axis(full_network, return_distance=True)
-distances[np.nonzero(origin)] = 0
-# width = 10
-# skel_size  = skeleton.sum()
-# while width > 0 and skel_size > skeleton.sum() * 0.75:
-#     width -= 1
-#     skeleton = skeleton.copy()
-#     skeleton[distances > width] = 0
-#     # Only keep the largest connected component
-#     skeleton, stats, _ = cc(skeleton)
-#     skeleton[skeleton > 1] = 0
-#     skel_size = skeleton.sum()
-width = 10
-skeleton = skeleton.copy()
-skeleton[distances > width] = 0
-# Remove the origin
-skeleton = skeleton * (1 - origin)
-# Only keep the largest connected component
-skeleton, stats, _ = cc(skeleton)
-skeleton[skeleton > 1] = 0
+pad_skeleton, pad_distances = get_skeleton_and_widths(pad_network, pad_origin)
 
-nb, shape = cv2.connectedComponents(skeleton)
+# nb, shape = cv2.connectedComponents(skeleton)
 # skeleton = skeleton[450:525, 775:855]
 
 # Find vertices and edges
-skeleton, vertices, edges = get_vertices_and_edges_from_skeleton(skeleton)
+pad_skeleton, pad_vertices, pad_edges = get_vertices_and_edges_from_skeleton(pad_skeleton)
 
-numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges)
+network, net_contour, skeleton, distances, vertices, edges = remove_padding([pad_network, pad_net_contour, pad_skeleton, pad_distances, pad_vertices, pad_edges])
+
+numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges, distances)
 
 numbered_vertices, numbered_edges, vertices_table, edges_labels = add_central_vertex(numbered_vertices, numbered_edges, vertices_table, edges_labels, origin, network_contour)
 
@@ -86,9 +72,8 @@ save_graph_image(binary_im, full_network, numbered_edges, distances, origin, ver
 
 
 
-
-
-
+a, st, _ = cc(skeleton.astype(np.uint8))
+a, st, _ = cc(((numbered_edges+numbered_vertices)>0).astype(np.uint8))
 
 
 
@@ -110,19 +95,20 @@ plt.imshow(im)
 plt.show()
 plt.savefig(f"/Users/aurele/Documents/graphics/meshes/edges_and_vertices.png")
 plt.close()
-plt.imshow(full_network[700:750, 600:700])
+plt.imshow(full_network)
 plt.show()
-plt.imshow(skeleton[450:525, 775:855])
+plt.imshow(skeleton[260:266, 562:570])
 plt.show()
-plt.imshow(skeletonbis)
+plt.imshow(full_network[260:266, 562:570])
 plt.show()
-plt.imshow(numbered_vertices)
+plt.imshow((a>0)[260:266, 562:570])
+plt.show()
+plt.imshow((a==1))
 plt.show()
 plt.imshow(skeleton[650:(origin_centroid[0]+1), 650:(origin_centroid[1]+1)])
 plt.show()
 plt.imsave(f"/Users/Directory/Scripts/mathematica/training/full_description.jpg", skeletonbis, dpi=500)
 plt.close()
-np.save(f"/Users/aurele/Documents/graphics/meshes/vertices_1475_1477.npy", np.nonzero(vertices))
 np.save(f"/Users/aurele/Documents/graphics/meshes/dilated_vertices_1475_1477.npy", np.nonzero(dilated_vertices))
 
 # fig, axes = plt.subplots(2, 2, figsize=(8, 8), sharex=True, sharey=True)
