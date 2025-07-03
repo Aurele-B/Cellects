@@ -244,6 +244,7 @@ def cc(binary_img):
 
 def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
     """
+    gravity_field = scipy.ndimage.distance_transform_edt(1 - original_shape)
     Create a field containing a gradient around a shape
     :param original_shape: a binary matrix containing one connected component
     :type original_shape: uint8
