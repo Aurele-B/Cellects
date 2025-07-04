@@ -63,7 +63,12 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
         # When the edge is connected to more than two vertices, we need to split it into more edges:
         else:
             eY, eX = np.nonzero(edge_i)
-            eY_min, eY_max, eX_min, eX_max = np.min(eY) - 1, np.max(eY) + 2, np.min(eX) - 1, np.max(eX) + 2
+            vY, vX = np.nonzero(np.isin(tempo_numbered_vertices, unique_vertices))
+            # Take a marge window around the edge to correctly compute the neighbor number
+            eY_min, eY_max, eX_min, eX_max = np.min(np.concatenate([eY, vY])) - 1, np.max(
+                np.concatenate([eY, vY])) + 2, np.min(np.concatenate([eX, vX])) - 1, np.max(
+                np.concatenate([eX, vX])) + 2
+            # eY_min, eY_max, eX_min, eX_max = np.min(eY) - 2, np.max(eY) + 3, np.min(eX) - 2, np.max(eX) + 3
             # print(f"{i}: {unique_vertices}")
             # First remove vertices that are too close to each other
             sub_edge_i = edge_i[eY_min:eY_max, eX_min:eX_max]
@@ -71,46 +76,47 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
             sub_tempo_numbered_vertices = tempo_numbered_vertices[eY_min:eY_max, eX_min:eX_max].copy()
 
             # a = sub_tempo_numbered_vertices + sub_edge_i
-            cc_vertex_nb, _ = cv2.connectedComponents(sub_tempo_numbered_vertices.astype(np.uint8), connectivity=8)
+            # cc_vertex_nb, _ = cv2.connectedComponents(sub_tempo_numbered_vertices.astype(np.uint8), connectivity=8)
             # Make sure that we are not in a situation where there are 2 tips among 3 vertices
-            if len(unique_vertices) != 3 or cc_vertex_nb != 4: #  and sub_edge_i.sum() == 2
+            # if len(unique_vertices) != 3 or cc_vertex_nb != 4: #  and sub_edge_i.sum() == 2
             # if not (len(unique_vertices) == 3 and cc_vertex_nb == 4): #  and sub_edge_i.sum() == 2
-                unique_vertices_im = np.isin(sub_tempo_numbered_vertices, unique_vertices)
-                for vertex in unique_vertices: # vertex=unique_vertices[1]
-                    vertex_i = sub_tempo_numbered_vertices == vertex
-                    dil_vertex = (sub_edge_i + vertex_i) * cv2.dilate((vertex_i).astype(np.uint8), square_33)
-                    dil_vertex = cv2.dilate(dil_vertex, cross_33)
-                    duplicate_vertices = dil_vertex * unique_vertices_im
-                    dup_vert_nb = duplicate_vertices.sum()
-                    if dup_vert_nb > 1:
-                        # print("h")
-                        vertices_coord = np.nonzero(sub_tempo_numbered_vertices * duplicate_vertices)
-                        # Remove the vertex with the lower connection number with any edge
-                        # connexions = sub_edge_i.astype(np.int32)
-                        connexions = sub_tempo_numbered_edges.copy() # NEW
-                        connexions[vertices_coord] = sub_tempo_numbered_vertices[vertices_coord]
-                        c_cnv = CompareNeighborsWithValue(connexions, 8)
-                        c_cnv.is_equal(1, and_itself=False)
-                        connexion_nb = c_cnv.equal_neighbor_nb[vertices_coord]
-                        vertices_to_remove = np.argsort(connexion_nb)[::-1][1:]
-                        # vertices_to_remove = vertices_to_remove[vertices_to_remove != vertex]
-                        remove_nb = 0
-                        while len(unique_vertices) > 2 and remove_nb < len(vertices_to_remove):
-                            vertex_to_remove = vertices_to_remove[remove_nb]
-                            vertex_name = sub_tempo_numbered_vertices[vertices_coord[0][vertex_to_remove], vertices_coord[1][vertex_to_remove]]
-                            removed_vertex = (sub_tempo_numbered_vertices == vertex_name).astype(np.uint8)
-                            rv_Y, rv_X = np.nonzero(removed_vertex)
-                            sub_tempo_numbered_vertices[rv_Y, rv_X] = 0
-                            unique_vertices = unique_vertices[unique_vertices != vertex_name]
-                            remove_nb += 1
-                            # Replace that pixel by the value of the most connected edge nearby
-                            removed_vertex = cv2.dilate(removed_vertex, square_33)
-                            new_ids, counts = np.unique(removed_vertex * sub_tempo_numbered_edges, return_counts=True)
-                            new_id = new_ids[counts[1:].argmax() + 1]
-                            sub_tempo_numbered_edges[rv_Y, rv_X] = new_id
-                            sub_edge_i[rv_Y, rv_X] = 1
-                            # numbered_edge_i[eY_min:eY_max, eX_min:eX_max] = new_id
-                    # for vertex_to_remove in vertices_to_remove: # vertex_to_remove=1
+            unique_vertices_im = np.isin(sub_tempo_numbered_vertices, unique_vertices)
+            for vertex in unique_vertices: # vertex=unique_vertices[1]
+                vertex_i = sub_tempo_numbered_vertices == vertex
+                dil_vertex = (sub_edge_i + vertex_i) * cv2.dilate((vertex_i).astype(np.uint8), square_33)
+                dil_vertex = cv2.dilate(dil_vertex, cross_33)
+                duplicate_vertices = dil_vertex * unique_vertices_im
+                dup_vert_nb = duplicate_vertices.sum()
+                if dup_vert_nb > 1:
+                    # print("h")
+                    vertices_coord = np.nonzero(sub_tempo_numbered_vertices * duplicate_vertices)
+                    # Remove the vertex with the lower connection number with any edge
+                    # connexions = sub_edge_i.astype(np.int32)
+                    connexions = sub_tempo_numbered_edges.copy() # NEW
+                    connexions[vertices_coord] = sub_tempo_numbered_vertices[vertices_coord]
+                    c_cnv = CompareNeighborsWithValue(connexions > 0, 8)
+                    c_cnv.is_equal(1, and_itself=False)
+                    connexion_nb = c_cnv.equal_neighbor_nb[vertices_coord]
+                    # if len(connexion_nb) > 1 + (connexion_nb == 1).sum():
+                    vertices_to_remove = np.argsort(connexion_nb)[::-1][1:]
+                    # vertices_to_remove = vertices_to_remove[vertices_to_remove != vertex]
+                    remove_nb = 0
+                    while len(unique_vertices) > 2 and remove_nb < len(vertices_to_remove):
+                        vertex_to_remove = vertices_to_remove[remove_nb]
+                        vertex_name = sub_tempo_numbered_vertices[vertices_coord[0][vertex_to_remove], vertices_coord[1][vertex_to_remove]]
+                        # removed_vertex = (sub_tempo_numbered_vertices == vertex_name).astype(np.uint8)
+                        # rv_Y, rv_X = np.nonzero(removed_vertex)
+                        # sub_tempo_numbered_vertices[rv_Y, rv_X] = 0
+                        unique_vertices = unique_vertices[unique_vertices != vertex_name]
+                        remove_nb += 1
+                        # Replace that pixel by the value of the most connected edge nearby
+                        # removed_vertex = cv2.dilate(removed_vertex, square_33)
+                        # new_ids, counts = np.unique(removed_vertex * sub_tempo_numbered_edges, return_counts=True)
+                        # new_id = new_ids[counts[1:].argmax() + 1]
+                        # sub_tempo_numbered_edges[rv_Y, rv_X] = new_id
+                        # sub_edge_i[rv_Y, rv_X] = 1
+                        # numbered_edge_i[eY_min:eY_max, eX_min:eX_max] = new_id
+                # for vertex_to_remove in vertices_to_remove: # vertex_to_remove=1
 
             if len(unique_vertices) == 2:
                 tempo_edges_labels.append((i, unique_vertices[0], unique_vertices[1]))
@@ -215,6 +221,11 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
                     # When the edge is connected to more than two vertices, we need to split it into more edges:
                     else:
                         print(f"i={i}, j={j}: {new_unique_vertices}")
+    # Create edges between each connected vertices
+    # cc(tempo_numbered_vertices > 0)
+    # The case with two tips branching from one vertex cannot be handled in the pipeline above.
+    # Because there, we don't want to remove tips to correctly get edge id. We want to remove the branching
+    # Or, if we remove the branching, we create an edge between two tips and we don't want that. Do it later on.
 
     tempo_edges_labels = np.array(tempo_edges_labels, dtype=np.uint64)
     # # Debugging stuff:
@@ -314,6 +325,7 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
     numbered_vertices = np.zeros_like(tempo_numbered_vertices)
 
     # CURRENT PROBLEM : WE have some tempo_numbered_vertices that have been removed while they still exist in tempo_edges_labels
+    #IDEA: Do not remove vertices from tempo_numbered_vertices and do not replace vertices pixels by edges. Instead, create edges between each connected vertices
     for i, old_label in enumerate(tempo_unique_vertices):
         new_label = i + 1
         # Update old vertex labels with new ones on all tables
