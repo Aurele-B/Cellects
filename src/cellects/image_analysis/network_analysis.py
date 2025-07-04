@@ -1,5 +1,5 @@
-import cv2
 
+import cv2
 from cellects.utils.utilitarian import *
 import matplotlib
 # matplotlib.use('QtAgg')
@@ -14,12 +14,13 @@ from cellects.image_analysis.image_segmentation import *
 Prepare data
 """
 video_nb = 2
-os.chdir("/Users/Directory/Data/dossier1")
+os.chdir("D:\Directory\Data")
 binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
 binary_video = np.zeros((720, 1475, 1477), np.uint8)
 binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
 origin = binary_video[0, ...]
 net_coord = np.load(f"coord_tubular_network{video_nb}_t720_y1475_x1477.npy")
+binary_coord=net_coord
 visu = np.load(f"ind_{video_nb}.npy")
 first_dict = TDict()
 first_dict["lab"] = np.array((0, 0, 1))
