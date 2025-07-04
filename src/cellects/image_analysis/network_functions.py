@@ -47,7 +47,14 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
     nb_e, tempo_numbered_edges = cv2.connectedComponents(edges, connectivity=8)
 
     tempo_edges_labels = []
-    for i in range(1, nb_e):  # nb_e   i=335 436 2563
+    # All this does not work because I use morphological dilatation too much.
+    # Start as it is to find the edges that are already connected to only two vertices
+    # Then use distance transform on the remaining edges.
+    # Start from each tip to get the non-tip vertex that is the nearest to that tip along the edge connected to the tip
+    # X/ Start from each vertex to get the non-tip vertex that is the nearest to that tip along the edge connected to the first vertex
+    # Do X/ as long as necessary
+    # Difficulty is to adjust the distance transform so that it works along an edge
+    for i in range(1, 251):  # nb_e   i=335 436 2563
         # i += 1
         edge_i = (tempo_numbered_edges == i).astype(np.uint8)
         dil_edge_i = cv2.dilate(edge_i, square_33)
@@ -104,9 +111,9 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
                     while len(unique_vertices) > 2 and remove_nb < len(vertices_to_remove):
                         vertex_to_remove = vertices_to_remove[remove_nb]
                         vertex_name = sub_tempo_numbered_vertices[vertices_coord[0][vertex_to_remove], vertices_coord[1][vertex_to_remove]]
-                        # removed_vertex = (sub_tempo_numbered_vertices == vertex_name).astype(np.uint8)
-                        # rv_Y, rv_X = np.nonzero(removed_vertex)
-                        # sub_tempo_numbered_vertices[rv_Y, rv_X] = 0
+                        removed_vertex = (sub_tempo_numbered_vertices == vertex_name).astype(np.uint8)
+                        rv_Y, rv_X = np.nonzero(removed_vertex)
+                        sub_tempo_numbered_vertices[rv_Y, rv_X] = 0
                         unique_vertices = unique_vertices[unique_vertices != vertex_name]
                         remove_nb += 1
                         # Replace that pixel by the value of the most connected edge nearby
@@ -123,7 +130,6 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
             else:
                 # Split the edge:
                 # Second if removing vertices was not enough, cut the edges according to the remaining vertices
-
                 vY, vX = np.nonzero(sub_tempo_numbered_vertices)
                 terminations = np.logical_or(
                     np.logical_or(np.logical_or(vY == 0, vY == (sub_tempo_numbered_vertices.shape[0] - 1)), vX == 0),
@@ -139,16 +145,22 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
                     nb_ei = 3
                     new_edge_names = []
                     new_edge_names.append(i)
-                    new_edge_names.append(nb_e)
                     if sub_edge_i.sum() == 2:
                         Y, X = np.nonzero(sub_edge_i)
                         sub_tempo_numbered_edges[Y[1], X[1]] = nb_e
+                        new_edge_names.append(nb_e)
+                        nb_e += 1
                     else:
-                        split_edge = cv2.dilate(numbered_edge_i.astype(np.uint8), square_33)
-                        split_edge = (1 - split_edge) * sub_edge_i
-                        Y, X = np.nonzero(split_edge)
-                        sub_tempo_numbered_edges[Y, X] = nb_e
-                    nb_e += 1
+                        # split_edge = cv2.dilate(numbered_edge_i.astype(np.uint8), square_33)
+                        # split_edge = (1 - split_edge) * sub_edge_i
+                        # nb_diff_edges, different_edges = cv2.connectedComponents(split_edge)
+                        nb_diff_edges, different_edges = cv2.connectedComponents((sub_edge_i - numbered_edge_i).astype(np.uint8))
+                        for diff_edge in range(1, nb_diff_edges):
+                            # Add the pixels of sub_edge_i connected to it but not in other edges
+                            Y, X = np.nonzero(different_edges == diff_edge)
+                            sub_tempo_numbered_edges[Y, X] = nb_e
+                            new_edge_names.append(nb_e)
+                            nb_e += 1
                 else:
                     # new_edge_number = (nb_ei - 1)
                     # not_terminations = np.nonzero(not_terminations)[0]
@@ -208,7 +220,8 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
                 for j in new_edge_names:
                     edge_i = (sub_tempo_numbered_edges == j).astype(np.uint8)
                     dil_edge_i = cv2.dilate(edge_i, square_33)
-                    unique_vertices_im = dil_edge_i * sub_tempo_numbered_vertices
+                    unique_vertices_im = dil_edge_i * tempo_numbered_vertices[eY_min:eY_max, eX_min:eX_max]
+                    # unique_vertices_im = dil_edge_i * sub_tempo_numbered_vertices
                     new_unique_vertices = np.unique(unique_vertices_im)
                     new_unique_vertices = new_unique_vertices[new_unique_vertices > 0]
                     new_unique_vertices = new_unique_vertices[np.isin(new_unique_vertices, unique_vertices)]
