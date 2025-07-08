@@ -1,9 +1,5 @@
 
-import cv2
 from cellects.utils.utilitarian import *
-import matplotlib
-# matplotlib.use('QtAgg')
-from matplotlib import pyplot as plt
 from numba.typed import Dict as TDict
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.fractal_functions import *
@@ -14,13 +10,12 @@ from cellects.image_analysis.image_segmentation import *
 Prepare data
 """
 video_nb = 2
-os.chdir("D:\Directory\Data")
+os.chdir("/Users/Directory/Data/dossier1")
 binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
 binary_video = np.zeros((720, 1475, 1477), np.uint8)
 binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
 origin = binary_video[0, ...]
 net_coord = np.load(f"coord_tubular_network{video_nb}_t720_y1475_x1477.npy")
-binary_coord=net_coord
 visu = np.load(f"ind_{video_nb}.npy")
 first_dict = TDict()
 first_dict["lab"] = np.array((0, 0, 1))
@@ -55,20 +50,42 @@ pad_skeleton, pad_distances = get_skeleton_and_widths(pad_network, pad_origin)
 # skeleton = skeleton[450:525, 775:855]
 
 # Find vertices and edges
-pad_skeleton, pad_vertices, pad_edges = get_vertices_and_edges_from_skeleton(pad_skeleton)
+pad_skeleton = keep_one_connected_component(pad_skeleton)
+pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+branches_coord, tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
+connecting_vertices_coord, edge_lengths, edges_pixel_coords = find_closest_vertices(pad_skeleton, branches_coord, tips_coord)
+pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord = remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branches_coord, edges_pixel_coords)
+
+
+
+
+nb_e, tempo_numbered_edges, numbered_branches, numbered_tips = get_numbered_edges_and_vertices(pad_skeleton, pad_vertices, pad_tips)
+
+# branch_vertices = (np.array([2, 3]), np.array([3, 7]))  # (y-coords, x-coords)
+# branch_vertices = np.nonzero(pad_branches)  # (y-coords, x-coords)
+#
+# # Coordinates of tips
+# tip_vertices = (np.array([1, 3]), np.array([5, 7]))
+# tip_vertices = np.nonzero(pad_tips)
+#
+# pad_edges = (1 - pad_vertices) * pad_skeleton
+# branches = pad_vertices - pad_tips
+# # Find closest branching vertices
+find_closest_vertex(pad_skeleton, branch_vertices, tip_vertices)
+
+
+numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(pad_vertices, pad_edges, pad_distances)
 
 network, net_contour, skeleton, distances, vertices, edges = remove_padding([pad_network, pad_net_contour, pad_skeleton, pad_distances, pad_vertices, pad_edges])
-
-numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges, distances)
 
 numbered_vertices, numbered_edges, vertices_table, edges_labels = add_central_vertex(numbered_vertices, numbered_edges, vertices_table, edges_labels, origin, network_contour)
 
 edges_table = get_edges_table(numbered_edges, distances, greyscale_img)
 
-pathway = Path(f"/Users/Directory/Scripts/mathematica/training/")
-save_network_as_csv(full_network, skeleton, vertices_table, edges_table, edges_labels, pathway)
+pathway = Path(f"/Users/Directory/Data/dossier1/plots")
+save_network_as_csv(net_vid[im_nb, ...], skeleton, vertices_table, edges_table, edges_labels, pathway)
 
-save_graph_image(binary_im, full_network, numbered_edges, distances, origin, vertices_table, pathway)
+save_graph_image(binary_im, net_vid[im_nb, ...], numbered_edges, distances, origin, vertices_table, pathway)
 
 
 

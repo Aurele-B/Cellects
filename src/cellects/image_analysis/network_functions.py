@@ -13,11 +13,424 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import pandas as pd
-import scipy.ndimage
 from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates
 from cellects.utils.formulas import *
 from numba.typed import Dict as TDict
 from skimage import morphology
+from collections import deque
+
+# 8-connectivity neighbors
+neighbors = [(-1, -1), (-1, 0), (-1, 1),
+             (0, -1), (0, 1),
+             (1, -1), (1, 0), (1, 1)]
+
+
+def get_skeleton_and_widths(pad_network, origin=None):
+    pad_skeleton, pad_distances = morphology.medial_axis(pad_network, return_distance=True)
+    pad_skeleton = pad_skeleton.astype(np.uint8)
+    pad_skeleton, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
+
+    width = 10
+    pad_skeleton[pad_distances > width] = 0
+    if origin is not None:
+        pad_skeleton = pad_skeleton * (1 - origin)
+    # Only keep the largest connected component
+    pad_skeleton, stats, _ = cc(pad_skeleton)
+    pad_skeleton[pad_skeleton > 1] = 0
+
+    pad_distances *= pad_skeleton
+    return pad_skeleton, pad_distances
+    # width = 10
+    # skel_size  = skeleton.sum()
+    # while width > 0 and skel_size > skeleton.sum() * 0.75:
+    #     width -= 1
+    #     skeleton = skeleton.copy()
+    #     skeleton[distances > width] = 0
+    #     # Only keep the largest connected component
+    #     skeleton, stats, _ = cc(skeleton)
+    #     skeleton[skeleton > 1] = 0
+    #     skel_size = skeleton.sum()
+    # skeleton = pad_skeleton.copy()
+    # Remove the origin
+
+def remove_small_loops(pad_skeleton, pad_distances):
+    """
+    When zeros are surrounded by 4-connected ones and only contain 0 on their diagonal, replace 1 by 0
+    and put 1 in the center
+    Does not work because it cuts the skeleton!
+    :param pad_skeleton:
+    :return:
+    """
+    cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
+    # sure_terminations = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
+
+    cnv_diag_0 = CompareNeighborsWithValue(pad_skeleton, 0)
+    cnv_diag_0.is_equal(0, and_itself=True)
+
+    cnv4_false = CompareNeighborsWithValue(pad_skeleton, 4)
+    cnv4_false.is_equal(1, and_itself=False)
+
+    loop_centers = np.logical_and((cnv4_false.equal_neighbor_nb == 4), cnv_diag_0.equal_neighbor_nb == 4).astype(np.uint8)
+
+    surrounding = cv2.dilate(loop_centers, kernel=square_33)
+    surrounding -= loop_centers
+    surrounding = surrounding * cnv8.equal_neighbor_nb
+
+    # Every 2 can be replaced by 0 if the loop center becomes 1
+    filled_loops = pad_skeleton.copy()
+    filled_loops[surrounding == 2] = 0
+    filled_loops += loop_centers
+
+    new_pad_skeleton = morphology.medial_axis(filled_loops)
+    # Put the new pixels in pad_distances
+    new_pixels = new_pad_skeleton * (1 - pad_skeleton)
+    pad_distances[np.nonzero(new_pixels)] = 2.
+    # for yi, xi in zip(npY, npX): # yi, xi = npY[0], npX[0]
+    #     distances[yi, xi] = 2.
+    return pad_skeleton, pad_distances
+
+
+def get_neighbor_comparisons(pad_skeleton):
+    cnv4 = CompareNeighborsWithValue(pad_skeleton, 4)
+    cnv4.is_equal(1, and_itself=True)
+    cnv8 = CompareNeighborsWithValue(pad_skeleton, 8)
+    cnv8.is_equal(1, and_itself=True)
+    return cnv4, cnv8
+
+
+# def get_vertices_and_edges_from_skeleton(pad_skeleton):
+def keep_one_connected_component(pad_skeleton):
+    """
+    """
+    nb, nb_pad_skeleton = cv2.connectedComponents(pad_skeleton)
+    pad_skeleton[nb_pad_skeleton > 1] = 0
+    return pad_skeleton
+
+
+def get_vertices_and_tips_from_skeleton(pad_skeleton):
+    """
+    Find the vertices from a skeleton according to the following rules:
+    - Network terminations at the border are nodes
+    - The 4-connected nodes have priority over 8-connected nodes
+    :return:
+    """
+    cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
+    pad_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
+    pad_vertices = get_inner_vertices(pad_tips, cnv8)
+    # pad_edges = (1 - pad_vertices) * pad_skeleton
+    # pathway = Path(f"/Users/Directory/Data/dossier1/plots")
+    # save_vertices_and_tips_image(pad_skeleton, pad_vertices, pad_sure_terminations, pathway)
+    return pad_vertices, pad_tips
+    # return pad_skeleton, pad_vertices, pad_edges, pad_tips
+
+
+def get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8):
+    # All pixels having only one neighbor, and containing the value 1, are terminations for sure
+    sure_terminations = np.zeros(pad_skeleton.shape, dtype=np.uint8)
+    sure_terminations[cnv8.equal_neighbor_nb == 1] = 1
+    # Add more terminations using 4-connectivity
+    # If a pixel is 1 (in 4) and all its neighbors are neighbors (in 4), it is a termination
+
+    coord1_4 = cnv4.equal_neighbor_nb == 1
+    if np.any(coord1_4):
+        coord1_4 = np.nonzero(coord1_4)
+        for y1, x1 in zip(coord1_4[0], coord1_4[1]):
+            # y1, x1 = 3,5
+            # If, in the neighborhood of the 1 (in 4), all (in 8) its neighbors are 4-connected together, and none of them are terminations, the 1 is a termination
+            is_4neigh = cnv4.equal_neighbor_nb[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] != 0
+            all_4_connected = pad_skeleton[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] == is_4neigh
+            is_not_term = 1 - sure_terminations[y1, x1]
+            # is_not_term = (1 - sure_terminations[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)])
+            if np.all(all_4_connected * is_not_term):
+                is_4neigh[1, 1] = 0
+                is_4neigh = np.pad(is_4neigh, [(1,), (1,)], mode='constant')
+                cnv_4con = CompareNeighborsWithValue(is_4neigh, 4)
+                cnv_4con.is_equal(1, and_itself=True)
+                all_connected = (is_4neigh.sum() - (cnv_4con.equal_neighbor_nb > 0).sum()) == 0
+                # If they are connected, it can be a termination
+                if all_connected:
+                    # print('h',y1, x1)
+                    # If its closest neighbor is above 3 (in 8), this one is also a node
+                    is_closest_above_3 = cnv8.equal_neighbor_nb[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] * cross_33 > 3
+                    if np.any(is_closest_above_3):
+                        # print('h',y1, x1)
+                        Y, X = np.nonzero(is_closest_above_3)
+                        Y += y1 - 1
+                        X += x1 - 1
+                        sure_terminations[Y, X] = 1
+                    sure_terminations[y1, x1] = 1
+    return sure_terminations
+
+
+def get_inner_vertices(sure_terminations, cnv8):
+    # Initiate the vertices final matrix as a copy of the sure_terminations
+    pad_vertices = deepcopy(sure_terminations)
+    for neighbor_nb in [8, 7, 6, 5, 4]:
+        # All pixels having neighbor_nb neighbor are potential vertices
+        potential_vertices = np.zeros(sure_terminations.shape, dtype=np.uint8)
+
+        potential_vertices[cnv8.equal_neighbor_nb == neighbor_nb] = 1
+        # remove the false intersections that are a neighbor of a previously detected intersection
+        # Dilate vertices to make sure that no neighbors of the current potential vertices are already vertices.
+        dilated_previous_intersections = cv2.dilate(pad_vertices, cross_33, iterations=1)
+        # dilated_previous_intersections = cv2.dilate((cnv8.equal_neighbor_nb > neighbor_nb).astype(np.uint8), cross_33, iterations=1)
+        potential_vertices *= (1 - dilated_previous_intersections)
+        pad_vertices[np.nonzero(potential_vertices)] = 1
+
+    # Having 3 neighbors is ambiguous
+    with_3_neighbors = cnv8.equal_neighbor_nb == 3
+    if np.any(with_3_neighbors):
+        # We compare 8-connections with 4-connections
+        # We loop over all 3 connected
+        coord_3 = np.nonzero(with_3_neighbors)
+        for y3, x3 in zip(coord_3[0], coord_3[1]):
+            # y3, x3 = 3,3
+            # If, in the neighborhood of the 3, there is at least a 2 (in 8) that is 0 (in 4), and not a termination: the 3 is a node
+            has_2_8neigh = cnv8.equal_neighbor_nb[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)] > 0  # 1
+            # is_term = sure_terminations[y3, x3]
+            # is_not_term = np.logical_not(sure_terminations[(y3-1):(y3+2), (x3-1):(x3+2)])
+            has_2_8neigh_without_focal = has_2_8neigh.copy()
+            has_2_8neigh_without_focal[1, 1] = 0
+            # all_are_nodes = np.array_equal(has_2_8neigh_without_focal, pad_vertices[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)])
+            node_but_not_term = pad_vertices[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)] * (1 - sure_terminations[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)])
+            all_are_node_but_not_term = np.array_equal(has_2_8neigh_without_focal, node_but_not_term)
+            # has_0_4neigh = cnv4.equal_neighbor_nb[(y3-1):(y3+2), (x3-1):(x3+2)] == 0
+            if np.any(has_2_8neigh * (1 - all_are_node_but_not_term)):
+                # At least 3 of the 8neigh are not connected:
+                has_2_8neigh_without_focal = np.pad(has_2_8neigh_without_focal, [(1,), (1,)], mode='constant')
+                cnv_8con = CompareNeighborsWithValue(has_2_8neigh_without_focal, 4)
+                cnv_8con.is_equal(1, and_itself=True)
+                disconnected_nb = has_2_8neigh_without_focal.sum() - (cnv_8con.equal_neighbor_nb > 0).sum()
+                # disconnected_nb, shape = cv2.connectedComponents(has_2_8neigh_without_focal.astype(np.uint8), connectivity=4)
+                # nb_not_connected = has_2_8neigh_without_focal.sum() - (disconnected_nb - 1)
+                if disconnected_nb > 2:
+                    # print(y3, x3)
+                    pad_vertices[y3, x3] = 1
+        # potential_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint8)
+        # pad_vertices[np.logical_and(cnv4.equal_neighbor_nb == 2, cnv8.equal_neighbor_nb == 3)] = 1
+    return pad_vertices
+
+
+def get_branches_and_tips_coord(pad_vertices, pad_tips):
+    pad_branches = pad_vertices - pad_tips
+    branches_coord = np.transpose(np.array(np.nonzero(pad_branches)))
+    tips_coord = np.transpose(np.array(np.nonzero(pad_tips)))
+    return branches_coord, tips_coord
+
+
+def find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_coord):
+    """
+    For each vertex, find the nearest branching vertex along the skeleton.
+
+    Parameters:
+    - skeleton (2D np.ndarray): Binary skeleton image (0 and 1)
+    - all_vertices_coord (tuple): (array_y, array_x) coordinates of the first vertices
+    - starting_vertices_coord (tuple): (array_y, array_x) coordinates of the second vertices
+
+    Returns:
+    - dict: keys are tip coordinates, values are (branch_vertex_coords, geodesic_distance)
+    """
+
+    # Convert branching vertices to set for quick lookup
+    branch_set = set(zip(all_vertices_coord[:, 0], all_vertices_coord[:, 1]))
+    n = len(starting_vertices_coord[:, 0])
+    connecting_vertices_coord = np.zeros((n, 2), np.uint32)
+    edge_lengths = np.zeros((n, 1), np.float64)
+    all_path_pixels = []  # Will hold rows of (start_index, y, x)
+    for i, (tip_y, tip_x) in enumerate(zip(starting_vertices_coord[:, 0], starting_vertices_coord[:, 1])):
+        # tip_y, tip_x = starting_vertices_coord[0][i], starting_vertices_coord[1][i]
+        visited = np.zeros_like(pad_skeleton, dtype=bool)
+        parent = {}
+        q = deque()
+
+        q.append((tip_y, tip_x))
+        visited[tip_y, tip_x] = True
+        parent[(tip_y, tip_x)] = None
+        found_vertex = None
+
+        while q:
+            r, c = q.popleft()
+
+            # Check for branching vertex (ignore the starting tip itself)
+            if (r, c) in branch_set and (r, c) != (tip_y, tip_x):
+                found_vertex = (r, c)
+                break  # stop at first encountered (shortest due to BFS)
+
+            for dr, dc in neighbors:
+                nr, nc = r + dr, c + dc
+                if (0 <= nr < pad_skeleton.shape[0] and 0 <= nc < pad_skeleton.shape[1] and
+                    not visited[nr, nc] and pad_skeleton[nr, nc] > 0):
+                    visited[nr, nc] = True
+                    parent[(nr, nc)] = (r, c)
+                    q.append((nr, nc))
+
+        if found_vertex:
+            fy, fx = found_vertex
+            connecting_vertices_coord[i, :] = [fy, fx]
+
+            # Reconstruct path from found_vertex back to tip
+            path = []
+            current = (fy, fx)
+            while current is not None:
+                path.append((i, *current))
+                current = parent[current]
+
+            # path.reverse()  # So path goes from starting tip to found vertex
+
+            for _, y, x in path[1:-1]: # Exclude both vertices from the edge pixels
+                all_path_pixels.append((i + 1, y, x))
+
+            edge_lengths[i] = len(path) - 1  # exclude one node for length computation
+        else:
+            connecting_vertices_coord[i, :] = np.nan
+            edge_lengths[i] = np.nan
+
+    edges_pixel_coords = np.array(all_path_pixels, dtype=np.uint32)
+
+    return connecting_vertices_coord, edge_lengths, edges_pixel_coords
+
+
+def remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branches_coord, edges_pixel_coords):
+    # Identify edges that are smaller than the width of the branch it is attached to
+    tipped_edges_to_remove = np.zeros(edge_lengths.shape[0], dtype=bool)
+    connecting_vertices_to_remove = np.zeros(connecting_vertices_coord.shape[0], dtype=bool)
+    branches_to_remove = np.zeros(branches_coord.shape[0], dtype=bool)
+    for i in range(len(edge_lengths)):
+        Y, X  = connecting_vertices_coord[i, 0], connecting_vertices_coord[i, 1]
+        if pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)].max() > edge_lengths[i]:
+            tipped_edges_to_remove[i] = True
+
+            # Remove the corresponding tip: Not done anymore in find_closest_vertices
+            pad_skeleton[tips_coord[0][i], tips_coord[1][i]] = 0
+
+            # Remove the corresponding edge
+            edge_bool = edges_pixel_coords[:, 0] == (i + 1)
+            eY, eX = edges_pixel_coords[edge_bool, 1], edges_pixel_coords[edge_bool, 2]
+            pad_skeleton[eY, eX] = 0
+            pad_distances[eY, eX] = 0
+            edges_pixel_coords = np.delete(edges_pixel_coords, edge_bool, 0)
+
+            # check whether the connecting vertex remains a vertex of not
+            pad_sub_skeleton = np.pad(pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1, ), (1, )], mode='constant')
+            sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
+            # If there is no vertex at the center, remove it
+            if sub_vertices[3, 3] == 0:
+                connecting_vertices_to_remove[i] = True
+                vertex_to_remove = np.nonzero(np.logical_and(branches_coord[:, 0] == Y, branches_coord[:, 1] == X))[0]
+                branches_to_remove[vertex_to_remove] = True
+
+    # Remove the tips connected to small edges
+    tips_coord = np.delete(tips_coord, tipped_edges_to_remove, 0)
+    # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
+    edges_labels = np.zeros((tips_coord.shape[0], 3), dtype=np.uint32)
+    edges_labels[:, 0] = np.arange(tips_coord.shape[0]) + 1
+    edges_labels[:, 1] = np.arange(tips_coord.shape[0]) + 1
+    edges_labels[:, 2] = np.arange(tips_coord.shape[0], tips_coord.shape[0] * 2) + 1
+
+    # Use this vertex labeling to order their coordinates. Their order falls into 3 groups
+    # The first vertices are the tips, the second are the ones that are connected to the tipped edges
+    vertices_connecting_tips_coord = np.delete(connecting_vertices_coord, tipped_edges_to_remove, 0)
+    tips_and_connected_vertices_coord = np.vstack((tips_coord, vertices_connecting_tips_coord))
+
+    # # Update the branches_coord
+    # branches_coord = np.delete(branches_coord, branches_to_remove, 0)
+    # numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
+    # for i, coord in enumerate(tips_and_connected_vertices_coord):
+    #     numbered_vertices[coord[0], coord[1]] = i + 1
+    # for j, coord in enumerate(branches_coord):
+    #     if not (coord == tips_and_connected_vertices_coord[:, None]).all(-1).any():
+    #         numbered_vertices[coord[0], coord[1]] = j + i + 2
+
+
+    # The third vertices are those that are nor tips nor connected to tipped edges
+    # To get them, update the branches_coord
+    branches_coord = np.delete(branches_coord, branches_to_remove, 0)
+    # Find out those that are neither tips neither connected to an edge that is connected to a tip
+    other_vertices = np.logical_not((branches_coord[:, None] == tips_and_connected_vertices_coord).all(-1).any(-1))
+    # vertex_coord = np.zeros((tips_and_connected_vertices_coord.shape[0] + other_vertices.sum(), 3), dtype=np.uint32)
+    # # Name vertices from 1 to the total number of vertices
+    # vertex_coord[:, 0] = np.arange(vertex_coord.shape[0])
+    ordered_vertex_coord = np.vstack((tips_and_connected_vertices_coord, branches_coord[other_vertices]))
+    numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
+    for i, coord in enumerate(ordered_vertex_coord):
+        numbered_vertices[coord[0], coord[1]] = i + 1
+
+    # Update the connecting vertices coord to make sure that they are
+    # connecting_vertices_coord = np.delete(connecting_vertices_coord, connecting_vertices_to_remove, 0)
+    return pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord
+
+
+def identify_other_edges(pad_skeleton, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord):
+    cropped_skeleton = pad_skeleton.copy()
+    connecting_vertices_coord = vertices_connecting_tips_coord.copy()
+    cropped_numbered_vertices = numbered_vertices.copy()
+    cropped_branches_coord = branches_coord.copy()
+
+    edges_nb = edges_labels.shape[0]
+    # Clearly differentiate the loop that make sure that we explore all connexions of the current connecting_vertices_coord
+    # And the loop that update connecting_vertices_coord until we explored all vertices.
+    for i in range(4): # the maximal edge number that can connect a vertex
+        # 1. Find the ith closest vertex to each focal vertex
+        new_connecting_vertices_coord, new_edge_lengths, new_edges_pixel_coords = find_closest_vertices(cropped_skeleton, cropped_branches_coord,
+                                                                                            connecting_vertices_coord)
+
+        # Add the new edges labels
+        start = numbered_vertices[connecting_vertices_coord[:, 0], connecting_vertices_coord[:, 1]]
+        end = numbered_vertices[new_connecting_vertices_coord[:, 0], new_connecting_vertices_coord[:, 1]]
+        new_edges_nb = len(end)
+        new_edges = np.zeros((new_edges_nb, 3), dtype=np.uint32)
+        new_edges[:, 0] = np.arange(edges_nb, edges_nb + new_edges_nb)
+        new_edges[:, 1] = start
+        new_edges[:, 2] = end
+        edges_labels = np.vstack((edges_labels, new_edges))
+
+        # Add the new edge pixel coord
+        new_edges_pixel_coords[:, 0] += edges_nb
+        edges_pixel_coords = np.vstack((edges_pixel_coords, new_edges_pixel_coords))
+
+        # Remove all edges connecting these two vertices
+        cropped_skeleton[new_edges_pixel_coords[:, 1], new_edges_pixel_coords[:, 2]] = 0
+
+        # Remove the branches that are not connected anymore
+        not_connected_anymore = np.zeros_like(cropped_skeleton)
+        brY, brX = cropped_branches_coord[:, 0], cropped_branches_coord[:, 1]
+        not_connected_anymore[brY, brX] = 1
+        not_connected_anymore = cv2.dilate(not_connected_anymore, square_33)
+        not_connected_anymore *= cropped_skeleton
+        not_co_nb, not_connected_anymore, stats, centroids = cv2.connectedComponentsWithStats(not_connected_anymore)
+        not_co_ids = np.nonzero(stats[:, 4] == 1)[0]
+        not_co_ids = np.nonzero(np.isin(not_connected_anymore, not_co_ids))
+        cropped_numbered_vertices[not_co_ids[0], not_co_ids[1]] = 0
+        cropped_branches_coord = np.nonzero(cropped_numbered_vertices)
+
+        # Update the connecting_vertices_coord array
+        connecting_vertices_coord = new_connecting_vertices_coord
+        edges_nb += new_edges_nb
+
+
+
+    # 3. Find another closest vertex to each focal vertex
+    # 4. Remove all edges connecting these two vertices
+    # 5. Find -if existing- another closest vertex to each focal vertex
+    # 6. Do 4. and 5. four times
+    # 7. Remove all edges, use the new_connecting_vertices as the first vertices
+
+
+
+def get_numbered_edges_and_vertices(pad_skeleton, pad_vertices, pad_tips):
+    pad_edges = (1 - pad_vertices) * pad_skeleton
+    pad_branches = pad_vertices - pad_tips
+    bY, bX = np.nonzero(pad_branches)
+    numbered_branches = np.zeros(pad_branches.shape, np.int64)
+    for bi, (bYi, bXi) in enumerate(zip(bY, bX)):
+        numbered_branches[bYi, bXi] = bi + 1
+    tY, tX = np.nonzero(pad_tips)
+    numbered_tips = np.zeros(pad_branches.shape, np.int64)
+    for ti, (tYi, tXi) in enumerate(zip(tY, tX)):
+        numbered_tips[tYi, tXi] = ti + 1
+    # nb_v, tempo_numbered_vertices = cv2.connectedComponents(vertices, connectivity=4)  # Connectivity is 4 to avoid having the same label for two nodes
+    nb_e, tempo_numbered_edges = cv2.connectedComponents(pad_edges, connectivity=8)
+    return nb_e, tempo_numbered_edges, numbered_branches, numbered_tips
 
 
 def remove_padding(array_list):
@@ -27,7 +440,29 @@ def remove_padding(array_list):
     return new_array_list
 
 
-def get_graph_from_vertices_and_edges(vertices, edges, distances):
+def edges_directly_connecting_two_vertices(nb_e, tempo_numbered_edges, tempo_numbered_vertices):
+    tempo_edges_labels = []
+    problematic_edges = {}
+    for i in range(1, nb_e):  # nb_e
+        edge_i = (tempo_numbered_edges == i).astype(np.uint8)
+        dil_edge_i = cv2.dilate(edge_i, square_33)
+        unique_vertices_im = dil_edge_i * tempo_numbered_vertices
+        unique_vertices = np.unique(unique_vertices_im)
+        unique_vertices = unique_vertices[unique_vertices > 0]
+        # In most cases, the edge is connected to 2 vertices
+        if len(unique_vertices) == 2:
+            tempo_edges_labels.append((i, unique_vertices[0], unique_vertices[1]))
+        # When the edge is connected to 1 vertex, it forms a loop
+        elif len(unique_vertices) == 1:
+            tempo_edges_labels.append((i, unique_vertices[0], unique_vertices[0]))
+        else:
+            problematic_edges[i] = unique_vertices
+
+    return tempo_edges_labels, problematic_edges
+
+
+
+def get_graph_from_vertices_and_edges(pad_vertices, pad_edges, pad_distances):
     """
     Remaining problems:
     1. when 3 or more nodes contour one edge,
@@ -39,12 +474,8 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
     :param edges:
     :return:
     """
-    vY, vX = np.nonzero(vertices)
-    tempo_numbered_vertices = np.zeros(vertices.shape, np.int64)
-    for vi,(vYi, vXi) in enumerate(zip(vY, vX)):
-        tempo_numbered_vertices[vYi, vXi] = vi + 1
-    # nb_v, tempo_numbered_vertices = cv2.connectedComponents(vertices, connectivity=4)  # Connectivity is 4 to avoid having the same label for two nodes
-    nb_e, tempo_numbered_edges = cv2.connectedComponents(edges, connectivity=8)
+    nb_e, tempo_numbered_edges, tempo_numbered_vertices = get_numbered_edges_and_vertices(pad_vertices, pad_edges)
+    tempo_edges_labels, problematic_edges = edges_directly_connecting_two_vertices(nb_e, tempo_numbered_edges, tempo_numbered_vertices)
 
     tempo_edges_labels = []
     # All this does not work because I use morphological dilatation too much.
@@ -54,7 +485,7 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
     # X/ Start from each vertex to get the non-tip vertex that is the nearest to that tip along the edge connected to the first vertex
     # Do X/ as long as necessary
     # Difficulty is to adjust the distance transform so that it works along an edge
-    for i in range(1, 251):  # nb_e   i=335 436 2563
+    for i in range(1, nb_e):  # nb_e   i=335 436 2563
         # i += 1
         edge_i = (tempo_numbered_edges == i).astype(np.uint8)
         dil_edge_i = cv2.dilate(edge_i, square_33)
@@ -302,7 +733,7 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
             non_tip_vertex = vertices_pair[1 - tip_pos]
             non_tip_im = (tempo_numbered_vertices == non_tip_vertex).astype(np.uint8)
             dil_non_tip_im = cv2.dilate(non_tip_im, square_33, iterations=1)
-            non_tip_skel_width = distances * dil_non_tip_im
+            non_tip_skel_width = pad_distances * dil_non_tip_im
             if edge_i.sum() < non_tip_skel_width.max():
                 edge_i_coord = np.nonzero(tempo_numbered_edges == edge_with_tip)
                 tempo_numbered_edges[edge_i_coord] = 0
@@ -360,6 +791,7 @@ def get_graph_from_vertices_and_edges(vertices, edges, distances):
         numbered_edges[tempo_numbered_edges == old_name] = i
         edges_labels[i - 1, 0] = i
     return numbered_vertices, numbered_edges, vertices_table, edges_labels
+
 
 def add_central_vertex(numbered_vertices, numbered_edges, vertices_table, edges_labels, origin, network_contour):
     """
@@ -460,22 +892,6 @@ def save_graph_image(binary_im, full_network, numbered_edges, distances, origin,
     plt.close()
 
 
-def get_vertices_and_edges_from_skeleton(pad_skeleton):
-    """
-    Find the vertices from a skeleton according to the following rules:
-    - Network terminations at the border are nodes
-    - The 4-connected nodes have priority over 8-connected nodes
-    :return:
-    """
-    nb, nb_pad_skeleton = cv2.connectedComponents(pad_skeleton)
-    pad_skeleton[nb_pad_skeleton > 1] = 0
-    cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
-    pad_sure_terminations = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
-    pad_vertices = get_inner_vertices(pad_sure_terminations, cnv8)
-    pad_edges = (1 - pad_vertices) * pad_skeleton
-    # sure_terminations = pad_sure_terminations[1:-1, 1:-1]
-    return pad_skeleton, pad_vertices, pad_edges
-
     # # Remove all edges of only one pixel
     # _, numbered_edges, stats, _ = cv2.connectedComponentsWithStats(edges)
     # too_small_edges = np.nonzero(stats[:, -1] == 1)[0]
@@ -490,214 +906,18 @@ def get_vertices_and_edges_from_skeleton(pad_skeleton):
     #     c += 1
     # print(c)
 
+def save_vertices_and_tips_image(pad_skeleton, pad_vertices, pad_sure_terminations, pathway):
+    plt.figure(figsize=(15, 15))
+    valued_skeleton = pad_skeleton.copy()
+    valued_skeleton *= 20
+    valued_skeleton[np.nonzero(pad_vertices)] = 200
+    valued_skeleton[np.nonzero(pad_sure_terminations)] = 40
+    plt.imshow(valued_skeleton, cmap='nipy_spectral')
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(pathway / f"vertices and tips on skeleton.png", dpi=1500)
+    plt.close()
 
-    # Remove all disconnected vertices
-
-def get_skeleton_and_widths(pad_network, origin):
-    pad_skeleton, pad_distances = morphology.medial_axis(pad_network, return_distance=True)
-    pad_skeleton = pad_skeleton.astype(np.uint8)
-    pad_skeleton, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
-
-    width = 10
-    pad_skeleton[pad_distances > width] = 0
-    pad_skeleton = pad_skeleton * (1 - origin)
-    # Only keep the largest connected component
-    pad_skeleton, stats, _ = cc(pad_skeleton)
-    pad_skeleton[pad_skeleton > 1] = 0
-
-    pad_distances *= pad_skeleton
-    return pad_skeleton, pad_distances
-    # width = 10
-    # skel_size  = skeleton.sum()
-    # while width > 0 and skel_size > skeleton.sum() * 0.75:
-    #     width -= 1
-    #     skeleton = skeleton.copy()
-    #     skeleton[distances > width] = 0
-    #     # Only keep the largest connected component
-    #     skeleton, stats, _ = cc(skeleton)
-    #     skeleton[skeleton > 1] = 0
-    #     skel_size = skeleton.sum()
-    # skeleton = pad_skeleton.copy()
-    # Remove the origin
-
-def remove_small_loops(pad_skeleton, distances):
-    """
-    distances = distances[
-    When zeros are surrounded by 4-connected ones and only contain 0 on their diagonal, replace 1 by 0
-    and put 1 in the center
-    Does not work because it cuts the skeleton!
-    :param pad_skeleton:
-    :return:
-    """
-    cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
-    # sure_terminations = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
-
-    cnv_diag_0 = CompareNeighborsWithValue(pad_skeleton, 0)
-    cnv_diag_0.is_equal(0, and_itself=True)
-
-    cnv4_false = CompareNeighborsWithValue(pad_skeleton, 4)
-    cnv4_false.is_equal(1, and_itself=False)
-
-    loop_centers = np.logical_and((cnv4_false.equal_neighbor_nb == 4), cnv_diag_0.equal_neighbor_nb == 4).astype(np.uint8)
-
-    surrounding = cv2.dilate(loop_centers, kernel=square_33)
-    surrounding -= loop_centers
-    surrounding = surrounding * cnv8.equal_neighbor_nb
-
-    # Every 2 can be replaced by 0 if the loop center becomes 1
-    filled_loops = pad_skeleton.copy()
-    filled_loops[surrounding == 2] = 0
-    filled_loops += loop_centers
-
-    new_pad_skeleton = morphology.medial_axis(filled_loops)
-    # Put the new pixels in pad_distances
-    new_pixels = new_pad_skeleton * (1 - pad_skeleton)
-    distances[np.nonzero(new_pixels)] = 2.
-    # for yi, xi in zip(npY, npX): # yi, xi = npY[0], npX[0]
-    #     distances[yi, xi] = 2.
-    return pad_skeleton, distances
-
-    # # Things complicated comes with neighbors having more than 2 neighbors
-    # y_loop, x_loop = np.nonzero(loop_centers)
-    # for yi, xi in zip(y_loop, x_loop): # yi, xi = y_loop[0], x_loop[0]
-    #     sub_surrounding = surrounding[yi - 1:yi+2, xi - 1:xi+2].copy()
-    #     unique_nei_nb, counts = np.unique(sub_surrounding, return_counts=True)
-    #     # Add 1 at the center of the loop if it has 3 neighbors having only themselves as neighbors
-    #     neighbor_nb_with_2_neighbors = counts[np.nonzero(unique_nei_nb == 2)[0]]
-    #     # if np.any(neighbor_nb_with_2_neighbors) and neighbor_nb_with_2_neighbors > 2:
-    #     #     pad_skeleton[yi, xi] = 1
-    #
-    #     # If every neighbor has more neighbors than themselves
-    #     neighbor_nb_with_more_than_2_neighbors = counts[unique_nei_nb > 2]
-    #     if np.any(neighbor_nb_with_more_than_2_neighbors) and neighbor_nb_with_more_than_2_neighbors.sum() == 4:
-    #         # Remove those that do not have any 4-connected neighbors but exactly 3 8-connected neighbors
-    #         sub_surrounding *= (1 - cnv4.equal_neighbor_nb[yi - 1:yi+2, xi - 1:xi+2])
-    #         pad_skeleton[yi - 1:yi + 2, xi - 1:xi + 2][sub_surrounding == 3] = 0
-    #         # pad_skeleton[yi, xi] = 1
-
-
-    #
-    #         counts[np.nonzero(unique_nei_nb == 3)[0]]
-    #         counts[np.nonzero(unique_nei_nb == 4)[0]]
-    #
-    #     if counts[np.nonzero(unique_nei_nb > 2)[0]] == 1:
-    #     if counts[np.nonzero(unique_nei_nb > 2)[0]] == 1:
-    #         pad_skeleton[yi - 1:yi+2, xi - 1:xi+2][sub_surrounding == 2] = 0
-    #
-    # nb, numbered_loops = cv2.connectedComponents(loop_centers)
-    #
-    # pad_skeleton[surrounding == 2] = 0
-    #
-    #
-    #
-    # surrounding = cv2.dilate(new_skeleton, kernel=square_33)
-    # surrounding -= new_skeleton
-    # surrounding = surrounding * cnv4_false.equal_neighbor_nb
-    # new_skeleton[surrounding > 2] = 1
-    #
-    # loop_coord = np.nonzero(new_skeleton)
-    # pad_skeleton[loop_coord[0], loop_coord[1]] = 1
-    # pad_skeleton[loop_coord[0] - 1, loop_coord[1]] = 0
-    # pad_skeleton[loop_coord[0] + 1, loop_coord[1]] = 0
-    # pad_skeleton[loop_coord[0], loop_coord[1] - 1] = 0
-    # pad_skeleton[loop_coord[0], loop_coord[1] + 1] = 0
-    # pad_skeleton[sure_terminations > 0] = 1
-    return pad_skeleton
-
-
-def get_neighbor_comparisons(pad_skeleton):
-    cnv4 = CompareNeighborsWithValue(pad_skeleton, 4)
-    cnv4.is_equal(1, and_itself=True)
-    cnv8 = CompareNeighborsWithValue(pad_skeleton, 8)
-    cnv8.is_equal(1, and_itself=True)
-    return cnv4, cnv8
-
-
-def get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8):
-    # All pixels having only one neighbor, and containing the value 1, are terminations for sure
-    sure_terminations = np.zeros(pad_skeleton.shape, dtype=np.uint8)
-    sure_terminations[cnv8.equal_neighbor_nb == 1] = 1
-    # Add more terminations using 4-connectivity
-    # If a pixel is 1 (in 4) and all its neighbors are neighbors (in 4), it is a termination
-
-    coord1_4 = cnv4.equal_neighbor_nb == 1
-    if np.any(coord1_4):
-        coord1_4 = np.nonzero(coord1_4)
-        for y1, x1 in zip(coord1_4[0], coord1_4[1]):
-            # y1, x1 = 3,5
-            # If, in the neighborhood of the 1 (in 4), all (in 8) its neighbors are 4-connected together, and none of them are terminations, the 1 is a termination
-            is_4neigh = cnv4.equal_neighbor_nb[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] != 0
-            all_4_connected = pad_skeleton[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] == is_4neigh
-            is_not_term = 1 - sure_terminations[y1, x1]
-            # is_not_term = (1 - sure_terminations[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)])
-            if np.all(all_4_connected * is_not_term):
-                is_4neigh[1, 1] = 0
-                is_4neigh = np.pad(is_4neigh, [(1,), (1,)], mode='constant')
-                cnv_4con = CompareNeighborsWithValue(is_4neigh, 4)
-                cnv_4con.is_equal(1, and_itself=True)
-                all_connected = (is_4neigh.sum() - (cnv_4con.equal_neighbor_nb > 0).sum()) == 0
-                # If they are connected, it can be a termination
-                if all_connected:
-                    # print('h',y1, x1)
-                    # If its closest neighbor is above 3 (in 8), this one is also a node
-                    is_closest_above_3 = cnv8.equal_neighbor_nb[(y1 - 1):(y1 + 2), (x1 - 1):(x1 + 2)] * cross_33 > 3
-                    if np.any(is_closest_above_3):
-                        # print('h',y1, x1)
-                        Y, X = np.nonzero(is_closest_above_3)
-                        Y += y1 - 1
-                        X += x1 - 1
-                        sure_terminations[Y, X] = 1
-                    sure_terminations[y1, x1] = 1
-    return sure_terminations
-
-
-def get_inner_vertices(sure_terminations, cnv8):
-    # Initiate the vertices final matrix as a copy of the sure_terminations
-    pad_vertices = deepcopy(sure_terminations)
-    for neighbor_nb in [8, 7, 6, 5, 4]:
-        # All pixels having neighbor_nb neighbor are potential vertices
-        potential_vertices = np.zeros(sure_terminations.shape, dtype=np.uint8)
-
-        potential_vertices[cnv8.equal_neighbor_nb == neighbor_nb] = 1
-        # remove the false intersections that are a neighbor of a previously detected intersection
-        # Dilate vertices to make sure that no neighbors of the current potential vertices are already vertices.
-        dilated_previous_intersections = cv2.dilate(pad_vertices, cross_33, iterations=1)
-        # dilated_previous_intersections = cv2.dilate((cnv8.equal_neighbor_nb > neighbor_nb).astype(np.uint8), cross_33, iterations=1)
-        potential_vertices *= (1 - dilated_previous_intersections)
-        pad_vertices[np.nonzero(potential_vertices)] = 1
-
-    # Having 3 neighbors is ambiguous
-    with_3_neighbors = cnv8.equal_neighbor_nb == 3
-    if np.any(with_3_neighbors):
-        # We compare 8-connections with 4-connections
-        # We loop over all 3 connected
-        coord_3 = np.nonzero(with_3_neighbors)
-        for y3, x3 in zip(coord_3[0], coord_3[1]):
-            # y3, x3 = 3,3
-            # If, in the neighborhood of the 3, there is at least a 2 (in 8) that is 0 (in 4), and not a termination: the 3 is a node
-            has_2_8neigh = cnv8.equal_neighbor_nb[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)] > 0  # 1
-            # is_term = sure_terminations[y3, x3]
-            # is_not_term = np.logical_not(sure_terminations[(y3-1):(y3+2), (x3-1):(x3+2)])
-            has_2_8neigh_without_focal = has_2_8neigh.copy()
-            has_2_8neigh_without_focal[1, 1] = 0
-            # all_are_nodes = np.array_equal(has_2_8neigh_without_focal, pad_vertices[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)])
-            node_but_not_term = pad_vertices[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)] * (1 - sure_terminations[(y3 - 1):(y3 + 2), (x3 - 1):(x3 + 2)])
-            all_are_node_but_not_term = np.array_equal(has_2_8neigh_without_focal, node_but_not_term)
-            # has_0_4neigh = cnv4.equal_neighbor_nb[(y3-1):(y3+2), (x3-1):(x3+2)] == 0
-            if np.any(has_2_8neigh * (1 - all_are_node_but_not_term)):
-                # At least 3 of the 8neigh are not connected:
-                has_2_8neigh_without_focal = np.pad(has_2_8neigh_without_focal, [(1,), (1,)], mode='constant')
-                cnv_8con = CompareNeighborsWithValue(has_2_8neigh_without_focal, 4)
-                cnv_8con.is_equal(1, and_itself=True)
-                disconnected_nb = has_2_8neigh_without_focal.sum() - (cnv_8con.equal_neighbor_nb > 0).sum()
-                # disconnected_nb, shape = cv2.connectedComponents(has_2_8neigh_without_focal.astype(np.uint8), connectivity=4)
-                # nb_not_connected = has_2_8neigh_without_focal.sum() - (disconnected_nb - 1)
-                if disconnected_nb > 2:
-                    # print(y3, x3)
-                    pad_vertices[y3, x3] = 1
-        # potential_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint8)
-        # pad_vertices[np.logical_and(cnv4.equal_neighbor_nb == 2, cnv8.equal_neighbor_nb == 3)] = 1
-    return pad_vertices
 
 
 def old_get_vertices_from_skeleton(skeleton):

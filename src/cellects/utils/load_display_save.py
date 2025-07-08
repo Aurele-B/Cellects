@@ -123,6 +123,15 @@ class PickleRick:
             logging.error(f"Failed to read {file_name}")
 
 
+def show(img):
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.gca()
+    ax.imshow(img, interpolation="none")
+    fig.tight_layout()
+    fig.show()
+
+
 def See(image, img_name="", size=None, keep_display=0):
     """
     Display an image using opencv
