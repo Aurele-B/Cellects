@@ -53,7 +53,7 @@ def get_skeleton_and_widths(pad_network, origin=None):
     # skeleton = pad_skeleton.copy()
     # Remove the origin
 
-def remove_small_loops(pad_skeleton, pad_distances):
+def remove_small_loops(pad_skeleton, pad_distances=None):
     """
     When zeros are surrounded by 4-connected ones and only contain 0 on their diagonal, replace 1 by 0
     and put 1 in the center
@@ -84,10 +84,13 @@ def remove_small_loops(pad_skeleton, pad_distances):
     new_pad_skeleton = morphology.medial_axis(filled_loops)
     # Put the new pixels in pad_distances
     new_pixels = new_pad_skeleton * (1 - pad_skeleton)
-    pad_distances[np.nonzero(new_pixels)] = 2.
-    # for yi, xi in zip(npY, npX): # yi, xi = npY[0], npX[0]
-    #     distances[yi, xi] = 2.
-    return pad_skeleton, pad_distances
+    if pad_distances is None:
+        return pad_skeleton
+    else:
+        pad_distances[np.nonzero(new_pixels)] = 2.
+        # for yi, xi in zip(npY, npX): # yi, xi = npY[0], npX[0]
+        #     distances[yi, xi] = 2.
+        return pad_skeleton, pad_distances
 
 
 def get_neighbor_comparisons(pad_skeleton):
@@ -213,13 +216,13 @@ def get_inner_vertices(sure_terminations, cnv8):
 
 def get_branches_and_tips_coord(pad_vertices, pad_tips):
     pad_branches = pad_vertices - pad_tips
-    branches_coord = np.transpose(np.array(np.nonzero(pad_branches)))
+    branching_vertices_coord = np.transpose(np.array(np.nonzero(pad_branches)))
     tips_coord = np.transpose(np.array(np.nonzero(pad_tips)))
-    return branches_coord, tips_coord
+    return branching_vertices_coord, tips_coord
 
 
-def find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_coord):
-    """
+def find_closest_vertices(skeleton, all_vertices_coord, starting_vertices_coord):
+    """ skeleton, all_vertices_coord, starting_vertices_coord = cropped_skeleton, cropped_branching_vertices_coord, connecting_vertices_coord
     For each vertex, find the nearest branching vertex along the skeleton.
 
     Parameters:
@@ -235,11 +238,21 @@ def find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_co
     branch_set = set(zip(all_vertices_coord[:, 0], all_vertices_coord[:, 1]))
     n = len(starting_vertices_coord[:, 0])
     connecting_vertices_coord = np.zeros((n, 2), np.uint32)
-    edge_lengths = np.zeros((n, 1), np.float64)
+    edge_lengths = np.zeros(n, np.float64)
     all_path_pixels = []  # Will hold rows of (start_index, y, x)
-    for i, (tip_y, tip_x) in enumerate(zip(starting_vertices_coord[:, 0], starting_vertices_coord[:, 1])):
-        # tip_y, tip_x = starting_vertices_coord[0][i], starting_vertices_coord[1][i]
-        visited = np.zeros_like(pad_skeleton, dtype=bool)
+    i = 0
+    ne_i = 0
+    for tip_y, tip_x in zip(starting_vertices_coord[:, 0], starting_vertices_coord[:, 1]):
+        # tip_y, tip_x = starting_vertices_coord[i, 0], starting_vertices_coord[i, 1]
+        # ky = 5
+        # ly = ky + 1
+        # kx = 10
+        # lx = kx + 1
+        # a = skeleton[(tip_y - ky):(tip_y + ly), (tip_x - kx):(tip_x + lx)]
+        # a = pad_skeleton[(tip_y - ky):(tip_y + ly), (tip_x - kx):(tip_x + lx)]
+        # a = numbered_vertices[(tip_y - ky):(tip_y + ly), (tip_x - kx):(tip_x + lx)]
+
+        visited = np.zeros_like(skeleton, dtype=bool)
         parent = {}
         q = deque()
 
@@ -258,13 +271,14 @@ def find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_co
 
             for dr, dc in neighbors:
                 nr, nc = r + dr, c + dc
-                if (0 <= nr < pad_skeleton.shape[0] and 0 <= nc < pad_skeleton.shape[1] and
-                    not visited[nr, nc] and pad_skeleton[nr, nc] > 0):
+                if (0 <= nr < skeleton.shape[0] and 0 <= nc < skeleton.shape[1] and
+                    not visited[nr, nc] and skeleton[nr, nc] > 0):
                     visited[nr, nc] = True
                     parent[(nr, nc)] = (r, c)
                     q.append((nr, nc))
 
         if found_vertex:
+            ne_i += 1
             fy, fx = found_vertex
             connecting_vertices_coord[i, :] = [fy, fx]
 
@@ -277,36 +291,65 @@ def find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_co
 
             # path.reverse()  # So path goes from starting tip to found vertex
 
-            for _, y, x in path[1:-1]: # Exclude both vertices from the edge pixels
-                all_path_pixels.append((i + 1, y, x))
+            for _, y, x in path: # Exclude no vertices from the edge pixels path[1:-1]
+                all_path_pixels.append((i, y, x))
 
             edge_lengths[i] = len(path) - 1  # exclude one node for length computation
         else:
-            connecting_vertices_coord[i, :] = np.nan
+            # connecting_vertices_coord[i, :] = None
             edge_lengths[i] = np.nan
+        i += 1
 
     edges_pixel_coords = np.array(all_path_pixels, dtype=np.uint32)
-
+    # example = np.nonzero(np.isnan(edge_lengths))[0]
     return connecting_vertices_coord, edge_lengths, edges_pixel_coords
 
 
-def remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branches_coord, edges_pixel_coords):
+def remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branching_vertices_coord, edges_pixel_coords):
+
+    # numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
+    # numbered_vertices[connecting_vertices_coord[:, 0], connecting_vertices_coord[:, 1]] = np.arange(1, connecting_vertices_coord.shape[0] + 1)
+    # numbered_vertices[tips_coord[:, 0], tips_coord[:, 1]] = np.arange(1, tips_coord.shape[0] + 1)
+    # numbered_vertices[branching_vertices_coord[:, 0], branching_vertices_coord[:, 1]] = np.arange(1, branching_vertices_coord.shape[0] + 1)
+    # tip_y, tip_x = 164, 417
+    # ky = 5
+    # ly = ky + 1
+    # kx = 10
+    # lx = kx + 1
+    # a = numbered_vertices[(tip_y - ky):(tip_y + ly), (tip_x - kx):(tip_x + lx)]
     # Identify edges that are smaller than the width of the branch it is attached to
     tipped_edges_to_remove = np.zeros(edge_lengths.shape[0], dtype=bool)
     connecting_vertices_to_remove = np.zeros(connecting_vertices_coord.shape[0], dtype=bool)
-    branches_to_remove = np.zeros(branches_coord.shape[0], dtype=bool)
+    branches_to_remove = np.zeros(branching_vertices_coord.shape[0], dtype=bool)
+    new_edges_pixel_coords = []
+    remaining_tipped_edges_nb = 0
     for i in range(len(edge_lengths)):
         Y, X  = connecting_vertices_coord[i, 0], connecting_vertices_coord[i, 1]
+        edge_bool = edges_pixel_coords[:, 0] == i
+        eY, eX = edges_pixel_coords[edge_bool, 1], edges_pixel_coords[edge_bool, 2]
         if pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)].max() > edge_lengths[i]:
+            # print(i)
             tipped_edges_to_remove[i] = True
 
-            # Remove the corresponding tip: Not done anymore in find_closest_vertices
-            pad_skeleton[tips_coord[0][i], tips_coord[1][i]] = 0
+            # # Remove the corresponding tip: already done in find_closest_vertices
+            # pad_skeleton[tips_coord[:, 0][i], tips_coord[:, 1][i]] = 0
 
-            # Remove the corresponding edge
-            edge_bool = edges_pixel_coords[:, 0] == (i + 1)
-            eY, eX = edges_pixel_coords[edge_bool, 1], edges_pixel_coords[edge_bool, 2]
+            # Remove the corresponding edge, but not the connecting vertex (hence [1:])
+            # edge_bool = edges_pixel_coords[:, 0] == (i + 1)
+            eY, eX = eY[1:], eX[1:]
             pad_skeleton[eY, eX] = 0
+            # pad_skeleton[(Y - 1): (Y + 2), (X - 1): (X + 2)]
+            # t = 0
+            #a=  pad_skeleton[(eY[t] - 10): (eY[t] + 11), (eX[t] -20): (eX[t] + 6)]
+            # nb, shape, stats, centr= cv2.connectedComponentsWithStats(pad_skeleton)
+            # yt, xt = 625, 809
+            # numbered_vertices[(yt - 5): yt + 6, (xt - 5): xt + 6]
+            # numbered_vertices[eY, eX] = 0
+            # nb, _ = cv2.connectedComponents(pad_skeleton)
+            # if nb > 2:
+            #     print(i)
+            #     break
+
             pad_distances[eY, eX] = 0
             edges_pixel_coords = np.delete(edges_pixel_coords, edge_bool, 0)
 
@@ -316,98 +359,195 @@ def remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertic
             # If there is no vertex at the center, remove it
             if sub_vertices[3, 3] == 0:
                 connecting_vertices_to_remove[i] = True
-                vertex_to_remove = np.nonzero(np.logical_and(branches_coord[:, 0] == Y, branches_coord[:, 1] == X))[0]
+                vertex_to_remove = np.nonzero(np.logical_and(branching_vertices_coord[:, 0] == Y, branching_vertices_coord[:, 1] == X))[0]
                 branches_to_remove[vertex_to_remove] = True
+        else:
+            remaining_tipped_edges_nb += 1
+            new_edges_pixel_coords.append(np.stack((np.repeat(remaining_tipped_edges_nb, len(eY)),eY, eX), axis=1))
 
-    # Remove the tips connected to small edges
+    # Remove vertices connecting a tip through very small edges
     tips_coord = np.delete(tips_coord, tipped_edges_to_remove, 0)
+    vertices_branching_tips = np.delete(connecting_vertices_coord, tipped_edges_to_remove, 0)
+    # Remove duplicates
+    duplicates_vertices_branching_tips = find_duplicates_coord(vertices_branching_tips)
+    vertices_branching_tips = np.delete(vertices_branching_tips, duplicates_vertices_branching_tips, 0)
+
+    # Create arrays to store edges and vertices labels
+    # Name edges and labels according to their orders
+    branching_vertices_coord = np.delete(branching_vertices_coord, branches_to_remove, 0)
+    # Find common coordinates between two arrays;
+    v_branching_tips_in_branching_v = find_common_coord(branching_vertices_coord, connecting_vertices_coord)
+    remaining_vertices = np.delete(branching_vertices_coord, v_branching_tips_in_branching_v, 0)
+
+    ordered_vertices_coord = np.vstack((tips_coord, vertices_branching_tips, remaining_vertices))
+    numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
+    numbered_vertices[ordered_vertices_coord[:, 0], ordered_vertices_coord[:, 1]] = np.arange(1, ordered_vertices_coord.shape[0] + 1)
+
     # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
     edges_labels = np.zeros((tips_coord.shape[0], 3), dtype=np.uint32)
     edges_labels[:, 0] = np.arange(tips_coord.shape[0]) + 1
     edges_labels[:, 1] = np.arange(tips_coord.shape[0]) + 1
     edges_labels[:, 2] = np.arange(tips_coord.shape[0], tips_coord.shape[0] * 2) + 1
 
-    # Use this vertex labeling to order their coordinates. Their order falls into 3 groups
-    # The first vertices are the tips, the second are the ones that are connected to the tipped edges
-    vertices_connecting_tips_coord = np.delete(connecting_vertices_coord, tipped_edges_to_remove, 0)
-    tips_and_connected_vertices_coord = np.vstack((tips_coord, vertices_connecting_tips_coord))
+    # update edges_pixel_coords
+    edges_pixel_coords = np.vstack(new_edges_pixel_coords)
 
-    # # Update the branches_coord
-    # branches_coord = np.delete(branches_coord, branches_to_remove, 0)
+    #### TEST ####
+    # un, counts = np.unique(edges_labels[:, 1:], return_counts=True)
+    # counts.sum() == vertices_branching_tips.shape[0] + tips_coord.shape[0]
+    # len(np.unique(numbered_vertices)) - 1 == ordered_vertices_coord.shape[0]
+    #### TEST ####
+
+    # # Use this vertex labeling to order their coordinates. Their order falls into 3 groups
+    # # The first vertices are the tips, the second are the ones that are connected to the tipped edges
+    # vertices_branching_tips = np.delete(connecting_vertices_coord, connecting_vertices_to_remove, 0)
+    # 
+    # kept_tips_and_branching_vertices_coord = np.vstack((tips_coord, vertices_branching_tips))
+    # 
+    #     
+    # # # Update the branching_vertices_coord
+    # # branching_vertices_coord = np.delete(branching_vertices_coord, branches_to_remove, 0)
+    # # numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
+    # # for i, coord in enumerate(tips_and_connected_vertices_coord):
+    # #     numbered_vertices[coord[0], coord[1]] = i + 1
+    # # for j, coord in enumerate(branching_vertices_coord):
+    # #     if not (coord == tips_and_connected_vertices_coord[:, None]).all(-1).any():
+    # #         numbered_vertices[coord[0], coord[1]] = j + i + 2
+    # 
+    # 
+    # # The third vertices are those that are nor tips nor connected to tipped edges
+    # # To get them, update the branching_vertices_coord
+    # branching_vertices_coord = np.delete(branching_vertices_coord, branches_to_remove, 0)
+    # # Find out those that are neither tips neither connected to an edge that is connected to a tip
+    # other_vertices = np.logical_not((branching_vertices_coord[:, None] == kept_tips_and_branching_vertices_coord).all(-1).any(-1))
+    # # vertex_coord = np.zeros((tips_and_connected_vertices_coord.shape[0] + other_vertices.sum(), 3), dtype=np.uint32)
+    # # # Name vertices from 1 to the total number of vertices
+    # # vertex_coord[:, 0] = np.arange(vertex_coord.shape[0])
+    # ordered_vertex_coord = np.vstack((kept_tips_and_branching_vertices_coord, branching_vertices_coord[other_vertices]))
     # numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
-    # for i, coord in enumerate(tips_and_connected_vertices_coord):
+    # for i, coord in enumerate(ordered_vertex_coord):
     #     numbered_vertices[coord[0], coord[1]] = i + 1
-    # for j, coord in enumerate(branches_coord):
-    #     if not (coord == tips_and_connected_vertices_coord[:, None]).all(-1).any():
-    #         numbered_vertices[coord[0], coord[1]] = j + i + 2
-
-
-    # The third vertices are those that are nor tips nor connected to tipped edges
-    # To get them, update the branches_coord
-    branches_coord = np.delete(branches_coord, branches_to_remove, 0)
-    # Find out those that are neither tips neither connected to an edge that is connected to a tip
-    other_vertices = np.logical_not((branches_coord[:, None] == tips_and_connected_vertices_coord).all(-1).any(-1))
-    # vertex_coord = np.zeros((tips_and_connected_vertices_coord.shape[0] + other_vertices.sum(), 3), dtype=np.uint32)
-    # # Name vertices from 1 to the total number of vertices
-    # vertex_coord[:, 0] = np.arange(vertex_coord.shape[0])
-    ordered_vertex_coord = np.vstack((tips_and_connected_vertices_coord, branches_coord[other_vertices]))
-    numbered_vertices = np.zeros(pad_skeleton.shape, dtype=np.uint32)
-    for i, coord in enumerate(ordered_vertex_coord):
-        numbered_vertices[coord[0], coord[1]] = i + 1
 
     # Update the connecting vertices coord to make sure that they are
     # connecting_vertices_coord = np.delete(connecting_vertices_coord, connecting_vertices_to_remove, 0)
-    return pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord
+    return pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branching_vertices_coord, vertices_branching_tips
 
 
-def identify_other_edges(pad_skeleton, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord):
+def identify_other_edges(pad_skeleton, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branching_vertices_coord, vertices_branching_tips):
+    # First, create another version of these arrays, where we remove every already detected edge and vertices
     cropped_skeleton = pad_skeleton.copy()
-    connecting_vertices_coord = vertices_connecting_tips_coord.copy()
+    cropped_skeleton[edges_pixel_coords[:, 1], edges_pixel_coords[:, 2]] = 0
+    cropped_skeleton[vertices_branching_tips[:, 0], vertices_branching_tips[:, 1]] = 1
+    # cropped_skeleton[tips_coord[:, 0], tips_coord[:, 1]] = 0
     cropped_numbered_vertices = numbered_vertices.copy()
-    cropped_branches_coord = branches_coord.copy()
+    cropped_numbered_vertices[tips_coord[:, 0], tips_coord[:, 1]] = 0
+    cropped_numbered_vertices[tips_coord[:, 0], tips_coord[:, 1]] = 0
+
+    # We will start from the vertices connecting tips
+    connecting_vertices_coord = vertices_branching_tips.copy()
+
+    # branching_vertices_coord does not need to be updated yet, because it only contains verified branching vertices
+    cropped_branching_vertices_coord = branching_vertices_coord.copy()
 
     edges_nb = edges_labels.shape[0]
     # Clearly differentiate the loop that make sure that we explore all connexions of the current connecting_vertices_coord
     # And the loop that update connecting_vertices_coord until we explored all vertices.
-    for i in range(4): # the maximal edge number that can connect a vertex
-        # 1. Find the ith closest vertex to each focal vertex
-        new_connecting_vertices_coord, new_edge_lengths, new_edges_pixel_coords = find_closest_vertices(cropped_skeleton, cropped_branches_coord,
-                                                                                            connecting_vertices_coord)
+    while np.any(cropped_branching_vertices_coord):
+        explored_connexions_per_vertex = 0 # the maximal edge number that can connect a vertex
+        new_level_vertices = None
+        new_connexions = True
+        while explored_connexions_per_vertex < 4 and new_connexions:
+            explored_connexions_per_vertex += 1
+            # 1. Find the ith closest vertex to each focal vertex
+            new_connecting_vertices_coord, new_edge_lengths, new_edges_pixel_coords = find_closest_vertices(
+                cropped_skeleton, cropped_branching_vertices_coord, connecting_vertices_coord)
+            print(np.isnan(new_edge_lengths).sum())
+            if np.isnan(new_edge_lengths).sum() == new_edge_lengths.shape[0]:
+                new_connexions = False
+            else:
+                # ###
+                # example = np.nonzero(np.isnan(new_edge_lengths))[0]
+                # np.nonzero(new_edge_lengths == 0)
+                # example = np.nonzero(new_edge_lengths == 1)[0]
+                # example = [50]
+                # new_edges_pixel_coords[new_edges_pixel_coords[:, 0] == example[0], :]
+                # new_connecting_vertices_coord[example[0], :]
+                # connecting_vertices_coord[example[0], :]
+                # ###
+                no_more_connexion = np.isnan(new_edge_lengths)
+                lost_connexions = connecting_vertices_coord[no_more_connexion, :]
+                vertex_to_vertex_connexions = new_edge_lengths == 1
+                vertex_to_vertex_connexions = connecting_vertices_coord[vertex_to_vertex_connexions, :]
 
-        # Add the new edges labels
-        start = numbered_vertices[connecting_vertices_coord[:, 0], connecting_vertices_coord[:, 1]]
-        end = numbered_vertices[new_connecting_vertices_coord[:, 0], new_connecting_vertices_coord[:, 1]]
-        new_edges_nb = len(end)
-        new_edges = np.zeros((new_edges_nb, 3), dtype=np.uint32)
-        new_edges[:, 0] = np.arange(edges_nb, edges_nb + new_edges_nb)
-        new_edges[:, 1] = start
-        new_edges[:, 2] = end
-        edges_labels = np.vstack((edges_labels, new_edges))
+                remaining_connexions = np.logical_not(no_more_connexion)
+                new_connecting_vertices_coord = new_connecting_vertices_coord[remaining_connexions, :]
+                connecting_vertices_coord = connecting_vertices_coord[remaining_connexions, :]
 
-        # Add the new edge pixel coord
-        new_edges_pixel_coords[:, 0] += edges_nb
-        edges_pixel_coords = np.vstack((edges_pixel_coords, new_edges_pixel_coords))
+                #     Y, X = cropped_branching_vertices_coord[0, 0], cropped_branching_vertices_coord[0, 1]
+                #     cropped_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)]
 
-        # Remove all edges connecting these two vertices
-        cropped_skeleton[new_edges_pixel_coords[:, 1], new_edges_pixel_coords[:, 2]] = 0
 
-        # Remove the branches that are not connected anymore
-        not_connected_anymore = np.zeros_like(cropped_skeleton)
-        brY, brX = cropped_branches_coord[:, 0], cropped_branches_coord[:, 1]
-        not_connected_anymore[brY, brX] = 1
-        not_connected_anymore = cv2.dilate(not_connected_anymore, square_33)
-        not_connected_anymore *= cropped_skeleton
-        not_co_nb, not_connected_anymore, stats, centroids = cv2.connectedComponentsWithStats(not_connected_anymore)
-        not_co_ids = np.nonzero(stats[:, 4] == 1)[0]
-        not_co_ids = np.nonzero(np.isin(not_connected_anymore, not_co_ids))
-        cropped_numbered_vertices[not_co_ids[0], not_co_ids[1]] = 0
-        cropped_branches_coord = np.nonzero(cropped_numbered_vertices)
 
+                if new_level_vertices is None:
+                    new_level_vertices = new_connecting_vertices_coord.copy()
+                else:
+                    new_level_vertices = np.vstack((new_level_vertices, new_connecting_vertices_coord))
+                # Add the new edges labels
+                start = numbered_vertices[connecting_vertices_coord[:, 0], connecting_vertices_coord[:, 1]]
+                end = numbered_vertices[new_connecting_vertices_coord[:, 0], new_connecting_vertices_coord[:, 1]]
+                new_edges_nb = len(end)
+                new_edges = np.zeros((new_edges_nb, 3), dtype=np.uint32)
+                new_edges[:, 0] = np.arange(edges_nb, edges_nb + new_edges_nb)
+                new_edges[:, 1] = start
+                new_edges[:, 2] = end
+                edges_labels = np.vstack((edges_labels, new_edges))
+
+                # Add the new edge pixel coord
+                new_edges_pixel_coords[:, 0] += edges_nb
+                edges_pixel_coords = np.vstack((edges_pixel_coords, new_edges_pixel_coords))
+
+                # Remove the edge connecting these two vertices
+                cropped_skeleton[new_edges_pixel_coords[:, 1], new_edges_pixel_coords[:, 2]] = 0
+                # Add the first vertices:
+                fvY, fvX = connecting_vertices_coord[:, 0], connecting_vertices_coord[:, 1]
+                cropped_skeleton[fvY, fvX] = 1
+
+                # # Remove the branching that are not connected to anything else than an edge (not to another vertex)
+                # # PROBLEM HERE : some are connected to vertices
+                # first_vertices = np.zeros_like(cropped_skeleton)
+                # # Add and dilate the first vertices:
+                # first_vertices[fvY, fvX] = 1
+                # first_vertices[fvY, fvX - 1] = 1
+                # first_vertices[fvY, fvX + 1] = 1
+                # first_vertices[fvY - 1, fvX] = 1
+                # first_vertices[fvY + 1, fvX] = 1
+                # first_vertices[fvY - 1, fvX - 1] = 1
+                # first_vertices[fvY + 1, fvX + 1] = 1
+                # first_vertices[fvY - 1, fvX + 1] = 1
+                # first_vertices[fvY + 1, fvX - 1] = 1
+                # # # not_connected_anymore[new_connecting_vertices_coord[:, 0], new_connecting_vertices_coord[:, 1]] = 1
+                # # brY, brX = cropped_branching_vertices_coord[:, 0], cropped_branching_vertices_coord[:, 1]
+                # # not_connected_anymore[brY, brX] = 1
+                # # not_connected_anymore = cv2.dilate(not_connected_anymore, square_33)
+                # first_vertices *= cropped_skeleton
+                # _, first_vertices_conn_comp, stats, centroids = cv2.connectedComponentsWithStats(first_vertices)
+                # not_connected_ids = np.nonzero(stats[:, 4] == 1)[0]
+                # not_connected_ids = np.nonzero(np.isin(first_vertices_conn_comp, not_connected_ids))
+                # cropped_numbered_vertices[not_connected_ids[0], not_connected_ids[1]] = 0
+
+                # Faster way:
+                cropped_numbered_vertices[lost_connexions[:, 0], lost_connexions[:, 1]] = 0
+                cropped_numbered_vertices[vertex_to_vertex_connexions[:, 0], vertex_to_vertex_connexions[:, 1]] = 0
+                # What happens to those that are connected to a vertex?
+                cropped_branching_vertices_coord = np.transpose(np.array(np.nonzero(cropped_numbered_vertices)))
+
+                # Update the edge number
+                edges_nb += new_edges_nb
         # Update the connecting_vertices_coord array
-        connecting_vertices_coord = new_connecting_vertices_coord
-        edges_nb += new_edges_nb
 
-
+        connecting_vertices_coord = np.unique(new_level_vertices, axis=0) # new_level_vertices
+        # a[edges_pixel_coords[:, 1],edges_pixel_coords[:, 2]]=1
+        #show(a)
 
     # 3. Find another closest vertex to each focal vertex
     # 4. Remove all edges connecting these two vertices
@@ -415,7 +555,7 @@ def identify_other_edges(pad_skeleton, edges_labels, numbered_vertices, edges_pi
     # 6. Do 4. and 5. four times
     # 7. Remove all edges, use the new_connecting_vertices as the first vertices
 
-
+    return edges_labels, edges_pixel_coords
 
 def get_numbered_edges_and_vertices(pad_skeleton, pad_vertices, pad_tips):
     pad_edges = (1 - pad_vertices) * pad_skeleton

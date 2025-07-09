@@ -52,10 +52,12 @@ pad_skeleton, pad_distances = get_skeleton_and_widths(pad_network, pad_origin)
 # Find vertices and edges
 pad_skeleton = keep_one_connected_component(pad_skeleton)
 pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
-branches_coord, tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
-connecting_vertices_coord, edge_lengths, edges_pixel_coords = find_closest_vertices(pad_skeleton, branches_coord, tips_coord)
-pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branches_coord, vertices_connecting_tips_coord = remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branches_coord, edges_pixel_coords)
+branching_vertices_coord, tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
+connecting_vertices_coord, edge_lengths, edges_pixel_coords = find_closest_vertices(pad_skeleton, branching_vertices_coord, tips_coord)
+pad_skeleton, pad_distances, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branching_vertices_coord, vertices_branching_tips = remove_tipped_edge_smaller_than_branch_width(pad_skeleton, connecting_vertices_coord, pad_distances, edge_lengths, tips_coord, branching_vertices_coord, edges_pixel_coords)
 
+
+edges_labels, edges_pixel_coords = identify_other_edges(pad_skeleton, edges_labels, numbered_vertices, edges_pixel_coords, tips_coord, branching_vertices_coord, vertices_branching_tips)
 
 
 
