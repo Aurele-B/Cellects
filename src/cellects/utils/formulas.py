@@ -14,7 +14,7 @@
     - max_cum_sum_from_rolling_window
 """
 from copy import deepcopy
-from numpy import sum, round, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
+from numpy import sum, unique, bincount, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
 
 
@@ -288,3 +288,14 @@ def moving_average(vector, step):
 
 def max_cum_sum_from_rolling_window(side_length, window_step):
     return square(ceil(side_length / window_step))
+
+
+def find_common_coord(array1, array2):
+    return (array1[:, None, :] == array2[None, :, :]).all(-1).any(-1)
+
+
+def find_duplicates_coord(array1):
+    unique_rows, inverse_indices = unique(array1, axis=0, return_inverse=True)
+    counts = bincount(inverse_indices)
+    # A row is duplicate if its count > 1
+    return counts[inverse_indices] > 1

@@ -624,7 +624,7 @@ def test_remove_small_loops():
     pad_skeleton = remove_small_loops(pad_skeleton)
     nb, nb_pad_skeleton = cv2.connectedComponents(pad_skeleton)
 
-    skeleton, vertices, edges = get_vertices_and_edges_from_skeleton(skeleton)
+    pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(skeleton)
     numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges)
     target = skeleton.copy()
     print(f"{test_name}{np.array_equal(((numbered_vertices + numbered_edges) > 0).astype(np.uint8), target)}")
@@ -640,8 +640,8 @@ def test_get_graph_from_vertices_and_edges():
         [0, 0, 0, 1, 0, 0],
         [0, 0, 0, 0, 1, 0],
         [0, 0, 0, 0, 1, 0]], dtype=np.uint8)
-    skeleton, vertices, edges = get_vertices_and_edges_from_skeleton(skeleton)
-    numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges)
+    pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(skeleton)
+    numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(pad_vertices, pad_tips)
     target = skeleton.copy()
     print(f"{test_name}{np.array_equal(((numbered_vertices + numbered_edges) > 0).astype(np.uint8), target)}")
 
@@ -657,8 +657,8 @@ def test_get_graph_from_vertices_and_edges():
         [1, 1, 0, 1, 1, 0, 0, 0],
         [0, 0, 0, 1, 0, 0, 0, 0],
         [0, 0, 0, 0, 1, 0, 0, 0]], dtype=np.uint8)
-    skeleton, vertices, edges = get_vertices_and_edges_from_skeleton(skeleton)
-    numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(vertices, edges)
+    pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(skeleton)
+    numbered_vertices, numbered_edges, vertices_table, edges_labels = get_graph_from_vertices_and_edges(pad_vertices, pad_tips)
     target = skeleton.copy()
     print(f"{test_name}{np.array_equal(((numbered_vertices + numbered_edges) > 0).astype(np.uint8), target)}")
 
@@ -675,12 +675,11 @@ def test_get_tipped_edges():
         [0, 0, 0, 0, 0, 1, 0, 1, 0],
         [0, 0, 0, 0, 0, 0, 1, 1, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
-    pad_skeleton, pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+    pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
     nb_e, tempo_numbered_edges, numbered_branches, numbered_tips = get_numbered_edges_and_vertices(pad_skeleton, pad_vertices, pad_tips)
 
 
 
-    get_tipped_edges
 
     pad_skeleton = np.array([
         [0, 0, 0, 0, 0, 0, 1, 0, 0],
