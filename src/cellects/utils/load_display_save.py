@@ -123,8 +123,12 @@ class PickleRick:
             logging.error(f"Failed to read {file_name}")
 
 
-def show(img):
+def show(img, interactive=True):
     import matplotlib.pyplot as plt
+    if interactive:
+        plt.ion()
+    else:
+        plt.ioff()
     fig = plt.figure(figsize=(20, 20))
     ax = fig.gca()
     ax.imshow(img, interpolation="none")
