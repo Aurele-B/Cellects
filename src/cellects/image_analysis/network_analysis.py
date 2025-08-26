@@ -1,10 +1,10 @@
+import os
 
 from cellects.utils.utilitarian import *
 from numba.typed import Dict as TDict
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.fractal_functions import *
 from cellects.image_analysis.image_segmentation import *
-
 
 """
 Prepare data
@@ -20,14 +20,14 @@ visu = np.load(f"ind_{video_nb}.npy")
 first_dict = TDict()
 first_dict["lab"] = np.array((0, 0, 1))
 first_dict["luv"] = np.array((0, 0, 1))
-im_nb = -1 #  -1   466
+im_nb = 465 #  -1   465
 binary_im = binary_video[im_nb, ...]
 greyscale_img, _ = generate_color_space_combination(visu[im_nb, ...], list(first_dict.keys()), first_dict, convert_to_uint8=True)
 # a = np.array((net_coord))
 # a = a[1:,a[0,:]==im_nb]
 # import pandas as pd
 # pd.DataFrame(a).to_csv(f"/Users/Directory/Scripts/mathematica/training/network_coord_{binary_video.shape[1:]}.csv")
-
+show(binary_im)
 
 net_vid = np.zeros((720, 1475, 1477), dtype=np.uint8)
 net_vid[net_coord[0], net_coord[1], net_coord[2]] = 1

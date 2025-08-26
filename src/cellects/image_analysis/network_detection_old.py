@@ -3,57 +3,24 @@
 This script contains the class for detecting networks out of a grayscale image of Physarum polycephalum
 """
 
-from tqdm import tqdm
-
-import numpy as np
-import scipy.ndimage as nd
-
-from scipy.optimize import minimize
-
-import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-
-from skimage.filters import frangi, threshold_otsu
-from skimage.measure import perimeter
-
+# A completely different strategy could be to segment the network by layers of luminosity.
+# The first layer captures the brightest veins and replace their pixels by background pixels.
+# The second layer captures other veins, (make sure that they are connected to the first?) and replace their pixels too.
+# During one layer segmentation, the algorithm make sure that all detected veins are as long as possible
+# but less long than and connected to the previous.
 
 import random
 from copy import deepcopy
 from scipy import ndimage
 import cv2
 import numpy as np
-import os
-from numba.typed import Dict as TDict
-
-
-video_nb = 2
-os.chdir("/Users/Directory/Data/dossier1")
-binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
-binary_video = np.zeros((720, 1475, 1477), np.uint8)
-binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
-origin = binary_video[0, ...]
-visu = np.load(f"ind_{video_nb}.npy")
-im_no = 465
-bgr_img = visu[im_no, :, :, :]
-rgb_img = bgr_img[:, :, ::-1]
-cell_img = binary_video[im_no, :, :]
-
-figure = plt.figure(figsize=(20, 20))
-ax = figure.gca()
-
-ax.imshow(rgb_img, interpolation='none')
-figure.tight_layout()
-
-
-
-
-net_img = np.load("data/NET_2_720.npy")
-net_coord = np.load(f"coord_tubular_network{video_nb}_t720_y1475_x1477.npy")
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, otsu_thresholding
 from cellects.image_analysis.morphological_operations import make_gravity_field, cross_33, square_33, cc, CompareNeighborsWithValue, get_rolling_window_coordinates_list
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.load_display_save import See
 from cellects.utils.formulas import max_cum_sum_from_rolling_window
+import os
+from numba.typed import Dict as TDict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
