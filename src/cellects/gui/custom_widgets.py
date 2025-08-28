@@ -19,15 +19,16 @@ print(font_names)
 
 # colorblind-friendly : rgb(42, 251, 97) , rgb(126, 85, 197)
 buttonfont = QFont("Segoe UI Semibold", 17, QFont.Bold)
-tabfont = "Baskerville"
 # titlesize = 40
 
 if os.name == 'nt':
     titlefont = f"Baskerville Old Face" #"40pt Baskerville Old Face"
     textfont = "Century Gothic"
+    tabfont = "Baskerville Old Face" # 30pt Comic Sans MS
 else:
     titlefont = "Baskerville"
     textfont = "Times New Roman"
+    tabfont = "Baskerville"
 textsize = 15
 
 backgroundcolor = "rgb(255,255,255)"
@@ -129,6 +130,7 @@ class MainTabsType(WindowType):
     def __init__(self, parent, night_mode):
         super().__init__(parent, night_mode)
         self.Vlayout = QtWidgets.QVBoxLayout()
+        self.Vlayout.setContentsMargins(9, 0, 9, 9)
         self.main_tabs_widget = QtWidgets.QWidget()
         self.main_tabs_layout = QtWidgets.QHBoxLayout()
         self.main_tabs_layout.setContentsMargins(0, 0, 0, 0)
@@ -716,7 +718,7 @@ class MainTabsWidget(QtWidgets.QPushButton):
         self.update_style()
 
     def update_style(self):
-        """Update the widget's stylesheet based on current state and mode."""
+        """Update the widget's stylesheetµ"""
 
         if self.state == "not_usable":
             tab_text_color = "#888888"
@@ -743,12 +745,12 @@ class MainTabsWidget(QtWidgets.QPushButton):
 
         if self._night_mode:
             style = {"buttoncolor": night_button_color, "buttontextColor": tab_text_color, "border": tab_border,
-                     "font_family": tabfont, "font_size": "25pt", #"font_weight": "bold",
+                     "font_family": tabfont, "font_size": "22pt", #"font_weight": "bold",
                      "border-top-color": "#323241", "border-right-color": "#323241", # invisible
                      "border-top-left-radius": "10", "border-bottom-left-radius": "1"}
         else:
             style = {"buttoncolor": buttoncolor, "buttontextColor": tab_text_color, "border": tab_border,
-                     "font_family": tabfont, "font_size": "25pt", #"font_weight": "bold",
+                     "font_family": tabfont, "font_size": "22pt", #"font_weight": "bold",
                      "border-top-color": "#ffffff", "border-right-color": "#ffffff", # invisible
                      "border-top-left-radius": "10", "border-bottom-left-radius": "1"
                      }
