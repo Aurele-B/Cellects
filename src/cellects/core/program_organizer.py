@@ -455,19 +455,37 @@ class ProgramOrganizer:
         return videos_coordinates
 
     def extract_exif(self):
-        if self.vars['time_step'] == 0:
-            if self.all['im_or_vid'] == 1:
-                timings = arange(self.vars['dims'][0])
+        if self.all['im_or_vid'] == 1:
+            timings = arange(self.vars['dims'][0])
+        else:
+            if sys.platform.startswith('win'):
+                pathway = os.getcwd() + '\\'
             else:
-                if sys.platform.startswith('win'):
-                    pathway = os.getcwd() + '\\'
-                else:
-                    pathway = os.getcwd() + '/'
-                timings = extract_time(self.data_list, pathway, self.all['raw_images'])
+                pathway = os.getcwd() + '/'
+            arbitrary_time_step: bool = True
+            if self.all['extract_time_interval']:
+                self.vars['time_step'] = 1
+                try:
+                    timings = extract_time(self.data_list, pathway, self.all['raw_images'])
+                    timings = timings - timings[0]
+                    timings = timings / 60
+                    time_step = mean(diff(timings))
+                    digit_nb = 0
+                    for i in str(time_step):
+                        if i in {'.'}:
+                            pass
+                        elif i in {'0'}:
+                            digit_nb += 1
+                        else:
+                            break
+                    self.vars['time_step'] = round(time_step, digit_nb + 1)
+                    arbitrary_time_step = False
+                except:
+                    pass
+            if arbitrary_time_step:
+                timings = arange(0, self.vars['dims'][0] * self.vars['time_step'], self.vars['time_step'])
                 timings = timings - timings[0]
                 timings = timings / 60
-        else:
-            timings = arange(0, self.vars['dims'][0] * self.vars['time_step'], self.vars['time_step'])
         return timings
 
         #

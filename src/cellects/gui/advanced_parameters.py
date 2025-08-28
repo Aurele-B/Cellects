@@ -423,10 +423,20 @@ class AdvancedParameters(WindowType):
         self.scale_box_widget = QtWidgets.QWidget()
         self.scale_box_widget.setStyleSheet(boxstylesheet)
         # I/C/ Create widgets
+
+        self.extract_time = Checkbox(self.parent().po.all['extract_time_interval'])
+        self.extract_time.clicked.connect(self.extract_time_is_clicked)
+
         self.time_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['time_step'], decimals=1,
                                  night_mode=self.parent().po.all['night_mode'])
-        self.time_step_label = FixedText('Set the time interval between images',
-                                         tip="In minutes. If 0 is chosen, Cellects will extract these intervals from the exif data of the images (if available)",
+        if self.parent().po.all['extract_time_interval']:
+            self.time_step.setVisible(False)
+            self.time_step_label = FixedText('Automatically extract time interval between images',
+                                         tip="Uses the exif data of the images (if available), to extract these intervals\nOtherwise, default time interval is 1 min",
+                                         night_mode=self.parent().po.all['night_mode'])
+        else:
+            self.time_step_label = FixedText('Set the time interval between images',
+                                         tip="In minutes",
                                          night_mode=self.parent().po.all['night_mode'])
         # self.overwrite_cellects_data = Checkbox(self.parent().po.all['overwrite_cellects_data'],
         #                                night_mode=self.parent().po.all['night_mode'])
@@ -659,6 +669,17 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold.setVisible(not self.do_automatic_size_thresholding.isChecked())
         self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
+    def extract_time_is_clicked(self):
+        self.time_step.setVisible(self.extract_time.isChecked())
+        if self.extract_time.isChecked():
+            self.time_step_label = FixedText('Automatically extract time interval between images',
+                                             tip="Uses the exif data of the images (if available), to extract these intervals\nOtherwise, default time interval is 1 min",
+                                             night_mode=self.parent().po.all['night_mode'])
+        else:
+            self.time_step.setVisible(True)
+            self.time_step_label = FixedText('Set the time interval between images',
+                                             tip="In minutes",
+                                             night_mode=self.parent().po.all['night_mode'])
     def do_multiprocessing_is_clicked(self):
         self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
         self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
@@ -1188,6 +1209,7 @@ class AdvancedParameters(WindowType):
         # self.parent().po.all['overwrite_unaltered_videos'] = self.overwrite_unaltered_videos.isChecked()
         self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
         self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
+        self.parent().po.all['extract_time_interval'] = self.extract_time.isChecked()
         self.parent().po.vars['time_step'] = float(self.time_step.value())
         # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
 

@@ -9,7 +9,7 @@ from cv2 import resize, waitKey, destroyAllWindows
 from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import (
-    GetFirstImThread, RunAllThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
+    GetFirstImThread, GetExifDataThread, RunAllThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, FixedText, EditText, LineWidget)
@@ -29,6 +29,7 @@ class FirstWindow(MainTabsType):
         self.thread["RunAll"] = RunAllThread(self.parent())
         self.thread["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
+        self.thread["GetExifDataThread"] = GetExifDataThread(self.parent())
         self.instantiate: bool = True
         ##
         self.title_label = FixedText('Cellects', police=60, night_mode=self.parent().po.all['night_mode'])
@@ -321,18 +322,21 @@ class FirstWindow(MainTabsType):
         if self.parent().po.first_exp_ready_to_run:
             self.parent().imageanalysiswindow.video_tab.set_not_in_use()
         self.parent().change_widget(2) # imageanalysiswindow
-
         # From now on, image analysis will be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_in_use()
+        self.thread["GetExifDataThread"].start()
 
     def required_outputs_is_clicked(self):
         self.parent().last_is_first = True
-        self.parent().change_widget(4) # RequiredOutput
+        self.parent().change_widget(4)  # RequiredOutput
 
     def advanced_parameters_is_clicked(self):
-        self.parent().last_is_first = True
-        self.parent().widget(5).update_csc_editing_display()
-        self.parent().change_widget(5) # AdvancedParameters
+        if self.thread["GetExifDataThread"].isRunning():
+            self.message.setText("Reading data, wait or restart Cellects")
+        else:
+            self.parent().last_is_first = True
+            self.parent().widget(5).update_csc_editing_display()
+            self.parent().change_widget(5) # AdvancedParameters
 
     def video_analysis_window_is_clicked(self):
         if self.video_tab.state != "not_usable":

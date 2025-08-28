@@ -29,6 +29,7 @@ class DefaultDicts:
             'display_shortcuts': False,
             'connect_distant_shape_during_segmentation': False,
             'all_same_direction': True,
+            'extract_time_interval': True,
             'do_multiprocessing': False,
             'extension': '.jpg',
             'first_detection_frame': 1,
