@@ -72,6 +72,9 @@ class WindowType(QtWidgets.QWidget):
                            # "QToolTip { color:  rgb(1, 152, 117); background-color: rgb(64,64,64); border: 0px; };\n"
                            # "")
         # self.titles_font = "font: 24pt"
+        self.data_button = PButton('Data', night_mode=night_mode)
+        self.image_button = PButton('Image analysis', night_mode=night_mode)
+        self.video_button = PButton('Video analysis', night_mode=night_mode)
         self.horizontal_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
                                               QtWidgets.QSizePolicy.Maximum)
         self.vertical_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
