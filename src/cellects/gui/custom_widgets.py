@@ -6,16 +6,27 @@ from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import Qt, QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 import numpy as np
 from cv2 import cvtColor, COLOR_BGR2RGB, resize
+from skimage.color.rgb_colors import darkgray
+
+"""
+Get every available font:
+from PySide6 import QtGui
+fonts = QtGui.QFontDatabase()
+font_names = fonts.families()
+print(font_names)
+"Baskerville" in font_names
+"""
 
 # colorblind-friendly : rgb(42, 251, 97) , rgb(126, 85, 197)
 buttonfont = QFont("Segoe UI Semibold", 17, QFont.Bold)
+tabfont = "Baskerville"
 # titlesize = 40
 
 if os.name == 'nt':
     titlefont = f"Baskerville Old Face" #"40pt Baskerville Old Face"
     textfont = "Century Gothic"
 else:
-    titlefont = "Times New Roman"
+    titlefont = "Baskerville"
     textfont = "Times New Roman"
 textsize = 15
 
@@ -72,9 +83,6 @@ class WindowType(QtWidgets.QWidget):
                            # "QToolTip { color:  rgb(1, 152, 117); background-color: rgb(64,64,64); border: 0px; };\n"
                            # "")
         # self.titles_font = "font: 24pt"
-        self.data_button = PButton('Data', night_mode=night_mode)
-        self.image_button = PButton('Image analysis', night_mode=night_mode)
-        self.video_button = PButton('Video analysis', night_mode=night_mode)
         self.horizontal_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
                                               QtWidgets.QSizePolicy.Maximum)
         self.vertical_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
@@ -115,6 +123,25 @@ class WindowType(QtWidgets.QWidget):
                 "background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (
                 backgroundcolor, textColor, f"{textsize}pt {textfont};", bordercolor, selectioncolor,
                 selectionbackgroundcolor))
+
+
+class MainTabsType(WindowType):
+    def __init__(self, parent, night_mode):
+        super().__init__(parent, night_mode)
+        self.Vlayout = QtWidgets.QVBoxLayout()
+        self.main_tabs_widget = QtWidgets.QWidget()
+        self.main_tabs_layout = QtWidgets.QHBoxLayout()
+        self.main_tabs_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_tabs_layout.setSpacing(0)
+        self.data_tab = MainTabsWidget('Data specifications', night_mode=night_mode)
+        self.image_tab = MainTabsWidget('Image analysis', night_mode=night_mode)
+        self.video_tab = MainTabsWidget('Video analysis', night_mode=night_mode)
+        self.main_tabs_layout.addWidget(self.data_tab)
+        self.main_tabs_layout.addWidget(self.image_tab)
+        self.main_tabs_layout.addWidget(self.video_tab)
+        self.main_tabs_widget.setLayout(self.main_tabs_layout)
+        self.Vlayout.addWidget(self.main_tabs_widget)
+        self.Vlayout.addItem(self.vertical_space)
 
 
 class FullScreenImage(QtWidgets.QLabel):
@@ -230,6 +257,7 @@ class PButton(QtWidgets.QPushButton):
         #                    )
         self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.setFixedWidth(len(text)*15 + 25)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         # if fade:
         #     # self.mouseMoveEvent.connect(self.fade)
         #     self.clicked.connect(self.fade)
@@ -365,6 +393,7 @@ class Spinbox(QtWidgets.QWidget):
                 background-color: #e0e0e0;
             }
         """)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
     def sizeHint(self):
         fm = QFontMetrics(self.font())
@@ -483,7 +512,7 @@ class Combobox(QtWidgets.QComboBox):
 
         # self.setStyleSheet("QComboBox::drop - down:!editable{background: transparent; border: none;};"
         #                    "QComboBox {border: '1px solid rgb(127, 127, 127)'; border-radius: 4px}")
-
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
     def night_mode_switch(self, night_mode):
         if night_mode:
             self.setStyleSheet("border-color: %s; border: %s; border-radius: %s" % (
@@ -501,6 +530,7 @@ class Checkbox(QtWidgets.QCheckBox):
         self.setMinimumWidth(75)
         # self.setStyleSheet("padding:5px")
         self.setStyleSheet("margin-left:50%; margin-right:50%;")
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
 
 class Title(QtWidgets.QLabel):
@@ -527,6 +557,7 @@ class EditText(QtWidgets.QLineEdit):
         self.setMaximumHeight(36)
         self.setText(str(text))
         self.night_mode_switch(night_mode)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         # self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
 
     def night_mode_switch(self, night_mode):
@@ -535,11 +566,11 @@ class EditText(QtWidgets.QLineEdit):
         if night_mode:
             self.setStyleSheet(
                 "background-color: %s; color: %s; font: %s; border-bottom: %s; border-top: %s" % (
-                    night_background_color, night_text_Color, f"{textsize}pt {textfont};", f"1px solid grey", f"1px solid grey"))
+                    night_background_color, night_text_Color, f"{textsize}pt {textfont};", f"1px solid #adadad", f"1px dotted grey"))
         else:
             self.setStyleSheet(
                 "background-color: %s; color: %s; font: %s; border-bottom: %s; border-top: %s" % (
-                    backgroundcolor, textColor, f"{textsize}pt {textfont};", f"1px solid grey", f"1px solid grey"))
+                    backgroundcolor, textColor, f"{textsize}pt {textfont};", f"1px solid grey", f"1px dotted #adadad"))
 
             # "QLineEdit"
             #           "{"
@@ -649,3 +680,109 @@ class LineWidget(QtWidgets.QWidget):
         else:
             self.line.setStyleSheet("QFrame { background-color: rgb(0, 0, 0) }")
 
+
+
+class MainTabsWidget(QtWidgets.QPushButton):
+    """
+    A custom QPushButton that mimics an explorer tab appearance.
+
+    Features:
+    - Customizable text
+    - Night mode support
+    - Three states: not_in_use (grey border), in_use (black border), not_usable (grey text)
+    - Tooltip support for not_usable state
+    """
+
+    def __init__(self, text="", night_mode=False, parent=None):
+        super().__init__()
+
+        self.setText(text)
+        self.state = "not_in_use"  # States: "not_in_use", "in_use", "not_usable"
+        self.setFont(buttonfont)
+
+
+        # Set basic properties
+        self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        # self.setFixedWidth(len(text)*15 + 25)
+        self.setFixedHeight(35)
+        # self.setMinimumWidth(80)
+        self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+
+        self.night_mode_switch(night_mode)
+
+
+    def night_mode_switch(self, night_mode):
+        self._night_mode = night_mode
+        self.update_style()
+
+    def update_style(self):
+        """Update the widget's stylesheet based on current state and mode."""
+
+        if self.state == "not_usable":
+            tab_text_color = "#888888"
+            self.setCursor(QtCore.Qt.CursorShape.ForbiddenCursor)
+        else:
+            if self._night_mode:
+                tab_text_color = night_text_Color
+            else:
+                tab_text_color = textColor
+            if self.state == "not_in_use":
+                self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
+        if self.state == "in_use":
+            border_width = 2
+            if self._night_mode:
+                tab_border = f"{border_width}px solid #adadad"
+            else:
+                tab_border = f"{border_width}px solid #323241"
+        else:
+            border_width = 1
+            if self._night_mode:
+                tab_border = f"{border_width}px solid #323241"
+            else:
+                tab_border = f"{border_width}px solid #adadad"
+
+        if self._night_mode:
+            style = {"buttoncolor": night_button_color, "buttontextColor": tab_text_color, "border": tab_border,
+                     "font_family": tabfont, "font_size": "25pt", #"font_weight": "bold",
+                     "border-top-color": "#323241", "border-right-color": "#323241", # invisible
+                     "border-top-left-radius": "10", "border-bottom-left-radius": "1"}
+        else:
+            style = {"buttoncolor": buttoncolor, "buttontextColor": tab_text_color, "border": tab_border,
+                     "font_family": tabfont, "font_size": "25pt", #"font_weight": "bold",
+                     "border-top-color": "#ffffff", "border-right-color": "#ffffff", # invisible
+                     "border-top-left-radius": "10", "border-bottom-left-radius": "1"
+                     }
+        self.setStyleSheet(
+            "background-color: %s; color: %s; border: %s; font-family: %s; font-size: %s;  border-top-color: %s; border-right-color: %s; border-top-left-radius: %s; border-bottom-left-radius: %s" % tuple(style.values()))
+
+
+    def set_in_use(self):
+        """Set the tab to 'in_use' state with black border."""
+        self.state = "in_use"
+        self.setToolTip("")  # Clear any tooltip
+        self.update_style()
+
+    def set_not_in_use(self):
+        """Set the tab to 'not_in_use' state with grey border."""
+        self.state = "not_in_use"
+        self.setToolTip("")  # Clear any tooltip
+        self.update_style()
+
+    def set_not_usable(self, tooltip_text="This tab is not usable"):
+        """
+        Set the tab to 'not_usable' state with grey text.
+
+        Args:
+            tooltip_text (str): Custom tooltip text to show when hovering
+        """
+        self.state = "not_usable"
+        self.setToolTip(tooltip_text)
+        self.update_style()
+
+    def get_state(self):
+        """Get the current state of the tab."""
+        return self.state
+
+    def is_night_mode(self):
+        """Check if night mode is enabled."""
+        return self._night_mode

@@ -13,9 +13,9 @@ class RequiredOutput(WindowType):
         super().__init__(parent, night_mode)
         self.setParent(parent)
         # Create the main Title
-        self.create_gui(night_mode)
+        self.true_init(night_mode)
 
-    def create_gui(self, night_mode):
+    def true_init(self, night_mode):
 
         logging.info("Initialize RequiredOutput window")
         self.title = FixedText('Required Output', police=30, night_mode=self.parent().po.all['night_mode'])
@@ -45,37 +45,21 @@ class RequiredOutput(WindowType):
         self.save_presence_coordinates_widget.setStyleSheet(boxstylesheet)
 
         # I/C/ Create widgets
-        try:
-            self.parent().po.vars['save_coord_specimen']
-        except KeyError or NameError:
-            self.parent().po.vars['save_coord_specimen'] = True
-        try:
-            self.parent().po.vars['save_coord_contour']
-        except KeyError or NameError:
-            self.parent().po.vars['save_coord_contour'] = True
-        try:
-            self.parent().po.vars['save_coord_thickening_slimming']
-        except KeyError or NameError:
-            self.parent().po.vars['save_coord_thickening_slimming'] = True
-        try:
-            self.parent().po.vars['save_coord_network']
-        except KeyError or NameError:
-            self.parent().po.vars['save_coord_network'] = True
         self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
-        self.save_coord_specimen.stateChanged.connect(self.save_coord_specimen_saving)
+        # self.save_coord_specimen.stateChanged.connect(self.save_coord_specimen_saving)
         self.save_coord_specimen_label = FixedText('All pixels covered by the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
 
         self.save_coord_contour = Checkbox(self.parent().po.vars['save_coord_contour'])
-        self.save_coord_contour.stateChanged.connect(self.save_coord_contour_saving)
+        # self.save_coord_contour.stateChanged.connect(self.save_coord_contour_saving)
         self.save_coord_contour_label = FixedText('Contours of the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
-        self.save_coord_thickening_slimming.stateChanged.connect(self.save_coord_thickening_slimming_saving)
+        # self.save_coord_thickening_slimming.stateChanged.connect(self.save_coord_thickening_slimming_saving)
         self.save_coord_thickening_slimming_label = FixedText('Thickening and slimming areas in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
-        self.save_coord_network.stateChanged.connect(self.save_coord_network_saving)
+        # self.save_coord_network.stateChanged.connect(self.save_coord_network_saving)
         self.save_coord_network_label = FixedText('Tubular network in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
 
@@ -121,18 +105,16 @@ class RequiredOutput(WindowType):
         self.last_row_widget = QtWidgets.QWidget()
 
         # self.binary_mask_label = FixedText('Save binary mask coordinates', 14, tip="If checked, saves the binary mask coordinates used to compute the selected descriptors.\nMost of them only require the cell presence mask.\nThe oscillatory and network analyses require additional masks (also saved if checked)\nWarning: these masks may take a lot of hard drive space.", night_mode=self.parent().po.all['night_mode'])
-        # try:
-        #     self.parent().po.vars['save_binary_masks']
-        # except KeyError or NameError:
-        #     self.parent().po.vars['save_binary_masks'] = False
         # self.binary_mask = Checkbox(self.parent().po.vars['save_binary_masks'])
         # self.binary_mask.stateChanged.connect(self.binary_mask_saving)
         # self.last_row_layout.addWidget(self.binary_mask_label)
         # self.last_row_layout.addWidget(self.binary_mask)
-
+        self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
+        self.cancel.clicked.connect(self.cancel_is_clicked)
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
         self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
 
         self.vlayout.addItem(horzspaceItem)
@@ -181,17 +163,46 @@ class RequiredOutput(WindowType):
         #if not self.parent().po.vars['oscilacyto_analysis']:
             #self.descriptor_widgets_list[cb_index].setVisible(False)
 
-    def save_coord_specimen_saving(self):
-        self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
-    def save_coord_contour_saving(self):
-        self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
-    def save_coord_thickening_slimming_saving(self):
-        self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
-    def save_coord_network_saving(self):
-        self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
+    # def save_coord_specimen_saving(self):
+    #     self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
+    # def save_coord_contour_saving(self):
+    #     self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
+    # def save_coord_thickening_slimming_saving(self):
+    #     self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
+    # def save_coord_network_saving(self):
+    #     self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
 
+
+    def cancel_is_clicked(self):
+        self.save_coord_specimen.setChecked(self.parent().po.vars['save_coord_specimen'])
+        self.save_coord_contour.setChecked(self.parent().po.vars['save_coord_contour'])
+        self.save_coord_thickening_slimming.setChecked(self.parent().po.vars['save_coord_thickening_slimming'])
+        self.save_coord_network.setChecked(self.parent().po.vars['save_coord_network'])
+
+        descriptor_names = self.parent().po.all['descriptors']
+        for i, name in enumerate(descriptor_names):
+            k = i * 2 + 1
+            if name == 'iso_digi_analysis':
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['iso_digi_analysis'])
+            elif name == 'oscilacyto_analysis':
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['oscilacyto_analysis'])
+            elif name == 'fractal_analysis':
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['fractal_analysis'])
+            elif name == 'network_analysis':
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['network_analysis'])
+            else:
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.all['descriptors'][name])
+
+        if self.parent().last_is_first:
+            self.parent().change_widget(0) # FirstWidget
+        else:
+            self.parent().change_widget(3) # ThirdWidget
 
     def ok_is_clicked(self):
+        self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
+        self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
+        self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
+        self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
         descriptor_names = self.parent().po.all['descriptors'].keys()
         for i, name in enumerate(descriptor_names):
             k = i * 2 + 1

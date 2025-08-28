@@ -13,12 +13,12 @@ from cellects.core.cellects_threads import (
     CropScaleSubtractDelineateThread, UpdateImageThread,
     LastImageAnalysisThread, SaveManualDelineationThread, FinalizeImageAnalysisThread)
 from cellects.gui.custom_widgets import (
-    WindowType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
 from cellects.core.one_image_analysis import OneImageAnalysis
 
 
-class ImageAnalysisWindow(WindowType):
+class ImageAnalysisWindow(MainTabsType):
     def __init__(self, parent, night_mode):
         super().__init__(parent, night_mode)
         self.setParent(parent)
@@ -28,6 +28,9 @@ class ImageAnalysisWindow(WindowType):
     def true_init(self):
 
         logging.info("Initialize ImageAnalysisWindow")
+        self.data_tab.set_not_in_use()
+        self.image_tab.set_in_use()
+        self.video_tab.set_not_usable()
         self.hold_click_flag: bool = False
         self.is_first_image_flag: bool = True
         self.is_image_analysis_running: bool = False
@@ -58,16 +61,9 @@ class ImageAnalysisWindow(WindowType):
         self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
         self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
 
-        self.Vlayout = QtWidgets.QVBoxLayout()
         ## Title
-        self.title_label = FixedText('One Image Analysis', police=30, night_mode=self.parent().po.all['night_mode'])
-        self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        # self.Vlayout.addWidget(self.title_label)
-        # self.Vlayout.addItem(self.vertical_space)
-        # self.visibility_cb = Checkbox(self.parent().po.vars['origin_state'] == "invisible")
-        # self.visibility_cb.stateChanged.connect(self.visibility_check)
-        # self.visibility_label = FixedText('Cells are not visible on the first image', tip="Check if to calibrate the analysis on another image")
-        # self.visibility_label.setAlignment(QtCore.Qt.AlignVCenter)
+        # self.title_label = FixedText('One Image Analysis', police=30, night_mode=self.parent().po.all['night_mode'])
+        # self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.image_number_label = FixedText('Image number',
                                             tip="Change this number if cells are invisible on the first image, never otherwise\nIf they cannot be seen on the first image, increase this number and read until all cells have appeared.",
                                             night_mode=self.parent().po.all['night_mode'])
@@ -107,49 +103,65 @@ class ImageAnalysisWindow(WindowType):
         # 1) Open the first row layout
         self.row1_widget = QtWidgets.QWidget()
         self.row1_layout = QtWidgets.QHBoxLayout()
-        self.row1_col1_widget = QtWidgets.QWidget()
-        self.row1_col1_layout = QtWidgets.QVBoxLayout()
-        self.row1_col2_widget = QtWidgets.QWidget()
-        self.row1_col2_layout = QtWidgets.QVBoxLayout()
-
-        self.im_number_widget = QtWidgets.QWidget()
-        self.im_number_layout = QtWidgets.QHBoxLayout()
-        self.im_number_layout.addWidget(self.image_number_label)
-        self.im_number_layout.addWidget(self.image_number)
-        self.im_number_layout.addWidget(self.read)
-        self.im_number_widget.setLayout(self.im_number_layout)
-        self.row1_col1_layout.addWidget(self.im_number_widget)
-
-        self.specimen_number_widget = QtWidgets.QWidget()
-        self.specimen_number_layout = QtWidgets.QHBoxLayout()
-        self.specimen_number_layout.addWidget(self.one_blob_per_arena)
-        self.specimen_number_layout.addWidget(self.one_blob_per_arena_label)
-        self.specimen_number_widget.setLayout(self.specimen_number_layout)
-        self.row1_col1_layout.addWidget(self.specimen_number_widget)
-        self.row1_col1_widget.setLayout(self.row1_col1_layout)
-        self.row1_layout.addWidget(self.row1_col1_widget)
-
+        self.row1_layout.addWidget(self.image_number_label)
+        self.row1_layout.addWidget(self.image_number)
+        self.row1_layout.addWidget(self.read)
         self.row1_layout.addItem(self.horizontal_space)
-        self.row1_layout.addWidget(self.title_label)
+        self.row1_layout.addWidget(self.one_blob_per_arena_label)
+        self.row1_layout.addWidget(self.one_blob_per_arena)
         self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addWidget(self.scale_with_label)
+        self.row1_layout.addWidget(self.scale_with)
+        self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addWidget(self.scale_size_label)
+        self.row1_layout.addWidget(self.horizontal_size)
 
-        self.scale_with_widget = QtWidgets.QWidget()
-        self.scale_with_layout = QtWidgets.QHBoxLayout()
-        self.scale_with_layout.addWidget(self.scale_with_label)
-        self.scale_with_layout.addWidget(self.scale_with)
-        self.scale_with_widget.setLayout(self.scale_with_layout)
-        self.row1_col2_layout.addWidget(self.scale_with_widget)
-
-        self.scale_size_widget = QtWidgets.QWidget()
-        self.scale_size_layout = QtWidgets.QHBoxLayout()
-        self.scale_size_layout.addWidget(self.scale_size_label)
-        self.scale_size_layout.addWidget(self.horizontal_size)
-        self.scale_size_widget.setLayout(self.scale_size_layout)
-        self.row1_col2_layout.addWidget(self.scale_size_widget)
-        self.row1_col2_widget.setLayout(self.row1_col2_layout)
-        self.row1_layout.addWidget(self.row1_col2_widget)
+        # self.row1_widget = QtWidgets.QWidget()
+        # self.row1_layout = QtWidgets.QHBoxLayout()
+        # self.row1_col1_widget = QtWidgets.QWidget()
+        # self.row1_col1_layout = QtWidgets.QVBoxLayout()
+        # self.row1_col2_widget = QtWidgets.QWidget()
+        # self.row1_col2_layout = QtWidgets.QVBoxLayout()
+        #
+        # self.im_number_widget = QtWidgets.QWidget()
+        # self.im_number_layout = QtWidgets.QHBoxLayout()
+        # self.im_number_layout.addWidget(self.image_number_label)
+        # self.im_number_layout.addWidget(self.image_number)
+        # self.im_number_layout.addWidget(self.read)
+        # self.im_number_widget.setLayout(self.im_number_layout)
+        # self.row1_col1_layout.addWidget(self.im_number_widget)
+        #
+        # self.specimen_number_widget = QtWidgets.QWidget()
+        # self.specimen_number_layout = QtWidgets.QHBoxLayout()
+        # self.specimen_number_layout.addWidget(self.one_blob_per_arena)
+        # self.specimen_number_layout.addWidget(self.one_blob_per_arena_label)
+        # self.specimen_number_widget.setLayout(self.specimen_number_layout)
+        # self.row1_col1_layout.addWidget(self.specimen_number_widget)
+        # self.row1_col1_widget.setLayout(self.row1_col1_layout)
+        # self.row1_layout.addWidget(self.row1_col1_widget)
+        #
+        # # self.row1_layout.addItem(self.horizontal_space)
+        # # self.row1_layout.addWidget(self.title_label)
+        # self.row1_layout.addItem(self.horizontal_space)
+        #
+        # self.scale_with_widget = QtWidgets.QWidget()
+        # self.scale_with_layout = QtWidgets.QHBoxLayout()
+        # self.scale_with_layout.addWidget(self.scale_with_label)
+        # self.scale_with_layout.addWidget(self.scale_with)
+        # self.scale_with_widget.setLayout(self.scale_with_layout)
+        # self.row1_col2_layout.addWidget(self.scale_with_widget)
+        #
+        # self.scale_size_widget = QtWidgets.QWidget()
+        # self.scale_size_layout = QtWidgets.QHBoxLayout()
+        # self.scale_size_layout.addWidget(self.scale_size_label)
+        # self.scale_size_layout.addWidget(self.horizontal_size)
+        # self.scale_size_widget.setLayout(self.scale_size_layout)
+        # self.row1_col2_layout.addWidget(self.scale_size_widget)
+        # self.row1_col2_widget.setLayout(self.row1_col2_layout)
+        # self.row1_layout.addWidget(self.row1_col2_widget)
 
         self.row1_widget.setLayout(self.row1_layout)
+        self.Vlayout.addItem(self.vertical_space)
         self.Vlayout.addWidget(self.row1_widget)
         self.Vlayout.addItem(self.vertical_space)
         self.Vlayout.setSpacing(0)
@@ -428,6 +440,8 @@ class ImageAnalysisWindow(WindowType):
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.previous = PButton('Previous', night_mode=self.parent().po.all['night_mode'])
         self.previous.clicked.connect(self.previous_is_clicked)
+        self.data_tab.clicked.connect(self.data_is_clicked)
+        self.video_tab.clicked.connect(self.video_is_clicked)
         self.next = PButton("Next", night_mode=self.parent().po.all['night_mode'])
         self.next.setVisible(False)
         self.next.clicked.connect(self.go_to_next_widget)
@@ -459,7 +473,7 @@ class ImageAnalysisWindow(WindowType):
 
     def previous_is_clicked(self):
         if self.is_image_analysis_running:
-            self.message.setText("Wait for the analysis to end")
+            self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
             self.parent().firstwindow.instantiate = True
             self.hold_click_flag: bool = False
@@ -484,7 +498,24 @@ class ImageAnalysisWindow(WindowType):
             self.available_bio_names = arange(1, 1000, dtype=uint16)
             self.available_back_names = arange(1, 1000, dtype=uint16)
             self.parent().po.current_combination_id = 0
+            self.parent().last_tab = "data_specifications"
             self.parent().change_widget(0)  # First
+
+    def data_is_clicked(self):
+        if self.is_image_analysis_running:
+            self.message.setText("Wait for the analysis to end, or restart Cellects")
+        else:
+            self.parent().last_tab = "data_specifications"
+            self.parent().change_widget(0)  # First
+
+    def video_is_clicked(self):
+
+        if self.video_tab.state != "not_usable":
+            if self.is_image_analysis_running:
+                self.message.setText("Wait for the analysis to end, or restart Cellects")
+            else:
+                self.parent().last_tab = "image_analysis"
+                self.parent().change_widget(3)
 
     def read_is_clicked(self):
         if not self.thread["GetFirstIm"].isRunning():
@@ -1849,7 +1880,7 @@ class ImageAnalysisWindow(WindowType):
 
 
             self.message.setText(f"Final checks, wait... ")
-            self.parent().last_is_image_analysis = True
+            self.parent().last_tab = "image_analysis"
             self.thread['FinalizeImageAnalysis'].start()
             if self.parent().po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
@@ -1860,6 +1891,8 @@ class ImageAnalysisWindow(WindowType):
             self.thread['FinalizeImageAnalysis'].wait()
             self.message.setText(f"")
 
+            self.video_tab.set_not_in_use()
+            self.parent().last_tab = "image_analysis"
             self.parent().change_widget(3)  # VideoAnalysisWindow
 
             self.popup.close()

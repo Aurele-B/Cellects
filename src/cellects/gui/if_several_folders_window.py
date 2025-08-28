@@ -215,7 +215,7 @@ class IfSeveralFoldersWindow(WindowType):
         # self.parent().change_widget(3)  # VideoAnalysisWindow
 
     def Video_analysis_window_is_clicked(self):
-        self.parent().last_is_image_analysis = False
+        self.parent().last_tab = "data_specifications"
         # self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
         #                                   self.parent().po.all['folder_list'][0])
         self.parent().change_widget(3)
