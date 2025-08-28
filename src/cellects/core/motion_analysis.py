@@ -34,7 +34,7 @@ from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
 from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
-from cellects.image_analysis.network_detection import network_detection
+#from cellects.image_analysis.network_detection import network_detection
 from cellects.image_analysis.fractal_analysis import FractalAnalysis, box_counting, prepare_box_counting
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
@@ -1410,11 +1410,13 @@ class MotionAnalysis:
             # self.network_dynamics = load(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy")
 
             self.check_converted_video_type()
+            """
             self.network_dynamics = network_detection(self.binary, self.converted_video, self.origin,
                                                       self.vars['origin_state'], self.vars['lighter_background'],
                                                       sliding_sum_step=10, int_variation_thresh=self.vars['network_detection_threshold'],
                                                       side_length=self.vars['network_mesh_side_length'],
                                                       window_step=self.vars['network_mesh_step_length'])
+            """
             #
             # self.network_dynamics = zeros(self.dims, dtype=uint8)
             # if self.vars['origin_state'] == "constant":
