@@ -31,7 +31,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.setWindowTitle('Cellects')
         self.pre_processing_done: bool = False
         self.last_is_first: bool = True
-        self.last_is_image_analysis: bool = False
+        self.last_tab: str = "data_specifications"
         self.pre_processing_done: bool = False
         self.screen_height = get_monitors()[0].height
         self.screen_width = get_monitors()[0].width
@@ -92,23 +92,20 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         #         self.removeWidget(widget)
         #         # widget.deleteLater()
         if severalfolder_included:
-            self.ifseveralfolderswindow = IfSeveralFoldersWindow(
-                self, night_mode=self.po.all['night_mode'])
+            self.ifseveralfolderswindow = IfSeveralFoldersWindow(self, night_mode=self.po.all['night_mode'])
             self.insertWidget(1, self.ifseveralfolderswindow)
             # self.ifseveralfolderswindow.setVisible(True)
-        self.imageanalysiswindow = ImageAnalysisWindow(
-            self, night_mode=self.po.all['night_mode'])
+        self.imageanalysiswindow = ImageAnalysisWindow(self, night_mode=self.po.all['night_mode'])
         self.insertWidget(2, self.imageanalysiswindow)
 
-        self.videoanalysiswindow = VideoAnalysisWindow(
-            self, night_mode=self.po.all['night_mode'])
+        self.videoanalysiswindow = VideoAnalysisWindow(self, night_mode=self.po.all['night_mode'])
         self.insertWidget(3, self.videoanalysiswindow)
 
-        self.insertWidget(4, RequiredOutput(
-            self, night_mode=self.po.all['night_mode']))
+        self.requiredoutputwindow = RequiredOutput(self, night_mode=self.po.all['night_mode'])
+        self.insertWidget(4, self.requiredoutputwindow)
 
-        self.insertWidget(5, AdvancedParameters(
-            self, night_mode=self.po.all['night_mode']))
+        self.advancedparameterswindow = AdvancedParameters(self, night_mode=self.po.all['night_mode'])
+        self.insertWidget(5, self.advancedparameterswindow)
 
         # self.requiredoutputwindow = RequiredOutput(
         #     self, night_mode=self.po.all['night_mode'])

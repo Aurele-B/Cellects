@@ -10,34 +10,37 @@ from cellects.core.cellects_threads import (
     RunAllThread, OneArenaThread, VideoReaderThread, ChangeOneRepResultThread,
     WriteVideoThread)
 from cellects.gui.custom_widgets import (
-    WindowType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
 
 
-class VideoAnalysisWindow(WindowType):
+class VideoAnalysisWindow(MainTabsType):
     def __init__(self, parent, night_mode):
         super().__init__(parent, night_mode)
         logging.info("Initialize VideoAnalysisWindow")
         self.setParent(parent)
+        self.data_tab.set_not_in_use()
+        self.image_tab.set_not_usable()
+        self.video_tab.set_in_use()
+        self.data_tab.clicked.connect(self.data_tab_is_clicked)
+        self.image_tab.clicked.connect(self.image_tab_is_clicked)
         self.thread = {}
         self.thread['VideoReader'] = VideoReaderThread(self.parent())
         self.thread['OneArena'] = OneArenaThread(self.parent())
         self.thread['ChangeOneRepResult'] = ChangeOneRepResultThread(self.parent())
         self.thread['RunAll'] = RunAllThread(self.parent())
         self.previous_arena = 0
-        self.layout = QtWidgets.QGridLayout()
 
-        self.title = FixedText('Video tracking', police=30, night_mode=self.parent().po.all['night_mode'])
-        self.title.setAlignment(QtCore.Qt.AlignHCenter)
-        vertspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
-                                              QtWidgets.QSizePolicy.MinimumExpanding)
-        horzspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-                                              QtWidgets.QSizePolicy.Maximum)
+        self.layout = QtWidgets.QGridLayout()
+        self.grid_widget = QtWidgets.QWidget()
+
+        # self.title = FixedText('Video tracking', police=30, night_mode=self.parent().po.all['night_mode'])
+        # self.title.setAlignment(QtCore.Qt.AlignHCenter)
         curr_row_main_layout = 0
         ncol = 1
-        self.layout.addWidget(self.title, curr_row_main_layout, 0, 2, ncol)
-        curr_row_main_layout += 2
-        self.layout.addItem(vertspaceItem, curr_row_main_layout, 0, 1, ncol)
+        # self.layout.addWidget(self.title, curr_row_main_layout, 0, 2, ncol)
+        # curr_row_main_layout += 2
+        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
         #
         # self.layout.addWidget(self.arena_widget, curr_row_main_layout, 0)
@@ -50,10 +53,10 @@ class VideoAnalysisWindow(WindowType):
         self.general_step_label = FixedText('Step 1: Tune parameters to improve Detection', night_mode=self.parent().po.all['night_mode'])
         self.general_step_button = PButton('Done', night_mode=self.parent().po.all['night_mode'])
         self.general_step_button.clicked.connect(self.step_done_is_clicked)
-        self.general_step_layout.addItem(horzspaceItem)
+        self.general_step_layout.addItem(self.horizontal_space)
         self.general_step_layout.addWidget(self.general_step_label)
         self.general_step_layout.addWidget(self.general_step_button)
-        self.general_step_layout.addItem(horzspaceItem)
+        self.general_step_layout.addItem(self.horizontal_space)
         self.general_step_widget.setLayout(self.general_step_layout)
         self.layout.addWidget(self.general_step_widget, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
@@ -61,7 +64,7 @@ class VideoAnalysisWindow(WindowType):
         # Open central widget
         self.video_display_widget = QtWidgets.QWidget()
         self.video_display_layout = QtWidgets.QHBoxLayout()
-        self.video_display_layout.addItem(horzspaceItem)
+        self.video_display_layout.addItem(self.horizontal_space)
         #   Open left widget
         self.left_options_widget = QtWidgets.QWidget()
         self.left_options_layout = QtWidgets.QVBoxLayout()
@@ -86,10 +89,10 @@ class VideoAnalysisWindow(WindowType):
                                night_mode=self.parent().po.all['night_mode'])
         self.arena.valueChanged.connect(self.arena_changed)
 
-        # self.arena_layout.addItem(horzspaceItem)
+        # self.arena_layout.addItem(self.horizontal_space)
         self.arena_layout.addWidget(self.arena_label)
         self.arena_layout.addWidget(self.arena)
-        # self.arena_layout.addItem(horzspaceItem)
+        # self.arena_layout.addItem(self.horizontal_space)
         self.arena_widget.setLayout(self.arena_layout)
         # self.arena_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.left_options_layout.addWidget(self.arena_widget)
@@ -203,10 +206,10 @@ class VideoAnalysisWindow(WindowType):
         self.right_options_layout.addWidget(self.read, alignment=QtCore.Qt.AlignCenter)
 
 
-        self.right_options_layout.addItem(horzspaceItem)
+        self.right_options_layout.addItem(self.horizontal_space)
         self.right_options_widget.setLayout(self.right_options_layout)
         self.video_display_layout.addWidget(self.right_options_widget)
-        self.video_display_layout.addItem(horzspaceItem)
+        self.video_display_layout.addItem(self.horizontal_space)
         # Close central widget
         self.video_display_widget.setLayout(self.video_display_layout)
         # self.video_display_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
@@ -218,7 +221,7 @@ class VideoAnalysisWindow(WindowType):
         # Open Second step row
         self.second_step_widget = QtWidgets.QWidget()
         self.second_step_layout = QtWidgets.QHBoxLayout()
-        self.second_step_layout.addItem(horzspaceItem)
+        self.second_step_layout.addItem(self.horizontal_space)
         self.second_step_widget.setVisible(False)
 
         self.fading_widget = QtWidgets.QWidget()
@@ -252,9 +255,9 @@ class VideoAnalysisWindow(WindowType):
 
         # Close Second step row
         self.second_step_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.second_step_layout.addItem(horzspaceItem)
+        self.second_step_layout.addItem(self.horizontal_space)
         self.second_step_widget.setLayout(self.second_step_layout)
-        self.layout.addItem(vertspaceItem, curr_row_main_layout, 0, 1, ncol)
+        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
         self.layout.addWidget(self.second_step_widget, curr_row_main_layout, 0)
         curr_row_main_layout += 1
@@ -262,7 +265,7 @@ class VideoAnalysisWindow(WindowType):
         # Open last options row widget
         self.last_options_widget = QtWidgets.QWidget()
         self.last_options_layout = QtWidgets.QHBoxLayout()
-        self.last_options_layout.addItem(horzspaceItem)
+        self.last_options_layout.addItem(self.horizontal_space)
 
         # #  advanced mode widget
         # self.advanced_mode_widget = QtWidgets.QWidget()
@@ -297,7 +300,7 @@ class VideoAnalysisWindow(WindowType):
         self.last_options_layout.addWidget(self.save_all_vars)
 
         # Close last options widget
-        self.last_options_layout.addItem(horzspaceItem)
+        self.last_options_layout.addItem(self.horizontal_space)
         self.last_options_widget.setLayout(self.last_options_layout)
         self.layout.addWidget(self.last_options_widget, curr_row_main_layout, 0)
         curr_row_main_layout += 1
@@ -317,15 +320,18 @@ class VideoAnalysisWindow(WindowType):
         self.last_row_widget = QtWidgets.QWidget()
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_layout.addWidget(self.previous)
-        self.last_row_layout.addItem(horzspaceItem)
+        self.last_row_layout.addItem(self.horizontal_space)
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.run_all)
         # Close last row widget
         self.last_row_widget.setLayout(self.last_row_layout)
-        self.layout.addItem(vertspaceItem, curr_row_main_layout, 0, 1, ncol)
+        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
         self.layout.addWidget(self.last_row_widget, curr_row_main_layout, 0)
 
-        self.setLayout(self.layout)
+        self.grid_widget.setLayout(self.layout)
+        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addWidget(self.grid_widget)
+        self.setLayout(self.Vlayout)
         # self.advanced_mode_check()
 
     def display_conditionally_visible_widgets(self):
@@ -411,6 +417,23 @@ class VideoAnalysisWindow(WindowType):
         # self.iterate_smoothing.setVisible(advanced_mode)
         # self.iterate_smoothing_label.setVisible(advanced_mode)
 
+    def data_tab_is_clicked(self):
+        if self.thread['VideoReader'].isRunning() or self.thread['OneArena'].isRunning() or self.thread['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+            self.message.setText("Wait for the analysis to end, or restart Cellects")
+        else:
+            self.parent().last_tab = "data_specifications"
+            self.parent().change_widget(0)  # FirstWidget
+
+    def image_tab_is_clicked(self):
+        if self.image_tab.state != "not_usable":
+            if self.thread['VideoReader'].isRunning() or self.thread['OneArena'].isRunning() or self.thread[
+                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+                self.message.setText("Wait for the analysis to end, or restart Cellects")
+            else:
+                self.parent().last_tab = "video_analysis"
+                self.parent().change_widget(2)
+
+
     def required_outputs_is_clicked(self):
         self.parent().last_is_first = False
         self.parent().change_widget(4)  # RequiredOutput
@@ -421,10 +444,11 @@ class VideoAnalysisWindow(WindowType):
         self.parent().change_widget(5)  # AdvancedParameters
 
     def previous_is_clicked(self):
-        if self.parent().last_is_image_analysis:
-            self.parent().change_widget(2)  # ThirdWidget
-        else:
+        if self.parent().last_tab == "data_specifications":
             self.parent().change_widget(0)  # FirstWidget
+        elif self.parent().last_tab == "image_analysis":
+            self.parent().change_widget(2)  # ThirdWidget
+        self.parent().last_tab = "video_analysis"
         # self.parent().change_widget(2)  # SecondWidget
 
     def save_all_vars_thread(self):

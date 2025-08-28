@@ -11,15 +11,18 @@ from PySide6 import QtWidgets, QtCore
 from cellects.core.cellects_threads import (
     GetFirstImThread, RunAllThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
 from cellects.gui.custom_widgets import (
-    WindowType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, FixedText, EditText, LineWidget)
 
 
-class FirstWindow(WindowType):
+class FirstWindow(MainTabsType):
     def __init__(self, parent, night_mode):
         super().__init__(parent, night_mode)
         logging.info("Initialize first window")
         self.setParent(parent)
+        self.data_tab.set_in_use()
+        self.image_tab.set_not_usable()
+        self.video_tab.set_not_usable()
         # self.night_mode_switch(False)
         self.thread = {}
         self.thread["LookForData"] = LookForDataThreadInFirstW(self.parent())
@@ -27,16 +30,15 @@ class FirstWindow(WindowType):
         self.thread["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
         self.instantiate: bool = True
-        self.Vlayout = QtWidgets.QVBoxLayout()
         ##
-        self.title_label = FixedText('Cellects', police=40, night_mode=self.parent().po.all['night_mode'])
+        self.title_label = FixedText('Cellects', police=60, night_mode=self.parent().po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        self.subtitle_label = FixedText('A Cell Expansion Computer Tracking Software', police=18, night_mode=self.parent().po.all['night_mode'])
-        self.subtitle_label.setAlignment(QtCore.Qt.AlignHCenter)
-        self.subtitle_line = LineWidget(size=[1, 300], night_mode=self.parent().po.all['night_mode'])
-        # self.subtitle_line.set
+        # self.subtitle_label = FixedText('A Cell Expansion Computer Tracking Software', police=18, night_mode=self.parent().po.all['night_mode'])
+        # self.subtitle_label.setAlignment(QtCore.Qt.AlignHCenter)
+        self.subtitle_line = LineWidget(size=[1, 50], night_mode=self.parent().po.all['night_mode'])
+
         self.Vlayout.addWidget(self.title_label)
-        self.Vlayout.addWidget(self.subtitle_label)
+        # self.Vlayout.addWidget(self.subtitle_label)
         self.Vlayout.addWidget(self.subtitle_line)
         self.Vlayout.addItem(self.vertical_space)
 
@@ -161,19 +163,19 @@ class FirstWindow(WindowType):
         self.required_outputs = PButton('Required Outputs', night_mode=self.parent().po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         # Shortcut 3 :
-        self.Video_analysis_window = PButton("Video tracking window", night_mode=self.parent().po.all['night_mode'])
-        self.Video_analysis_window.clicked.connect(self.video_analysis_window_is_clicked)
+        # self.Video_analysis_window = PButton("Video tracking window", night_mode=self.parent().po.all['night_mode'])
+        # self.Video_analysis_window.clicked.connect(self.video_analysis_window_is_clicked)
+        self.video_tab.clicked.connect(self.video_analysis_window_is_clicked)
         # Shortcut 4 :
         self.Run_all_directly = PButton("Run all directly", night_mode=self.parent().po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
-        self.Video_analysis_window.setVisible(False)
+        # self.Video_analysis_window.setVisible(False)
         self.Run_all_directly.setVisible(False)
-        #self.display_shortcuts_checked()
 
         self.shortcuts_layout.addItem(self.horizontal_space)
         self.shortcuts_layout.addWidget(self.advanced_parameters)
         self.shortcuts_layout.addWidget(self.required_outputs)
-        self.shortcuts_layout.addWidget(self.Video_analysis_window)
+        # self.shortcuts_layout.addWidget(self.Video_analysis_window)
         self.shortcuts_layout.addWidget(self.Run_all_directly)
         self.shortcuts_layout.addItem(self.horizontal_space)
         self.shortcuts_widget.setLayout(self.shortcuts_layout)
@@ -188,6 +190,7 @@ class FirstWindow(WindowType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
         # Next button
         self.next = PButton('Next', night_mode=self.parent().po.all['night_mode'])
+        self.image_tab.clicked.connect(self.next_is_clicked)
         self.next.clicked.connect(self.next_is_clicked)
         # Add widgets to the last_row_layout
         #self.last_row_layout.addWidget(self.shortcut_cb)
@@ -315,7 +318,12 @@ class FirstWindow(WindowType):
         self.parent().instantiate_widgets()
         self.parent().imageanalysiswindow.true_init()
         self.instantiate = False
+        if self.parent().po.first_exp_ready_to_run:
+            self.parent().imageanalysiswindow.video_tab.set_not_in_use()
         self.parent().change_widget(2) # imageanalysiswindow
+
+        # From now on, image analysis will be available from video analysis:
+        self.parent().videoanalysiswindow.image_tab.set_not_in_use()
 
     def required_outputs_is_clicked(self):
         self.parent().last_is_first = True
@@ -327,9 +335,13 @@ class FirstWindow(WindowType):
         self.parent().change_widget(5) # AdvancedParameters
 
     def video_analysis_window_is_clicked(self):
-        self.parent().last_is_image_analysis = False
-        # self.parent().po.first_exp_ready_to_run = False
-        self.parent().change_widget(3) # Should be VideoAnalysisW
+        if self.video_tab.state != "not_usable":
+            if self.thread["LookForData"].isRunning() or self.thread["LoadDataToRunCellectsQuickly"].isRunning() or self.thread["GetFirstIm"].isRunning() or self.thread["RunAll"].isRunning():
+                self.message.setText("Wait for the analysis to end, or restart Cellects")
+            else:
+                self.parent().last_tab = "data_specifications"
+                # self.parent().po.first_exp_ready_to_run = False
+                self.parent().change_widget(3) # Should be VideoAnalysisW
 
     def Run_all_directly_is_clicked(self):
         if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
@@ -356,7 +368,7 @@ class FirstWindow(WindowType):
             self.im_or_vid.setVisible(False)
             self.advanced_parameters.setVisible(False)
             self.required_outputs.setVisible(False)
-            self.Video_analysis_window.setVisible(False)
+            # self.Video_analysis_window.setVisible(False)
             self.Run_all_directly.setVisible(False)
             self.next.setVisible(False)
             # 2) Load the dict
@@ -364,11 +376,14 @@ class FirstWindow(WindowType):
             self.thread["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
             # 3) go to another func to change, put visible and re_instantiate
         else:
-            self.Video_analysis_window.setVisible(False)
+            # self.Video_analysis_window.setVisible(False)
             self.Run_all_directly.setVisible(False)
+            self.image_tab.set_not_usable()
+            self.video_tab.set_not_usable()
             self.message.setText("Please, enter a valid path")
 
     def load_data_quickly_finished(self, message):
+        self.image_tab.set_not_in_use()
         self.message.setText(message)
         self.radical.setVisible(True)
         self.extension.setVisible(True)
@@ -387,17 +402,20 @@ class FirstWindow(WindowType):
             self.extension.setText(self.parent().po.all['extension'])
             #self.shortcut_cb.setChecked(self.parent().po.all['display_shortcuts'])
             #self.display_shortcuts_checked()
-            self.Video_analysis_window.setVisible(True)
+            # self.Video_analysis_window.setVisible(True)
             self.Run_all_directly.setVisible(True)
+            self.video_tab.set_not_in_use()
 
 
     def re_instantiate_widgets(self):
         """
-            Does not work but should reset everything in ImageAnalysisWindow and IfSeveralFoldersWindow
-            each time the folder pathway gets changed
+
         :return:
         """
         self.instantiate = True
+        # Since we re-instantiate everything, image analysis will no longer be available from video analysis:
+        self.parent().videoanalysiswindow.image_tab.set_not_usable()
+
         # self.parent().po.all['radical'] = self.radical.text()
         # self.parent().po.all['extension'] = self.extension.text()
         # self.parent().po.sample_number = int(self.arena_number.value())

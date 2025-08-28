@@ -149,7 +149,7 @@ class AdvancedParameters(WindowType):
 
         # II/C/ Create widgets
         self.all_same_direction = Checkbox(self.parent().po.all['all_same_direction'])
-        self.all_same_direction.stateChanged.connect(self.all_same_direction_changed)
+        # self.all_same_direction.stateChanged.connect(self.all_same_direction_changed)
         self.all_same_direction_label = FixedText('All cells have the same direction',
                                                          tip="This parameter only affects the slow algorithm of automatic arena detection.\nChecking it will improve the chances to correctly detect arenas when\n all cells move in the same direction",
                                                          night_mode=self.parent().po.all['night_mode'])
@@ -327,39 +327,31 @@ class AdvancedParameters(WindowType):
 
         # V/ Fifth box: Fractal parameters:#
         # IV/A/ Title
-        self.fractal_label = FixedText('Fractal parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
-        self.left_col_layout.addWidget(self.fractal_label)
-
-        self.fractal_layout = QtWidgets.QGridLayout()
-        self.fractal_widget = QtWidgets.QWidget()
-        self.fractal_widget.setStyleSheet(boxstylesheet)
-
-        try:
-            self.parent().po.vars['fractal_box_side_threshold']
-        except KeyError or NameError:
-            self.parent().po.vars['fractal_box_side_threshold'] = 32
-        self.fractal_box_side_threshold = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_box_side_threshold'], decimals=0,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.fractal_box_side_threshold_label = FixedText('Fractal box side threshold',
-                                                  tip="Increase/decrease to adjust the minimal side length (pixels) of an image\nto compute the Minkowski dimension using the box counting method.",
-                                                  night_mode=self.parent().po.all['night_mode'])
-        self.fractal_layout.addWidget(self.fractal_box_side_threshold, 3, 0)
-        self.fractal_layout.addWidget(self.fractal_box_side_threshold_label, 3, 1)
-        try:
-            self.parent().po.vars['fractal_zoom_step']
-        except KeyError or NameError:
-            self.parent().po.vars['fractal_zoom_step'] = 0
-        self.fractal_zoom_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_zoom_step'], decimals=0,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.fractal_zoom_step_label = FixedText('Fractal zoom step',
-                                                  tip="When using the box counting method to compute the Minkowski dimension\nThe zoom step is the side length (pixels) difference between each zoom level.\nWhen set to 0, the default zoom step is all possible powers of two.",
-                                                  night_mode=self.parent().po.all['night_mode'])
-        self.fractal_layout.addWidget(self.fractal_zoom_step, 4, 0)
-        self.fractal_layout.addWidget(self.fractal_zoom_step_label, 4, 1)
-
-        self.fractal_widget.setLayout(self.fractal_layout)
-        self.left_col_layout.addWidget(self.fractal_widget)
+        # self.fractal_label = FixedText('Fractal parameters:', tip="",
+        #                                       night_mode=self.parent().po.all['night_mode'])
+        # self.left_col_layout.addWidget(self.fractal_label)
+        #
+        # self.fractal_layout = QtWidgets.QGridLayout()
+        # self.fractal_widget = QtWidgets.QWidget()
+        # self.fractal_widget.setStyleSheet(boxstylesheet)
+        #
+        # self.fractal_box_side_threshold = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_box_side_threshold'], decimals=0,
+        #                                   night_mode=self.parent().po.all['night_mode'])
+        # self.fractal_box_side_threshold_label = FixedText('Fractal box side threshold',
+        #                                           tip="Increase/decrease to adjust the minimal side length (pixels) of an image\nto compute the Minkowski dimension using the box counting method.",
+        #                                           night_mode=self.parent().po.all['night_mode'])
+        # self.fractal_layout.addWidget(self.fractal_box_side_threshold, 3, 0)
+        # self.fractal_layout.addWidget(self.fractal_box_side_threshold_label, 3, 1)
+        # self.fractal_zoom_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_zoom_step'], decimals=0,
+        #                                   night_mode=self.parent().po.all['night_mode'])
+        # self.fractal_zoom_step_label = FixedText('Fractal zoom step',
+        #                                           tip="When using the box counting method to compute the Minkowski dimension\nThe zoom step is the side length (pixels) difference between each zoom level.\nWhen set to 0, the default zoom step is all possible powers of two.",
+        #                                           night_mode=self.parent().po.all['night_mode'])
+        # self.fractal_layout.addWidget(self.fractal_zoom_step, 4, 0)
+        # self.fractal_layout.addWidget(self.fractal_zoom_step_label, 4, 1)
+        #
+        # self.fractal_widget.setLayout(self.fractal_layout)
+        # self.left_col_layout.addWidget(self.fractal_widget)
 
         # V/ Fifth box: Network detection parameters:#
         # IV/A/ Title
@@ -377,23 +369,23 @@ class AdvancedParameters(WindowType):
         self.network_detection_threshold_label = FixedText('Network detection threshold',
                                                   tip="To detect the network, Cellects segment small parts of the image using a sliding window.\nThis threshold is an intensity value [0, 255]\napplied to the sliding window to not consider homogeneous substes of the image\ni.e. This is the minimal variation in intensity to consider that some pixels are parts of the network.",
                                                   night_mode=self.parent().po.all['night_mode'])
-        self.mesh_side_length = Spinbox(min=2, max=1000000, val=self.parent().po.vars['network_mesh_side_length'], decimals=0,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.mesh_side_length_label = FixedText('Mesh side length',
-                                                  tip="This is the side length (in pixels) of the sliding window used to detect the network.\nHigh values are faster but less precise.\nWhen too high, straight vertical or horizontal lines appear in the detected network.",
-                                                  night_mode=self.parent().po.all['night_mode'])
-        self.mesh_step_length = Spinbox(min=1, max=100, val=self.parent().po.vars['network_mesh_step_length'], decimals=0,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.mesh_step_length_label = FixedText('Mesh step length',
-                                                  tip="This is the distance (in pixels) travelled by the sliding window\n(used to detect the network) at each stage.\nHigh values are faster but less precise.",
-                                                  night_mode=self.parent().po.all['night_mode'])
+        # self.mesh_side_length = Spinbox(min=2, max=1000000, val=self.parent().po.vars['network_mesh_side_length'], decimals=0,
+        #                                   night_mode=self.parent().po.all['night_mode'])
+        # self.mesh_side_length_label = FixedText('Mesh side length',
+        #                                           tip="This is the side length (in pixels) of the sliding window used to detect the network.\nHigh values are faster but less precise.\nWhen too high, straight vertical or horizontal lines appear in the detected network.",
+        #                                           night_mode=self.parent().po.all['night_mode'])
+        # self.mesh_step_length = Spinbox(min=1, max=100, val=self.parent().po.vars['network_mesh_step_length'], decimals=0,
+        #                                   night_mode=self.parent().po.all['night_mode'])
+        # self.mesh_step_length_label = FixedText('Mesh step length',
+        #                                           tip="This is the distance (in pixels) travelled by the sliding window\n(used to detect the network) at each stage.\nHigh values are faster but less precise.",
+        #                                           night_mode=self.parent().po.all['night_mode'])
 
         self.network_layout.addWidget(self.network_detection_threshold, 0, 0)
         self.network_layout.addWidget(self.network_detection_threshold_label, 0, 1)
-        self.network_layout.addWidget(self.mesh_side_length, 1, 0)
-        self.network_layout.addWidget(self.mesh_side_length_label, 1, 1)
-        self.network_layout.addWidget(self.mesh_step_length, 2, 0)
-        self.network_layout.addWidget(self.mesh_step_length_label, 2, 1)
+        # self.network_layout.addWidget(self.mesh_side_length, 1, 0)
+        # self.network_layout.addWidget(self.mesh_side_length_label, 1, 1)
+        # self.network_layout.addWidget(self.mesh_step_length, 2, 0)
+        # self.network_layout.addWidget(self.mesh_step_length_label, 2, 1)
 
         self.network_widget.setLayout(self.network_layout)
         self.left_col_layout.addWidget(self.network_widget)
@@ -596,6 +588,8 @@ class AdvancedParameters(WindowType):
         self.reset_all_settings = PButton("Reset all settings", night_mode=self.parent().po.all['night_mode'])
         self.reset_all_settings.clicked.connect(self.reset_all_settings_is_clicked)
         self.message = FixedText('', night_mode=self.parent().po.all['night_mode'])
+        self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
+        self.cancel.clicked.connect(self.cancel_is_clicked)
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
         self.last_row_layout.addWidget(self.night_mode_cb)
@@ -603,6 +597,7 @@ class AdvancedParameters(WindowType):
         self.last_row_layout.addWidget(self.reset_all_settings)
         self.last_row_layout.addItem(self.horizontal_space)
         self.last_row_layout.addWidget(self.message)
+        self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
         self.last_row_widget.setLayout(self.last_row_layout)
         self.layout.addWidget(self.last_row_widget)
@@ -661,18 +656,16 @@ class AdvancedParameters(WindowType):
 
     def do_automatic_size_thresholding_changed(self):
         """ Triggered when do_automatic_size_thresholding check status changes"""
-        self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
-        self.first_move_threshold.setVisible(not self.parent().po.all['automatic_size_thresholding'])
-        self.first_move_threshold_label.setVisible(not self.parent().po.all['automatic_size_thresholding'])
+        self.first_move_threshold.setVisible(not self.do_automatic_size_thresholding.isChecked())
+        self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
     def do_multiprocessing_is_clicked(self):
-        self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
-        self.max_core_nb.setVisible(self.parent().po.all['do_multiprocessing'])
-        self.max_core_nb_label.setVisible(self.parent().po.all['do_multiprocessing'])
+        self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
+        self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
 
-    def all_same_direction_changed(self):
-        """ Triggered when all_same_direction check status changes"""
-        self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
+    # def all_same_direction_changed(self):
+    #     """ Triggered when all_same_direction check status changes"""
+    #     self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
 
     def do_distant_shape_int_changed(self):
         """ Triggered when connect_distant_shape_during_segmentation check status changes"""
@@ -839,7 +832,7 @@ class AdvancedParameters(WindowType):
         # self.more_than_two_colors_label.setFixedWidth(300)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
         self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
-        self.distinct_colors_number.valueChanged.connect(self.distinct_colors_number_changed)
+        # self.distinct_colors_number.valueChanged.connect(self.distinct_colors_number_changed)
         # self.display_more_than_two_colors_option()
         # self.more_than_two_colors.setVisible(False)
         # self.more_than_two_colors_label.setVisible(False)
@@ -1059,12 +1052,13 @@ class AdvancedParameters(WindowType):
         else:
             self.csc_dict_is_empty = False
 
+        self.parent().po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
         if self.more_than_two_colors.isChecked():
+            self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             self.parent().videoanalysiswindow.select_option.setVisible(True)
             self.parent().videoanalysiswindow.select_option_label.setVisible(True)
 
     def display_more_than_two_colors_option(self):
-        self.parent().po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
         if self.more_than_two_colors.isChecked():
             self.distinct_colors_number.setVisible(True)
             self.more_than_two_colors_label.setText("How many distinct colors?")
@@ -1077,8 +1071,8 @@ class AdvancedParameters(WindowType):
 
             # self.parent().po.vars["color_number"] = 2
 
-    def distinct_colors_number_changed(self):
-        self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+    # def distinct_colors_number_changed(self):
+    #     self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
 
     def night_mode_is_clicked(self):
         """ Triggered when night_mode_cb check status changes"""
@@ -1106,86 +1100,138 @@ class AdvancedParameters(WindowType):
         self.message.setText('Close and restart Cellects to apply the settings reset')
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
+    def cancel_is_clicked(self):
+        self.crop_images.setChecked(self.parent().po.all['crop_images'])
+        self.subtract_background.setChecked(self.parent().po.vars['subtract_background'])
+        self.keep_masks_for_all_folders.setChecked(self.parent().po.all['keep_masks_for_all_folders'])
+        self.ring_correction.setChecked(self.parent().po.vars['ring_correction'])
+        self.prevent_fast_growth_near_periphery.setChecked(self.parent().po.vars['prevent_fast_growth_near_periphery'])
+        self.periphery_width.setValue(self.parent().po.vars['periphery_width'])
+        self.max_periphery_growth.setValue(self.parent().po.vars['max_periphery_growth'])
+
+
+        self.first_move_threshold.setValue(self.parent().po.all['first_move_threshold_in_mm²'])
+        self.pixels_to_mm.setChecked(self.parent().po.vars['output_in_mm'])
+        self.do_automatic_size_thresholding.setChecked(self.parent().po.all['automatic_size_thresholding'])
+        self.appearing_selection.setCurrentText(self.parent().po.vars['first_detection_method'])
+        self.oscillation_period.setValue(self.parent().po.vars['oscillation_period'])
+        self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
+
+        self.network_detection_threshold.setValue(self.parent().po.vars['network_detection_threshold'])
+
+        self.do_multiprocessing.setChecked(self.parent().po.all['do_multiprocessing'])
+        self.max_core_nb.setValue(self.parent().po.all['cores'])
+        self.min_memory_left.setValue(self.parent().po.vars['min_ram_free'])
+        self.lose_accuracy_to_save_memory.setChecked(self.parent().po.vars['lose_accuracy_to_save_memory'])
+        self.video_fps.setValue(self.parent().po.vars['video_fps'])
+        self.keep_unaltered_videos.setChecked(self.parent().po.vars['keep_unaltered_videos'])
+        self.save_processed_videos.setChecked(self.parent().po.vars['save_processed_videos'])
+        self.time_step.setValue(self.parent().po.vars['time_step'])
+        # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
+
+        self.connect_distant_shape_during_segmentation.setChecked(self.parent().po.all['connect_distant_shape_during_segmentation'])
+        do_use_max_size = self.parent().po.vars['max_distant_shape_size'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
+        do_use_min_size = self.parent().po.vars['min_distant_shape_size'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
+        self.use_max_size.setChecked(do_use_max_size)
+        self.use_min_size.setChecked(do_use_min_size)
+        if do_use_max_size:
+            self.max_distant_shape_size.setValue(self.parent().po.vars['max_distant_shape_size'])
+        else:
+            self.max_distant_shape_size.setValue(50)
+        if do_use_min_size:
+            self.min_distant_shape_size.setValue(self.parent().po.vars['min_distant_shape_size'])
+        else:
+            self.min_distant_shape_size.setValue(0)
+
+        self.ease_connect_distant_shape.setValue(self.parent().po.vars['ease_connect_distant_shape'])
+        self.all_same_direction.setChecked(self.parent().po.all['all_same_direction'])
+        self.update_csc_editing_display()
+
+        if self.parent().last_is_first:
+            self.parent().change_widget(0) # FirstWidget
+        else:
+            self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
+
     def ok_is_clicked(self):
         """ Triggered when ok is clicked, save the directory all_vars.pkl and go back to the previous window"""
-        if self.mesh_side_length.value() <= self.mesh_step_length.value():
-            self.message.setText('The mesh side has to be inferior to the mesh step')
-            self.message.setStyleSheet("color: rgb(230, 145, 18)")
+        # if self.mesh_side_length.value() <= self.mesh_step_length.value():
+        #     self.message.setText('The mesh side has to be inferior to the mesh step')
+        #     self.message.setStyleSheet("color: rgb(230, 145, 18)")
+        # else:
+        self.parent().po.all['crop_images'] = self.crop_images.isChecked()
+        self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
+        self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
+        self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
+        self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
+        self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
+        self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
+
+        # if self.parent().po.vars['origin_state'] == "invisible":
+        self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
+        self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
+        self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
+        self.parent().po.vars['first_detection_method'] = self.appearing_selection.currentText()
+        self.parent().po.vars['oscillation_period'] = self.oscillation_period.value()
+        self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
+        # self.parent().po.vars['fractal_box_side_threshold'] = int(self.fractal_box_side_threshold.value())
+        # self.parent().po.vars['fractal_zoom_step'] = int(self.fractal_zoom_step.value())
+
+        self.parent().po.vars['network_detection_threshold'] = int(round(self.network_detection_threshold.value()))
+        # self.parent().po.vars['network_mesh_side_length'] = int(round(self.mesh_side_length.value()))
+        # self.parent().po.vars['network_mesh_step_length'] = int(round(self.mesh_step_length.value()))
+
+        self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
+        self.parent().po.all['cores'] = uint8(self.max_core_nb.value())
+        self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
+        self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
+        self.parent().po.vars['video_fps'] = float(self.video_fps.value())
+        # self.parent().po.all['overwrite_unaltered_videos'] = self.overwrite_unaltered_videos.isChecked()
+        self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
+        self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
+        self.parent().po.vars['time_step'] = float(self.time_step.value())
+        # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
+
+        do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
+        self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
+        if do_distant_shape_int:
+            self.parent().po.vars['ease_connect_distant_shape'] = int(
+                round(self.ease_connect_distant_shape.value()))
         else:
-            self.parent().po.all['crop_images'] = self.crop_images.isChecked()
-            self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
-            self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
-            self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
-            self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
-            self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
-            self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
+            self.parent().po.vars['ease_connect_distant_shape'] = 0
+        if self.use_max_size.isChecked():
+            self.parent().po.vars['max_distant_shape_size'] = int(round(self.max_distant_shape_size.value()))
+        else:
+            self.parent().po.vars['max_distant_shape_size'] = None
+        if self.use_min_size.isChecked():
+            self.parent().po.vars['min_distant_shape_size'] = int(round(self.min_distant_shape_size.value()))
+        else:
+            self.parent().po.vars['min_distant_shape_size'] = None
 
-            # if self.parent().po.vars['origin_state'] == "invisible":
-            self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
-            self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
+        self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
 
-            self.parent().po.vars['first_detection_method'] = self.appearing_selection.currentText()
-            self.parent().po.vars['oscillation_period'] = self.oscillation_period.value()
-            self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
-            self.parent().po.vars['fractal_box_side_threshold'] = int(self.fractal_box_side_threshold.value())
-            self.parent().po.vars['fractal_zoom_step'] = int(self.fractal_zoom_step.value())
+        previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
+        self.save_user_defined_csc()
+        print(self.parent().po.vars['convert_for_motion'])
+        if self.parent().po.first_exp_ready_to_run:
+            are_dicts_equal: bool = True
+            for key in previous_csc.keys():
+                if key != 'logical':
+                    are_dicts_equal = are_dicts_equal and all(key in self.parent().po.vars['convert_for_motion'] and previous_csc[key] == self.parent().po.vars['convert_for_motion'][key])
+            for key in self.parent().po.vars['convert_for_motion'].keys():
+                if key != 'logical':
+                    are_dicts_equal = are_dicts_equal and all(
+                        key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
+                        previous_csc[key])
+            if not are_dicts_equal:
+                self.parent().po.find_if_lighter_background()
 
-            self.parent().po.vars['network_detection_threshold'] = int(round(self.network_detection_threshold.value()))
-            self.parent().po.vars['network_mesh_side_length'] = int(round(self.mesh_side_length.value()))
-            self.parent().po.vars['network_mesh_step_length'] = int(round(self.mesh_step_length.value()))
+        if not self.parent().thread['SaveAllVars'].isRunning():
+            self.parent().thread['SaveAllVars'].start()
 
-            self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
-            self.parent().po.all['cores'] = uint8(self.max_core_nb.value())
-            self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
-            self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
-            self.parent().po.vars['video_fps'] = float(self.video_fps.value())
-            # self.parent().po.all['overwrite_unaltered_videos'] = self.overwrite_unaltered_videos.isChecked()
-            self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
-            self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
-            self.parent().po.vars['time_step'] = float(self.time_step.value())
-            # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
-
-            do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
-            self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
-            if do_distant_shape_int:
-                self.parent().po.vars['ease_connect_distant_shape'] = int(
-                    round(self.ease_connect_distant_shape.value()))
-            else:
-                self.parent().po.vars['ease_connect_distant_shape'] = 0
-            if self.use_max_size.isChecked():
-                self.parent().po.vars['max_distant_shape_size'] = int(round(self.max_distant_shape_size.value()))
-            else:
-                self.parent().po.vars['max_distant_shape_size'] = None
-            if self.use_min_size.isChecked():
-                self.parent().po.vars['min_distant_shape_size'] = int(round(self.min_distant_shape_size.value()))
-            else:
-                self.parent().po.vars['min_distant_shape_size'] = None
-
-            self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
-
-            previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
-            self.save_user_defined_csc()
-            print(self.parent().po.vars['convert_for_motion'])
-            if self.parent().po.first_exp_ready_to_run:
-                are_dicts_equal: bool = True
-                for key in previous_csc.keys():
-                    if key != 'logical':
-                        are_dicts_equal = are_dicts_equal and all(key in self.parent().po.vars['convert_for_motion'] and previous_csc[key] == self.parent().po.vars['convert_for_motion'][key])
-                for key in self.parent().po.vars['convert_for_motion'].keys():
-                    if key != 'logical':
-                        are_dicts_equal = are_dicts_equal and all(
-                            key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
-                            previous_csc[key])
-                if not are_dicts_equal:
-                    self.parent().po.find_if_lighter_background()
-
-            if not self.parent().thread['SaveAllVars'].isRunning():
-                self.parent().thread['SaveAllVars'].start()
-
-            if self.parent().last_is_first:
-                self.parent().change_widget(0) # FirstWidget
-            else:
-                self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
+        if self.parent().last_is_first:
+            self.parent().change_widget(0) # FirstWidget
+        else:
+            self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
     
     def closeEvent(self, event):
         event.accept
