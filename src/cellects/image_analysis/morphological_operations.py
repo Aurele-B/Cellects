@@ -24,14 +24,16 @@ It contains the following functions:
 """
 import logging
 from copy import deepcopy
-from numpy import square, round, vstack, repeat, append, sqrt, apply_along_axis, arange, zeros_like, zeros, argsort, uint8, min, any, \
+from numpy import square, round, vstack, repeat, append, sqrt, apply_along_axis, arange, zeros_like, zeros, argsort, uint8, argmax, bincount, any, \
     float32, linspace, dstack, not_equal, row_stack, column_stack, quantile, transpose, concatenate, logical_and, logical_or, uint64, nonzero, ceil, sum, uint32, uint16, \
     fromfunction, greater_equal, logical_xor, equal, ptp, max, min, sort, unique, where, greater, minimum, less_equal, count_nonzero, argwhere, array, ones, int8
 from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
 from scipy.spatial import KDTree
 from numba import njit
 from cellects.utils.formulas import moving_average
-from cellects.image_analysis.image_segmentation import get_otsu_threshold
+from skimage.filters import threshold_otsu
+# from cellects.image_analysis.image_segmentation import get_otsu_threshold
+from skimage.measure import label
 
 
 cross_33 = getStructuringElement(MORPH_CROSS, (3, 3))
@@ -240,6 +242,13 @@ def cc(binary_img):
     for i, val in enumerate(sorted_idx):
         new_order[img == val] = i
     return new_order, stats, centers
+
+
+def get_largest_connected_component(segmentation):
+    labels = label(segmentation)
+    assert(labels.max() != 0) # assume at least 1 CC
+    largest_connected_component = labels == argmax(bincount(labels.flat)[1:]) + 1
+    return largest_connected_component
 
 
 def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
@@ -797,7 +806,8 @@ def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
     min_cy = min(coord[1])
     max_cy = max(coord[1])
     gray_img = grayscale_image[min_cy:max_cy, min_cx:max_cx]
-    threshold = get_otsu_threshold(gray_img)
+    # threshold = get_otsu_threshold(gray_img)
+    threshold = threshold_otsu(gray_img)
     bin_img = (gray_img < threshold).astype(uint8)
     detected_shape_number, bin_img = connectedComponents(bin_img, ltype=CV_16U)
     while (detected_shape_number > 2) and (0 < threshold < 255):

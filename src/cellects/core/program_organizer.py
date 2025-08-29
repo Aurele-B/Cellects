@@ -85,7 +85,7 @@ class ProgramOrganizer:
         # self.untype_csc_dict()
         self.all['vars'] = self.vars
         all_vars = deepcopy(self.all)
-        if not self.all['keep_masks_for_all_folders']:
+        if not self.all['keep_cell_and_back_for_all_folders']:
             all_vars['bio_mask'] = None
             all_vars['back_mask'] = None
         pickle_rick = PickleRick(0)
@@ -345,12 +345,12 @@ class ProgramOrganizer:
                 self.get_last_image()
                 (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly[
                     'coordinates']
-                if self.all['crop_images']:
+                if self.all['automatically_crop']:
                     self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     logging.info("Crop first image")
-                    self.first_image.crop_images(self.first_image.crop_coord)
+                    self.first_image.automatically_crop(self.first_image.crop_coord)
                     logging.info("Crop last image")
-                    self.last_image.crop_images(self.first_image.crop_coord)
+                    self.last_image.automatically_crop(self.first_image.crop_coord)
                 else:
                     self.first_image.crop_coord = None
                 # self.cropping(True)
@@ -367,9 +367,9 @@ class ProgramOrganizer:
                 # self.vars['background_list'] = data_to_run_cellects_quickly['background_and_origin_list'][1]
                 # self.vars['background_list2'] = data_to_run_cellects_quickly['background_and_origin_list'][2]
                 # self.vars['exif'] = data_to_run_cellects_quickly['exif']
-                # if self.all['crop_images']:
-                #     self.first_image.crop_images(self.first_image.crop_coord)
-                #     self.last_image.crop_images(self.first_image.crop_coord)
+                # if self.all['automatically_crop']:
+                #     self.first_image.automatically_crop(self.first_image.crop_coord)
+                #     self.last_image.automatically_crop(self.first_image.crop_coord)
                 self.first_exp_ready_to_run = True
                 print(f"Overwrite is {self.all['overwrite_unaltered_videos']}")
                 if self.vars['subtract_background'] and len(self.vars['background_list']) == 0:
@@ -653,13 +653,13 @@ class ProgramOrganizer:
             if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
                 self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
             # if not self.last_image.cropped:
-            #     self.last_image.crop_images(self.first_image.crop_coord)
+            #     self.last_image.automatically_crop(self.first_image.crop_coord)
             # self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
             #                                     biomask, backmask, self.first_image.subtract_background,
             #                                     self.first_image.subtract_background2)
 
             # if self.first_image.crop_coord is not None:
-            #     self.first_image.crop_images(self.first_image.crop_coord)
+            #     self.first_image.automatically_crop(self.first_image.crop_coord)
 
             # self.last_image.binary_image = round(self.last_image.binary_image).astype(uint8)
 
@@ -724,19 +724,19 @@ class ProgramOrganizer:
                     #          self.videos.bot) = pickle.load(fileopen)
                     else:
                         self.first_image.get_crop_coordinates()
-                    if self.all['crop_images']:
-                        self.first_image.crop_images(self.first_image.crop_coord)
+                    if self.all['automatically_crop']:
+                        self.first_image.automatically_crop(self.first_image.crop_coord)
                     else:
                         self.first_image.crop_coord = None
             else:
-                if not self.last_image.cropped and self.all['crop_images']:
-                    self.last_image.crop_images(self.first_image.crop_coord)
-        # if self.all['crop_images'] and not self.vars['drift_already_corrected']:
+                if not self.last_image.cropped and self.all['automatically_crop']:
+                    self.last_image.automatically_crop(self.first_image.crop_coord)
+        # if self.all['automatically_crop'] and not self.vars['drift_already_corrected']:
         #     if is_first_image:
         #         self.first_image.get_crop_coordinates()
-        #         self.first_image.crop_images(self.first_image.crop_coord)
+        #         self.first_image.automatically_crop(self.first_image.crop_coord)
         #     else:
-        #         self.last_image.crop_images(self.first_image.crop_coord)
+        #         self.last_image.automatically_crop(self.first_image.crop_coord)
 
     def get_average_pixel_size(self):
         logging.info("Get average pixel size")
@@ -832,7 +832,7 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],#self.vars['convert_for_motion']
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_same_direction=self.all['all_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
                 else:
                     self.videos.get_bounding_boxes(
                         are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
@@ -840,7 +840,7 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_same_direction=self.all['all_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
                 if any(self.videos.ordered_stats[:, 4] > 100 * median(self.videos.ordered_stats[:, 4])):
                     analysis_status['message'] = "A specimen is at least 100 times larger: (re)do the first image analysis."
                     analysis_status['continue'] = False
@@ -940,9 +940,9 @@ class ProgramOrganizer:
         # 2) Represent the segmentation using a particular color space combination
         if self.all['are_gravity_centers_moving'] != 1:
             analysis_status = self.delineate_each_arena()
-        # self.fi.crop_images(self.first_image.crop_coord)
+        # self.fi.automatically_crop(self.first_image.crop_coord)
         self.last_image = OneImageAnalysis(self.last_im)
-        self.last_image.crop_images(self.videos.first_image.crop_coord)
+        self.last_image.automatically_crop(self.videos.first_image.crop_coord)
         # csc = ColorSpaceCombination(self.last_image.image)
 
         concomp_nb = [self.sample_number, self.sample_number * 50]

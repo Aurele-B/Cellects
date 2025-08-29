@@ -43,7 +43,7 @@ class OneVideoPerBlob:
         self.shapes_to_remove = None
         self.not_analyzed_individuals = None
 
-    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2, sample_size=5, all_same_direction=True, display=False):
+    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=True, display=False):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         # are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1; img_list=self.data_list; color_space_combination=self.vars['convert_for_origin']; color_number=self.vars["color_number"]; sample_size=5
 
@@ -63,7 +63,7 @@ class OneVideoPerBlob:
             self.top = zeros(self.first_image.shape_number, dtype=int64)
             self.bot = repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
             if are_gravity_centers_moving:
-                self.get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_same_direction, display)
+                self.get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_specimens_have_same_direction, display)
                 # new:
                 new_ordered_first_image = zeros(self.ordered_first_image.shape, dtype=uint8)
                 #
@@ -225,7 +225,7 @@ class OneVideoPerBlob:
             self.right = self.standard[:, 3]
 
 
-    def get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_same_direction=True, display=False):
+    def get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False):
         """
         Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
         on following images. i.e. it segment evenly spaced images (See self.segment_blob_motion and OneImageAnalysis)
@@ -237,8 +237,8 @@ class OneVideoPerBlob:
         :param sample_size: The picture number to analyse. The higher it is, the higher bath accuracy and computation
         time are
         :type sample_size: int
-        :param all_same_direction: Whether all specimens move roughly in the same direction or not
-        :type all_same_direction: bool
+        :param all_specimens_have_same_direction: Whether all specimens move roughly in the same direction or not
+        :type all_specimens_have_same_direction: bool
         :return: For each shapes, the coordinate of a bounding box including all shape movements
         """
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
@@ -253,7 +253,7 @@ class OneVideoPerBlob:
             else:
                 # image_obj = OneImageAnalysis(cv2.imread(img_list[sample_numbers[image] - 1]))  # image_name=img_list[10]
                 # image_obj.conversion(rgb_hsv_lab=[[1, 0, 0], [0, 0, 1], [0, 0, 0]])
-                # image_obj.crop_images(self.first_image.crop_coord)
+                # image_obj.automatically_crop(self.first_image.crop_coord)
                 # image_obj.thresholding()
                 # self.motion_list.insert(image, image_obj.binary_image)
                 if img_list.dtype.type is str_:
@@ -378,7 +378,7 @@ class OneVideoPerBlob:
             #     new_ordered_centroids[shape_i, :] = oc[1][idx], oc[0][idx]
 
             new_ordered_centroids = ordered_centroids
-            if all_same_direction:
+            if all_specimens_have_same_direction:
                 # Adjust each centroid position according to the maximal centroid displacement.
                 x_diffs = new_ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
                 if mean(x_diffs) > 0: # They moved left, we add to x
@@ -729,7 +729,7 @@ if __name__ == "__main__":
     first_image.get_crop_coordinates()
     # See(first_image.binary_image)
     self = OneVideoPerBlob(first_image, 100, False)
-    are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_same_direction=True
-    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_same_direction=False, display=True)
+    are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_specimens_have_same_direction=True
+    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=False, display=True)
     self.print_bounding_boxes()
 

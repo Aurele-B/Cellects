@@ -1146,9 +1146,9 @@ class OneImageAnalysis:
                 indices_to_remove[improving_cuts] = 1
         return indices_to_remove
 
-    def crop_images(self, crop_coord):
+    def automatically_crop(self, crop_coord):
         if not self.cropped:
-            logging.info("Crop using the crop_images method of OneImageAnalysis class")
+            logging.info("Crop using the automatically_crop method of OneImageAnalysis class")
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])

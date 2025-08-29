@@ -46,7 +46,7 @@ class TestCellects(CellectsUnitTest):
             self.po.vars['keep_unaltered_videos'] = True
             self.po.update_output_list()
             self.po.instantiate_tables()
-            self.po.vars['max_growth_per_frame'] = 0.25
+            self.po.vars['maximal_growth_factor'] = 0.25
             self.po.get_first_image()
             backmask = zeros(self.po.first_im.shape[:2], uint8)
             backmask[-30:, :] = 1
@@ -54,7 +54,7 @@ class TestCellects(CellectsUnitTest):
             self.po.vars['convert_for_origin'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
             self.po.vars['convert_for_motion'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
             self.po.fast_image_segmentation(True, backmask=backmask)
-            self.po.all['crop_images'] = True
+            self.po.all['automatically_crop'] = True
             self.po.cropping(is_first_image=True)
             self.assertTrue(array_equal(self.po.first_image.crop_coord, coordinates[0]))
             self.po.all['scale_with_image_or_cells'] = 1
@@ -166,7 +166,7 @@ class TestCellects(CellectsUnitTest):
         self.test_save_data_to_run_cellects_quickly()
         self.test_video_writing()
         self.po.instantiate_tables()
-        self.po.vars['max_growth_per_frame'] = 0.25
+        self.po.vars['maximal_growth_factor'] = 0.25
         self.po.vars['do_slope_segmentation'] = False
         self.po.vars['do_value_segmentation'] = False
         self.po.vars['frame_by_frame_segmentation'] = True

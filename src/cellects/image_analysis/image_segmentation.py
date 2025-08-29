@@ -4,12 +4,17 @@ This script contains functions to convert bgr images into grayscale and grayscal
 """
 import threading
 import logging
+from tqdm import tqdm
 from numba.typed import Dict as TDict
-from numpy import min, max, all, any, zeros_like, argmin, logical_and, pi, square, mean, median, float32, histogram, cumsum, logical_not, float64, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
+from numpy import min, max, all, floor, any, linspace, ceil, transpose, meshgrid, ones_like, zeros_like, ptp, logical_and, pi, square, mean, median, float32, histogram, cumsum, logical_not, float64, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from numba import njit
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
+from cellects.image_analysis.morphological_operations import get_largest_connected_component
+from skimage.measure import perimeter
+from scipy.optimize import minimize
+from skimage.filters import frangi, sato, threshold_otsu
 
 
 def get_color_spaces(bgr_image, space_names=""):
@@ -206,3 +211,56 @@ def segment_with_lum_value(converted_video, basic_bckgrnd_values, l_threshold, l
             # segmentation = (converted_video > l_threshold).astype(uint8)
     return segmentation, l_threshold_over_time
 
+
+def _network_perimeter(threshold, img):
+    binary_img = img > threshold
+    return -perimeter(binary_img)
+
+
+def rolling_window_segmentation(greyscale_image, possibly_filled_pixels, patch_size=(80, 80)):
+    patch_centers = [
+        floor(linspace(
+            p // 2, s - p // 2, int(ceil(s / (p // 2))) - 1
+        )).astype(int)
+        for s, p in zip(greyscale_image.shape, patch_size)
+    ]
+    patch_centers = transpose(meshgrid(*patch_centers), (1, 2, 0)).reshape((-1, 2))
+
+    patch_slices = [
+        tuple(slice(c - p // 2, c + p // 2, 1)
+              for c, p in zip(p_c, patch_size)) for p_c in patch_centers
+    ]
+    maximize_parameter = False
+
+    network_patches = []
+    patch_thresholds = []
+    for patch in tqdm(patch_slices):
+        v = greyscale_image[patch] * possibly_filled_pixels[patch]
+        if v.max() > 0 and ptp(v) > 0.5:
+            t = threshold_otsu(v)
+
+            if maximize_parameter:
+                res = minimize(_network_perimeter, x0=t, args=(v,), method='Nelder-Mead')
+                t = res.x[0]
+
+            network_patches.append(v > t)
+            patch_thresholds.append(t)
+        else:
+            network_patches.append(zeros_like(v))
+            patch_thresholds.append(0)
+
+    network_img = zeros_like(greyscale_image)
+    count_img = zeros_like(greyscale_image)
+    for patch, network_patch, t in zip(patch_slices, network_patches, patch_thresholds):
+        network_img[patch] += network_patch
+        count_img[patch] += ones_like(network_patch)
+    network_img /= count_img
+    return network_img
+
+def binary_quality_index(binary_img):
+    if any(binary_img):
+        largest_cc = get_largest_connected_component(binary_img)
+        index = square(perimeter(largest_cc)) / binary_img.sum()
+    else:
+        index = 0.
+    return index

@@ -13,42 +13,154 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
-from skimage.filters import frangi, threshold_otsu
+from skimage.filters import frangi, sato, threshold_otsu
 from skimage.measure import perimeter
+from cellects.image_analysis.image_segmentation import rolling_window_segmentation, binary_quality_index
 
 
-import random
-from copy import deepcopy
-from scipy import ndimage
-import cv2
-import numpy as np
-import os
-from numba.typed import Dict as TDict
+def apply_frangi_variations(greyscale_image, possibly_filled_pixels):
+    """Apply 12 variations of Frangi filter"""
+    results = []
+
+    # Parameter variations for Frangi filter
+    beta = 1.
+    gamma = 1.
+    black_ridges = True
+    sigmas_list = [
+        [1], [2], [3], [1, 2], [2, 3], [1, 3],
+        [1, 2, 3], [0.5, 1], [1, 4], [0.5, 2],
+        [2, 4], [1, 2, 4]
+    ]
+    frangi_sigmas = {
+        's_fine_vessels': [0.75],
+        'fine_vessels': [0.5, 1.0],  # Very fine capillaries, thin fibers
+        'small_vessels': [1.0, 2.0],  # Small vessels, fine structures
+        'multi_scale_medium': [1.0, 2.0, 3.0],  # Standard multi-scale
+        'ultra_fine': [0.3, 0.5, 0.8],  # Ultra-fine structures
+        'comprehensive': [0.5, 1.0, 2.0, 4.0],  # Multi-scale
+        'retinal_vessels': [1.0, 2.0, 4.0, 8.0],  # Optimized for retinal imaging
+        'microscopy': [0.5, 1.0, 1.5, 2.5],  # Microscopy applications
+        'broad_spectrum': [0.5, 1.5, 3.0, 6.0, 10.0]
+    }
+
+    for i, (key, sigmas) in enumerate(frangi_sigmas.items()):
+        # Apply Frangi filter
+        frangi_result = frangi(greyscale_image, sigmas=sigmas, beta=beta, gamma=gamma, black_ridges=black_ridges)
+
+        # Apply both thresholding methods
+        # Method 1: Otsu thresholding
+        thresh_otsu = threshold_otsu(frangi_result)
+        binary_otsu = frangi_result > thresh_otsu
+        quality_otsu = binary_quality_index(binary_otsu)
+
+        # Method 2: Rolling window thresholding
+        binary_rolling = rolling_window_segmentation(frangi_result, possibly_filled_pixels, patch_size=(10, 10))
+        quality_rolling = binary_quality_index(binary_rolling)
+
+        # Store results
+        results.append({
+            'method': f'f_{sigmas}_thresh',
+            'binary': binary_otsu,
+            'quality': quality_otsu,
+            'filtered': frangi_result
+        })
+        results.append({
+            'method': f'f_{sigmas}_roll',
+            'binary': binary_rolling,
+            'quality': quality_rolling,
+            'filtered': frangi_result
+        })
+
+    return results
 
 
-video_nb = 2
-os.chdir("/Users/Directory/Data/dossier1")
-binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
-binary_video = np.zeros((720, 1475, 1477), np.uint8)
-binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
-origin = binary_video[0, ...]
-visu = np.load(f"ind_{video_nb}.npy")
-im_no = 465
-bgr_img = visu[im_no, :, :, :]
-rgb_img = bgr_img[:, :, ::-1]
-cell_img = binary_video[im_no, :, :]
+def apply_sato_variations(greyscale_image, possibly_filled_pixels):
+    """Apply 12 variations of sato filter"""
+    results = []
+    add_rolling_window = False
 
-figure = plt.figure(figsize=(20, 20))
-ax = figure.gca()
+    # Parameter variations for Frangi filter
+    black_ridges = True
+    sigmas_list = [
+        [1], [2], [3], [1, 2], [2, 3], [1, 3],
+        [1, 2, 3], [0.5, 1], [1, 4], [0.5, 2],
+        [2, 4], [1, 2, 4]
+    ]
+    sato_sigmas = {
+        'super_small_tubes': [0.01, 0.05, 0.1, 0.15],  #
+        'small_tubes': [0.1, 0.2, 0.4, 0.8],  #
+        's_thick_ridges': [0.25, 0.75],  # Thick ridges/tubes
+        'small_multi_scale': [0.1, 0.2, 0.4, 0.8, 1.6],  #
+        'fine_ridges': [0.8, 1.5],  # Fine ridge detection
+        'medium_ridges': [1.5, 3.0],  # Medium ridge structures
+        'multi_scale_fine': [0.8, 1.5, 2.5],  # Multi-scale fine detection
+        'multi_scale_standard': [1.0, 2.5, 5.0],  # Standard multi-scale
+        'edge_enhanced': [0.5, 1.0, 2.0],  # Edge-enhanced detection
+        'noise_robust': [1.5, 2.5, 4.0],  # Robust to noise
+        'fingerprint': [1.0, 1.5, 2.0, 3.0],  # Fingerprint ridge detection
+        'geological': [2.0, 5.0, 10.0, 15.0]  # Geological structures
+    }
 
-ax.imshow(rgb_img, interpolation='none')
-figure.tight_layout()
+    for i, (key, sigmas) in enumerate(sato_sigmas.items()):
+        # Apply Frangi filter
+        sato_result = sato(greyscale_image, sigmas=sigmas, black_ridges=black_ridges, mode='reflect')
+
+        # Apply both thresholding methods
+        # Method 1: Otsu thresholding
+        thresh_otsu = threshold_otsu(sato_result)
+        binary_otsu = sato_result > thresh_otsu
+        quality_otsu = binary_quality_index(binary_otsu)
+
+        # Store results
+        results.append({
+            'method': f's_{sigmas}_thresh',
+            'binary': binary_otsu,
+            'quality': quality_otsu,
+            'filtered': sato_result
+        })
+
+        # Method 2: Rolling window thresholding
+        if add_rolling_window:
+            binary_rolling = rolling_window_segmentation(sato_result, possibly_filled_pixels, patch_size=(10, 10))
+            quality_rolling = binary_quality_index(binary_rolling)
+
+            results.append({
+                'method': f's_{sigmas}_roll',
+                'binary': binary_rolling,
+                'quality': quality_rolling,
+                'filtered': sato_result
+            })
+
+    return results
 
 
+def get_best_network_detection_method(greyscale, possibly_filled_pixels):
+    frangi_res = apply_frangi_variations(greyscale, possibly_filled_pixels)
+    sato_res = apply_sato_variations(greyscale, possibly_filled_pixels)
+    all_results = frangi_res + sato_res
+    quality_metrics = np.array([result['quality'] for result in all_results])
+    return all_results, quality_metrics
 
 
-net_img = np.load("data/NET_2_720.npy")
-net_coord = np.load(f"coord_tubular_network{video_nb}_t720_y1475_x1477.npy")
+# video_nb = 2
+# os.chdir("/Users/Directory/Data/dossier1")
+# binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
+# binary_video = np.zeros((720, 1475, 1477), np.uint8)
+# binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
+# origin = binary_video[0, ...]
+# visu = np.load(f"ind_{video_nb}.npy")
+# im_no = 465
+# bgr_img = visu[im_no, :, :, :]
+# rgb_img = bgr_img[:, :, ::-1]
+# cell_img = binary_video[im_no, :, :]
+#
+# figure = plt.figure(figsize=(20, 20))
+# ax = figure.gca()
+#
+# ax.imshow(rgb_img, interpolation='none')
+# figure.tight_layout()
+# net_img = np.load("data/NET_2_720.npy")
+# net_coord = np.load(f"coord_tubular_network{video_nb}_t720_y1475_x1477.npy")
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, otsu_thresholding
 from cellects.image_analysis.morphological_operations import make_gravity_field, cross_33, square_33, cc, CompareNeighborsWithValue, get_rolling_window_coordinates_list
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
@@ -442,39 +554,39 @@ def network_detection(binary_video, converted_video, origin, origin_state, light
     return networks
 
 
-if __name__ == "__main__":
-    # 1. Prepare the data
-    # 1.a. Generate converted_video and sliding_cumulated_sum
-    video_nb = 3
-    for video_nb in np.arange(1, 7): #  np.array((5, 6), int):
-        os.chdir("D:\Directory\Data\Audrey")
-        visu = np.load(f"ind_{video_nb}.npy")
-        dims = visu.shape[:3]
-        binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
-        binary_video = np.zeros((720, 1475, 1477), np.uint8)
-        binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
-        origin = binary_video[0, ...]
-        first_dict = TDict()
-        first_dict["lab"] = np.array((0, 0, 1))
-        first_dict["luv"] = np.array((0, 0, 1))
-        origin_state = "constant"
-        lighter_background = False
-        int_variation_thresh = 20
-        side_length, window_step = 40, 4
-        sliding_sum_step = 10
-
-        converted_video = np.zeros((dims[0], dims[1], dims[2]), dtype=np.uint8)
-        for f_i in np.arange(dims[0]):
-            bgr_image = visu[f_i, ...]
-            converted_video[f_i, ...], _ = generate_color_space_combination(bgr_image, list(first_dict.keys()), first_dict,
-                                                                            convert_to_uint8=True)
-        networks = network_detection(binary_video, converted_video, origin, origin_state, lighter_background,
-                                     sliding_sum_step=10, int_variation_thresh=int_variation_thresh,
-                                     side_length=side_length, window_step=window_step)
-        np.save(f"new_net_detection{video_nb}.npy", networks)
-
-    # video_nb = 2
-    # for video_nb in np.array((2, 4), int):
-    #     os.chdir("/Users/Directory/Data/dossier1")
-    #     visu = np.load(f"ind_{video_nb}.npy")
-    #     write_video(visu, f"simple_video{video_nb}.mp4", is_color=True, fps=40)
+# if __name__ == "__main__":
+#     # 1. Prepare the data
+#     # 1.a. Generate converted_video and sliding_cumulated_sum
+#     video_nb = 3
+#     for video_nb in np.arange(1, 7): #  np.array((5, 6), int):
+#         os.chdir("D:\Directory\Data\Audrey")
+#         visu = np.load(f"ind_{video_nb}.npy")
+#         dims = visu.shape[:3]
+#         binary_coord = np.load(f"coord_specimen{video_nb}_t720_y1475_x1477.npy")
+#         binary_video = np.zeros((720, 1475, 1477), np.uint8)
+#         binary_video[binary_coord[0, :],binary_coord[1, :], binary_coord[2, :]] = 1
+#         origin = binary_video[0, ...]
+#         first_dict = TDict()
+#         first_dict["lab"] = np.array((0, 0, 1))
+#         first_dict["luv"] = np.array((0, 0, 1))
+#         origin_state = "constant"
+#         lighter_background = False
+#         int_variation_thresh = 20
+#         side_length, window_step = 40, 4
+#         sliding_sum_step = 10
+#
+#         converted_video = np.zeros((dims[0], dims[1], dims[2]), dtype=np.uint8)
+#         for f_i in np.arange(dims[0]):
+#             bgr_image = visu[f_i, ...]
+#             converted_video[f_i, ...], _ = generate_color_space_combination(bgr_image, list(first_dict.keys()), first_dict,
+#                                                                             convert_to_uint8=True)
+#         networks = network_detection(binary_video, converted_video, origin, origin_state, lighter_background,
+#                                      sliding_sum_step=10, int_variation_thresh=int_variation_thresh,
+#                                      side_length=side_length, window_step=window_step)
+#         np.save(f"new_net_detection{video_nb}.npy", networks)
+#
+#     # video_nb = 2
+#     # for video_nb in np.array((2, 4), int):
+#     #     os.chdir("/Users/Directory/Data/dossier1")
+#     #     visu = np.load(f"ind_{video_nb}.npy")
+#     #     write_video(visu, f"simple_video{video_nb}.mp4", is_color=True, fps=40)
