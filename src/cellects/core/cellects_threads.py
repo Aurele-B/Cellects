@@ -1054,7 +1054,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
 
         if self.parent().po.vars['do_fading']:
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
-        self.parent().po.motion.max_distance = 9 * self.parent().po.vars['ease_connect_distant_shape']
+        self.parent().po.motion.max_distance = 9 * self.parent().po.vars['detection_range_factor']
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         self.parent().po.motion.detect_growth_transitions()
         self.parent().po.motion.networks_detection(False)

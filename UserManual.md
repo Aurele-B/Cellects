@@ -31,7 +31,7 @@ Cellects User Manual
     - [Arena to analyze](#Arena-to-analyze)
     - [Maximal growth factor](#Maximal-growth-factor)
     - [Repeat video smoothing](#Repeat-video-smoothing)
-    - [Select analysis option and compute all options](#Select-analysis-option-and-compute-all-options)
+    - [Segmentation method and compute all options](#Select-analysis-option-and-compute-all-options)
     - [Load one arena](#Load-one-arena)
     - [Detection](#Detection)
     - [Fading detection](#Fading-detection)
@@ -46,7 +46,7 @@ Cellects User Manual
     - [Correct errors around initial shape](#Correct-errors-around-initial-shape)
     - [Prevent fast growth near periphery](#Prevent-fast-growth-near-periphery)
     - [Connect distant shapes](#Connect-distant-shapes)
-    - [All cells have the same direction](#All-cells-have-the-same-direction)
+    - [All specimens have the same direction](#All-cells-have-the-same-direction)
     - [Appearing cell/colony parameters](#Appearing-cell-colony-parameters)
     - [Oscillatory parameters](#Oscillatory-parameters)
     - [Fractal parameters](#Fractal-parameters)
@@ -320,7 +320,7 @@ it starts by smoothing every pixel intensity curve. The algorithm used to smooth
 can be repeated to make the curve as smooth as necessary. 
 This value corresponds to the number of times to apply this algorithm.
 
-### Select analysis option and compute all options
+### Segmentation method and compute all options
 Cellects offers five analysis options of video tracking. The user can choose one option or let the 
 “*Compute all options*” checkbox be checked before starting one detection. 
 - The frame option applies the algorithm used during the image analysis window, frame by frame, 
@@ -447,7 +447,7 @@ It allows a disconnected shape to be dynamically connected to the main shape.
 This algorithm is very useful when the color of some parts of the specimen is so close to the background that 
 a disconnection appears during detection. This algorithm will fix that apparent disconnection.
 
-### All cells have the same direction
+### All specimens have the same direction
 This parameter only affects the slow algorithm of automatic arena detection (i.e. when the fast failed).
 Applying this will improve the chances to correctly detect arenas when all cells move in the same direction.
 

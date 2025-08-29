@@ -340,7 +340,7 @@ class MotionAnalysis:
             else:
                 nb_components, output, stats, centroids = connectedComponentsWithStats(analysisi.binary_image,
                                                                                            connectivity=8)
-                if self.vars['first_detection_method'] == 'most_central':
+                if self.vars['appearance_detection_method'] == 'most_central':
                     center = array((self.dims[2] // 2, self.dims[1] // 2))
                     stats = zeros(nb_components - 1)
                     for shape_i in arange(1, nb_components):
@@ -348,7 +348,7 @@ class MotionAnalysis:
                     # The shape having the minimal euclidean distance from the center will be the original shape
                     self.origin = zeros((self.dims[1], self.dims[2]), dtype=uint8)
                     self.origin[output == (argmin(stats) + 1)] = 1
-                elif self.vars['first_detection_method'] == 'largest':
+                elif self.vars['appearance_detection_method'] == 'largest':
                     self.origin = zeros((self.dims[1], self.dims[2]), dtype=uint8)
                     self.origin[output == argmax(stats[1:, 4])] = 1
             self.origin_idx = nonzero(self.origin)
@@ -445,7 +445,7 @@ class MotionAnalysis:
         ##
 
     def detection(self, compute_all_possibilities=False):
-        # self.lost_frames = (self.step - 1) * self.vars['iterate_smoothing'] # relevant when smoothing did not use padding.
+        # self.lost_frames = (self.step - 1) * self.vars['repeat_video_smoothing'] # relevant when smoothing did not use padding.
         self.lost_frames = self.step
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
@@ -504,7 +504,7 @@ class MotionAnalysis:
                         gradient_segmentation = logical_xor(gradient_segmentation, gradient_segmentation2)
 
             if compute_all_possibilities:
-                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['max_growth_per_frame']}")
+                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['maximal_growth_factor']}")
                 self.luminosity_segmentation = nonzero(luminosity_segmentation)
                 self.gradient_segmentation = nonzero(gradient_segmentation)
                 self.logical_and = nonzero(logical_and(luminosity_segmentation, gradient_segmentation))
@@ -603,7 +603,7 @@ class MotionAnalysis:
             validated_thresholds = zeros(value_segmentation_thresholds.shape, dtype=bool)
             counter = 0
             while_condition = True
-            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['max_growth_per_frame'] * 2
+            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['maximal_growth_factor'] * 2
             if self.vars['lighter_background']:
                 basic_bckgrnd_values = quantile(converted_video[:(self.lost_frames + 1), ...], 0.9, axis=(1, 2))
             else:
@@ -673,8 +673,8 @@ class MotionAnalysis:
                         padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
                                      (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                         moving_average = convolve(padded, smooth_kernel, mode='valid')
-                        if self.vars['iterate_smoothing'] > 1:
-                            for it in arange(1, self.vars['iterate_smoothing']):
+                        if self.vars['repeat_video_smoothing'] > 1:
+                            for it in arange(1, self.vars['repeat_video_smoothing']):
                                 padded = pad(moving_average,
                                              (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                                 moving_average = convolve(padded, smooth_kernel, mode='valid')
@@ -690,8 +690,8 @@ class MotionAnalysis:
                         padded = pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
                                      (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                         moving_average = convolve(padded, smooth_kernel, mode='valid')
-                        if self.vars['iterate_smoothing'] > 1:
-                            for it in arange(1, self.vars['iterate_smoothing']):
+                        if self.vars['repeat_video_smoothing'] > 1:
+                            for it in arange(1, self.vars['repeat_video_smoothing']):
                                 padded = pad(moving_average,
                                              (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                                 moving_average = convolve(padded, smooth_kernel, mode='valid')
@@ -756,7 +756,7 @@ class MotionAnalysis:
             validated_thresholds = zeros(value_segmentation_thresholds.shape, dtype=bool)
             counter = 0
             while_condition = True
-            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['max_growth_per_frame']
+            max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['maximal_growth_factor']
             # Try different values of do_slope_segmentation and keep the one that does not
             # segment more than x percent of the image
             while counter <= 14:
@@ -806,11 +806,11 @@ class MotionAnalysis:
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
         self.erodila_disk = Ellipse((self.pixel_ring_depth, self.pixel_ring_depth)).create().astype(uint8)
-        self.max_distance = self.pixel_ring_depth * self.vars['ease_connect_distant_shape']
+        self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
         ## Initialization
-        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['ring_correction']}, Connect distant shapes: {self.vars['ease_connect_distant_shape'] > 0}, How to select appearing cell(s): {self.vars['first_detection_method']}")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
 
         self.binary = zeros(self.dims[:3], dtype=uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
@@ -846,7 +846,7 @@ class MotionAnalysis:
         self.surfarea[:self.start] = sum(self.binary[:self.start, :, :], (1, 2))
         self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
                                            sqrt(sum(self.binary[(self.start - 1), :, :])))
-        if self.vars['ring_correction']:
+        if self.vars['correct_errors_around_initial']:
             self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = zeros(self.dims[1:], dtype=uint8)
             self.pixel_ring_depth += 2
@@ -893,7 +893,7 @@ class MotionAnalysis:
         frame_counter = -1
         maximal_size = 0.5 * new_potentials.size
         if (self.vars["do_threshold_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > max((self.start + self.step, 6)):
-           maximal_size = min((max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['max_growth_per_frame']), self.borders.sum()))
+           maximal_size = min((max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['maximal_growth_factor']), self.borders.sum()))
         while logical_and(sum(new_potentials) > maximal_size,
                              frame_counter <= 5):  # logical_and(sum(new_potentials > 0) > 5 * sum(dila_ring), frame_counter <= 5):
             frame_counter += 1
@@ -922,8 +922,8 @@ class MotionAnalysis:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
                 r = weakref.ref(pads)
                 # If max_distance is non nul look for distant shapes
-                pads.consider_shapes_sizes(self.vars['min_distant_shape_size'],
-                                                     self.vars['max_distant_shape_size'])
+                pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
+                                                     self.vars['max_size_for_connection'])
                 pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
 
                 new_shape = deepcopy(pads.expanded_shape)
@@ -962,7 +962,7 @@ class MotionAnalysis:
 
         # Calculate the mean distance covered per frame and correct for a ring of not really fading pixels
         if self.mean_distance_per_frame is None:
-            if self.vars['ring_correction'] and not self.vars['several_blob_per_arena']:
+            if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
                 if logical_and((self.t % 20) == 0,
                                   logical_and(self.surfarea[self.t] > self.substantial_growth,
                                                  self.surfarea[self.t] < self.substantial_growth * 2)):
@@ -992,7 +992,7 @@ class MotionAnalysis:
                         ray_through_back = None
             if any(self.surfarea[:self.t] > self.substantial_growth * 2):
 
-                if self.vars['ring_correction'] and not self.vars['several_blob_per_arena']:
+                if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
                     # Apply the hole correction
                     self.holes = morphologyEx(self.holes, MORPH_CLOSE, cross_33, iterations=10)
                     # If some holes are not covered by now
@@ -1504,7 +1504,7 @@ class MotionAnalysis:
 
     def memory_allocation_for_cytoscillations(self):
         try:
-            period_in_frame_nb = int(self.vars['oscillation_period'] / self.time_interval)
+            period_in_frame_nb = int(self.vars['expected_oscillation_period'] / self.time_interval)
             if period_in_frame_nb < 2:
                 period_in_frame_nb = 2
             necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \

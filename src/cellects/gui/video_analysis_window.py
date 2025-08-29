@@ -100,35 +100,39 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.growth_per_frame_widget = QtWidgets.QWidget()
         self.growth_per_frame_layout = QtWidgets.QHBoxLayout()
-
-        self.max_growth_per_frame = Spinbox(min=0, max=0.5, val=self.parent().po.vars['max_growth_per_frame'],
+        try:
+            self.parent().po.vars['maximal_growth_factor']
+        except KeyError:
+            self.parent().po.vars['maximal_growth_factor'] = 0.02
+            self.parent().po.vars['repeat_video_smoothing'] = self.parent().po.vars['iterate_smoothing']
+        self.maximal_growth_factor = Spinbox(min=0, max=0.5, val=self.parent().po.vars['maximal_growth_factor'],
                                             decimals=3, night_mode=self.parent().po.all['night_mode'])
-        self.max_growth_per_frame_label = FixedText('Maximal growth factor:',
+        self.maximal_growth_factor_label = FixedText('Maximal growth factor:',
                                                     tip="This factor should be tried and increased (resp. decreases)\nif the analysis underestimates (resp. overestimates) the cell size.\nThe maximal growth factor is a proportion of pixels in the image. \nIt tells Cellects how much the cell(s) can possibly move or grow from one image to the next.\nIn other words, this is the upper limit of the proportion of the image\nthat can change from being the background to being covered by the cell(s).",
                                                     night_mode=self.parent().po.all['night_mode'])
-        self.max_growth_per_frame.valueChanged.connect(self.max_growth_per_frame_changed)
-        self.growth_per_frame_layout.addWidget(self.max_growth_per_frame_label)
-        self.growth_per_frame_layout.addWidget(self.max_growth_per_frame)
+        self.maximal_growth_factor.valueChanged.connect(self.maximal_growth_factor_changed)
+        self.growth_per_frame_layout.addWidget(self.maximal_growth_factor_label)
+        self.growth_per_frame_layout.addWidget(self.maximal_growth_factor)
         # self.growth_per_frame_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.growth_per_frame_widget.setLayout(self.growth_per_frame_layout)
         self.left_options_layout.addWidget(self.growth_per_frame_widget)
 
         self.iterate_widget = QtWidgets.QWidget()
         self.iterate_layout = QtWidgets.QHBoxLayout()
-        self.iterate_smoothing = Spinbox(min=0, max=10, val=self.parent().po.vars['iterate_smoothing'],
+        self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.parent().po.vars['repeat_video_smoothing'],
                                          night_mode=self.parent().po.all['night_mode'])
-        self.iterate_smoothing_label = FixedText('Repeat video smoothing:',
+        self.repeat_video_smoothing_label = FixedText('Repeat video smoothing:',
                                                  tip="Increase (with steps of 1) if video noise is the source of detection failure",
                                                  night_mode=self.parent().po.all['night_mode'])
-        self.iterate_smoothing.valueChanged.connect(self.iterate_smoothing_changed)
-        self.iterate_layout.addWidget(self.iterate_smoothing_label)
-        self.iterate_layout.addWidget(self.iterate_smoothing)
+        self.repeat_video_smoothing.valueChanged.connect(self.repeat_video_smoothing_changed)
+        self.iterate_layout.addWidget(self.repeat_video_smoothing_label)
+        self.iterate_layout.addWidget(self.repeat_video_smoothing)
         # self.iterate_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.iterate_widget.setLayout(self.iterate_layout)
         self.left_options_layout.addWidget(self.iterate_widget)
 
 
-        self.select_option_label = FixedText('Select analysis option:',
+        self.select_option_label = FixedText('Segmentation method:',
                                              tip='Select the option allowing the best cell delimitation.',
                                              night_mode=self.parent().po.all['night_mode'])
         self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
@@ -137,11 +141,11 @@ class VideoAnalysisWindow(MainTabsType):
         self.select_option.setFixedWidth(175)
         # self.select_option_label.setFixedWidth(265)
         # self.select_option.setFixedWidth(150)
-        self.select_option.addItem("1) Frame")
-        self.select_option.addItem("2) Threshold")
-        self.select_option.addItem("3) Slope")
-        self.select_option.addItem("4) T and S")
-        self.select_option.addItem("5) T or S")
+        self.select_option.addItem("1. Frame by frame")
+        self.select_option.addItem("2. Dynamical threshold")
+        self.select_option.addItem("3. Dynamical slope")
+        self.select_option.addItem("4. Threshold and Slope")
+        self.select_option.addItem("5. Threshold or Slope")
         # for option in range(5):
         #     self.select_option.addItem(f"Option {option + 1}")
         self.select_option.setCurrentIndex(self.parent().po.all['video_option'])
@@ -384,19 +388,19 @@ class VideoAnalysisWindow(MainTabsType):
         else:
             self.parent().po.vars['frame_by_frame_segmentation'] = False
             if self.parent().po.all['video_option'] == 1:
-                logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
+                logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
                 self.parent().po.vars['do_threshold_segmentation'] = True
             elif self.parent().po.all['video_option'] == 2:
-                logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
+                logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
                 self.parent().po.vars['do_slope_segmentation'] = True
             elif self.parent().po.all['video_option'] > 2:
                 self.parent().po.vars['do_threshold_segmentation'] = True
                 self.parent().po.vars['do_slope_segmentation'] = True
                 if self.parent().po.all['video_option'] == 3:
-                    logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
+                    logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
                     self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = True
                 elif self.parent().po.all['video_option'] == 4:
-                    logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.parent().po.vars['max_growth_per_frame']}")
+                    logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
                     self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = False
         # self.parent().po.motion
 
@@ -410,12 +414,12 @@ class VideoAnalysisWindow(MainTabsType):
     #             self.general_step_label.setText('Step 2: Tune fading and advanced parameters to improve Post processing')
     #         self.save_one_result.setVisible(self.current_step == 2)
 
-        # self.max_growth_per_frame.setVisible(advanced_mode)
-        # self.max_growth_per_frame_label.setVisible(advanced_mode)
+        # self.maximal_growth_factor.setVisible(advanced_mode)
+        # self.maximal_growth_factor_label.setVisible(advanced_mode)
         # self.fading.setVisible(advanced_mode)
         # self.fading_label.setVisible(advanced_mode)
-        # self.iterate_smoothing.setVisible(advanced_mode)
-        # self.iterate_smoothing_label.setVisible(advanced_mode)
+        # self.repeat_video_smoothing.setVisible(advanced_mode)
+        # self.repeat_video_smoothing_label.setVisible(advanced_mode)
 
     def data_tab_is_clicked(self):
         if self.thread['VideoReader'].isRunning() or self.thread['OneArena'].isRunning() or self.thread['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
@@ -453,24 +457,24 @@ class VideoAnalysisWindow(MainTabsType):
 
     def save_all_vars_thread(self):
         # self.parent().po.all['arena'] = int(round(self.arena.value()))
-        # self.parent().po.vars['max_growth_per_frame'] = self.max_growth_per_frame.value()
+        # self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
         # self.parent().po.vars['fading'] = self.fading.value()
-        # self.parent().po.vars['iterate_smoothing'] = int(round(self.iterate_smoothing.value()))
+        # self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
 
         if not self.parent().thread['SaveAllVars'].isRunning():
             self.parent().thread['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
 
     def save_current_settings(self):
-        self.parent().po.vars['max_growth_per_frame'] = self.max_growth_per_frame.value()
-        self.parent().po.vars['iterate_smoothing'] = int(round(self.iterate_smoothing.value()))
+        self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
+        self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
         self.parent().po.vars['do_fading'] = self.do_fading.isChecked()
         self.parent().po.vars['fading'] = self.fading.value()
         self.parent().po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
         self.option_changed()
         self.save_all_vars_thread()
 
-    def iterate_smoothing_changed(self):
-        self.parent().po.vars['iterate_smoothing'] = int(round(self.iterate_smoothing.value()))
+    def repeat_video_smoothing_changed(self):
+        self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
         # self.save_all_vars_is_clicked()
 
     def do_fading_check(self):
@@ -481,8 +485,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.parent().po.vars['fading'] = self.fading.value()
         # self.save_all_vars_is_clicked()
 
-    def max_growth_per_frame_changed(self):
-        self.parent().po.vars['max_growth_per_frame'] = self.max_growth_per_frame.value()
+    def maximal_growth_factor_changed(self):
+        self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
         # self.save_all_vars_is_clicked()
 
     def arena_changed(self):
@@ -513,7 +517,7 @@ class VideoAnalysisWindow(MainTabsType):
     def post_processing_is_clicked(self):
         # self.save_all_vars_is_clicked()
         self.parent().po.load_quick_full = 2
-        logging.info(self.parent().po.vars['max_growth_per_frame'])
+        logging.info(self.parent().po.vars['maximal_growth_factor'])
         self.run_one_arena_thread()
 
     def run_one_arena_thread(self):

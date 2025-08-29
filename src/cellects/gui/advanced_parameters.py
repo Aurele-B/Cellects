@@ -81,20 +81,20 @@ class AdvancedParameters(WindowType):
         self.general_param_box_widget = QtWidgets.QWidget()
         self.general_param_box_widget.setStyleSheet(boxstylesheet)
         # I/C/ Create widgets
-        self.crop_images = Checkbox(self.parent().po.all['crop_images'])
-        self.crop_images_label = FixedText('Automatically crop images', tip="If more than one cell shape are (or may appear) in each arena", night_mode=self.parent().po.all['night_mode'])
+        self.automatically_crop = Checkbox(self.parent().po.all['automatically_crop'])
+        self.automatically_crop_label = FixedText('Automatically crop images', tip="If more than one cell shape are (or may appear) in each arena", night_mode=self.parent().po.all['night_mode'])
 
         self.subtract_background = Checkbox(self.parent().po.vars['subtract_background'])
         self.subtract_background.stateChanged.connect(self.subtract_background_check)
         self.subtract_background_label = FixedText('Subtract background', tip="Apply an algorithm allowing to remove a potential brightness gradient from images during analysis", night_mode=self.parent().po.all['night_mode'])
 
-        self.keep_masks_for_all_folders = Checkbox(self.parent().po.all['keep_masks_for_all_folders'])
-        self.keep_masks_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
+        self.keep_cell_and_back_for_all_folders = Checkbox(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.keep_cell_and_back_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
                                                tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep this information for all folders (if checked)\n- Only use this information for the current folder (if unchecked)",
                                                night_mode=self.parent().po.all['night_mode'])
 
-        self.ring_correction = Checkbox(self.parent().po.vars['ring_correction'])
-        self.ring_correction_label = FixedText('Correct errors around initial shape',
+        self.correct_errors_around_initial = Checkbox(self.parent().po.vars['correct_errors_around_initial'])
+        self.correct_errors_around_initial_label = FixedText('Correct errors around initial shape',
                                                tip="Apply an algorithm allowing to correct some failure around the initial shape\nThese errors are most likely due to color variations\n themselves due to substrate width differences crossed by light\naround initial cell lying on an opaque substrate",
                                                night_mode=self.parent().po.all['night_mode'])
 
@@ -118,14 +118,14 @@ class AdvancedParameters(WindowType):
 
 
         # I/D/ Arrange widgets in the box
-        self.general_param_box_layout.addWidget(self.crop_images, 0, 0)
-        self.general_param_box_layout.addWidget(self.crop_images_label, 0, 1)
+        self.general_param_box_layout.addWidget(self.automatically_crop, 0, 0)
+        self.general_param_box_layout.addWidget(self.automatically_crop_label, 0, 1)
         self.general_param_box_layout.addWidget(self.subtract_background, 1, 0)
         self.general_param_box_layout.addWidget(self.subtract_background_label, 1, 1)
-        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders, 2, 0)
-        self.general_param_box_layout.addWidget(self.keep_masks_for_all_folders_label, 2, 1)
-        self.general_param_box_layout.addWidget(self.ring_correction, 3, 0)
-        self.general_param_box_layout.addWidget(self.ring_correction_label, 3, 1)
+        self.general_param_box_layout.addWidget(self.keep_cell_and_back_for_all_folders, 2, 0)
+        self.general_param_box_layout.addWidget(self.keep_cell_and_back_for_all_folders_label, 2, 1)
+        self.general_param_box_layout.addWidget(self.correct_errors_around_initial, 3, 0)
+        self.general_param_box_layout.addWidget(self.correct_errors_around_initial_label, 3, 1)
         self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery, 4, 0)
         self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, 4, 1)
         self.general_param_box_layout.addWidget(self.periphery_width, 5, 0)
@@ -148,9 +148,9 @@ class AdvancedParameters(WindowType):
         self.one_per_arena_box_widget.setStyleSheet(boxstylesheet)
 
         # II/C/ Create widgets
-        self.all_same_direction = Checkbox(self.parent().po.all['all_same_direction'])
-        # self.all_same_direction.stateChanged.connect(self.all_same_direction_changed)
-        self.all_same_direction_label = FixedText('All cells have the same direction',
+        self.all_specimens_have_same_direction = Checkbox(self.parent().po.all['all_specimens_have_same_direction'])
+        # self.all_specimens_have_same_direction.stateChanged.connect(self.all_specimens_have_same_direction_changed)
+        self.all_specimens_have_same_direction_label = FixedText('All specimens have the same direction',
                                                          tip="This parameter only affects the slow algorithm of automatic arena detection.\nChecking it will improve the chances to correctly detect arenas when\n all cells move in the same direction",
                                                          night_mode=self.parent().po.all['night_mode'])
 
@@ -161,16 +161,16 @@ class AdvancedParameters(WindowType):
         self.connect_distant_shape_label = FixedText('Connect distant shapes',
                                                          tip="Allows a homemade algorithm allowing to\nprogressively (i.e. at the growth rate speed of neighboring pixels)\nconnect distant shapes to original shape(s)\nWarning: this option can drastically increase the duration of the analysis",
                                                          night_mode=self.parent().po.all['night_mode'])
-        self.ease_connect_distant_shape = Spinbox(min=0, max=1000000,
-                                                      val=self.parent().po.vars['ease_connect_distant_shape'],
+        self.detection_range_factor = Spinbox(min=0, max=1000000,
+                                                      val=self.parent().po.vars['detection_range_factor'],
                                                       night_mode=self.parent().po.all['night_mode'])
-        self.ease_connect_distant_shape_label = FixedText('Detection range factor:',
+        self.detection_range_factor_label = FixedText('Detection range factor:',
                                                               tip="From 1 to 10, increase the allowed distance from original shape(s) to connect distant shapes",
                                                               night_mode=self.parent().po.all['night_mode'])
 
         # Connect distant shape algo:
-        do_use_max_size = self.parent().po.vars['max_distant_shape_size'] is not None and connect_distant_shape
-        do_use_min_size = self.parent().po.vars['min_distant_shape_size'] is not None and connect_distant_shape
+        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and connect_distant_shape
+        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and connect_distant_shape
         self.use_max_size = Checkbox(do_use_max_size, night_mode=self.parent().po.all['night_mode'])
         self.use_min_size = Checkbox(do_use_min_size, night_mode=self.parent().po.all['night_mode'])
         self.use_max_size.stateChanged.connect(self.use_max_size_changed)
@@ -182,62 +182,62 @@ class AdvancedParameters(WindowType):
         self.use_min_size_label = FixedText('Use min size as a threshold',
                                             tip="To decide whether distant shapes should get connected",
                                             night_mode=self.parent().po.all['night_mode'])
-        self.max_distant_shape_size_label = FixedText('Max (pixels):', night_mode=self.parent().po.all['night_mode'])
-        self.min_distant_shape_size_label = FixedText('Min (pixels):', night_mode=self.parent().po.all['night_mode'])
+        self.max_size_for_connection_label = FixedText('Max (pixels):', night_mode=self.parent().po.all['night_mode'])
+        self.min_size_for_connection_label = FixedText('Min (pixels):', night_mode=self.parent().po.all['night_mode'])
         if do_use_max_size:
-            self.max_distant_shape_size = Spinbox(min=0, max=1000000,
-                                                  val=self.parent().po.vars['max_distant_shape_size'],
+            self.max_size_for_connection = Spinbox(min=0, max=1000000,
+                                                  val=self.parent().po.vars['max_size_for_connection'],
                                                   night_mode=self.parent().po.all['night_mode'])
         else:
-            self.max_distant_shape_size = Spinbox(min=0, max=1000000, val=50,
+            self.max_size_for_connection = Spinbox(min=0, max=1000000, val=50,
                                                   night_mode=self.parent().po.all['night_mode'])
         if do_use_min_size:
-            self.min_distant_shape_size = Spinbox(min=0, max=1000000,
-                                                  val=self.parent().po.vars['min_distant_shape_size'],
+            self.min_size_for_connection = Spinbox(min=0, max=1000000,
+                                                  val=self.parent().po.vars['min_size_for_connection'],
                                                   night_mode=self.parent().po.all['night_mode'])
         else:
-            self.min_distant_shape_size = Spinbox(min=0, max=1000000, val=0,
+            self.min_size_for_connection = Spinbox(min=0, max=1000000, val=0,
                                                   night_mode=self.parent().po.all['night_mode'])
         # set things visible or invisible:
-        # self.ease_connect_distant_shape.setVisible(connect_distant_shape)
-        # self.ease_connect_distant_shape_label.setVisible(connect_distant_shape)
+        # self.detection_range_factor.setVisible(connect_distant_shape)
+        # self.detection_range_factor_label.setVisible(connect_distant_shape)
         # self.use_max_size.setVisible(connect_distant_shape)
         # self.use_min_size.setVisible(connect_distant_shape)
         # self.use_max_size_label.setVisible(connect_distant_shape)
         # self.use_min_size_label.setVisible(connect_distant_shape)
         #
-        # self.max_distant_shape_size.setVisible(do_use_max_size)
-        # self.max_distant_shape_size_label.setVisible(do_use_max_size)
-        # self.min_distant_shape_size.setVisible(do_use_min_size)
-        # self.min_distant_shape_size_label.setVisible(do_use_min_size)
+        # self.max_size_for_connection.setVisible(do_use_max_size)
+        # self.max_size_for_connection_label.setVisible(do_use_max_size)
+        # self.min_size_for_connection.setVisible(do_use_min_size)
+        # self.min_size_for_connection_label.setVisible(do_use_min_size)
 
         self.use_min_size.setStyleSheet("margin-left:100%; margin-right:0%;")
-        self.min_distant_shape_size_label.setAlignment(QtCore.Qt.AlignRight)
+        self.min_size_for_connection_label.setAlignment(QtCore.Qt.AlignRight)
         self.use_max_size.setStyleSheet("margin-left:100%; margin-right:0%;")
-        self.max_distant_shape_size_label.setAlignment(QtCore.Qt.AlignRight)
+        self.max_size_for_connection_label.setAlignment(QtCore.Qt.AlignRight)
 
         # II/D/ Arrange widgets in the box
         curr_box_row = 0
         self.one_per_arena_box_layout.addWidget(self.connect_distant_shape_during_segmentation, curr_box_row, 0)
         self.one_per_arena_box_layout.addWidget(self.connect_distant_shape_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.ease_connect_distant_shape, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.ease_connect_distant_shape_label, curr_box_row, 1)
+        self.one_per_arena_box_layout.addWidget(self.detection_range_factor, curr_box_row, 0)
+        self.one_per_arena_box_layout.addWidget(self.detection_range_factor_label, curr_box_row, 1)
         curr_box_row += 1
         self.one_per_arena_box_layout.addWidget(self.use_min_size, curr_box_row, 0)
         self.one_per_arena_box_layout.addWidget(self.use_min_size_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.min_distant_shape_size_label, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.min_distant_shape_size, curr_box_row, 1)
+        self.one_per_arena_box_layout.addWidget(self.min_size_for_connection_label, curr_box_row, 0)
+        self.one_per_arena_box_layout.addWidget(self.min_size_for_connection, curr_box_row, 1)
         curr_box_row += 1
         self.one_per_arena_box_layout.addWidget(self.use_max_size, curr_box_row, 0)
         self.one_per_arena_box_layout.addWidget(self.use_max_size_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.max_distant_shape_size_label, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.max_distant_shape_size, curr_box_row, 1)
+        self.one_per_arena_box_layout.addWidget(self.max_size_for_connection_label, curr_box_row, 0)
+        self.one_per_arena_box_layout.addWidget(self.max_size_for_connection, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.all_same_direction, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.all_same_direction_label, curr_box_row, 1)
+        self.one_per_arena_box_layout.addWidget(self.all_specimens_have_same_direction, curr_box_row, 0)
+        self.one_per_arena_box_layout.addWidget(self.all_specimens_have_same_direction_label, curr_box_row, 1)
         curr_box_row += 1
 
         self.one_per_arena_box_widget.setLayout(self.one_per_arena_box_layout)
@@ -271,10 +271,10 @@ class AdvancedParameters(WindowType):
                                                               night_mode=self.parent().po.all['night_mode'])
         self.do_automatic_size_thresholding.stateChanged.connect(self.do_automatic_size_thresholding_changed)
         self.appearing_selection = Combobox(["largest", "most_central"], night_mode=self.parent().po.all['night_mode'])
-        self.appearing_selection_label = FixedText('How to select eappearing cell(s)',
-                                                   tip="If cell is invisible at first",
+        self.appearing_selection_label = FixedText('Appearance detection method',
+                                                   tip="When specimen(s) are invisible at the beginning of the experiment and appear progressively",
                                                    night_mode=self.parent().po.all['night_mode'])
-        self.appearing_selection.setCurrentText(self.parent().po.vars['first_detection_method'])
+        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
         self.appearing_selection.setFixedWidth(190)
 
         # III/D/ Arrange widgets in the box
@@ -304,9 +304,9 @@ class AdvancedParameters(WindowType):
         self.oscillation_period_widget = QtWidgets.QWidget()
         self.oscillation_period_widget.setStyleSheet(boxstylesheet)
 
-        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['oscillation_period'], decimals=2,
+        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
                                           night_mode=self.parent().po.all['night_mode'])
-        self.oscillation_period_label = FixedText('Internal oscillation period (min)',
+        self.oscillation_period_label = FixedText('Expected oscillation period (min)',
                                                   tip="If one expect biotic oscillations to occur",
                                                   night_mode=self.parent().po.all['night_mode'])
 
@@ -427,8 +427,9 @@ class AdvancedParameters(WindowType):
         self.extract_time = Checkbox(self.parent().po.all['extract_time_interval'])
         self.extract_time.clicked.connect(self.extract_time_is_clicked)
 
-        self.time_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['time_step'], decimals=1,
+        self.time_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['time_step'], decimals=3,
                                  night_mode=self.parent().po.all['night_mode'])
+        self.time_step.setFixedWidth(60)
         if self.parent().po.all['extract_time_interval']:
             self.time_step.setVisible(False)
             self.time_step_label = FixedText('Automatically extract time interval between images',
@@ -448,8 +449,9 @@ class AdvancedParameters(WindowType):
                                             tip="Check if you want output variables to be in mm\nUncheck if you want output variables to be in pixels",
                                             night_mode=self.parent().po.all['night_mode'])
         # I/D/ Arrange widgets in the box
-        self.scale_box_layout.addWidget(self.time_step, 0, 0)
+        self.scale_box_layout.addWidget(self.extract_time, 0, 0)
         self.scale_box_layout.addWidget(self.time_step_label, 0, 1)
+        self.scale_box_layout.addWidget(self.time_step, 0, 2)
         # self.scale_box_layout.addWidget(self.overwrite_cellects_data, 1, 0)
         # self.scale_box_layout.addWidget(self.overwrite_cellects_data_label, 1, 1)
         self.scale_box_layout.addWidget(self.pixels_to_mm, 2, 0)
@@ -629,19 +631,19 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold.setVisible(not self.parent().po.all['automatic_size_thresholding'])
         self.first_move_threshold_label.setVisible(not self.parent().po.all['automatic_size_thresholding'])
         connect_distant_shape = self.parent().po.all['connect_distant_shape_during_segmentation']
-        do_use_max_size = self.parent().po.vars['max_distant_shape_size'] is not None and connect_distant_shape
-        do_use_min_size = self.parent().po.vars['min_distant_shape_size'] is not None and connect_distant_shape
-        self.ease_connect_distant_shape.setVisible(connect_distant_shape)
-        self.ease_connect_distant_shape_label.setVisible(connect_distant_shape)
+        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and connect_distant_shape
+        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and connect_distant_shape
+        self.detection_range_factor.setVisible(connect_distant_shape)
+        self.detection_range_factor_label.setVisible(connect_distant_shape)
         self.use_max_size.setVisible(connect_distant_shape)
         self.use_min_size.setVisible(connect_distant_shape)
         self.use_max_size_label.setVisible(connect_distant_shape)
         self.use_min_size_label.setVisible(connect_distant_shape)
 
-        self.max_distant_shape_size.setVisible(do_use_max_size)
-        self.max_distant_shape_size_label.setVisible(do_use_max_size)
-        self.min_distant_shape_size.setVisible(do_use_min_size)
-        self.min_distant_shape_size_label.setVisible(do_use_min_size)
+        self.max_size_for_connection.setVisible(do_use_max_size)
+        self.max_size_for_connection_label.setVisible(do_use_max_size)
+        self.min_size_for_connection.setVisible(do_use_min_size)
+        self.min_size_for_connection_label.setVisible(do_use_min_size)
         self.display_more_than_two_colors_option()
 
         if self.parent().po.vars['convert_for_motion'] is not None:
@@ -670,57 +672,55 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
     def extract_time_is_clicked(self):
-        self.time_step.setVisible(self.extract_time.isChecked())
+        self.time_step.setVisible(not self.extract_time.isChecked())
         if self.extract_time.isChecked():
-            self.time_step_label = FixedText('Automatically extract time interval between images',
-                                             tip="Uses the exif data of the images (if available), to extract these intervals\nOtherwise, default time interval is 1 min",
-                                             night_mode=self.parent().po.all['night_mode'])
+            self.time_step_label.setText("Automatically extract time interval between images")
+            self.time_step_label.setToolTip("Uses the exif data of the images (if available), to extract these intervals\nOtherwise, default time interval is 1 min")
         else:
-            self.time_step.setVisible(True)
-            self.time_step_label = FixedText('Set the time interval between images',
-                                             tip="In minutes",
-                                             night_mode=self.parent().po.all['night_mode'])
+            self.time_step_label.setText("Set the time interval between images")
+            self.time_step_label.setToolTip("In minutes")
+
     def do_multiprocessing_is_clicked(self):
         self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
         self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
 
-    # def all_same_direction_changed(self):
-    #     """ Triggered when all_same_direction check status changes"""
-    #     self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
+    # def all_specimens_have_same_direction_changed(self):
+    #     """ Triggered when all_specimens_have_same_direction check status changes"""
+    #     self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
 
     def do_distant_shape_int_changed(self):
         """ Triggered when connect_distant_shape_during_segmentation check status changes"""
         do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
-        self.ease_connect_distant_shape.setVisible(do_distant_shape_int)
+        self.detection_range_factor.setVisible(do_distant_shape_int)
         if do_distant_shape_int:
-            self.ease_connect_distant_shape.setValue(2)
-        self.ease_connect_distant_shape_label.setVisible(do_distant_shape_int)
+            self.detection_range_factor.setValue(2)
+        self.detection_range_factor_label.setVisible(do_distant_shape_int)
         self.use_max_size.setVisible(do_distant_shape_int)
         self.use_min_size.setVisible(do_distant_shape_int)
         self.use_max_size_label.setVisible(do_distant_shape_int)
         self.use_min_size_label.setVisible(do_distant_shape_int)
         do_use_max_size = do_distant_shape_int and self.use_max_size.isChecked()
-        self.max_distant_shape_size.setVisible(do_use_max_size)
-        self.max_distant_shape_size_label.setVisible(do_use_max_size)
+        self.max_size_for_connection.setVisible(do_use_max_size)
+        self.max_size_for_connection_label.setVisible(do_use_max_size)
         do_use_min_size = do_distant_shape_int and self.use_min_size.isChecked()
-        self.min_distant_shape_size.setVisible(do_use_min_size)
-        self.min_distant_shape_size_label.setVisible(do_use_min_size)
+        self.min_size_for_connection.setVisible(do_use_min_size)
+        self.min_size_for_connection_label.setVisible(do_use_min_size)
 
     def use_max_size_changed(self):
         """ Triggered when use_max_size check status changes"""
         do_use_max_size = self.use_max_size.isChecked()
-        self.max_distant_shape_size.setVisible(do_use_max_size)
-        self.max_distant_shape_size_label.setVisible(do_use_max_size)
+        self.max_size_for_connection.setVisible(do_use_max_size)
+        self.max_size_for_connection_label.setVisible(do_use_max_size)
         if do_use_max_size:
-            self.max_distant_shape_size.setValue(300)
+            self.max_size_for_connection.setValue(300)
 
     def use_min_size_changed(self):
         """ Triggered when use_min_size check status changes"""
         do_use_min_size = self.use_min_size.isChecked()
-        self.min_distant_shape_size.setVisible(do_use_min_size)
-        self.min_distant_shape_size_label.setVisible(do_use_min_size)
+        self.min_size_for_connection.setVisible(do_use_min_size)
+        self.min_size_for_connection_label.setVisible(do_use_min_size)
         if do_use_min_size:
-            self.min_distant_shape_size.setValue(30)
+            self.min_size_for_connection.setValue(30)
 
     def generate_csc_editing(self):
         # self.edit_layout = QtWidgets.QGridLayout()
@@ -1122,10 +1122,10 @@ class AdvancedParameters(WindowType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
     def cancel_is_clicked(self):
-        self.crop_images.setChecked(self.parent().po.all['crop_images'])
+        self.automatically_crop.setChecked(self.parent().po.all['automatically_crop'])
         self.subtract_background.setChecked(self.parent().po.vars['subtract_background'])
-        self.keep_masks_for_all_folders.setChecked(self.parent().po.all['keep_masks_for_all_folders'])
-        self.ring_correction.setChecked(self.parent().po.vars['ring_correction'])
+        self.keep_cell_and_back_for_all_folders.setChecked(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.correct_errors_around_initial.setChecked(self.parent().po.vars['correct_errors_around_initial'])
         self.prevent_fast_growth_near_periphery.setChecked(self.parent().po.vars['prevent_fast_growth_near_periphery'])
         self.periphery_width.setValue(self.parent().po.vars['periphery_width'])
         self.max_periphery_growth.setValue(self.parent().po.vars['max_periphery_growth'])
@@ -1134,8 +1134,8 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold.setValue(self.parent().po.all['first_move_threshold_in_mm²'])
         self.pixels_to_mm.setChecked(self.parent().po.vars['output_in_mm'])
         self.do_automatic_size_thresholding.setChecked(self.parent().po.all['automatic_size_thresholding'])
-        self.appearing_selection.setCurrentText(self.parent().po.vars['first_detection_method'])
-        self.oscillation_period.setValue(self.parent().po.vars['oscillation_period'])
+        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
+        self.oscillation_period.setValue(self.parent().po.vars['expected_oscillation_period'])
         self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
 
         self.network_detection_threshold.setValue(self.parent().po.vars['network_detection_threshold'])
@@ -1151,21 +1151,21 @@ class AdvancedParameters(WindowType):
         # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
 
         self.connect_distant_shape_during_segmentation.setChecked(self.parent().po.all['connect_distant_shape_during_segmentation'])
-        do_use_max_size = self.parent().po.vars['max_distant_shape_size'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
-        do_use_min_size = self.parent().po.vars['min_distant_shape_size'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
+        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
+        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
         self.use_max_size.setChecked(do_use_max_size)
         self.use_min_size.setChecked(do_use_min_size)
         if do_use_max_size:
-            self.max_distant_shape_size.setValue(self.parent().po.vars['max_distant_shape_size'])
+            self.max_size_for_connection.setValue(self.parent().po.vars['max_size_for_connection'])
         else:
-            self.max_distant_shape_size.setValue(50)
+            self.max_size_for_connection.setValue(50)
         if do_use_min_size:
-            self.min_distant_shape_size.setValue(self.parent().po.vars['min_distant_shape_size'])
+            self.min_size_for_connection.setValue(self.parent().po.vars['min_size_for_connection'])
         else:
-            self.min_distant_shape_size.setValue(0)
+            self.min_size_for_connection.setValue(0)
 
-        self.ease_connect_distant_shape.setValue(self.parent().po.vars['ease_connect_distant_shape'])
-        self.all_same_direction.setChecked(self.parent().po.all['all_same_direction'])
+        self.detection_range_factor.setValue(self.parent().po.vars['detection_range_factor'])
+        self.all_specimens_have_same_direction.setChecked(self.parent().po.all['all_specimens_have_same_direction'])
         self.update_csc_editing_display()
 
         if self.parent().last_is_first:
@@ -1179,10 +1179,10 @@ class AdvancedParameters(WindowType):
         #     self.message.setText('The mesh side has to be inferior to the mesh step')
         #     self.message.setStyleSheet("color: rgb(230, 145, 18)")
         # else:
-        self.parent().po.all['crop_images'] = self.crop_images.isChecked()
+        self.parent().po.all['automatically_crop'] = self.automatically_crop.isChecked()
         self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
-        self.parent().po.all['keep_masks_for_all_folders'] = self.keep_masks_for_all_folders.isChecked()
-        self.parent().po.vars['ring_correction'] = self.ring_correction.isChecked()
+        self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
+        self.parent().po.vars['correct_errors_around_initial'] = self.correct_errors_around_initial.isChecked()
         self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
         self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
         self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
@@ -1191,8 +1191,8 @@ class AdvancedParameters(WindowType):
         self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
         self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
         self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
-        self.parent().po.vars['first_detection_method'] = self.appearing_selection.currentText()
-        self.parent().po.vars['oscillation_period'] = self.oscillation_period.value()
+        self.parent().po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
+        self.parent().po.vars['expected_oscillation_period'] = self.oscillation_period.value()
         self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
         # self.parent().po.vars['fractal_box_side_threshold'] = int(self.fractal_box_side_threshold.value())
         # self.parent().po.vars['fractal_zoom_step'] = int(self.fractal_zoom_step.value())
@@ -1216,20 +1216,20 @@ class AdvancedParameters(WindowType):
         do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
         self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
         if do_distant_shape_int:
-            self.parent().po.vars['ease_connect_distant_shape'] = int(
-                round(self.ease_connect_distant_shape.value()))
+            self.parent().po.vars['detection_range_factor'] = int(
+                round(self.detection_range_factor.value()))
         else:
-            self.parent().po.vars['ease_connect_distant_shape'] = 0
+            self.parent().po.vars['detection_range_factor'] = 0
         if self.use_max_size.isChecked():
-            self.parent().po.vars['max_distant_shape_size'] = int(round(self.max_distant_shape_size.value()))
+            self.parent().po.vars['max_size_for_connection'] = int(round(self.max_size_for_connection.value()))
         else:
-            self.parent().po.vars['max_distant_shape_size'] = None
+            self.parent().po.vars['max_size_for_connection'] = None
         if self.use_min_size.isChecked():
-            self.parent().po.vars['min_distant_shape_size'] = int(round(self.min_distant_shape_size.value()))
+            self.parent().po.vars['min_size_for_connection'] = int(round(self.min_size_for_connection.value()))
         else:
-            self.parent().po.vars['min_distant_shape_size'] = None
+            self.parent().po.vars['min_size_for_connection'] = None
 
-        self.parent().po.all['all_same_direction'] = self.all_same_direction.isChecked()
+        self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
 
         previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
         self.save_user_defined_csc()

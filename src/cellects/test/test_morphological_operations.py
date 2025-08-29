@@ -400,7 +400,7 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         self.po.vars['convert_for_origin'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
         self.po.vars['convert_for_motion'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
         self.po.fast_image_segmentation(True, backmask=backmask)
-        self.po.all['crop_images'] = True
+        self.po.all['automatically_crop'] = True
         self.po.cropping(is_first_image=True)
         self.po.all['scale_with_image_or_cells'] = 1
         self.po.all['starting_blob_hsize_in_mm'] = 15
