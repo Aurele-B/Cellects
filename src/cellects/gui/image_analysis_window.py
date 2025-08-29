@@ -1054,6 +1054,9 @@ class ImageAnalysisWindow(MainTabsType):
             if self.parent().po.vars['several_blob_per_arena'] and (detected_shape_nb == self.parent().po.sample_number):
                 self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")
 
+        if not self.parent().po.visualize:
+            self.select_option.setVisible(color_analysis)
+            self.select_option_label.setVisible(color_analysis)
         if self.step == 0:
             # self.decision_label.setText(f"Does the color correctly cover the cells? And, is {detected_shape_nb} the number of distinct arenas?")
             if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
@@ -1063,8 +1066,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.no.setVisible(True)
             self.arena_shape.setVisible(True)
             self.arena_shape_label.setVisible(True)
-            self.select_option_label.setVisible(color_analysis)
-            self.select_option.setVisible(color_analysis)
+            # self.select_option_label.setVisible(color_analysis)
+            # self.select_option.setVisible(color_analysis)
             self.n_shapes_detected.setVisible(True)
 
         elif self.step == 2:
@@ -1072,9 +1075,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.quickly.setVisible(color_analysis)
             self.carefully.setVisible(color_analysis)
             self.visualize.setVisible(True)
-            if not self.parent().po.visualize:
-                self.select_option.setVisible(color_analysis)
-                self.select_option_label.setVisible(color_analysis)
 
             self.decision_label.setText("Click next when color delimits the cell(s) correctly")
             self.yes.setVisible(False)
@@ -1828,7 +1828,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
         self.asking_last_image_flag = True
-        self.title_label.setVisible(False)
+        # self.title_label.setVisible(False)
         self.step = 2
 
     def start_last_image(self):
@@ -1860,7 +1860,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize_label.setVisible(True)
         self.visualize.setVisible(True)
         self.row1_widget.setVisible(False)
-        self.title_label.setVisible(True)
+        # self.title_label.setVisible(True)
         # self.row1_col1_widget.setVisible(False)
         # self.row1_col2_widget.setVisible(False)
 
