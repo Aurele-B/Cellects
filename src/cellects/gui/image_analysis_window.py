@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Genereate the Image analysis window of the user interface of Cellects"""
+"""
+Genereate the Image analysis window of the user interface of Cellects
+
+Cellects transforms the color images into grayscale images in a way that maximizes the contrast between the specimens and the background.
+It has an automatic procedure, processed by the one_image_analysis class. If this automatic procedure does not produce good enough results, the user can manually label some areas of the picture as “cell” or “background” to help find a better color space combination. This is particularly useful when the background is heterogeneous, and Cellects can use this information in two ways: First; it can simply ignore the parts labeled as background (e.g. objects or manual writings). Second, it can  use the manual annotation to train a more sophisticated segmentation method: A k-means algorithm to split the image into as many categories as necessary and use the “Cell” labelling to infer to what category the specimens are related to.
+Then, Cellects will take into account the user’s input as follows: For each of the segmentations created in the previous steps, it will count the amount of pixels labeled as specimens by the user that were correctly labeled as cell in the segmentation, and will select the segmentation that achieves the highest number. Then, it will do the same thing for the pixels labeled as background. Then, it will use the AND operator between the two results having the best match with the areas labeled as specimens, the AND operator between the two results having the best match with the areas labeled as background, and the OR operator between the result having the best match with the areas labeled as specimens and the result having the best match with the areas labeled as background. Therefore, this optional labeling adds three new segmentations that take into account the user-labeled regions. If the results are still unsatisfactory, the user can continue labeling more areas until one of the segmentations matches their expectations.
+
+"""
 import logging
 import time
 from copy import deepcopy

@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""This file contains the class constituting the link between the graphical interface and the computations"""
+"""This file contains the class constituting the link between the graphical interface and the computations
+ First, Cellects analyze one image in order to get a color space combination maximizing the contrast between the specimens
+ and the background.
+ Second, Cellects automatically delineate each arena.
+ Third, Cellects write one video for each arena.
+ Fourth, Cellects segments the video and apply post-processing algorithms to improve the segmentation.
+ Fifth, Cellects extract variables and store them in .csv files.
+"""
 
 import logging
 import os

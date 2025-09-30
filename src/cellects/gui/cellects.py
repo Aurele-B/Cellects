@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""
+This module contains the Widget that stacks all Cellects widget.
+An important note is that user-friendliness and versatility are at the core of Cellects’ development.
+Henceforth, the general workflow is in fact, a user-assisted workflow. Every step of the general workflow can
+be fine-tuned by the user to cope with various imaging conditions. At every step, automatic algorithms suggest options
+to help the user to find the best parameters.
+"""
 import logging
 import signal
 

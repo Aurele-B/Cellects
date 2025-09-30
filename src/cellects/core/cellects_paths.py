@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Contains the paths used by cellects."""
+"""
+Generate the different paths used by cellects.
+Adjust the path names according to the current position of the software
+"""
 
 import os
 from pathlib import Path

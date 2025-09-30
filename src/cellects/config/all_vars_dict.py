@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+"""
+This script generates the default parameters of the GUI of Cellects.
+It can be used to write these parameters in a file named all_vars_dict.
+Then, the gui updates this file as users adjust the GUI parameters.
+These parameters are stored in a dictionary with keys corresponding to the parameter's name and values to its tunable
+ value.
+"""
+
 import os
 from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
 from numpy import min, max, all, any, array, int8, empty, uint16, int64
@@ -80,6 +89,7 @@ class DefaultDicts:
             'origin_state': 'fluctuating',
             'oscilacyto_analysis': False,
             'network_analysis': False,
+            'graph_extraction': False,
             'network_detection_threshold': 20,
             'network_mesh_side_length': 8,
             'network_mesh_step_length': 2,
