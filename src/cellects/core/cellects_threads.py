@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""
+Cellects graphical user interface interacts with computational scripts through threads.
+Especially, each thread calls one or several methods of the class named "program_organizer",
+which regroup all available computation of the software.
+These threads are started from a children of WindowType, run methods from program_organizer and send messages and
+results to the corresponding children of WindowType, allowing, for instance, to display a result in the interface.
+"""
 
 import logging
 from copy import deepcopy

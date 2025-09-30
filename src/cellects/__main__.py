@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Launcher of cellects software."""
+"""Launcher of cellects software.
+
+ """
 import logging
 import os
 import sys

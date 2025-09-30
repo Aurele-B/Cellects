@@ -190,6 +190,8 @@ class RequiredOutput(WindowType):
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['fractal_analysis'])
             elif name == 'network_analysis':
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['network_analysis'])
+            elif name == 'graph_extraction':
+                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['graph_extraction'])
             else:
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.all['descriptors'][name])
 
@@ -216,6 +218,8 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['fractal_analysis'] = checked_status
             if name == 'network_analysis':
                 self.parent().po.vars['network_analysis'] = checked_status
+            if name == 'graph_extraction':
+                self.parent().po.vars['graph_extraction'] = checked_status
 
             # for j in [0, 1, 2]:
             #     k = i * 4 + j + 1

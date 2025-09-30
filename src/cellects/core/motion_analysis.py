@@ -1,9 +1,99 @@
 #!/usr/bin/env python3
 """
-This script contains the MotionAnalysis class
-It loads a video, check origin shape, get the average covering duration of a pixel,
- perform a rough segmentation (detection), improves it through post-processing, compute all wanted descriptors
- and save them with validation images and videos.
+This script contains the MotionAnalysis class. This class, called by program_organizer,
+ calls all methods used to read, process videos and save results.
+1. It starts by loading a video in .npy (which must have been written before, thanks to the one_video_per_blob file)
+ and if it exists, the background used for background subtraction. Then, it uses a particular color space combination
+ to convert the rgb video into greyscale.
+ At this point, arenas have been delimited and each can be analyzed separately. The following describes what happens during the analysis of one arena. Also, while Cellects can work with either one or several cells in each arena, we will describe the algorithm for a single cell, making clarifications whenever anything changes for multiple cells.
+Cellects starts by reading and converting the video of each arena into grayscale, using the selected color space combination. Then, it processes it through the following steps.
+2. The method for correcting drift is not fully implemented
+3. It validates the presence/absence of the specimen(s) in the first image of the video, named origin.
+Cellects finds the frame in which the cell is visible for the first time in each arena. When the seed image is the first image, then all cells are visible from the beginning. Otherwise, it will apply the same segmentation as for the seed image to the first, second, third images, etc. until the cell appears in one of them.
+4. It browses the first frames of the video to find the average covering duration of a pixel.
+It does so using a very conservative method, to make sure that only pixels that really are covered by the specimen(s)
+are used to do compute that covering duration.
+5. It performs the main segmentation algorithm on the whole video.
+This segmentation will consist in transforming the grayscale video resulting from the color space combination conversion
+ into a binary video of presence/absence. To do this, Cellects provides several different options to detect specimen
+ motion and growth throughout the video. The video segmentation transforms a grayscale video into a binary one.
+ In simple datasets with strong contrast between specimens and background, Cellects can simply segment each image by
+ thresholding. In more challenging conditions, the algorithm tracks the intensity of each pixel over time,
+ using this dynamical information to determine when a pixel has been covered. This is done through an automatically
+ determined threshold on the intensity or on its derivative. Additionally, Cellects can apply the logical operators
+ AND or OR to these intensity and derivative thresholds. The default option is the dynamical intensity threshold and it
+ works in many cases, but the user interface lets the user quickly check the results of different options and choose
+ the best one by visual inspection of the segmentation result in different frames.
+ For Cellects to be as versatile as possible, the user can select across five segmentation strategies.
+The first option is the simplest: It starts at the frame in which the cell is visible for the first time and segments the video frame by frame, using the same method as when analyzing only one image (as described in sections 1 and 2). The only difference is an optional background subtraction algorithm, which subtracts the first image to all others.
+The second option segments each frame by intensity thresholding. The threshold changes over time to adapt to changes in the background over time. To estimate the optimal threshold for each frame, Cellects proceeds as follows: It first estimates the typical background intensity of each frame as an intensity higher than the first decile of all pixels in the frame. Then, it defines an initial threshold for each frame at a fixed distance above this decile. This fixed distance is initially low, so that the initial segmentation is an overestimation of the actual area covered by the specimen. Then, it performs segmentation of all frames. If any frame presents a growth greater than a user_set threshold (whose default value is 5% of the area), all thresholds are diminished by 10%. Then the segmentation is performed again, and this process continues until no frame presents excessive growth. This description refers to cases in which the background is darker than the specimen. Cellects automatically detects if contrast is reversed, and adapts the method accordingly. Finally, Cellects segments the whole video with these adjusted intensity thresholds.
+The third option uses the change in intensity over time: For each pixel, it considers the evolution in time of its intensity, and considers that the cell covers the pixel when the slope of this intensity over time exceeds a threshold (Fig 3d in the main text).  For each frame, Cellects computes each frame’s threshold with the similar procedure as in the second option, except for the following. As the value of the slope of a derivative is highly sensitive to noise, Cellects first smooths the intensity curves using a moving average with a window length adapted to the typical time it takes for the cell to cover each pixel. Cellects tries to compute this typical time using the dynamics of a subset of pixels whose intensity varies strongly at the beginning of the growth (see the code for further details), and uses a default value of 10 frames when this computation fails. Cellects also uses this subset of pixels to get the reference slope threshold. Finally, it progressively modifies this reference until the video segmentation matches the required growth ratio, as in the second step.
+The two next options are combinations of the two first ones.
+The fourth is a logical OR between the intensity value and the intensity slope segmentations. It provides a very permissive segmentation, which is useful when parts of the cells are very hard to detect.
+The fifth is the logical AND between the intensity value and the intensity slope segmentations. It provides a more restrictive segmentation that can be useful when both the value and the slope segmentations detect areas that are not covered by the cell.
+6. Video post-processing improves the resulting binary video obtained through segmentation.
+The final step consists in improving the segmentation (see section S3.5 of the Supplementary Materials for more information). Cellects will first apply several filters that consistently improve the results, such as checking that each detected pixel was also detected at least twice in the three previous frames, omitting images containing too many detected pixels, and performing morphological opening and closing. Optionally, the user can activate the detection of areas left by the cell (See section S3.5.B of the Supplementary Materials for details).
+
+Additionally, optional algorithms correct particular types of errors. The first algorithm is useful when the substrate on which the cells are at the first image is of a different color than the substrate on which they will grow, expand or move. This color difference may produce holes in the segmentation and we developed an optional algorithm to correct this kind of error around the initial shape. The second algorithm should be used when each arena contains a single specimen, which should generate a single connected component. We can use this information to correct mistakes in models such as P. polycephalum, whose strong heterogeneity produces large variations of opacity. In these cases, segmentation may fail in the most transparent parts of the specimens and identify two disconnected components. The correction algorithm merges these disconnecting components by finding the most likely pixels connecting them and the most likely times at which those pixels were covered during growth.
+6.A Basic post-processing
+This process improves the raw segmentation. It includes algorithms to filter out aberrant frames, remove small artifacts and holes, and to detect when the specimens leave pixels. First, it checks that every pixel was detected at least twice in the three previous frames. Second, it excludes frames containing too many newly detected pixels, according to the maximal growth ratio per frame (as defined in section 3B). For these frames, the previous segmentation is kept, making the analysis robust to events producing a sharp variation in the brightness of a few images in the video (for example, when an enclosed device is temporarily opened or a light is switched on or off). Third, it removes potential small artifacts and holes by performing morphological opening followed by morphological closing.
+
+6.B Cell leaving detection
+This optional algorithm detects when areas are left by the specimens. It is useful when the cells not only grow but also move, so they can leave pixels that were covered before. When a pixel is covered, Cellects saves the intensity it had before being covered, computed as the median of the pixel’s intensity over a time window before it was covered. The length of this time window matches the typical time it takes for the cell to cover each pixel (computed as described in section 4.B, third segmentation strategy). Then, pixels at the border of the cell whose intensity fall below the saved intensity, rescaled by a user-defined multiplier (set by default at 1) are considered to be left by the cell. When there should be only one cell in the arena, Cellects tries to remove each component one by one, accepting this removal only when it does not break the connectivity of all parts of the cell.
+
+6.C Special error correction algorithms
+At the time of writing, Cellects contains two post-processing algorithms adapted to two specific situations. The first one is useful when there should be only one specimen per arena and when Cellects fails to detect its distant parts because their connections are not sufficiently visible. The second one is useful when Cellects fails to detect small areas around the initial shape, for example due to reflections near the edges. The following explains how these optional algorithms work.
+
+6.D Connect distant components:
+This algorithm automatically and progressively adds distant shapes to the main one. This correcting process occurs in three steps. First, it selects which distant component should get connected to the main one. The user can adjust this selection process according to the distance of the distant components with the main shape, and the minimal and maximal size of these components. Second, for each distant component, it computes and creates the shortest connection with the main shape. The width of that connection depends on the size of the distant shape where the connection occurs. Third, it uses an algorithm similar to the one used to correct errors around initial shape to estimate how quickly the gaps should be filled. This algorithm uses distance and timing vectors to create a dynamic connection between these two shapes (Figure 3f-h in the main text).
+
+6.E Correct errors around initial shape:
+This correcting process occurs in two steps. The first one scans the formation of holes around the initial segmentation during the beginning of the growth. The second one finds out when and how these holes are to be filled. To determine how the holes should be covered, Cellects uses the same algorithm as the one used to connect distant components. Computing the speed at which growth occurs from the initial position allows Cellects to fill the holes at the same speed, and therefore to correct these errors.
+
+7. Special algorithms for Physarum polycephalum
+Although done for this organism, these methods can be used with other biological models, such as mycelia.
+7.A. Oscillatory activity detection:
+This algorithm analyzes grayscale video frames to detect whether pixel intensities increase or decrease over time. To prevent artifacts from arena-scale illumination fluctuations, pixel intensities are first standardized by the average intensity of the entire image. A pixel is considered to have increased (or decreased) in intensity if at least four of its eight neighboring pixels have also shown an increase (or decrease). Then, regions with adjacent pixels whose intensity is changing in the same direction are detected, keeping only those larger than a user-selected threshold. Each region is tracked throughout the video, recording its oscillatory period, phase, and coordinates until it dissipates or reaches the video’s end.
+
+7.B. Network detection:
+P. polycephalum cells are composed of two types of compartments: A tubular network that transports cytoplasmic materials, and a thinner compartment that covers the rest of the space. Cellects’ initial segmentation does not distinguish between these two compartments, detecting all pixels that have been covered by any of them. This step distinguishes them, in order to segment the tubular network, whose intensity is further from that of the background.
+Cellects detects such a network using an algorithm that scores the segmentation results after using filters of
+vesselness detection: sato and frangi. On top of testing these filters with around 10 variations of their parameters,
+Cellects tries to segment the images adaptatively: segmenting each part of the image using a 2D rolling window.
+Once the best segmentation strategy is found for the last image of the video, it is used to segment the network in all
+other frames
+
+8. Graph extraction:
+Cellects can extract the graph of the specimen, or if detected, of its internal network.
+To do so, Cellects does the following:
+- Get the skeleton of the binary matrix of presence/absence of the specimen, as well as the specimen/network
+ width at avery pixel of the skeleton.
+If the original position from which the specimen started has not the same color as the rest of the arena, apply
+a special algorithm to draw the skeleton at the border of that origin.
+- Smooth the skeleton using an algorithm removing small loops of 3 pixels widths
+- Keep only the largest connected component of the skeleton
+- Use pixel connectivity and their neighborhood connectivity to detect all tips and branching vertices of the graph
+summarizing the skeleton.
+- Find and label all edges connecting tips and remove those that are shorter than the width of the skeleton arm it is connected to
+- Find and label all edges connecting touching vertices
+- Find and label all edges connected to the two previoussly mentioned vertices
+- Find and label all edges forming loops and connected to only one vertex
+- Remove all shapes of 1 or two pixels that are neither detected as vertices nor edges,
+if and only if they do not break the skeleton into more than one connected component.
+- Remove edge duplicates
+- Remove vertices connectiong 2 edges
+- Finally, create and save the tables storing edge and vertex coordinates and properties
+
+9. Save
+Once the image analysis is finished, the software determines the value of each morphological descriptor at each time frame (SI - Table 1). Finally, Cellects saves a new video for each arena with the original video next to the converted video displaying the segmentation result, so that the user can easily validate the result. If an arena shows a poor segmentation result, the user can re-analyze it, tuning all parameters for that specific arena.
+- the final results of the segmentation and its contour (if applicable)
+- descriptors summarizing the whole video
+- validation images (efficiency tests) and videos
+
+10. If this class has been used in the video_analysis_window only on one arena, the method
+change_results_of_one_arena will open (or create if not existing) tables in the focal folder
+and adjust every row corresponding to that particular arena to the current analysis results.
+
 """
 
 import logging
@@ -1421,8 +1511,6 @@ class MotionAnalysis:
                                                       window_step=self.vars['network_mesh_step_length'])
             """
             self.network_dynamics = np.zeros_like(self.binary, dtype=bool)
-            _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
-            origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
             greyscale = self.visu[-1, ...].mean(axis=-1)
             NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[-1, ...],
                                       lighter_background=self.vars['lighter_background'],
@@ -1434,129 +1522,76 @@ class MotionAnalysis:
                                           lighter_background=self.vars['lighter_background'],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
-                if self.origin is not None:
-                    computed_network = NetDet_fast.complete_network * (1 - self.origin)
-                    origin_contours = get_contours(self.origin)
-                    computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-                else:
-                    origin_contours = None
-                    computed_network = NetDet_fast.complete_network.astype(np.uint8)
-                computed_network = keep_one_connected_component(computed_network)
-                pad_network, pad_origin = add_padding([computed_network, self.origin])
-                pad_origin_centroid = origin_centroid + 1
-                pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
-                                                                                           pad_origin_centroid)
-                edge_id = EdgeIdentification(pad_skeleton)
-                edge_id.get_vertices_and_tips_coord()
-                edge_id.get_tipped_edges()
-                edge_id.remove_tipped_edge_smaller_than_branch_width(pad_distances)
-                edge_id.label_tipped_edges_and_their_vertices()
-                edge_id.identify_all_other_edges()
-                edge_id.remove_edge_duplicates()
-                edge_id.remove_vertices_connecting_2_edges()
-                if pad_origin_contours is not None:
-                    origin_contours = remove_padding([pad_origin_contours])[0]
-                edge_id.make_vertex_table(origin_contours)
-                edge_id.make_edge_table(self.converted_video[:, t])
-
                 self.network_dynamics[t, ...] = NetDet_fast.complete_network
 
-                edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-                edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-                if t == self.one_descriptor_per_arena["first_move"]:
-                    vertex_table = edge_id.vertex_table.copy()
-                    edge_table = edge_id.edge_table.copy()
-                else:
-                    vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
-                    edge_table = np.vstack((edge_table, edge_id.edge_table))
-
-            #
-            # self.network_dynamics = zeros(self.dims, dtype=uint8)
-            # if self.vars['origin_state'] == "constant":
-            #     if self.origin_idx is None:
-            #         self.origin_idx = nonzero(self.origin)
-            #
-            # vertices_and_edges = zeros((self.dims[0], 2), dtype=uint32)
-            # previous_network = zeros(self.dims[:2], dtype=uint8)
-            # pat_tracker = PercentAndTimeTracker(self.dims[0])
-            # for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  #20):#
-            #     # t = self.one_descriptor_per_arena["first_move"]
-            #     # t = 200
-            #     current_percentage, eta = pat_tracker.get_progress(t)
-            #     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}, Network detection: {current_percentage}%{eta}")
-            #     if any(self.binary[t, ...]):
-            #         network = detect_network(self.binary[t, ...], self.converted_video[t, ...], previous_network, step=5,
-            #                                  int_variation_thresh=self.vars['network_detection_threshold'],
-            #                                  lighter_background=False)
-            #
-            #         nd = NetworkDetection(self.converted_video[t, ...], self.binary[t, ...], self.vars['lighter_background'])
-            #         nd.network = network
-            #         r = weakref.ref(nd)
-            #         # nd.segment_locally(side_length=self.vars['network_mesh_side_length'],
-            #         #                    step=self.vars['network_mesh_step_length'],
-            #         #                    int_variation_thresh=self.vars['network_detection_threshold'])
-            #         # nd.selects_elongated_or_holed_shapes(hole_surface_ratio=0.1, eccentricity=0.65)
-            #
-            #         if t > 0:
-            #             nd.add_pixels_to_the_network(nonzero(self.network_dynamics[t - 1, ...]))
-            #             if self.vars['do_fading'] and (t > self.step + self.lost_frames):
-            #                 # Remove the faded areas
-            #                 remove_faded_pixels = 1 - self.binary[t - 1, ...]
-            #                 nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=False)
-            #                 # nd.remove_pixels_from_the_network(nonzero(remove_faded_pixels), remove_homogeneities=True)
-            #
-            #         # Add the origin as a part of the network:
-            #         if self.vars['origin_state'] == 'constant':
-            #             nd.add_pixels_to_the_network(self.origin_idx)
-            #
-            #         # Connect all network pieces together:
-            #         nd.connect_network(maximal_distance_connection=self.max_distance)  # int(4*max(self.dims[1:3])//5))
-            #
-            #         self.network_dynamics[t, ...] = nd.network
-            #         previous_network = nd.network
-            #         nd.skeletonize()
-            #         nd.get_graph()
-            #         vertices_and_edges[t, :] = nd.vertices_number, nd.edges_number
-            #
-            #         # self.graph[t, ...] = deepcopy(nd.graph)
-            #
-            #         imtoshow = self.visu[t, ...]
-            #         eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
-            #         net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
-            #
-            #         edges = nonzero(nd.graph == 1)
-            #         vertices = nonzero(nd.graph == 2)
-            #         self.network_dynamics[t, edges[0], edges[1]] = 2
-            #         self.network_dynamics[t, vertices[0], vertices[1]] = 3
-            #
-            #         imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
-            #
-            #         # Remember to uncomment this when done!!! For visualization.
-            #         if show_seg:
-            #             imshow("", resize(imtoshow, (1000, 1000)))
-            #             waitKey(1)
-            #         else:
-            #             self.visu[t, ...] = imtoshow
-            # if show_seg:
-            #     destroyAllWindows()
-
-            vertex_table = df(vertex_table, columns=["t", "y_coord", "x_coord", "vertex_label", "is_tip", "origin", "vertex_connected"])
-            edge_table = df(edge_table, columns=["t", "label", "length", "width", "intensity", "betweenness_centrality"])
-            vertex_table.to_csv(f"vertex_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
-            edge_table.to_csv(f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
-            for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):
+                imtoshow = self.visu[t, ...]
                 eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
                 net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
-                self.visu[t, net_coord[0], net_coord[1], :] = (34, 34, 158)
+                imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+                if show_seg:
+                    imshow("", resize(imtoshow, (1000, 1000)))
+                    waitKey(1)
+                else:
+                    self.visu[t, ...] = imtoshow
+                if show_seg:
+                    destroyAllWindows()
             self.network_dynamics = smallest_memory_array(nonzero(self.network_dynamics), "uint")
-            # self.one_row_per_frame["vertices_number"] = vertices_and_edges[:, 0]
-            # self.one_row_per_frame["edges_number"] = vertices_and_edges[:, 1]
-            # edges = smallest_memory_array(nonzero(self.network_dynamics == 2), "uint")
-            # vertices = smallest_memory_array(nonzero(self.network_dynamics == 3), "uint")
             if self.vars['save_coord_network']:
-                save(f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", self.network_dynamics)
-                # save(f"coord_network_edges{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", edges)
-                # save(f"coord_network_vertices{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy", vertices)
+                save(
+                    f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                    self.network_dynamics)
+
+    def graph_extraction(self):
+        if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:
+            self.network_dynamics = self.binary
+        _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
+        origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
+        for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
+
+
+            if self.origin is not None:
+                computed_network = self.network_dynamics[t, ...] * (1 - self.origin)
+                origin_contours = get_contours(self.origin)
+                computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+            else:
+                origin_contours = None
+                computed_network = self.network_dynamics[t, ...].astype(np.uint8)
+            computed_network = keep_one_connected_component(computed_network)
+            pad_network, pad_origin = add_padding([computed_network, self.origin])
+            pad_origin_centroid = origin_centroid + 1
+            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
+                                                                                       pad_origin_centroid)
+            edge_id = EdgeIdentification(pad_skeleton)
+            edge_id.get_vertices_and_tips_coord()
+            edge_id.get_tipped_edges()
+            edge_id.remove_tipped_edge_smaller_than_branch_width(pad_distances)
+            edge_id.label_tipped_edges_and_their_vertices()
+            edge_id.identify_all_other_edges()
+            edge_id.remove_edge_duplicates()
+            edge_id.remove_vertices_connecting_2_edges()
+            if pad_origin_contours is not None:
+                origin_contours = remove_padding([pad_origin_contours])[0]
+            edge_id.make_vertex_table(origin_contours)
+            edge_id.make_edge_table(self.converted_video[:, t])
+
+
+            edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+            edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+            if t == self.one_descriptor_per_arena["first_move"]:
+                vertex_table = edge_id.vertex_table.copy()
+                edge_table = edge_id.edge_table.copy()
+            else:
+                vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
+                edge_table = np.vstack((edge_table, edge_id.edge_table))
+
+        vertex_table = df(vertex_table, columns=["t", "y_coord", "x_coord", "vertex_label", "is_tip", "origin",
+                                                 "vertex_connected"])
+        edge_table = df(edge_table,
+                        columns=["t", "label", "length", "width", "intensity", "betweenness_centrality"])
+        vertex_table.to_csv(
+            f"vertex_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+        edge_table.to_csv(
+            f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
 
 
     def memory_allocation_for_cytoscillations(self):

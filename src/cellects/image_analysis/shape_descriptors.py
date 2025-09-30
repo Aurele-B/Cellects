@@ -20,14 +20,15 @@ descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
                           'euler_number': False, 'standard_deviation_xy': False, 'skewness_xy': False,
                           'kurtosis_xy': False, 'major_axes_len_and_angle': True, 'iso_digi_analysis': False,
-                          'oscilacyto_analysis': False, 'network_analysis': False, 'fractal_analysis': False,
+                          'oscilacyto_analysis': False, 'network_analysis': False, 'graph_extraction': False,
+                          'fractal_analysis': False
                           }
 
 descriptors_names_to_display = ['Area', 'Perimeter', 'Circularity', 'Rectangularity', 'Total hole area',
                                 'Solidity', 'Convexity', 'Eccentricity', 'Euler number', 'Standard deviation xy',
                                 'Skewness xy', 'Kurtosis xy', 'Major axes lengths and angle',
-                                'Related to growth transitions', 'Related to oscillations', 'Related to network',
-                                'Related to fractals'
+                                'Growth transitions', 'Oscillations', 'Network', 'Graph'
+                                'Fractals'
                                 ]#, 'Oscillating cluster nb and size'
 
 from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
