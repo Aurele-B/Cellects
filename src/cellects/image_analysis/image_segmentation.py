@@ -4,12 +4,14 @@ This script contains functions to convert bgr images into grayscale and grayscal
 """
 import threading
 import logging
+from fnmatch import translate
+
 from tqdm import tqdm
 from numba.typed import Dict as TDict
 from numpy import min, max, all, floor, any, linspace, ceil, transpose, meshgrid, ones_like, zeros_like, ptp, logical_and, pi, square, mean, median, float32, histogram, cumsum, logical_not, float64, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from numba import njit
-from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis
+from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image_analysis.morphological_operations import get_largest_connected_component
 from skimage.measure import perimeter
@@ -24,6 +26,8 @@ def get_color_spaces(bgr_image, space_names=""):
     :param bgr_image: 3D matrix of a bgr image, the two first dims are coordinates, the last is color.
     :return: dict[str, float64]
     """
+    if 'logical' in space_names:
+        space_names.pop(nonzero(array(space_names, dtype=str) == 'logical')[0][0])
     c_spaces = TDict()
     c_spaces['bgr'] = bgr_image.astype(float64)
     if len(space_names) == 0:
@@ -86,7 +90,11 @@ def combine_color_spaces(c_space_dict, all_c_spaces, subtract_background=None):
 
 def generate_color_space_combination(bgr_image, c_spaces, first_dict, second_dict={}, background=None, background2=None, convert_to_uint8=False):
     all_c_spaces = get_color_spaces(bgr_image, c_spaces)
-    greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+    try:
+        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+    except:
+        first_dict = translate_dict(first_dict)
+        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
     if convert_to_uint8:
         greyscale_image = bracket_to_uint8_image_contrast(greyscale_image)
     greyscale_image2 = None
@@ -258,9 +266,14 @@ def rolling_window_segmentation(greyscale_image, possibly_filled_pixels, patch_s
     return network_img
 
 def binary_quality_index(binary_img):
+    from cellects.image_analysis.shape_descriptors import ShapeDescriptors
+
     if any(binary_img):
-        largest_cc = get_largest_connected_component(binary_img)
+        # SD = ShapeDescriptors(binary_img, ["euler_number"])
+        # index = - SD.descriptors['euler_number']
+        nb, largest_cc = get_largest_connected_component(binary_img)
         index = square(perimeter(largest_cc)) / binary_img.sum()
+        # index = (largest_cc.sum() * perimeter(largest_cc)) / binary_img.sum()
     else:
         index = 0.
     return index

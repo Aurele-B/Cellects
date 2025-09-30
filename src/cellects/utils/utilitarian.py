@@ -2,7 +2,7 @@ import logging
 import os
 
 from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, logical_and, \
-    iinfo, uint16, uint32, uint64, ndarray, int64, linalg, floor, max, gradient, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
+    iinfo, uint16, uint32, uint64, ndarray, int64, linalg, floor, max, unravel_index, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
 
 import pickle
 from timeit import default_timer
@@ -49,7 +49,8 @@ def translate_dict(old_dict):
     """
     numba_dict = Dict()
     for k, v in old_dict.items():
-        numba_dict[k] = v
+        if not isinstance(v, str):
+            numba_dict[k] = v
     return numba_dict
 
 def reduce_path_len(pathway, to_start, from_end):
@@ -205,3 +206,15 @@ def smallest_memory_array(array_object, array_type='uint'):
         else:
             array_object = array(array_object, dtype=uint64)
     return array_object
+
+
+def remove_coordinates(arr1, arr2):
+    """
+    equivalent to
+    image[arr2[:, 0], arr2[:, 1]] = 0
+    arrA = np.transpose(np.array(np.nonzero(image)))
+
+    """
+    # Convert to set of tuples
+    coords_to_remove = set(map(tuple, arr2))
+    return array([coord for coord in arr1 if tuple(coord) not in coords_to_remove])

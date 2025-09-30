@@ -16,6 +16,7 @@ from timeit import default_timer
 from time import sleep
 from copy import deepcopy
 import h5py
+import numpy as np
 from cv2 import (
     connectedComponents, connectedComponentsWithStats, MORPH_CROSS,
     getStructuringElement, CV_16U, erode, dilate, morphologyEx, MORPH_OPEN,
@@ -23,12 +24,12 @@ from cv2 import (
     FONT_HERSHEY_SIMPLEX, putText)
 from numba.typed import Dict as TDict
 from numpy import (
-    c_, char, floor, pad, append, round, ceil, uint64, float32, absolute, sum,
+    c_, char, floor, pad, append, round, uint64, float32, absolute, sum,
     mean, median, quantile, ptp, diff, square, sqrt, convolve, gradient, zeros,
     ones, empty, array, arange, nonzero, newaxis, argmin, argmax, unique,
-    isin, repeat, tile, stack, concatenate, logical_and, logical_or,vstack,
+    isin, repeat, tile, stack, concatenate, logical_and, logical_or, vstack,
     logical_xor, float16, less, greater, save, sign, uint8, int8, logical_not, load,
-    uint32, float64, expand_dims, min, max, any, row_stack, column_stack, full)
+    uint32, float64, expand_dims, min, max, any, row_stack, column_stack, full, ceil)
 from numpy.ma.core import ones_like, logical_not
 from pandas import DataFrame as df
 from pandas import read_csv, concat, NA, isna
@@ -36,6 +37,7 @@ from psutil import virtual_memory
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 #from cellects.image_analysis.network_detection import network_detection
 from cellects.image_analysis.fractal_analysis import FractalAnalysis, box_counting, prepare_box_counting
+from cellects.image_analysis.network_validation import vertex_table
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
@@ -46,6 +48,7 @@ from cellects.image_analysis.image_segmentation import segment_with_lum_value, g
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
 from cellects.utils.load_display_save import write_video, video2numpy, vstack_h5_array, remove_h5_key
+from cellects.image_analysis.network_functions import *
 
 
 class MotionAnalysis:
@@ -1417,6 +1420,56 @@ class MotionAnalysis:
                                                       side_length=self.vars['network_mesh_side_length'],
                                                       window_step=self.vars['network_mesh_step_length'])
             """
+            self.network_dynamics = np.zeros_like(self.binary, dtype=bool)
+            _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
+            origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
+            greyscale = self.visu[-1, ...].mean(axis=-1)
+            NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[-1, ...],
+                                      lighter_background=self.vars['lighter_background'],
+                                      origin_to_add=self.origin)
+            NetDet.get_best_network_detection_method()
+            for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
+                greyscale = self.visu[t, ...].mean(axis=-1)
+                NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
+                                          lighter_background=self.vars['lighter_background'],
+                                          origin_to_add=self.origin, best_result=NetDet.best_result)
+                NetDet_fast.detect_network()
+                if self.origin is not None:
+                    computed_network = NetDet_fast.complete_network * (1 - self.origin)
+                    origin_contours = get_contours(self.origin)
+                    computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+                else:
+                    origin_contours = None
+                    computed_network = NetDet_fast.complete_network.astype(np.uint8)
+                computed_network = keep_one_connected_component(computed_network)
+                pad_network, pad_origin = add_padding([computed_network, self.origin])
+                pad_origin_centroid = origin_centroid + 1
+                pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
+                                                                                           pad_origin_centroid)
+                edge_id = EdgeIdentification(pad_skeleton)
+                edge_id.get_vertices_and_tips_coord()
+                edge_id.get_tipped_edges()
+                edge_id.remove_tipped_edge_smaller_than_branch_width(pad_distances)
+                edge_id.label_tipped_edges_and_their_vertices()
+                edge_id.identify_all_other_edges()
+                edge_id.remove_edge_duplicates()
+                edge_id.remove_vertices_connecting_2_edges()
+                if pad_origin_contours is not None:
+                    origin_contours = remove_padding([pad_origin_contours])[0]
+                edge_id.make_vertex_table(origin_contours)
+                edge_id.make_edge_table(self.converted_video[:, t])
+
+                self.network_dynamics[t, ...] = NetDet_fast.complete_network
+
+                edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+                edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+                if t == self.one_descriptor_per_arena["first_move"]:
+                    vertex_table = edge_id.vertex_table.copy()
+                    edge_table = edge_id.edge_table.copy()
+                else:
+                    vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
+                    edge_table = np.vstack((edge_table, edge_id.edge_table))
+
             #
             # self.network_dynamics = zeros(self.dims, dtype=uint8)
             # if self.vars['origin_state'] == "constant":
@@ -1487,6 +1540,10 @@ class MotionAnalysis:
             # if show_seg:
             #     destroyAllWindows()
 
+            vertex_table = df(vertex_table, columns=["t", "y_coord", "x_coord", "vertex_label", "is_tip", "origin", "vertex_connected"])
+            edge_table = df(edge_table, columns=["t", "label", "length", "width", "intensity", "betweenness_centrality"])
+            vertex_table.to_csv(f"vertex_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+            edge_table.to_csv(f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
             for t in arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):
                 eroded_binary = erode(self.network_dynamics[t, ...], cross_33)
                 net_coord = nonzero(self.network_dynamics[t, ...] - eroded_binary)
