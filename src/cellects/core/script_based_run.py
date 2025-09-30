@@ -3,6 +3,7 @@
 
 import logging
 import os
+from pathlib import Path
 from numpy import (
     median, stack, ceil, all, any, equal, pi, min, round, mean, diff, sum, multiply, square,
     sqrt, zeros, array, arange, ones_like, isin, sort, repeat, uint8, uint32, unique, vstack, hstack,
@@ -89,7 +90,7 @@ def run_one_video_analysis(po):
     self.study_cytoscillations(show_seg)
 
 if __name__ == "__main__":
-    po = load_one_folder("D:\Directory\Data\Audrey\dosier1", 6)
+    po = load_one_folder(Path("/Users/Directory/Data/dossier1"), 6)
     run_image_analysis(po)
     write_videos(po)
     run_one_video_analysis(po)

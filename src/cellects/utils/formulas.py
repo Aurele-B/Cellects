@@ -14,7 +14,7 @@
     - max_cum_sum_from_rolling_window
 """
 from copy import deepcopy
-from numpy import sum, unique, bincount, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
+from numpy import sum, delete, unique, bincount, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
 
 
@@ -287,15 +287,90 @@ def moving_average(vector, step):
 
 
 def max_cum_sum_from_rolling_window(side_length, window_step):
+    """
+    Calculates the maximum cumulative sum from a rolling window across a square grid.
+
+    This function computes the squared result of dividing `side_length` by `window_step`,
+    rounded up to the nearest integer. It represents the theoretical upper limit of
+    cumulative values achievable when applying a rolling window mechanism over a square
+    grid with uniform spacing.
+
+    Parameters
+    ----------
+    side_length : int or float
+        Total length of one side of the square grid.
+    window_step : int or float
+        Spacing between consecutive windows along the grid axis. Must be positive and
+        smaller than `side_length`.
+
+    Returns
+    -------
+    int or float
+        Squared value representing maximum cumulative sum based on window distribution.
+
+    Notes
+    -----
+    The ceiling operation ensures full coverage of the grid when dividing into discrete
+    windows, preventing underestimation due to partial remainder windows.
+    """
     return square(ceil(side_length / window_step))
 
 
 def find_common_coord(array1, array2):
+    """
+    Compares coordinates between two arrays to find matching rows from array1 in array2.
+
+    Parameters
+    ----------
+    array1 : numpy.ndarray
+        First 2D coordinate array (shape `(n_coords, n_dims)`)
+    array2 : numpy.ndarray
+        Second 2D coordinate array (shape `(m_coords, n_dims)`)
+
+    Returns
+    -------
+    numpy.ndarray
+        Boolean array with shape `(n_coords,)` where True indicates that corresponding row in `array1`
+        exists as a matching row in `array2`. Comparison is done element-wise across all dimensions.
+    """
     return (array1[:, None, :] == array2[None, :, :]).all(-1).any(-1)
 
 
 def find_duplicates_coord(array1):
+    """
+    Detect duplicate rows in a 2D array by comparing row occurrences.
+
+    Returns boolean mask indicating which rows are duplicated (appear more than once) along the first axis of input array. Uses inverse indices mapping to track original positions during deduplication process.
+
+    Parameters
+    ----------
+    array1 : numpy.ndarray
+        Input array with shape (N, M) containing coordinates or values where N is number of rows and M is row dimension
+
+    Returns
+    -------
+    duplicates_mask : numpy.ndarray
+        Boolean array with same first dimension as input. True at index i indicates that the corresponding row in array1 occurs more than once.
+
+    See Also
+    --------
+    numpy.unique : Used for finding unique rows and generating inverse indices mapping.
+    numpy.bincount : Counts occurrences of each unique row based on inverse indices.
+    """
     unique_rows, inverse_indices = unique(array1, axis=0, return_inverse=True)
     counts = bincount(inverse_indices)
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
+
+def remove_excedent_duplicates_coord(array1):
+    # np.unique(array1, axis=0)
+    unique_rows, inverse_indices = unique(array1, axis=0, return_inverse=True)
+    to_remove = []
+    seen_indices = []
+    for i in inverse_indices:
+        if i in seen_indices:
+            to_remove.append(True)
+        else:
+            to_remove.append(False)
+            seen_indices.append(i)
+    return delete(array1, to_remove, 0)

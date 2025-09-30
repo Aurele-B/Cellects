@@ -247,8 +247,9 @@ def cc(binary_img):
 def get_largest_connected_component(segmentation):
     labels = label(segmentation)
     assert(labels.max() != 0) # assume at least 1 CC
-    largest_connected_component = labels == argmax(bincount(labels.flat)[1:]) + 1
-    return largest_connected_component
+    con_comp = bincount(labels.flat)[1:]
+    largest_connected_component = labels == argmax(con_comp) + 1
+    return len(con_comp), largest_connected_component
 
 
 def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
@@ -825,6 +826,9 @@ def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
 
 class Ellipse:
     def __init__(self, sizes):
+        """
+        Usage: Ellipse
+        """
         self.vsize = sizes[0]
         self.hsize = sizes[1]
         self.vr = self.hsize // 2

@@ -12,8 +12,9 @@ import pickle
 import time
 import h5py
 from timeit import default_timer
-from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate
+from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate, linspace
 from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
+from matplotlib import pyplot as plt
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
@@ -123,17 +124,40 @@ class PickleRick:
             logging.error(f"Failed to read {file_name}")
 
 
-def show(img, interactive=True):
+def show(img, interactive=True, cmap=None):
     import matplotlib.pyplot as plt
     if interactive:
         plt.ion()
     else:
         plt.ioff()
-    fig = plt.figure(figsize=(20, 20))
+    # sizes = img.shape[0] // 100, img.shape[1] // 100
+    # sizes = int(round(img.shape[0] / 90)),  int(round(img.shape[1] / 90))
+    sizes = img.shape[0] / 100,  img.shape[1] / 100
+    fig = plt.figure(figsize=(sizes[0], sizes[1]))
     ax = fig.gca()
-    ax.imshow(img, interpolation="none")
+    if cmap is None:
+        ax.imshow(img, interpolation="none")
+    else:
+        ax.imshow(img, cmap=cmap, interpolation="none")
     fig.tight_layout()
     fig.show()
+
+def save_fig(img, full_path, cmap=None):
+    import matplotlib.pyplot as plt
+    # sizes = img.shape[0] // 100, img.shape[1] // 100
+    # sizes = int(round(img.shape[0] / 90)),  int(round(img.shape[1] / 90))
+    sizes = img.shape[0] / 100,  img.shape[1] / 100
+    fig = plt.figure(figsize=(sizes[0], sizes[1]))
+    ax = fig.gca()
+    if cmap is None:
+        ax.imshow(img, interpolation="none")
+    else:
+        ax.imshow(img, cmap=cmap, interpolation="none")
+    plt.axis('off')
+    fig.tight_layout()
+    fig.show()
+    fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
+    plt.close()
 
 
 def See(image, img_name="", size=None, keep_display=0):
@@ -431,3 +455,15 @@ def remove_h5_key(file_name, key="data"):
         raise FileNotFoundError(f"The file '{file_name}' does not exist.")
     except Exception as e:
         raise RuntimeError(f"An error occurred: {e}")
+
+
+def get_mpl_colormap(cmap_name):
+    cmap = plt.get_cmap(cmap_name)
+
+    # Initialize the matplotlib color map
+    sm = plt.cm.ScalarMappable(cmap=cmap)
+
+    # Obtain linear color range
+    color_range = sm.to_rgba(linspace(0, 1, 256), bytes=True)[:, 2::-1]
+
+    return color_range.reshape(256, 1, 3)
