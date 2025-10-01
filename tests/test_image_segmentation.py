@@ -4,7 +4,7 @@ This script contains all unit tests of the image_analysis directory
 """
 
 import unittest
-from cellects.test.cellects_unit_test import CellectsUnitTest
+from tests._base import CellectsUnitTest
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
 from numba.typed import Dict as TDict

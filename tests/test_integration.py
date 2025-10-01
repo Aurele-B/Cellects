@@ -6,25 +6,31 @@ import os.path
 import unittest
 import logging
 from glob import glob
-from cellects.test.cellects_unit_test import CellectsUnitTest
+from tests._base import CellectsUnitTest
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.core.cellects_paths import TEST_DIR
 from cellects.utils.load_display_save import PickleRick
 import numpy as np
 from numba.typed import Dict as TDict
 
 
 class TestCellects(CellectsUnitTest):
-    po = ProgramOrganizer()
-    po.load_variable_dict()
-    po.all['global_pathway'] = TEST_DIR / "experiment"
-    po.all['first_folder_sample_number'] = 100
-    po.look_for_data()
-    po.load_data_to_run_cellects_quickly()
-    i = 7
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.po = ProgramOrganizer()
+        cls.po.load_variable_dict()
+
+        # use the test data folders provided by _base
+        cls.po.all['global_pathway'] = str(cls.path_experiment)
+        cls.po.all['first_folder_sample_number'] = 100
+
+        cls.po.look_for_data()
+        cls.po.load_data_to_run_cellects_quickly()
+
+        cls.i = 7
 
     def test_look_for_data(self):
         self.assertEqual(len(self.po.data_list), 25)

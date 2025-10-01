@@ -5,7 +5,7 @@ This script contains all unit tests of the utilitarian script
 """
 import os
 import unittest
-from cellects.test.cellects_unit_test import CellectsUnitTest
+from tests._base import CellectsUnitTest
 from cellects.utils.utilitarian import *
 from numpy import zeros, uint8, float32, random, array, testing, array_equal, allclose
 from cv2 import imwrite, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, VideoCapture, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FPS

@@ -4,10 +4,9 @@ This script contains all unit tests of the morphological_operations script
 """
 
 import unittest
-from cellects.test.cellects_unit_test import CellectsUnitTest
+from tests._base import CellectsUnitTest
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.one_video_per_blob import OneVideoPerBlob
-from cellects.core.cellects_paths import TEST_DIR
 from cellects.utils.load_display_save import PickleRick
 from cellects.image_analysis.morphological_operations import *
 from numpy import zeros, uint8, float32, random, array, testing, array_equal, allclose, int32, int64, diff, concatenate
@@ -384,13 +383,20 @@ class TestFindMajorIncline(CellectsUnitTest):
 
 
 class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
-    po = ProgramOrganizer()
-    po.load_variable_dict()
-    po.all['global_pathway'] = TEST_DIR / "experiment"
-    po.all['first_folder_sample_number'] = 100
-    po.look_for_data()
-    po.load_data_to_run_cellects_quickly()
-    po.update_output_list()
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.po = ProgramOrganizer()
+        cls.po.load_variable_dict()
+
+        # use the test data folders provided by _base
+        cls.po.all['global_pathway'] = str(cls.path_experiment)
+        cls.po.all['first_folder_sample_number'] = 100
+
+        cls.po.look_for_data()
+        cls.po.load_data_to_run_cellects_quickly()
+        cls.po.update_output_list()
 
     def test_with_y_boundaries(self):
         self.po.get_first_image()

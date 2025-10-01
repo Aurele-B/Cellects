@@ -4,7 +4,7 @@ This script contains all unit tests of the formulas script
 14 tests
 """
 import unittest
-from cellects.test.cellects_unit_test import CellectsUnitTest
+from tests._base import CellectsUnitTest
 from cellects.utils.formulas import *
 from cellects.utils.utilitarian import translate_dict
 import numpy as np
