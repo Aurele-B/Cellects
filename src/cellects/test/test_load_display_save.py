@@ -60,7 +60,7 @@ class TestSee(CellectsUnitTest):
 
     def test_see_with_uint8_image(self):
         # Create a uint8 image for testing
-        image = zeros((100, 100), dtype=uint8)
+        image = np.zeros((100, 100), dtype=np.uint8)
         img_name = "test_image"
         size = (500, 500)
 
@@ -72,7 +72,7 @@ class TestSee(CellectsUnitTest):
 
     def test_see_with_non_uint8_image(self):
         # Create a non-uint8 image for testing
-        image = zeros((100, 100), dtype=float32)
+        image = np.zeros((100, 100), dtype=np.float32)
         img_name = "test_image"
         size = (500, 500)
 
@@ -86,7 +86,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -98,7 +98,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary file without a recognized extension
         with open(self.path_output / 'test_write_video.xyz', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -112,7 +112,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.npy', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -125,19 +125,19 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
             fps = 30
 
             # Write the video
             write_video(np_array, temp_file.name, fps=fps)
 
             # Read the video back
-            vid = VideoCapture(temp_file.name)
+            vid = cv2.VideoCapture(temp_file.name)
             
             # Verify the video dimensions
-            self.assertEqual(vid.get(CAP_PROP_FRAME_WIDTH), np_array.shape[2])
-            self.assertEqual(vid.get(CAP_PROP_FRAME_HEIGHT), np_array.shape[1])
-            self.assertEqual(vid.get(CAP_PROP_FPS), fps)
+            self.assertEqual(vid.get(cv2.CAP_PROP_FRAME_WIDTH), np_array.shape[2])
+            self.assertEqual(vid.get(cv2.CAP_PROP_FRAME_HEIGHT), np_array.shape[1])
+            self.assertEqual(vid.get(cv2.CAP_PROP_FPS), fps)
 
     def tearDown(self):
         if os.path.isfile(self.path_output / 'test_write_video.mp4'):
@@ -154,8 +154,8 @@ class TestVideo2Numpy(CellectsUnitTest):
         # Create a temporary npy file
         with open(self.path_output / 'test_write_video.npy', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
-            save(temp_file.name, np_array)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
+            np.save(temp_file.name, np_array)
 
             # Read the video
             video = video2numpy(temp_file.name)
@@ -167,7 +167,7 @@ class TestVideo2Numpy(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -182,13 +182,13 @@ class TestVideo2Numpy(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = random.randint(0, 255, size=(10, 480, 640, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
 
             # Define the conversion dictionary
-            conversion_dict = {'hsv': array((0, 1, 0))}
+            conversion_dict = {'hsv': np.array((0, 1, 0))}
 
             # Read the video with conversion
             video, converted_video = video2numpy('test_write_video.mp4', conversion_dict)
@@ -202,7 +202,7 @@ class TestVideo2Numpy(CellectsUnitTest):
         # Create a temporary mp4 file with double width
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array with double width
-            np_array = random.randint(0, 255, size=(10, 480, 1280, 3), dtype=uint8)
+            np_array = np.random.randint(0, 255, size=(10, 480, 1280, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -226,7 +226,7 @@ class TestVideo2Numpy(CellectsUnitTest):
 class TestMovie(CellectsUnitTest):
 
     def test_movie(self):
-        np_array = random.randint(0, 255, size=(10, 480, 640), dtype=uint8)
+        np_array = np.random.randint(0, 255, size=(10, 480, 640), dtype=np.uint8)
         movie(np_array, keyboard=1)
 
 
@@ -262,9 +262,9 @@ class TestReadImage(CellectsUnitTest):
         # Call the function
         result = readim(str(image_path), raw_image)
 
-        ref_size = array((3670, 5496, 3))
+        ref_size = np.array((3670, 5496, 3))
         # Verify the expected result
-        self.assertTrue(array_equal(ref_size, result.shape))
+        self.assertTrue(np.array_equal(ref_size, result.shape))
 
 
     def test_readim_with_regular_image(self):
@@ -275,9 +275,9 @@ class TestReadImage(CellectsUnitTest):
         # Call the function
         result = readim(str(image_path), raw_image)
 
-        ref_size = array((995, 1003, 3))
+        ref_size = np.array((995, 1003, 3))
         # Verify the expected result
-        self.assertTrue(array_equal(ref_size, result.shape))
+        self.assertTrue(np.array_equal(ref_size, result.shape))
 
 
 
@@ -293,18 +293,18 @@ class TestReadAndRotate(CellectsUnitTest):
         # Call the function
         im1 = read_and_rotate(str(image_1), None, raw_images, is_landscape)
         im2 = read_and_rotate(str(image_2), im1, raw_images, is_landscape)
-        im2a = rotate(im2, ROTATE_90_CLOCKWISE)
-        im2b = rotate(im2, ROTATE_90_COUNTERCLOCKWISE)
+        im2a = cv2.rotate(im2, cv2.ROTATE_90_CLOCKWISE)
+        im2b = cv2.rotate(im2, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
         im2a_path = str(self.path_output / 'im2a.jpg')
         im2b_path = str(self.path_output / 'im2b.jpg')
-        imwrite(im2a_path, im2a)
-        imwrite(im2b_path, im2b)
+        cv2.imwrite(im2a_path, im2a)
+        cv2.imwrite(im2b_path, im2b)
         im2a = read_and_rotate(im2a_path, im1, raw_images, is_landscape)
         im2b = read_and_rotate(im2b_path, im1, raw_images, is_landscape)
 
-        self.assertTrue(allclose(im2, im2a, atol=15))
-        self.assertTrue(allclose(im2, im2b, atol=15))
+        self.assertTrue(np.allclose(im2, im2a, atol=15))
+        self.assertTrue(np.allclose(im2, im2b, atol=15))
 
 
 if __name__ == '__main__':

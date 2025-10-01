@@ -653,7 +653,7 @@ def test_remove_small_loops():
        [0, 1, 0, 1, 0],
        [0, 0, 1, 0, 0],
        [1, 1, 0, 1, 1],
-       [0, 0, 0, 0, 0]], dtype=uint8)
+       [0, 0, 0, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(new_skeleton, target)}")
 
     test_nb += 1
@@ -676,7 +676,7 @@ def test_remove_small_loops():
         [0, 0, 0, 1, 1, 1, 1],
         [0, 0, 1, 0, 0, 0, 0],
         [0, 1, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0, 0]], dtype=uint8)
+        [1, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(new_skeleton, target)}")
 
     test_nb += 1
@@ -701,7 +701,7 @@ def test_remove_small_loops():
         [0, 0, 2, 0, 2, 0, 0],
         [0, 0, 0, 2, 0, 2, 0],
         [0, 0, 0, 0, 2, 0, 2],
-        [0, 0, 0, 0, 0, 2, 0]], dtype=np.float64)
+        [0, 0, 0, 0, 0, 2, 0]], dtype=np.=np.float64)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_distances = np.pad(distances, [(1,), (1,)], mode='constant')
     pad_skeleton, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
@@ -774,7 +774,7 @@ def test_remove_small_loops():
        [1, 1, 1, 1, 0, 0],
        [0, 0, 1, 0, 0, 0],
        [0, 0, 0, 1, 0, 0],
-       [0, 0, 0, 1, 0, 0]], dtype=uint8)
+       [0, 0, 0, 1, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(new_skeleton, target)}")
 
 
@@ -798,7 +798,7 @@ def test_remove_small_loops():
         [0, 0, 1, 1, 0, 1, 1],
         [0, 1, 0, 0, 1, 0, 0],
         [1, 0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0, 1]], dtype=uint8)
+        [0, 0, 0, 0, 0, 0, 1]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(new_skeleton, target)}")
 
 
@@ -831,7 +831,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [0, 1, 1, 1, 1, 0, 0],
         [0, 1, 0, 1, 0, 0, 0],
         [1, 0, 0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 0, 1, 1]], dtype=uint8)
+        [0, 0, 0, 0, 0, 1, 1]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
     vertices = remove_padding([pad_vertices])[0]
@@ -849,7 +849,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [1, 0, 1, 1, 1, 0, 0],
         [0, 1, 0, 1, 0, 1, 1],
         [0, 0, 0, 1, 0, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0]], dtype=uint8)
+        [0, 0, 0, 1, 0, 0, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
     vertices = remove_padding([pad_vertices])[0]
@@ -863,7 +863,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [0, 0, 1, 1, 1, 0, 0],
         [0, 0, 0, 1, 0, 0, 0],
         [0, 0, 0, 0, 1, 0, 0],
-        [0, 0, 0, 0, 1, 0, 0]], dtype=uint8)
+        [0, 0, 0, 0, 1, 0, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
@@ -875,7 +875,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [0, 0, 0, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 0, 0]], dtype=uint8)
+        [0, 0, 0, 0, 1, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(vertices, target)}")
 
     test_nb += 1
@@ -887,7 +887,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [1, 1, 1, 1, 0, 0, 0],
         [0, 0, 1, 0, 0, 0, 0],
         [0, 0, 0, 1, 0, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0]], dtype=uint8)
+        [0, 0, 0, 1, 0, 0, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
@@ -899,7 +899,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [1, 0, 1, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0]], dtype=uint8)
+        [0, 0, 0, 1, 0, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(vertices, target)}")
 
     test_nb += 1
@@ -966,7 +966,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0],
         [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
         [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=uint8)
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
@@ -984,7 +984,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
+        [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
@@ -998,7 +998,7 @@ def test_get_vertices_and_tips_from_skeleton():
         [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0],
         [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1],
         [0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0],
-        [1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=uint8)
+        [1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]], dtype=np.uint8)
     pad_skeleton = np.pad(skeleton, [(1,), (1,)], mode='constant')
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
@@ -1072,7 +1072,7 @@ def test_get_branches_and_tips_coord():
                                                [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0],
                                                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
                                                [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
-                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(vertices_and_tips, vertices_and_tips_target)}")
 
 
@@ -1097,14 +1097,6 @@ def test_find_closest_vertices():
     non_tip_vertices, tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
     all_vertices_coord = np.vstack((tips_coord, non_tip_vertices))
     starting_vertices_coord = tips_coord
-    # Manually:
-    # all_vertices_coord = np.array([[0, 7], [2, 0], [2, 8], [4, 2], [6, 3], [6, 7], [4, 3], [2, 7], [4, 7]])
-    # all_vertices = np.zeros_like(skeleton)
-    # all_vertices[all_vertices_coord[:, 0], all_vertices_coord[:, 1]] = 1
-    # starting_vertices_coord = np.array([[0, 7], [2, 0], [2, 8], [4, 2], [6, 3], [6, 7]])
-    # all_vertices[starting_vertices_coord[:, 0], starting_vertices_coord[:, 1]] = 2
-
-    # vertex_coord_with_edge_id, edge_lengths, edge_pix_coord = find_closest_vertices(pad_skeleton, all_vertices_coord, starting_vertices_coord)
     vertex_coord_with_edge_id, edge_lengths, edge_pix_coord = find_closest_vertices(pad_skeleton, non_tip_vertices, starting_vertices_coord)
 
     pad_skeleton, pad_distances, tips_coord, non_tip_vertices, edge_pix_coord, vertices_branching_tips, ordered_v_coord, numbered_vertices, edges_labels = remove_tipped_edge_smaller_than_branch_width(
@@ -1210,7 +1202,7 @@ def test_identify_all_vertices_and_edges():
        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
+       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
     print(f"{test_name}{np.array_equal(vertices_connecting_edges_connecting_tips, vertices_connecting_edges_connecting_tips_target)}")
 
     test_nb += 1

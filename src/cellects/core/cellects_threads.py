@@ -8,7 +8,6 @@ results to the corresponding children of WindowType, allowing, for instance, to 
 """
 
 import logging
-from copy import deepcopy
 import weakref
 from multiprocessing import Queue, Process, Manager
 import os
@@ -16,22 +15,15 @@ import time
 from glob import glob
 from timeit import default_timer
 from copy import deepcopy
-from cv2 import (connectedComponents, connectedComponentsWithStats, erode, dilate, morphologyEx, MORPH_GRADIENT, FONT_HERSHEY_SIMPLEX, putText)
+import cv2
 from numba.typed import Dict as TDict
-from numpy import (
-    min, max, all, any, pi, min, round, mean, diff, square,
-    zeros, array, arange, ones_like, ones, repeat, uint8,
-    uint64, int64, save, nonzero, max, stack, uint32,
-    c_, ceil, append, float32, expand_dims, cumsum)
-from pandas import DataFrame as df
-from pandas import concat, NA, isna
+import numpy as np
+import pandas as pd
 from PySide6 import QtCore
-
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import generate_color_space_combination
-from cellects.utils.load_display_save import read_and_rotate, PickleRick
+from cellects.utils.load_display_save import read_and_rotate
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
-from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.utils.load_display_save import write_video
 from cellects.core.motion_analysis import MotionAnalysis
@@ -39,8 +31,6 @@ from cellects.core.motion_analysis import MotionAnalysis
 
 class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
     message_from_thread = QtCore.Signal(str)
-    # message_from_thread = QtCore.Signal(str) # PySide2
-    # message_from_thread = QtCore.pyqtSignal(str) # PyQt5
 
     def __init__(self, parent=None):
         super(LoadDataToRunCellectsQuicklyThread, self).__init__(parent)
@@ -56,9 +46,6 @@ class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
 
 
 class LookForDataThreadInFirstW(QtCore.QThread):
-    # utiliser l'instance.start() pour lancer ce qu'il y a dans le run
-    # ajouter self.connect(self.thread[1], SIGNAL("ThreadDone()"), self.threaddone, Qt.DirectConnection)
-    # avec une methode threaddone qui produit un message
     def __init__(self, parent=None):
         super(LookForDataThreadInFirstW, self).__init__(parent)
         self.setParent(parent)
@@ -103,7 +90,6 @@ class GetFirstImThread(QtCore.QThread):
 
 
 class GetLastImThread(QtCore.QThread):
-    # message_when_thread_finished = QtCore.Signal(str)
     def __init__(self, parent=None):
         super(GetLastImThread, self).__init__(parent)
         self.setParent(parent)
@@ -124,7 +110,6 @@ class UpdateImageThread(QtCore.QThread):
         # and convert them to fit the displayed image size
         user_input = len(self.parent().imageanalysiswindow.saved_coord) > 0 or len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0
         if user_input:
-            # logging.info('This image modification comes from a user mouse action')
             if len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0:
                 idx = self.parent().imageanalysiswindow.temporary_mask_coord
             else:
@@ -135,11 +120,11 @@ class UpdateImageThread(QtCore.QThread):
                 # Convert coordinates:
                 self.parent().imageanalysiswindow.display_image.update_image_scaling_factors()
                 sf = self.parent().imageanalysiswindow.display_image.scaling_factors
-                idx = array(((round(idx[0][0] * sf[0]), round(idx[0][1] * sf[1])), (round(idx[1][0] * sf[0]), round(idx[1][1] * sf[1]))), dtype=int64)
-                min_y = min(idx[:, 0])
-                max_y = max(idx[:, 0])
-                min_x = min(idx[:, 1])
-                max_x = max(idx[:, 1])
+                idx = np.array(((np.round(idx[0][0] * sf[0]), np.round(idx[0][1] * sf[1])), (np.round(idx[1][0] * sf[0]), np.round(idx[1][1] * sf[1]))), dtype=np.int64)
+                min_y = np.min(idx[:, 0])
+                max_y = np.max(idx[:, 0])
+                min_x = np.min(idx[:, 1])
+                max_x = np.max(idx[:, 1])
                 if max_y > self.parent().imageanalysiswindow.drawn_image.shape[0]:
                     max_y = self.parent().imageanalysiswindow.drawn_image.shape[0] - 1
                 if max_x > self.parent().imageanalysiswindow.drawn_image.shape[1]:
@@ -166,34 +151,32 @@ class UpdateImageThread(QtCore.QThread):
             logging.info('Add the segmentation mask to the image')
             if self.parent().imageanalysiswindow.is_first_image_flag:
                 im_combinations = self.parent().po.first_image.im_combinations
-                im_mean = self.parent().po.first_image.image.mean()
+                im_mean = self.parent().po.first_image.image.np.mean()
             else:
                 im_combinations = self.parent().po.last_image.im_combinations
-                im_mean = self.parent().po.last_image.bgr.mean()
+                im_mean = self.parent().po.last_image.bgr.np.mean()
             # If there are image combinations, get the current corresponding binary image
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
-                # if not self.parent().imageanalysiswindow.is_first_image_flag:
 
-                eroded_binary = erode(binary_idx, cross_33)
-                binary_idx = binary_idx - eroded_binary
-                # binary_idx = morphologyEx(binary_idx, MORPH_GRADIENT, cross_33)
-                binary_idx = dilate(binary_idx, kernel=cross_33, iterations=contour_width)
-                binary_idx = nonzero(binary_idx)
+                cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
+                binary_idx = binary_idx - cv2.eroded_binary
+                binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
+                binary_idx = np.nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
                     # logging.info('Color the segmentation mask in magenta')
-                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = array((20, 0, 150), dtype=uint8)
+                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((20, 0, 150), dtype=np.uint8)
                 else:
                     # logging.info('Color the segmentation mask in pink')
-                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = array((94, 0, 213), dtype=uint8)
+                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                mask = zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=uint8)
+                mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                 if self.parent().imageanalysiswindow.back1_bio2 == 0:
                     logging.info("Save the user drawn mask of the current arena")
                     if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(uint8)
+                        ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(np.uint8)
                         mask[min_y:max_y, min_x:max_x, ...] = ellipse
                     else:
                         mask[min_y:max_y, min_x:max_x] = 1
@@ -202,13 +185,13 @@ class UpdateImageThread(QtCore.QThread):
 
                     if self.parent().imageanalysiswindow.back1_bio2 == 2:
                         if self.parent().po.all['starting_blob_shape'] == 'circle':
-                            ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(uint8)
+                            ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(np.uint8)
                             mask[min_y:max_y, min_x:max_x, ...] = ellipse
                         else:
                             mask[min_y:max_y, min_x:max_x] = 1
                     else:
                         mask[min_y:max_y, min_x:max_x] = 1
-                mask = nonzero(mask)
+                mask = np.nonzero(mask)
 
                 if self.parent().imageanalysiswindow.back1_bio2 == 1:
                     self.parent().imageanalysiswindow.back_masks_number += 1
@@ -221,54 +204,52 @@ class UpdateImageThread(QtCore.QThread):
                     self.parent().imageanalysiswindow.arena_mask[mask[0], mask[1]] = self.parent().imageanalysiswindow.available_arena_names[0]
                 # 2)a) Apply all these masks to the drawn image:
 
-            back_coord = nonzero(self.parent().imageanalysiswindow.back_mask)
+            back_coord = np.nonzero(self.parent().imageanalysiswindow.back_mask)
 
-            bio_coord = nonzero(self.parent().imageanalysiswindow.bio_mask)
+            bio_coord = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
 
             if self.parent().imageanalysiswindow.arena_mask is not None:
-                arena_coord = nonzero(self.parent().imageanalysiswindow.arena_mask)
-                self.parent().imageanalysiswindow.drawn_image[arena_coord[0], arena_coord[1], :] = repeat(self.parent().po.vars['contour_color'], 3).astype(uint8)
+                arena_coord = np.nonzero(self.parent().imageanalysiswindow.arena_mask)
+                self.parent().imageanalysiswindow.drawn_image[arena_coord[0], arena_coord[1], :] = np.repeat(self.parent().po.vars['contour_color'], 3).astype(np.uint8)
 
-            self.parent().imageanalysiswindow.drawn_image[back_coord[0], back_coord[1], :] = array((224, 160, 81), dtype=uint8)
+            self.parent().imageanalysiswindow.drawn_image[back_coord[0], back_coord[1], :] = np.array((224, 160, 81), dtype=np.uint8)
 
-            self.parent().imageanalysiswindow.drawn_image[bio_coord[0], bio_coord[1], :] = array((17, 160, 212), dtype=uint8)
+            self.parent().imageanalysiswindow.drawn_image[bio_coord[0], bio_coord[1], :] = np.array((17, 160, 212), dtype=np.uint8)
 
             image = self.parent().imageanalysiswindow.drawn_image
             # 3) The automatically detected video contours
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
                 # logging.info("Draw the delineation mask of each arena")
                 for contour_i in range(len(self.parent().po.top)):
-                    mask = zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=uint8)
+                    mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                     min_cy = self.parent().po.top[contour_i]
                     max_cy = self.parent().po.bot[contour_i]
                     min_cx = self.parent().po.left[contour_i]
                     max_cx = self.parent().po.right[contour_i]
                     text = f"{contour_i + 1}"
                     position = (self.parent().po.left[contour_i] + 25, self.parent().po.top[contour_i] + (self.parent().po.bot[contour_i] - self.parent().po.top[contour_i]) // 2)
-                    image = putText(image,  # numpy array on which text is written
+                    image = cv2.putText(image,  # numpy array on which text is written
                                     text,  # text
                                     position,  # position at which writing has to start
-                                    FONT_HERSHEY_SIMPLEX,  # font family
+                                    cv2.FONT_HERSHEY_SIMPLEX,  # font family
                                     1,  # font size
                                     (138, 95, 18, 255),
-                                    # (209, 80, 0, 255),  # repeat(self.vars["contour_color"], 3),# font color
+                                    # (209, 80, 0, 255),  # font color
                                     2)  # font stroke
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = Ellipse((max_cy - min_cy, max_cx - min_cx)).create().astype(uint8)
-                        ellipse = morphologyEx(ellipse, MORPH_GRADIENT, cross_33)
+                        ellipse = Ellipse((max_cy - min_cy, max_cx - min_cx)).create().astype(np.uint8)
+                        ellipse = cv2.morphologyEx(ellipse, cv2.MORPH_GRADIENT, cross_33)
                         mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
                     else:
                         mask[(min_cy, max_cy), min_cx:max_cx] = 1
                         mask[min_cy:max_cy, (min_cx, max_cx)] = 1
-                    mask = dilate(mask, kernel=cross_33, iterations=contour_width)
+                    mask = cv2.dilate(mask, kernel=cross_33, iterations=contour_width)
 
-                    mask = nonzero(mask)
-                    image[mask[0], mask[1], :] = array((138, 95, 18), dtype=uint8)# self.parent().po.vars['contour_color']
+                    mask = np.nonzero(mask)
+                    image[mask[0], mask[1], :] = np.array((138, 95, 18), dtype=np.uint8)# self.parent().po.vars['contour_color']
 
-                # video_contour_mask = self.parent().po.videos.print_bounding_boxes(1)
-                # self.parent().imageanalysiswindow.drawn_image[video_contour_mask == 1, :] = 255
         else: #load
             if user_input:
                 # III/ If this thread runs from user input: update the drawn_image according to the current user input
@@ -280,33 +261,33 @@ class UpdateImageThread(QtCore.QThread):
                     # logging.info("Dynamic drawing of the arena outline")
                     if self.parent().po.vars['arena_shape'] == 'circle':
                         ellipse = Ellipse((max_y - min_y, max_x - min_x)).create()
-                        ellipse = stack((ellipse, ellipse, ellipse), axis=2).astype(uint8)
+                        ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
                         image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
                         image[min_y:max_y, min_x:max_x, ...] += ellipse
                     else:
-                        mask = zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=uint8)
+                        mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                         mask[min_y:max_y, min_x:max_x] = 1
-                        mask = nonzero(mask)
-                        image[mask[0], mask[1], :] = array((0, 0, 0), dtype=uint8)
+                        mask = np.nonzero(mask)
+                        image[mask[0], mask[1], :] = np.array((0, 0, 0), dtype=np.uint8)
                 else:
                     # logging.info("Dynamic drawing of Cell or Back")
                     if self.parent().imageanalysiswindow.back1_bio2 == 2:
                         if self.parent().po.all['starting_blob_shape'] == 'circle':
                             ellipse = Ellipse((max_y - min_y, max_x - min_x)).create()
-                            ellipse = stack((ellipse, ellipse, ellipse), axis=2).astype(uint8)
+                            ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
                             image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
-                            ellipse[:, :, :] *= array((17, 160, 212), dtype=uint8)
+                            ellipse[:, :, :] *= np.array((17, 160, 212), dtype=np.uint8)
                             image[min_y:max_y, min_x:max_x, ...] += ellipse
                         else:
-                            mask = zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=uint8)
+                            mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                             mask[min_y:max_y, min_x:max_x] = 1
-                            mask = nonzero(mask)
-                            image[mask[0], mask[1], :] = array((17, 160, 212), dtype=uint8)
+                            mask = np.nonzero(mask)
+                            image[mask[0], mask[1], :] = np.array((17, 160, 212), dtype=np.uint8)
                     else:
-                        mask = zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=uint8)
+                        mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                         mask[min_y:max_y, min_x:max_x] = 1
-                        mask = nonzero(mask)
-                        image[mask[0], mask[1], :] = array((224, 160, 81), dtype=uint8)
+                        mask = np.nonzero(mask)
+                        image[mask[0], mask[1], :] = np.array((224, 160, 81), dtype=np.uint8)
 
         self.parent().imageanalysiswindow.display_image.update_image(image)
         self.message_when_thread_finished.emit(True)
@@ -325,13 +306,13 @@ class FirstImageAnalysisThread(QtCore.QThread):
         biomask = None
         backmask = None
         if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            shape_nb, ordered_image = connectedComponents((self.parent().imageanalysiswindow.bio_mask > 0).astype(uint8))
+            shape_nb, ordered_image = cv2.connectedComponents((self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8))
             shape_nb -= 1
-            biomask = nonzero(self.parent().imageanalysiswindow.bio_mask)
+            biomask = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
         else:
             shape_nb = 0
         if self.parent().imageanalysiswindow.back_masks_number != 0:
-            backmask = nonzero(self.parent().imageanalysiswindow.back_mask)
+            backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2 or shape_nb == self.parent().po.sample_number:
             self.message_from_thread.emit("Image segmentation, wait 30 seconds at most")
             if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
@@ -345,7 +326,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
             if shape_nb == self.parent().po.sample_number and self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] != self.parent().po.sample_number:
                 self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] = shape_nb
                 self.parent().po.first_image.shape_number = shape_nb
-                self.parent().po.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(uint8)
+                self.parent().po.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8)
                 self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['binary_image'] = self.parent().po.first_image.validated_shapes
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
@@ -385,9 +366,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    color_space_dictionaries=None,
                                                                                    carefully=self.parent().po.carefully)
 
-                # first_im_combinations = self.parent().po.first_image.find_first_im_csc(None, self.parent().po.all['shape_size_confint'], biomask, backmask)
         logging.info(f" image analysis lasted {default_timer() - tic} secondes")
-        logging.info(f" image analysis lasted {round((default_timer() - tic) / 60)} minutes")
+        logging.info(f" image analysis lasted {np.round((default_timer() - tic) / 60)} minutes")
         self.message_when_thread_finished.emit(True)
 
 
@@ -402,21 +382,17 @@ class LastImageAnalysisThread(QtCore.QThread):
     def run(self):
         self.parent().po.cropping(False)
         self.parent().po.get_background_to_subtract()
-        # self.parent().po.get_origins_and_backgrounds_lists()
         biomask = None
         backmask = None
         if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            biomask = nonzero(self.parent().imageanalysiswindow.bio_mask)
+            biomask = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
         if self.parent().imageanalysiswindow.back_masks_number != 0:
-            backmask = nonzero(self.parent().imageanalysiswindow.back_mask)
+            backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
             self.message_from_thread.emit("Image segmentation, wait...")
             self.parent().po.fast_image_segmentation(is_first_image=False, biomask=biomask, backmask=backmask)
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
-            # if self.parent().po.vars["color_number"] > 2:
-            #     kmeans_clust_nb = self.parent().po.vars["color_number"]
-            # else:
             if self.parent().po.vars['several_blob_per_arena']:
                 concomp_nb = [self.parent().po.sample_number, self.parent().po.first_image.size // 50]
                 max_shape_size = .75 * self.parent().po.first_image.size
@@ -424,32 +400,31 @@ class LastImageAnalysisThread(QtCore.QThread):
             else:
                 concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
                 if self.parent().po.all['are_zigzag'] == "columns":
-                    inter_dist = mean(diff(nonzero(self.parent().po.videos.first_image.y_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
                 elif self.parent().po.all['are_zigzag'] == "rows":
-                    inter_dist = mean(diff(nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
                 else:
-                    dist1 = mean(diff(nonzero(self.parent().po.videos.first_image.y_boundaries)))
-                    dist2 = mean(diff(nonzero(self.parent().po.videos.first_image.x_boundaries)))
-                    inter_dist = max(dist1, dist2)
+                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
+                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    inter_dist = np.max(dist1, dist2)
                 if self.parent().po.all['starting_blob_shape'] == "circle":
-                    max_shape_size = pi * square(inter_dist)
+                    max_shape_size = np.pi * np.square(inter_dist)
                 else:
-                    max_shape_size = square(2 * inter_dist)
+                    max_shape_size = np.square(2 * inter_dist)
                 total_surfarea = max_shape_size * self.parent().po.sample_number
             out_of_arenas = None
             if self.parent().po.all['are_gravity_centers_moving'] != 1:
-                out_of_arenas = ones_like(self.parent().po.videos.first_image.validated_shapes)
-                for blob_i in arange(len(self.parent().po.vars['analyzed_individuals'])):
+                out_of_arenas = np.ones_like(self.parent().po.videos.first_image.validated_shapes)
+                for blob_i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
                     out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
                     self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
             ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'])
+            self.parent().po.first_image.generate_subtract_backgnp.round(self.parent().po.vars['convert_for_motion'])
             kmeans_clust_nb = None
             self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
                                                          ref_image, self.parent().po.first_image.subtract_background,
                                                          kmeans_clust_nb, biomask, backmask, color_space_dictionaries=None,
                                                          carefully=self.parent().po.carefully)
-                # first_im_combinations = self.parent().po.first_image.find_first_im_csc(None, self.parent().po.all['shape_size_confint'], biomask, backmask)
         self.message_when_thread_finished.emit(True)
 
 
@@ -474,11 +449,11 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         self.parent().po.data_to_save['first_image'] = False
         if not self.parent().po.vars['several_blob_per_arena']:
             logging.info("Check whether the detected shape number is ok")
-            nb, shapes, stats, centroids = connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
+            nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
             y_lim = self.parent().po.first_image.y_boundaries
-            if ((nb - 1) != self.parent().po.sample_number or any(stats[:, 4] == 1)):
+            if ((nb - 1) != self.parent().po.sample_number or np.any(stats[:, 4] == 1)):
                 self.message_from_thread.emit("Image analysis failed to detect the right cell(s) number: restart the analysis.")
-            elif len(nonzero(y_lim == - 1)) != len(nonzero(y_lim == 1)):
+            elif len(np.nonzero(y_lim == - 1)) != len(np.nonzero(y_lim == 1)):
                 self.message_from_thread.emit("Automatic arena delineation cannot work if one cell touches the image border.")
                 self.parent().po.first_image.y_boundaries = None
             else:
@@ -490,8 +465,6 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
             analysis_status = self.parent().po.delineate_each_arena()
             self.message_when_thread_finished.emit(analysis_status["message"])
 
-        # self.parent().po.first_image.image.shape
-
 
 class SaveManualDelineationThread(QtCore.QThread):
 
@@ -500,31 +473,24 @@ class SaveManualDelineationThread(QtCore.QThread):
         self.setParent(parent)
 
     def run(self):
-        # if not self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile('coordinates.pkl'):
-        #     with open('coordinates.pkl', 'rb') as file:
-        #         self.parent().po.left, self.parent().po.right, self.parent().po.top, self.parent().po.bot = pickle.load(file)
-        # else:
-        self.parent().po.left = arange(self.parent().po.sample_number)
-        self.parent().po.right = arange(self.parent().po.sample_number)
-        self.parent().po.top = arange(self.parent().po.sample_number)
-        self.parent().po.bot = arange(self.parent().po.sample_number)
-        for arena in arange(1, self.parent().po.sample_number + 1):
-            y, x = nonzero(self.parent().imageanalysiswindow.arena_mask == arena)
-            self.parent().po.left[arena - 1] = min(x)
-            self.parent().po.right[arena - 1] = max(x)
-            self.parent().po.top[arena - 1] = min(y)
-            self.parent().po.bot[arena - 1] = max(y)
+        self.parent().po.left = np.arange(self.parent().po.sample_number)
+        self.parent().po.right = np.arange(self.parent().po.sample_number)
+        self.parent().po.top = np.arange(self.parent().po.sample_number)
+        self.parent().po.bot = np.arange(self.parent().po.sample_number)
+        for arena in np.arange(1, self.parent().po.sample_number + 1):
+            y, x = np.nonzero(self.parent().imageanalysiswindow.arena_mask == arena)
+            self.parent().po.left[arena - 1] = np.min(x)
+            self.parent().po.right[arena - 1] = np.max(x)
+            self.parent().po.top[arena - 1] = np.min(y)
+            self.parent().po.bot[arena - 1] = np.max(y)
 
         logging.info("Save data to run Cellects quickly")
         self.parent().po.data_to_save['coordinates'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
         self.parent().po.data_to_save['coordinates'] = False
 
-        # with open('coordinates.pkl', 'wb') as file:
-        #     pickle.dump(videos_coordinates, file)
-
         logging.info("Save manual video delineation")
-        self.parent().po.vars['analyzed_individuals'] = arange(self.parent().po.sample_number) + 1
+        self.parent().po.vars['analyzed_individuals'] = np.arange(self.parent().po.sample_number) + 1
         self.parent().po.videos = OneVideoPerBlob(self.parent().po.first_image, self.parent().po.starting_blob_hsize_in_pixels, self.parent().po.all['raw_images'])
         self.parent().po.videos.left = self.parent().po.left
         self.parent().po.videos.right = self.parent().po.right
@@ -556,16 +522,14 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
             self.parent().po.fast_image_segmentation(False)
-        self.parent().po.find_if_lighter_background()
+        self.parent().po.find_if_lighter_backgnp.round()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
         self.parent().po.data_to_save['coordinates'] = True
         self.parent().po.data_to_save['exif'] = True
-        # self.parent().po.data_to_save['background_and_origin_list'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
         self.parent().po.data_to_save['coordinates'] = False
         self.parent().po.data_to_save['exif'] = False
-        # self.parent().po.data_to_save['background_and_origin_list'] = False
 
 
 class SaveAllVarsThread(QtCore.QThread):
@@ -708,37 +672,37 @@ class OneArenaThread(QtCore.QThread):
                     self.parent().po.get_last_image()
                     self.parent().po.fast_image_segmentation(False)
                     # self.parent().po.type_csc_dict()
-                    self.parent().po.find_if_lighter_background()
+                    self.parent().po.find_if_lighter_backgnp.round()
                     logging.info("The current (or the first) folder is ready to run")
                     self.parent().po.first_exp_ready_to_run = True
         return analysis_status["continue"]
 
     def load_one_arena(self):
         arena = self.parent().po.all['arena']
-        i = nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
+        i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
         save_loaded_video: bool = False
         if not os.path.isfile(f'ind_{arena}.npy') or self.parent().po.all['overwrite_unaltered_videos']:
             logging.info(f"Starting to load arena n°{arena} from images")
             add_to_c = 1
             self.parent().po.one_arenate_done = True
-            i = nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
+            i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
             if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                self.parent().po.converted_video = zeros(
+                self.parent().po.converted_video = np.zeros(
                     (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                    dtype=uint8)
+                    dtype=np.uint8)
             else:
-                self.parent().po.converted_video = zeros(
+                self.parent().po.converted_video = np.zeros(
                     (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
                     dtype=float)
             if not self.parent().po.vars['already_greyscale']:
-                self.parent().po.visu = zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                   self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=uint8)
+                self.parent().po.visu = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                                   self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=np.uint8)
                 if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                     if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                        self.parent().po.converted_video2 = zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=uint8)
+                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=np.uint8)
                     else:
-                        self.parent().po.converted_video2 = zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
                                                        self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
                 first_dict = TDict()
                 second_dict = TDict()
@@ -804,12 +768,12 @@ class OneArenaThread(QtCore.QThread):
                     #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
                     # # self.parent().po.converted_video[image_i, ...] = csc.image
                     # if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #     self.parent().po.converted_video[image_i, ...] = bracket_to_uint8_image_contrast(csc.image)
+                    #     self.parent().po.converted_video[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image)
                     # else:
                     #     self.parent().po.converted_video[image_i, ...] = csc.image
                     # if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                     #     if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #         self.parent().po.converted_video2[image_i, ...] = bracket_to_uint8_image_contrast(csc.image2)
+                    #         self.parent().po.converted_video2[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image2)
                     #     else:
                     #         self.parent().po.converted_video2[image_i, ...] = csc.image2
 
@@ -851,11 +815,11 @@ class OneArenaThread(QtCore.QThread):
 
         if self.parent().po.motion.visu is None:
             visu = self.parent().po.motion.converted_video
-            visu -= min(visu)
-            visu = 255 * (visu / max(visu))
-            visu = round(visu).astype(uint8)
+            visu -= np.min(visu)
+            visu = 255 * (visu / np.max(visu))
+            visu = np.round(visu).astype(np.uint8)
             if len(visu.shape) == 3:
-                visu = stack((visu, visu, visu), axis=3)
+                visu = np.stack((visu, visu, visu), axis=3)
             self.parent().po.motion.visu = visu
 
     def detection(self):
@@ -866,9 +830,9 @@ class OneArenaThread(QtCore.QThread):
         # self.parent().po.motion.detection(compute_all_possibilities=True)
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         if self.parent().po.all['compute_all_options']:
-            self.parent().po.computed_video_options = ones(5, bool)
+            self.parent().po.computed_video_options = np.ones(5, bool)
         else:
-            self.parent().po.computed_video_options = zeros(5, bool)
+            self.parent().po.computed_video_options = np.zeros(5, bool)
             self.parent().po.computed_video_options[self.parent().po.all['video_option']] = True
         # if self.parent().po.vars['color_number'] > 2:
 
@@ -890,7 +854,7 @@ class OneArenaThread(QtCore.QThread):
             analyses_to_compute = [0]
         else:
             if self.parent().po.all['compute_all_options']:
-                analyses_to_compute = arange(5)
+                analyses_to_compute = np.arange(5)
             else:
                 logging.info(f"option: {self.parent().po.all['video_option']}")
                 analyses_to_compute = [self.parent().po.all['video_option']]
@@ -900,11 +864,11 @@ class OneArenaThread(QtCore.QThread):
         args = [self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
                 False, False, False, self.videos_in_ram]
         if self.parent().po.vars['do_fading']:
-            self.parent().po.newly_explored_area = zeros((self.parent().po.motion.dims[0], 5), uint64)
+            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.unp.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             r = weakref.ref(analysis_i)
-            analysis_i.segmentation = zeros(analysis_i.converted_video.shape[:3], dtype=uint8)
+            analysis_i.segmentation = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
                     analysis_i.segmentation = self.parent().po.motion.segmentation
@@ -934,20 +898,15 @@ class OneArenaThread(QtCore.QThread):
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 # analysis_i.update_shape(True)
                 analysis_i.update_shape(False)
-                contours = nonzero(
-                    morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], MORPH_GRADIENT, cross_33))
+                contours = np.nonzero(
+                    cv2.morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], cv2.MORPH_GRADIENT, cross_33))
                 current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
-                # else:
-                #     current_image = round(self.parent().po.motion.converted_video[analysis_i.t - 1, :, :]).astype(uint8)
-                #     current_image = stack((current_image, current_image, current_image), axis=2)
-                # Not ok to have visu:
-                # current_image = analysis_i.visu[analysis_i.t - 1, :, :, :].copy()
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
                     {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
                      "current_image": current_image})
             if analysis_i.start is None:
-                analysis_i.binary = repeat(expand_dims(analysis_i.origin, 0),
+                analysis_i.binary = np.repeat(np.expand_dims(analysis_i.origin, 0),
                                            analysis_i.converted_video.shape[0], axis=0)
                 if self.parent().po.vars['color_number'] > 2:
                     self.message_from_thread_starting.emit(
@@ -959,13 +918,13 @@ class OneArenaThread(QtCore.QThread):
                 if seg_i == 0:
                     self.parent().po.motion.segmentation = analysis_i.binary
                 elif seg_i == 1:
-                    self.parent().po.motion.luminosity_segmentation = nonzero(analysis_i.binary)
+                    self.parent().po.motion.luminosity_segmentation = np.nonzero(analysis_i.binary)
                 elif seg_i == 2:
-                    self.parent().po.motion.gradient_segmentation = nonzero(analysis_i.binary)
+                    self.parent().po.motion.gradient_segmentation = np.nonzero(analysis_i.binary)
                 elif seg_i == 3:
-                    self.parent().po.motion.logical_and = nonzero(analysis_i.binary)
+                    self.parent().po.motion.logical_and = np.nonzero(analysis_i.binary)
                 elif seg_i == 4:
-                    self.parent().po.motion.logical_or = nonzero(analysis_i.binary)
+                    self.parent().po.motion.logical_or = np.nonzero(analysis_i.binary)
             else:
                 self.parent().po.motion.segmentation = analysis_i.binary
 
@@ -999,22 +958,22 @@ class VideoReaderThread(QtCore.QThread):
                         mask = self.parent().po.motion.logical_and
                     elif self.parent().po.all['video_option'] == 4:
                         mask = self.parent().po.motion.logical_or
-                    video_mask = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                    video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                     video_mask[mask[0], mask[1], mask[2]] = 1
             else:
-                video_mask = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     video_mask = self.parent().po.motion.segmentation
 
             if self.parent().po.load_quick_full == 1:
-                video_mask = cumsum(video_mask.astype(uint32), axis=0)
+                video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
                 video_mask[video_mask > 0] = 1
-                video_mask = video_mask.astype(uint8)
+                video_mask = video_mask.astype(np.uint8)
         logging.info(f"sum: {video_mask.sum()}")
         # timings = genfromtxt("timings.csv")
-        for t in arange(self.parent().po.motion.dims[0]):
-            mask = morphologyEx(video_mask[t, ...], MORPH_GRADIENT, cross_33)
-            mask = stack((mask, mask, mask), axis=2)
+        for t in np.arange(self.parent().po.motion.dims[0]):
+            mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
+            mask = np.stack((mask, mask, mask), axis=2)
             # current_image[current_image > 0] = self.parent().po.vars['contour_color']
             current_image = deepcopy(video_analysis[t, ...])
             current_image[mask > 0] = self.parent().po.vars['contour_color']
@@ -1036,8 +995,8 @@ class ChangeOneRepResultThread(QtCore.QThread):
             f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
         # self.parent().po.motion2 = deepcopy(self.parent().po.motion)
         if self.parent().po.motion.start is None:
-            self.parent().po.motion.binary = repeat(expand_dims(self.parent().po.motion.origin, 0),
-                                                     self.parent().po.motion.converted_video.shape[0], axis=0).astype(uint8)
+            self.parent().po.motion.binary = np.repeat(np.expand_dims(self.parent().po.motion.origin, 0),
+                                                     self.parent().po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
         else:
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
@@ -1051,10 +1010,10 @@ class ChangeOneRepResultThread(QtCore.QThread):
                         mask = self.parent().po.motion.logical_and
                     elif self.parent().po.all['video_option'] == 4:
                         mask = self.parent().po.motion.logical_or
-                    self.parent().po.motion.binary = zeros(self.parent().po.motion.dims, dtype=uint8)
+                    self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims, dtype=np.uint8)
                     self.parent().po.motion.binary[mask[0], mask[1], mask[2]] = 1
             else:
-                self.parent().po.motion.binary = zeros(self.parent().po.motion.dims[:3], dtype=uint8)
+                self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     self.parent().po.motion.binary = self.parent().po.motion.segmentation
 
@@ -1120,9 +1079,9 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.look_for_data()
 
         if analysis_status["continue"] and (not self.parent().po.first_exp_ready_to_run or self.parent().po.all['folder_number'] > 1):
-            folder_number = max((len(self.parent().po.all['folder_list']), 1))
+            folder_number = np.max((len(self.parent().po.all['folder_list']), 1))
 
-            for exp_i in arange(folder_number):
+            for exp_i in np.arange(folder_number):
                 if len(self.parent().po.all['folder_list']) > 0:
                     logging.info(self.parent().po.all['folder_list'][exp_i])
                 self.parent().po.first_im = None
@@ -1213,7 +1172,7 @@ class RunAllThread(QtCore.QThread):
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_image_segmentation(is_first_image=False)
-                    self.parent().po.find_if_lighter_background()
+                    self.parent().po.find_if_lighter_backgnp.round()
             return analysis_status
         else:
             analysis_status["message"] = f"Wrong folder or parameters"
@@ -1244,86 +1203,24 @@ class RunAllThread(QtCore.QThread):
             if analysis_status["continue"]:
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
                 if video_nb_per_bunch > 0 and rom_memory_required is None:
-                    convert_for_motion = None
-                    # total_img_number = bunch_nb * self.parent().po.vars['img_number']
-                    # is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-
-                    # https://stackoverflow.com/questions/48672130/saving-to-hdf5-is-very-slow-python-freezing
-                    # https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
-                    # # NEW version to read images and write videos at the same time. PB: Stun the disk
-                    # # from: https://stackoverflow.com/questions/65802751/adding-big-matrices-stored-in-hdf5-datasets
-                    # # https://docs.h5py.org/en/stable/quick.html#quick
-                    # import h5py
-                    # image_percentage = 0
-                    # arena_percentage = 0
-                    # prev_img = None
-                    # for image_i, image_name in enumerate(self.parent().po.data_list):
-                    #     image_percentage, remaining_time = pat_tracker1.get_progress(image_i)
-                    #     self.message_from_thread.emit(
-                    #         message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
-                    #     if not os.path.exists(image_name):
-                    #         raise FileNotFoundError(image_name)
-                    #     img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                    #     prev_img = img.copy()
-                    #     if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
-                    #         img = img[:, :, 0]
-                    #     for arena_i, arena_name in enumerate(arange(self.parent().po.first_image.shape_number)):
-                    #         with h5py.File(f"ind{arena_i}.h5", 'a') as h5fw:
-                    #             arena_i_vid = h5fw.create_dataset(f"ind{arena_i}", shape=sizes[arena_i, :], dtype='f')
-                    #             arena_i_vid[arena_i, ...] = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
-                    #                   self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
-                    #         arena_percentage, eta = pat_tracker2.get_progress()
-                    #         self.message_from_thread.emit(
-                    #             message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")  # , ETA {remaining_time}
-                    #         # arena_i_vid.close()
-                    # # NEW:
-
-
                     arena_percentage = 0
-                    # for bunch in arange(bunch_nb): old
-                    for bunch in arange(bunch_nb):
+                    for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
-                        # if bunch == (bunch_nb - 1): old
                         if bunch == (bunch_nb - 1) and remaining > 0:
-                            arena = arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
+                            arena = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
                         else:
-                            arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        # print(arena)
+                            arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
                         if self.parent().po.videos.use_list_of_vid:
-                            video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
+                            video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
                         else:
-                            video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-                        # if bunch == bunch_nb:
-                            # # The last bunch is larger if there is a remaining to division
-                            # remaining = self.parent().po.first_image.shape_number % bunch_nb
-                            # arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch + remaining)
-                            # if bunch > 0:
-                            #     # The last bunch is larger if there is a remaining to division
-                            #     if self.parent().po.videos.use_list_of_vid:
-                            #         video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                            #     else:
-                            #         video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-                            # # Add the remaining videos to the last bunch if necessary
-                            # if self.parent().po.videos.use_list_of_vid:
-                            #     for i in arange(self.parent().po.first_image.shape_number - remaining, self.parent().po.first_image.shape_number):
-                            #         video_bunch.append(zeros(sizes[i, :], dtype=uint8))
-                            # else:
-                            #     video_bunch = zeros(append(sizes[0, :], len(arena) + remaining), dtype=uint8)
-                        # else:
-                        #     arena = arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        #     if bunch > 0:
-                        #         if self.parent().po.videos.use_list_of_vid:
-                        #             video_bunch = [zeros(sizes[i, :], dtype=uint8) for i in arena]
-                        #         else:
-                        #             video_bunch = zeros(append(sizes[0, :], len(arena)), dtype=uint8)
-
+                            video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
                         prev_img = None
                         images_done = bunch * self.parent().po.vars['img_number']
                         for image_i, image_name in enumerate(self.parent().po.data_list):
                             image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
-                            self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")
+                            self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
@@ -1355,14 +1252,14 @@ class RunAllThread(QtCore.QThread):
                             for arena_i, arena_name in enumerate(arena):
                                 try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
-                                    self.message_from_thread.emit(message + f" Step 1/2: Video writing ({round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
+                                    self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
                                     if self.parent().po.videos.use_list_of_vid:
-                                        save(vid_names[arena_name], video_bunch[arena_i])
+                                        np.save(vid_names[arena_name], video_bunch[arena_i])
                                     else:
                                         if len(video_bunch.shape) == 5:
-                                            save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                                            np.save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
                                         else:
-                                            save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
+                                            np.save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
                         logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
@@ -1423,31 +1320,23 @@ class RunAllThread(QtCore.QThread):
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
                             self.parent().po.update_one_row_per_arena(i, analysis_i.one_descriptor_per_arena)
-                            # self.parent().po.one_row_per_arena.iloc[i, :] = analysis_i.statistics.values()
 
 
                             # Save descriptors in long_format
-                            # NEW
-                            # for descriptor in self.one_row_per_frame.keys():
-                            #     self.one_row_per_frame.loc[i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'], descriptor] = analysis_i.whole_shape_descriptors[descriptor]
-                            # Old
                             self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
-                            # self.parent().po.one_row_per_frame.iloc[
-                            # i * self.parent().po.vars['img_number']:arena * self.parent().po.vars['img_number'],
-                            # :] = analysis_i.whole_shape_descriptors
-
+                            
                             # Save cytosol_oscillations
                         if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
                             if self.parent().po.vars['oscilacyto_analysis']:
-                                oscil_i = df(
-                                    c_[repeat(arena,
+                                oscil_i = pd.DataFrame(
+                                    np.c_[np.repeat(arena,
                                               analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
                                     columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
                                 if self.parent().po.one_row_per_oscillating_cluster is None:
                                     self.parent().po.one_row_per_oscillating_cluster = oscil_i
                                 else:
-                                    self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
-                                # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
+                                    self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
+                                
                         # Save efficiency visualization
                         self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                                  analysis_i.efficiency_test_2)
@@ -1497,28 +1386,21 @@ class RunAllThread(QtCore.QThread):
                         for i in range(subtotals.qsize()):
                             grouped_results = subtotals.get()
                             for j, results_i in enumerate(grouped_results):
-                                # j=0;results_i=grouped_results[j]
-                                # print(isinstance(results_i, list))
                                 if not self.parent().po.vars['several_blob_per_arena']:
                                     # Save basic statistics
                                     self.parent().po.update_one_row_per_arena(results_i['i'], results_i['one_row_per_arena'])
-                                    # self.parent().po.one_row_per_arena.iloc[results_i['i'], :] = results_i['one_row_per_arena']
                                     # Save descriptors in long_format
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
                                                                               results_i['arena'] * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
-                                    # self.parent().po.one_row_per_frame.iloc[
-                                    # results_i['i'] * self.parent().po.vars['img_number']:results_i['arena'] * self.parent().po.vars['img_number'],
-                                    # :] = results_i['one_row_per_frame']
                                 if not isna(results_i['first_move']):
                                     # Save cytosol_oscillations
                                     if self.parent().po.vars['oscilacyto_analysis']:
                                         if self.parent().po.one_row_per_oscillating_cluster is None:
                                             self.parent().po.one_row_per_oscillating_cluster = results_i['one_row_per_oscillating_cluster']
                                         else:
-                                            self.parent().po.one_row_per_oscillating_cluster = concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
-                                        # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
-
+                                            self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
+                                        
                                 # Save efficiency visualization
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])
@@ -1567,18 +1449,16 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
         if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
             if vars['oscilacyto_analysis']:
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
-                results_i['one_row_per_oscillating_cluster'] = df(
-                    c_[repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
+                results_i['one_row_per_oscillating_cluster'] = pd.DataFrame(
+                    np.c_[np.repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
                     columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
-                # self.one_row_per_oscillating_cluster = self.one_row_per_oscillating_cluster.append(oscil_i)
             if vars['fractal_analysis']:
-                results_i['fractal_box_sizes'] = df(analysis_i.fractal_boxes,
+                results_i['fractal_box_sizes'] = pd.DataFrame(analysis_i.fractal_boxes,
                                columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
 
         # Save efficiency visualization
         results_i['efficiency_test_1'] = analysis_i.efficiency_test_1
         results_i['efficiency_test_2'] = analysis_i.efficiency_test_2
-        # advance = max((advance, arena))
         grouped_results.append(results_i)
 
     subtotals.put(grouped_results)

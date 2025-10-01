@@ -48,23 +48,23 @@ class TestCellects(CellectsUnitTest):
             self.po.instantiate_tables()
             self.po.vars['maximal_growth_factor'] = 0.25
             self.po.get_first_image()
-            backmask = zeros(self.po.first_im.shape[:2], uint8)
+            backmask = np.zeros(self.po.first_im.shape[:2], np.uint8)
             backmask[-30:, :] = 1
-            backmask = nonzero(backmask)
-            self.po.vars['convert_for_origin'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
-            self.po.vars['convert_for_motion'] = {'lab': array([0, 0, 1], dtype=int8), 'logical': 'None'}
+            backmask = np.nonzero(backmask)
+            self.po.vars['convert_for_origin'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
+            self.po.vars['convert_for_motion'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
             self.po.fast_image_segmentation(True, backmask=backmask)
             self.po.all['automatically_crop'] = True
             self.po.cropping(is_first_image=True)
-            self.assertTrue(array_equal(self.po.first_image.crop_coord, coordinates[0]))
+            self.assertTrue(np.array_equal(self.po.first_image.crop_coord, coordinates[0]))
             self.po.all['scale_with_image_or_cells'] = 1
             self.po.all['starting_blob_hsize_in_mm'] = 15
             self.po.get_average_pixel_size()
             self.po.delineate_each_arena()
-            self.assertTrue(array_equal(self.po.left, coordinates[1]))
-            self.assertTrue(array_equal(self.po.right, coordinates[2]))
-            self.assertTrue(array_equal(self.po.top, coordinates[3]))
-            self.assertTrue(array_equal(self.po.bot, coordinates[4]))
+            self.assertTrue(np.array_equal(self.po.left, coordinates[1]))
+            self.assertTrue(np.array_equal(self.po.right, coordinates[2]))
+            self.assertTrue(np.array_equal(self.po.top, coordinates[3]))
+            self.assertTrue(np.array_equal(self.po.bot, coordinates[4]))
             self.po.get_background_to_subtract()
             self.po.get_origins_and_backgrounds_lists()
             self.po.get_last_image()
@@ -79,11 +79,11 @@ class TestCellects(CellectsUnitTest):
     def test_load_data_to_run_cellects_quickly(self):
         self.test_save_data_to_run_cellects_quickly()
         coordinates = PickleRick().read_file(self.path_output / "coordinates.pkl")
-        self.assertTrue(array_equal(self.po.first_image.crop_coord, coordinates[0]))
-        self.assertTrue(array_equal(self.po.left, coordinates[1]))
-        self.assertTrue(array_equal(self.po.right, coordinates[2]))
-        self.assertTrue(array_equal(self.po.top, coordinates[3]))
-        self.assertTrue(array_equal(self.po.bot, coordinates[4]))
+        self.assertTrue(np.array_equal(self.po.first_image.crop_coord, coordinates[0]))
+        self.assertTrue(np.array_equal(self.po.left, coordinates[1]))
+        self.assertTrue(np.array_equal(self.po.right, coordinates[2]))
+        self.assertTrue(np.array_equal(self.po.top, coordinates[3]))
+        self.assertTrue(np.array_equal(self.po.bot, coordinates[4]))
 
     def test_video_writing(self):
         self.test_save_data_to_run_cellects_quickly()
@@ -102,7 +102,7 @@ class TestCellects(CellectsUnitTest):
             self.po.videos.first_image.shape_number = self.po.sample_number
             self.po.videos.write_videos_as_np_arrays(
                 self.po.data_list, self.po.vars['min_ram_free'], not self.po.vars['already_greyscale'], self.po.reduce_image_dim)
-        for video_i in arange(len(self.po.vars['analyzed_individuals'])) + 1:
+        for video_i in np.arange(len(self.po.vars['analyzed_individuals'])) + 1:
             self.assertTrue(os.path.isfile(f"ind_{video_i}.npy"))
 
     def test_thresh_detection(self):

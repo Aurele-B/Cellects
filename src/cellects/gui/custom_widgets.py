@@ -5,8 +5,7 @@ import os
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import Qt, QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
 import numpy as np
-from cv2 import cvtColor, COLOR_BGR2RGB, resize
-from skimage.color.rgb_colors import darkgray
+import cv2
 
 """
 Get every available font:
@@ -104,7 +103,7 @@ class WindowType(QtWidgets.QWidget):
             if self.display_image.max_width * self.display_image.height_width_ratio < self.display_image.max_height:
                 self.display_image.scaled_shape = [round(self.display_image.max_width * self.display_image.height_width_ratio), self.display_image.max_width]
             else:
-                self.display_image.scaled_shape = [self.display_image.max_height, round(self.display_image.max_height / self.display_image.height_width_ratio)]
+                self.display_image.scaled_shape = [self.display_image.max_height, np.round(self.display_image.max_height / self.display_image.height_width_ratio)]
 
             self.display_image.setMaximumHeight(self.display_image.scaled_shape[0])
             self.display_image.setMaximumWidth(self.display_image.scaled_shape[1])
@@ -159,14 +158,14 @@ class FullScreenImage(QtWidgets.QLabel):
         self.setSizePolicy(self.im_size_policy)
 
         self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cvtColor(image, COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
         if self.max_width * self.height_width_ratio < self.max_height:
             self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, round(self.max_height / self.height_width_ratio)]
+            self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         # self.setMaximumHeight(self.scaled_shape[0])
@@ -189,14 +188,14 @@ class InsertImage(QtWidgets.QLabel):
         self.setSizePolicy(self.im_size_policy)
 
         self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cvtColor(image, COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
         if self.max_width * self.height_width_ratio < self.max_height:
             self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, round(self.max_height / self.height_width_ratio)]
+            self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
@@ -210,14 +209,14 @@ class InsertImage(QtWidgets.QLabel):
     def update_image(self, image, text=None, color=255):
         self.true_shape = image.shape
         self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cvtColor(image, COLOR_BGR2RGB)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
         image = QPixmap(image)
         self.setScaledContents(True)
         if self.max_width * self.height_width_ratio < self.max_height:
-            self.scaled_shape = [int(round(self.max_width * self.height_width_ratio)), self.max_width]
+            self.scaled_shape = [int(np.round(self.max_width * self.height_width_ratio)), self.max_width]
         else:
-            self.scaled_shape = [self.max_height, int(round(self.max_height / self.height_width_ratio))]
+            self.scaled_shape = [self.max_height, int(np.round(self.max_height / self.height_width_ratio))]
         # self.setFixedHeight(self.scaled_shape[0])
         # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
@@ -402,14 +401,14 @@ class Spinbox(QtWidgets.QWidget):
         max_str = f"{self._maximum:.{self._decimals}f}"
         w = fm.horizontalAdvance(max_str) + self._button_width + 5  # Add some padding
         h = self._line_edit.sizeHint().height()
-        return QtCore.QSize(max(w, 100), h)  # Ensure a minimum width of 100 pixels
+        return QtCore.QSize(np.max(w, 100), h)  # Ensure a minimum width of 100 pixels
 
     def minimumSizeHint(self):
         return QtCore.QSize(self._button_width * 3, self._line_edit.minimumSizeHint().height())
 
     def _updateDisplayValue(self):
         if self._decimals == 0:
-            self._line_edit.setText(f"{int(round(self._value))}")
+            self._line_edit.setText(f"{int(np.round(self._value))}")
         else:
             self._line_edit.setText(f"{self._value:.{self._decimals}f}")
 
@@ -429,12 +428,12 @@ class Spinbox(QtWidgets.QWidget):
     def setMinimum(self, minimum):
         self._minimum = float(minimum)
         self._updateValidator()
-        self.setValue(max(self._value, self._minimum))
+        self.setValue(np.max((self._value, self._minimum)))
 
     def setMaximum(self, maximum):
         self._maximum = float(maximum)
         self._updateValidator()
-        self.setValue(min(self._value, self._maximum))
+        self.setValue(np.min((self._value, self._maximum)))
 
     def setSingleStep(self, step):
         self._singleStep = float(step)

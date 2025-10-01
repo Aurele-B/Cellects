@@ -9,7 +9,7 @@ These parameters are stored in a dictionary with keys corresponding to the param
 
 import os
 from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
-from numpy import min, max, all, any, array, int8, empty, uint16, int64
+import numpy as np
 from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
 from cellects.utils.load_display_save import PickleRick
 from cellects.core.cellects_paths import TEST_DIR
@@ -68,16 +68,16 @@ class DefaultDicts:
         }
 
         self.vars = {
-            'analyzed_individuals': empty(0, dtype=uint16),
+            'analyzed_individuals': np.empty(0, dtype=np.uint16),
             'arena_shape': 'circle',
             'bio_label': 1,
             'bio_label2': 1,
             'color_number': 2,
             'convert_for_motion': {
-                'lab': array((0, 0, 1), int8),
+                'lab': np.array((0, 0, 1), np.int8),
                 'logical': 'None'},
             'convert_for_origin': {
-                'lab': array((0, 0, 1), int8),
+                'lab': np.array((0, 0, 1), np.int8),
                 'logical': 'None'},
             'detection_range_factor': 2,
             'first_move_threshold': None,

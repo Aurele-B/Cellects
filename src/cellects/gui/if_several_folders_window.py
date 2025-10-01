@@ -55,7 +55,7 @@ class IfSeveralFoldersWindow(WindowType):
         self.tableau.setRowCount(len(self.parent().po.all['folder_list']))
         self.tableau.setHorizontalHeaderLabels(['Folders', 'Sample size'])
         # if len(self.parent().po.all['sample_number_per_folder']) < 2:
-        self.parent().po.all['sample_number_per_folder'] = repeat(int(self.parent().po.all['first_folder_sample_number']), self.parent().po.all['folder_number'])
+        self.parent().po.all['sample_number_per_folder'] = np.repeat(int(self.parent().po.all['first_folder_sample_number']), self.parent().po.all['folder_number'])
 
         for i, folder in enumerate(self.parent().po.all['folder_list']):
             self.tableau.setItem(i, 0, QtWidgets.QTableWidgetItem(folder))
@@ -157,7 +157,7 @@ class IfSeveralFoldersWindow(WindowType):
                 # sample_number =
                 # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
                 #     sample_number = self.parent().po.all['sample_number_per_folder']
-                for i in arange(item_number):
+                for i in np.arange(item_number):
                     if i % 2 == 0:
                         folder_list.append(self.tableau.selectedItems()[i].text())
                     else:
@@ -193,7 +193,7 @@ class IfSeveralFoldersWindow(WindowType):
             self.cb_widget.setVisible(False)
             self.tableau.setVisible(False)
             if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.all['first_folder_sample_number']:
-                self.parent().po.vars['analyzed_individuals'] = arange(
+                self.parent().po.vars['analyzed_individuals'] = np.arange(
                     self.parent().po.all['first_folder_sample_number']) + 1
                 self.parent().po.sample_number = self.parent().po.all['first_folder_sample_number']
             self.message.setText("Data found, shortcuts are available. Click Next again to redo/improve the image analysis")

@@ -12,8 +12,10 @@ import pickle
 import time
 import h5py
 from timeit import default_timer
-from numpy import any, uint8, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate, linspace
-from cv2 import getStructuringElement, MORPH_CROSS, morphologyEx, MORPH_GRADIENT, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, cvtColor, COLOR_RGB2BGR, imread, VideoWriter_fourcc, VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
+import numpy as np
+import cv2
+from numpy import any, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate, linspace
+from cv2 import VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
 from matplotlib import pyplot as plt
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
@@ -71,7 +73,7 @@ class PickleRick:
         if self.counter < 100:
             if self.counter > 95:
                 self.delete_pickle_rick()
-            # time.sleep(random.choice(arange(1, os.cpu_count(), 0.5)))
+            # time.sleep(np.random.choice(np.arange(1, os.cpu_count(), 0.5)))
             self.check_that_file_is_not_open()
             if self.wait_for_pickle_rick:
                 time.sleep(2)
@@ -101,7 +103,6 @@ class PickleRick:
         if self.counter < 1000:
             if self.counter > 950:
                 self.delete_pickle_rick()
-            # time.sleep(random.choice(arange(1, os.cpu_count(), 0.5)))
             self.check_that_file_is_not_open()
             if self.wait_for_pickle_rick:
                 time.sleep(2)
@@ -130,8 +131,6 @@ def show(img, interactive=True, cmap=None):
         plt.ion()
     else:
         plt.ioff()
-    # sizes = img.shape[0] // 100, img.shape[1] // 100
-    # sizes = int(round(img.shape[0] / 90)),  int(round(img.shape[1] / 90))
     sizes = img.shape[0] / 100,  img.shape[1] / 100
     fig = plt.figure(figsize=(sizes[0], sizes[1]))
     ax = fig.gca()
@@ -144,8 +143,6 @@ def show(img, interactive=True, cmap=None):
 
 def save_fig(img, full_path, cmap=None):
     import matplotlib.pyplot as plt
-    # sizes = img.shape[0] // 100, img.shape[1] // 100
-    # sizes = int(round(img.shape[0] / 90)),  int(round(img.shape[1] / 90))
     sizes = img.shape[0] / 100,  img.shape[1] / 100
     fig = plt.figure(figsize=(sizes[0], sizes[1]))
     ax = fig.gca()
@@ -173,19 +170,19 @@ def See(image, img_name="", size=None, keep_display=0):
     """
     # image = resize(image, (960, 540))
     if image.dtype != 'uint8':
-        image = image.astype(uint8)
+        image = image.astype(np.uint8)
     if size is None:
         size = (1000, 1000)
     image = resize(image, size)
-    if not isinstance(image, uint8):
-        image = image.astype(uint8)
-    img_content_diversity = len(unique(image))
+    if not isinstance(image, np.uint8):
+        image = image.astype(np.uint8)
+    img_content_diversity = len(np.unique(image))
     if img_content_diversity < 10:
         image *= 255 // img_content_diversity
-    imshow(img_name, image)
-    waitKey(keep_display)
+    cv2.imshow(img_name, image)
+    cv2.waitKey(keep_display)
     if not keep_display:
-        destroyAllWindows()
+        cv2.destroyAllWindows()
 
 
 def write_video(np_array, vid_name, is_color=True, fps=40):
@@ -205,7 +202,7 @@ def write_video(np_array, vid_name, is_color=True, fps=40):
     # linux: fourcc = 0x00000021 -> don't forget to change it bellow as well
     if vid_name[-4:] == '.npy':
         with open(vid_name, 'wb') as file:
-            save(file, np_array)
+             np.save(file, np_array)
     else:
         valid_extensions = ['.mp4', '.avi', '.mkv']
         vid_ext = vid_name[-4:]
@@ -216,10 +213,10 @@ def write_video(np_array, vid_name, is_color=True, fps=40):
         if vid_ext =='.mp4':
             fourcc = 0x7634706d# VideoWriter_fourcc(*'FMP4') #(*'MP4V') (*'h265') (*'x264') (*'DIVX')
         else:
-            fourcc = VideoWriter_fourcc('F', 'F', 'V', '1')  # lossless
+            fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')  # lossless
         size = np_array.shape[2], np_array.shape[1]
-        vid = VideoWriter(vid_name, fourcc, float(fps), tuple(size), is_color)
-        for image_i in arange(np_array.shape[0]):
+        vid = cv2.VideoWriter(vid_name, fourcc, float(fps), tuple(size), is_color)
+        for image_i in np.arange(np_array.shape[0]):
             image = np_array[image_i, ...]
             vid.write(image)
         vid.release()
@@ -231,7 +228,7 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
     :param vid_name: path and file name of the video to read
     :type vid_name: str
     :param conversion_dict: dictionary containing the color space combination to modify the bgr image before writing
-    :type conversion_dict: TDict[str: float64]
+    :type conversion_dict: TDict[str: =np.float64]
     :param background: grayscale image
     :type background: uint8
     :param true_frame_width: widht of one frame, if the video is twice that width returns the left side of it
@@ -239,38 +236,35 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
     :return: a numpy array of the video and its converted version if required
     """
     if vid_name[-4:] == ".npy":
-        video = load(vid_name) # , allow_pickle='TRUE'
+        video = np.load(vid_name) # , allow_pickle='TRUE'
         frame_width = video.shape[2]
         if true_frame_width is not None:
             if frame_width == 2 * true_frame_width:
                 frame_width = true_frame_width
         if conversion_dict is not None:
-            converted_video = zeros((video.shape[0], video.shape[1], frame_width), dtype=uint8)
-            for counter in arange(video.shape[0]):
+            converted_video = np.zeros((video.shape[0], video.shape[1], frame_width), dtype=np.uint8)
+            for counter in np.arange(video.shape[0]):
                 img = video[counter, :, :frame_width, :]
                 greyscale_image, greyscale_image2 = generate_color_space_combination(img, list(conversion_dict.keys()),
                                                                                      conversion_dict, background=background,
                                                                                      convert_to_uint8=True)
                 converted_video[counter, ...] = greyscale_image
-                # csc = OneImageAnalysis(csc)
-                # csc.generate_color_space_combination(conversion_dict, background)
-                # converted_video[counter, ...] = csc.image.astype(uint8)
         video = video[:, :, :frame_width, ...]
     else:
 
-        cap = VideoCapture(vid_name)
-        frame_number = int(cap.get(CAP_PROP_FRAME_COUNT))
-        frame_height = int(cap.get(CAP_PROP_FRAME_HEIGHT))
-        frame_width = int(cap.get(CAP_PROP_FRAME_WIDTH))
+        cap = cv2.VideoCapture(vid_name)
+        frame_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         if true_frame_width is not None:
             if frame_width == 2 * true_frame_width:
                 frame_width = true_frame_width
 
         # 2) Create empty arrays to store video analysis data
 
-        video = empty((frame_number, frame_height, frame_width, 3), dtype=uint8)
+        video = np.empty((frame_number, frame_height, frame_width, 3), dtype=np.uint8)
         if conversion_dict is not None:
-            converted_video = empty((frame_number, frame_height, frame_width), dtype=uint8)
+            converted_video = np.empty((frame_number, frame_height, frame_width), dtype=np.uint8)
         # 3) Read and convert the video frame by frame
         counter = 0
         while cap.isOpened() and counter < frame_number:
@@ -302,15 +296,15 @@ def movie(video, keyboard=1, increase_contrast=True):
     :type increase_contrast: bool
     :return: 
     """
-    for i in arange(video.shape[0]):
+    for i in np.arange(video.shape[0]):
         image = video[i, :, :]
-        if any(image):
+        if np.any(image):
             if increase_contrast:
                 image = bracket_to_uint8_image_contrast(image)
             final_img = resize(image, (500, 500))
-            imshow('Motion analysis', final_img)
-            waitKey(keyboard)
-    destroyAllWindows()
+            cv2.imshow('Motion analysis', final_img)
+            cv2.waitKey(keyboard)
+    cv2.destroyAllWindows()
 
 
 opencv_accepted_formats = [
@@ -330,7 +324,7 @@ def is_raw_image(image_path):
     :rtype: bool
     """
     ext = image_path.split(".")[-1]
-    if isin(ext, opencv_accepted_formats):
+    if np.isin(ext, opencv_accepted_formats):
         raw_image = False
     else:
         raw_image = True
@@ -352,10 +346,10 @@ def readim(image_path, raw_image=False):
         # import rawpy
         # raw = rawpy.imread(image_path)
         # raw = raw.postprocess()
-        # return cvtColor(raw, COLOR_RGB2BGR)
-        return imread(image_path)
+        # return cv2.cvtColor(raw, COLOR_RGB2BGR)
+        return cv2.imread(image_path)
     else:
-        return imread(image_path)
+        return cv2.imread(image_path)
 
 
 def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
@@ -371,14 +365,12 @@ def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
     """
     img = readim(image_name, raw_images)
     if (img.shape[0] > img.shape[1] and is_landscape) or (img.shape[0] < img.shape[1] and not is_landscape):
-        clockwise = rotate(img, ROTATE_90_CLOCKWISE)
+        clockwise = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
         if prev_img is not None:
-            prev_img = int16(prev_img)
-            clock_diff = sum_of_abs_differences(prev_img, int16(clockwise))
-            # clock_diff = sum(absolute(int16(prev_img) - int16(clockwise)))
-            counter_clockwise = rotate(img, ROTATE_90_COUNTERCLOCKWISE)
-            counter_clock_diff = sum_of_abs_differences(prev_img, int16(counter_clockwise))
-            # counter_clock_diff = sum(absolute(int16(prev_img) - int16(counter_clockwise)))
+            prev_img = np.int16(prev_img)
+            clock_diff = sum_of_abs_differences(prev_img, np.int16(clockwise))
+            counter_clockwise = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            counter_clock_diff = sum_of_abs_differences(prev_img, np.int16(counter_clockwise))
             if clock_diff > counter_clock_diff:
                 img = counter_clockwise
             else:
@@ -401,7 +393,7 @@ def vstack_h5_array(file_name, table, key="data"):
             if key in h5f:
                 # Append to the existing dataset
                 existing_data = h5f[key][:]
-                new_data = vstack((existing_data, table))
+                new_data = np.vstack((existing_data, table))
                 del h5f[key]
                 h5f.create_dataset(key, data=new_data)
             else:
@@ -464,6 +456,6 @@ def get_mpl_colormap(cmap_name):
     sm = plt.cm.ScalarMappable(cmap=cmap)
 
     # Obtain linear color range
-    color_range = sm.to_rgba(linspace(0, 1, 256), bytes=True)[:, 2::-1]
+    color_range = sm.to_rgba(np.linspace(0, 1, 256), bytes=True)[:, 2::-1]
 
     return color_range.reshape(256, 1, 3)

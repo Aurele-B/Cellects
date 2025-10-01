@@ -12,7 +12,7 @@ import signal
 # necessary on OSX
 # pip install cython pyobjus
 import sys
-from numpy import min, max, all, any, uint8, zeros, arange
+import numpy as np
 from PySide6 import QtWidgets, QtGui
 from screeninfo import get_monitors
 
@@ -47,9 +47,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         # self.image_window_height_ratio = 266/750
         self.image_window_width_diff = 1380 - 570
         self.image_window_height_diff = 750 - 266
-        self.image_to_display = zeros(
-            (self.im_max_height, self.im_max_width, 3),
-            uint8)
+        self.image_to_display = np.zeros((self.im_max_height, self.im_max_width, 3), np.uint8)
         # self.im_max_height = (2 * self.screen_height // 3) // 3
         # self.im_max_width = (2 * self.screen_width // 3) // 4
         self.i = 1
@@ -92,7 +90,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
     def instantiate_widgets(self, severalfolder_included=True):
         print("Widgets are instantiating")
-        # for widg_i in arange(1, 6):
+        # for widg_i in np.arange(1, 6):
         #     widget = self.widget(1)
         #     if widget is not None:
         #         self.removeWidget(widget)

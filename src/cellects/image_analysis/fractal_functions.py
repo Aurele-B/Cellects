@@ -47,7 +47,6 @@ def prepare_box_counting(binary_image, min_im_side=128, min_mesh_side=8, zoom_st
             if contours:
                 eroded_zoomed_binary = cv2.erode(zoomed_binary, cross_33)
                 zoomed_binary = zoomed_binary - eroded_zoomed_binary
-                # zoomed_binary = cv2.morphologyEx(zoomed_binary, cv2.MORPH_GRADIENT, cross_33)
             if zoom_step == 0:
                 max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2
                 side_lengths = 2 ** np.arange(max_power, int(np.log2(min_mesh_side // 2)), -1)

@@ -3,9 +3,7 @@
 
  """
 import logging
-import os
 import sys
-from pathlib import Path
 import coloredlogs
 from PySide6 import QtWidgets, QtGui
 from cellects.core.cellects_paths import ICONS_DIR

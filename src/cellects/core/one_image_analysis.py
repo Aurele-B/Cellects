@@ -98,29 +98,10 @@ class OneImageAnalysis:
 
         # logging.info(f"Generate the color space combination {first_dict}")
         self.all_c_spaces = get_color_spaces(self.bgr, c_spaces)
-        # self.all_c_spaces = TDict()
-        # self.all_c_spaces['bgr'] = self.bgr.astype(np.float64)
-        # if np.isin('lab', c_spaces):
-        #     self.all_c_spaces['lab'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LAB).astype(np.float64)
-        # if np.isin('hsv', c_spaces):
-        #     self.all_c_spaces['hsv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HSV).astype(np.float64)
-        # if np.isin('luv', c_spaces):
-        #     self.all_c_spaces['luv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2LUV).astype(np.float64)
-        # if np.isin('hls', c_spaces):
-        #     self.all_c_spaces['hls'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2HLS).astype(np.float64)
-        # if np.isin('yuv', c_spaces):
-        #     self.all_c_spaces['yuv'] = cv2.cvtColor(self.bgr, cv2.COLOR_BGR2YUV).astype(np.float64)
-
         self.image = combine_color_spaces(first_dict, self.all_c_spaces, background)
         if len(second_dict) > 0:
             logging.info(f"Coupled with the color space combination {second_dict}")
             self.image2 = combine_color_spaces(second_dict, self.all_c_spaces, background2)
-        # if deleted later:
-        # -do not put as uint16, converted_video before gradient
-        # -put as uint8, converted_video before imtoshow
-        # -put as uint8, converted_video before write_video
-        # -do round(csc.image).astype(uint8) in load_one_arena
-        # self.image = np.round(self.image).astype(np.uint8)
 
     def convert_and_segment(self, c_space_dict, color_number=2, biomask=None,
                             backmask=None, subtract_background=None, subtract_background2=None, grid_segmentation=False,
@@ -153,41 +134,14 @@ class OneImageAnalysis:
 
             else:
 
-                # self.image = generate_color_space_combination(c_space_dict, self.all_c_spaces, subtract_background)
-
-                #
-                # self.image = generate_color_space_combination(c_space_dict, self.all_c_spaces, None)
-                # if self.image.sum() > subtract_background.sum():
-                #     self.image -= subtract_background
-                # else:
-                #     self.image = subtract_background - self.image
-                # # add (resp. subtract) the most negative (resp. smallest) value to the whole matrix to get a min = 0
-                # self.image -= np.min(self.image)
-                # # Make analysable this image by bracketing its values between 0 and 255 and converting it to uint8
-                # self.image = 255 * (self.image / np.max(self.image))
-
                 self.segmentation(logical='None', color_number=color_number, biomask=biomask,
                                   backmask=backmask, grid_segmentation=grid_segmentation,
                                   lighter_background=lighter_background, side_length=side_length, step=step,
                                   int_variation_thresh=int_variation_thresh, mask=mask)
-                #
-                # if subtract_background is not None:
-                #     if self.image.sum() > subtract_background.sum():
-                #         self.image -= subtract_background
-                #     else:
-                #         self.image = subtract_background - self.image
-                #
-                # if more_than_two_colors and (biomask is not None or backmask is not None):
-                #     self.kmeans(color_number, biomask, backmask)
-                # else:
-                #     self.binary_image = otsu_thresholding(self.image)
+
 
     def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None, grid_segmentation=False, lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):
-        if (color_number > 2): #  and (biomask is not None or backmask is not None)
-            # if logical != 'None':
-            #     self.kmeans(color_number, biomask, backmask, logical)
-                # binary_image2 = self.binary_image.copy()
-                # self.bio_label2 = self.bio_label
+        if (color_number > 2):
             self.kmeans(color_number, biomask, backmask, logical, bio_label, bio_label2)
         elif grid_segmentation:
             if lighter_background is None:
@@ -385,7 +339,6 @@ class OneImageAnalysis:
                         possibilities.append(new_possibility)
                         remaining_possibilities = remaining_possibilities[remaining_possibilities != new_possibility]
 
-                # possibilities = np.random.choice(possibilities, 6, replace=False)
 
             pool = mp.ThreadPool(processes=os.cpu_count() - 1)
             get_one_channel_result = False
@@ -412,7 +365,6 @@ class OneImageAnalysis:
             # Should only need one instanciation
             process_i = ProcessFirstImage(
                 [self, False, False, None, several_blob_per_arena, sample_number, spot_size, kmeans_clust_nb, biomask, backmask, None])
-            # self.combination_features = np.append(self.combination_features, np.zeros((1, 11), dtype=np.uint32), axis=0)
             process_i.binary_image = np.logical_and(self.saved_images_list[most1], self.saved_images_list[most2]).astype(np.uint8)
             process_i.image = self.converted_images_list[most1]
             process_i.process_binary_image()
@@ -420,16 +372,8 @@ class OneImageAnalysis:
                         "logical": "And",
                         list(self.saved_color_space_list[most2].keys())[0] + "2": self.combination_features[most2, :3]}
             process_i.unaltered_concomp_nb = np.min(self.combination_features[(most1, most2), unaltered_cc_nb])
-            # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), biomask, backmask)
             process_i.total_area = process_i.binary_image.sum()
             self.save_combination_features(process_i)
-            # la ligne d'au dessus pose pb pcq le self qui est passé dans
-            # self.save_combination_thread = SaveCombinationThread(self, biomask, backmask)
-            # est ancien et self.combination_features ne se met pas à jour dans le parent. Bizarre: fonctionne pour backmask
-
-
-            # and a logical Or between the two least covered images
-            # self.combination_features = np.append(self.combination_features, np.zeros((1, 11), dtype=np.uint32), axis=0)
             process_i.image = self.converted_images_list[least1]
             process_i.binary_image = np.logical_or(self.saved_images_list[least1], self.saved_images_list[least2]).astype(np.uint8)
             process_i.process_binary_image()
@@ -446,7 +390,6 @@ class OneImageAnalysis:
             # Do a logical And between the two best biomasks
             if biomask is not None:
                 if not np.all(np.isin((bio1, bio2), (most1, most2))):
-                    # self.combination_features = np.append(self.combination_features, np.zeros((1, 11), dtype=np.uint32), axis=0)
                     process_i.image = self.converted_images_list[bio1]
                     process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[bio2]).astype(
                     np.uint8)
@@ -455,7 +398,6 @@ class OneImageAnalysis:
                                 "logical": "And",
                                 list(self.saved_color_space_list[bio2].keys())[0] + "2": self.combination_features[bio2,:3]}
                     process_i.unaltered_concomp_nb = np.min(self.combination_features[(bio1, bio2), unaltered_cc_nb])
-                    # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), biomask, backmask)
                     process_i.total_area = process_i.binary_image.sum()
 
                     self.save_combination_features(process_i)
@@ -464,7 +406,6 @@ class OneImageAnalysis:
             if backmask is not None:
 
                 if not np.all(np.isin((back1, back2), (most1, most2))):
-                    # self.combination_features = np.append(self.combination_features, np.zeros((1, 11), dtype=np.uint32), axis=0)
                     process_i.image = self.converted_images_list[back1]
                     process_i.binary_image = np.logical_and(self.saved_images_list[back1], self.saved_images_list[back2]).astype(
                     np.uint8)
@@ -473,14 +414,11 @@ class OneImageAnalysis:
                                 "logical": "And",
                                 list(self.saved_color_space_list[back2].keys())[0] + "2": self.combination_features[back2,:3]}
                     process_i.unaltered_concomp_nb = np.min(self.combination_features[(back1, back2), unaltered_cc_nb])
-                    # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), biomask, backmask)
                     process_i.total_area = process_i.binary_image.sum()
                     self.save_combination_features(process_i)
             # Do a logical Or between the best biomask and the best backmask
             if biomask is not None and backmask is not None:
                 if not np.all(np.isin((bio1, back1), (least1, least2))):
-                    # self.combination_features = np.append(self.combination_features, np.zeros((1, 11), dtype=np.uint32),
-                    #                                       axis=0)
                     process_i.image = self.converted_images_list[bio1]
                     process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[back1]).astype(
                         np.uint8)
@@ -600,22 +538,6 @@ class OneImageAnalysis:
                 (1 - process_i.validated_shapes)[process_i.backmask[0], process_i.backmask[1]])
         self.saved_csc_nb += 1
 
-    # def save_combination_features(self, csc_dict, unaltered_concomp_nb, total_area, biomask=None, backmask=None):
-    #     self.saved_images_list.append(self.validated_shapes)
-    #     self.saved_color_space_list.append(csc_dict)
-    #     self.combination_features[self.saved_csc_nb, :3] = list(csc_dict.values())[0]
-    #     self.combination_features[self.saved_csc_nb, 3] = unaltered_concomp_nb - 1 #unaltered_cc_nb
-    #     self.combination_features[self.saved_csc_nb, 4] = self.shape_number# cc_nb
-    #     self.combination_features[self.saved_csc_nb, 5] = total_area#area
-    #     self.combination_features[self.saved_csc_nb, 6] = np.std(self.concomp_stats[1:, 2])#width_std
-    #     self.combination_features[self.saved_csc_nb, 7] = np.std(self.concomp_stats[1:, 3])#height_std
-    #     self.combination_features[self.saved_csc_nb, 8] = np.std(self.concomp_stats[1:, 4])#area_std
-    #     if biomask is not None:
-    #         self.combination_features[self.saved_csc_nb, 9] = np.sum(self.validated_shapes[biomask[0], biomask[1]])
-    #     if backmask is not None:
-    #         self.combination_features[self.saved_csc_nb, 10] = np.sum((1 - self.validated_shapes)[backmask[0], backmask[1]])
-    #     self.saved_csc_nb += 1
-
     def update_current_images(self, current_combination_id):
         self.image = self.im_combinations[current_combination_id]["converted_image"]
         self.validated_shapes = self.im_combinations[current_combination_id]["binary_image"]
@@ -678,7 +600,6 @@ class OneImageAnalysis:
                         if in_common > 0:
                             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
                             nb -= 1
-                            # nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(oia.binary_image)
                             if np.all(np.sort(stats[:, 4])[:-1] < max_shape_size):
                                 # oia.viewing()
                                 c_space = list(csc_dict.keys())[0]
@@ -768,7 +689,6 @@ class OneImageAnalysis:
                             if in_common > 0:
                                 nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
                                 nb -= 1
-                                # nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(oia.binary_image)
                                 if np.all(np.sort(stats[:, 4])[:-1] < max_shape_size):
                                     # If a color space remove fits in the requirements, we store its values
                                     self.converted_images_list.append(self.image)
@@ -828,24 +748,17 @@ class OneImageAnalysis:
         # Save and return a dictionnary containing the selected color space combinations
         # and their corresponding binary images
 
-        # first_im_combinations = [i for i in np.arange(fit.sum())]
         self.im_combinations = []
         for saved_csc in cc_efficiency_order:
             if len(self.saved_color_space_list[saved_csc]) > 0:
                 self.im_combinations.append({})
-                # self.im_combinations.append({})
-                # self.im_combinations[len(self.im_combinations) - 1]["csc"] = self.saved_color_space_list[saved_csc]
                 self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
                 self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
                 for k, v in self.saved_color_space_list[saved_csc].items():
                     self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                # self.im_combinations[len(self.im_combinations) - 1]["csc"] = {list(self.saved_color_space_list[saved_csc])[0]: self.combination_features[saved_csc, :3]}
                 self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                # contours = cv2.morphologyEx(self.saved_images_list[saved_csc], cv2.MORPH_GRADIENT, cross_33)
-                # contours = np.nonzero(cv2.dilate(contours, cross_33, iterations=3))
                 self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
                     saved_csc]).astype(np.uint8)
-        # logging.info(default_timer()-tic)
         self.saved_color_space_list = []
         self.saved_images_list = None
         self.converted_images_list = None
@@ -968,7 +881,7 @@ class OneImageAnalysis:
             x_size = self.image.shape[1]
             max_y = y_size + 1
             max_x = x_size + 1
-            mask = ones_like(self.image)
+            mask = np.ones_like(self.image)
         else:
             y, x = np.nonzero(mask)
             min_y = np.min(y)
@@ -1091,55 +1004,12 @@ class OneImageAnalysis:
 
     def projection_to_get_peaks_boundaries(self, axis):
         sums = np.sum(self.validated_shapes, axis)
-
-        # y_ax = slopes.copy()
-        # x_ax = np.arange(len(slopes))
-        # img = np.zeros((len(y_ax), len(x_ax)))
-        # img[y_ax, x_ax] = 1
-        # See(img)
-        # for i in range(len(sc[0])):
-        #     img[sc[0][i]:sc[0][i] + 20, :] = 1
-
         slopes = np.greater(sums, 0)
         slopes = np.append(0, np.diff(slopes))
         coord = np.nonzero(slopes)[0]
         for ci in np.arange(len(coord)):
             if ci % 2 == 0:
                 slopes[coord[ci]] = - 1
-        #plt.plot(slopes)
-        """
-        # plt.plot(sums)
-        # Use a moving average to smooth the curve
-        moving_average_step = self.validated_shapes.shape[1] // 100
-        sums = np.convolve(sums, np.ones((moving_average_step,)) / moving_average_step, mode='valid')
-        # Correct the peak positions by moving the distribution to the right and by substracting
-        sums = np.append(np.zeros(moving_average_step // 2), sums - np.min(sums))
-
-        # Test different threshold to maximize peak detection
-        tested_coefs = np.arange(0.1, 0.95, 0.05)
-        peaks_obtained = np.zeros(len(tested_coefs))
-        for coefi in np.arange(len(tested_coefs)):
-            slopes = np.less(sums, np.max(sums) * tested_coefs[coefi])
-            slopes = slopes.astype(int)
-            slopes = np.append(False, np.diff(slopes))
-            peaks_obtained[coefi] = np.sum(slopes == True)
-        # plt.axhline(np.max(sums) * tested_coefs[np.argmax(peaks_obtained)])
-        slopes = np.less(sums, np.max(sums) * tested_coefs[np.argmax(peaks_obtained)])
-        # Format peak slopes in order to have 1 for increases and -1 for decreases
-        slopes = slopes.astype(np.int8)
-        slopes = np.append(0, np.diff(slopes))
-        # plt.imshow(img, aspect="auto")
-        # [plt.axvline(np.argwhere(slopes)[i]) for i in np.arange(0, len(slopes))]
-
-        # Find which increase or decrease produce an inconsistent interval
-        inc_idx = np.argwhere(slopes == - 1)
-        idx_of_inc_idx_to_remove = self.jackknife_cutting(slopes == - 1)
-        slopes[inc_idx[idx_of_inc_idx_to_remove]] = False
-
-        dec_idx = np.argwhere(slopes == 1)
-        idx_of_dec_idx_to_remove = self.jackknife_cutting(slopes == 1)
-        slopes[dec_idx[idx_of_dec_idx_to_remove]] = False
-        """
         return slopes, sums.max()
 
     def jackknife_cutting(self, changes):

@@ -17,15 +17,15 @@ interchange_format_length', 'lens_make', 'lens_model', 'lens_specification', 'ma
 digitized', 'subsec_time_original', 'white_balance', 'x_resolution', 'y_and_c_positioning', 'y_resolution']
 
 """
-
+import numpy as np
 
 def extract_time(image_list, pathway="", raw_images=False):
     from numpy import min, max, any, zeros, arange, all, int64, repeat
     nb = len(image_list)
-    timings = zeros((nb, 6), dtype=int64)
+    timings = np.zeros((nb, 6), dtype=np.int64)
     if raw_images:
         import exifread
-        for i in arange(nb):
+        for i in np.arange(nb):
             with open(pathway + image_list[i], 'rb') as image_file:
                 my_image = exifread.process_file(image_file, details=False, stop_tag='DateTimeOriginal')
                 datetime = my_image["EXIF DateTimeOriginal"]
@@ -33,7 +33,7 @@ def extract_time(image_list, pathway="", raw_images=False):
             timings[i, :] = datetime.split(':')
     else:
         from exif import Image
-        for i in arange(nb):
+        for i in np.arange(nb):
             with open(pathway + image_list[i], 'rb') as image_file:
                 my_image = Image(image_file)
                 if my_image.has_exif:
@@ -41,21 +41,21 @@ def extract_time(image_list, pathway="", raw_images=False):
                     datetime = datetime[:10] + ':' + datetime[11:]
                     timings[i, :] = datetime.split(':')
 
-    if all(timings[:, 0] == timings[0, 0]):
-        if all(timings[:, 1] == timings[0, 1]):
-            if all(timings[:, 2] == timings[0, 2]):
+    if np.all(timings[:, 0] == timings[0, 0]):
+        if np.all(timings[:, 1] == timings[0, 1]):
+            if np.all(timings[:, 2] == timings[0, 2]):
                 time = timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
             else:
                 time = timings[:, 2] * 86400 + timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
         else:
             days_per_month = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-            for j in arange(nb):
+            for j in np.arange(nb):
                 month_number = timings[j, 1]#int(timings[j, 1])
                 timings[j, 1] = days_per_month[month_number] * month_number
             time = (timings[:, 1] + timings[:, 2]) * 86400 + timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
         #time = int(time)
     else:
-        time = repeat(0, nb)#arange(1, nb * 60, 60)#"Do not experiment the 31th of december!!!"
+        time = np.repeat(0, nb)#arange(1, nb * 60, 60)#"Do not experiment the 31th of december!!!"
     if time.sum() == 0:
-        time = repeat(0, nb)#arange(1, nb * 60, 60)
+        time = np.repeat(0, nb)#arange(1, nb * 60, 60)
     return time

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-""" This script contains formula functions
+""" This script contains formula functions,
+they mainly are simple mathematical expressions, used many times by Cellects.
+This is part of the lower level of the software. When possible, these functions are optimized using Numba's decorator
+@njit.
     - linear_model
     - get_divisor
     - eudist
@@ -14,44 +17,112 @@
     - max_cum_sum_from_rolling_window
 """
 from copy import deepcopy
-from numpy import sum, delete, unique, bincount, absolute, max, min, empty_like, round, uint8, meshgrid, sqrt, arange,square, arctan, pi, isnan, arctan2, cos, sin, mean, random, append, quantile, std, array, floor, ceil, zeros, logical_not, logical_and
 from numba import njit
+import numpy as np
 
 
 @njit()
 def sum_of_abs_differences(array1, array2):
     """
-    Compute the sum of absolute differences between two arrays of the same size and type
-    :param array1:
-    :param array2:
-    :return: sum of absolute differences
+    Calculate the sum of absolute differences between two NumPy arrays.
+
+    Parameters
+    ----------
+    array1 : array_like
+        First input array.
+    array2 : array_like
+        Second input array.
+
+    Returns
+    -------
+    scalar
+        Sum of absolute differences between the two arrays.
     """
-    return sum(absolute(array1 - array2))
+    return np.sum(np.absolute(array1 - array2))
 
 
 @njit()
 def to_uint8(an_array):
     """
-    Round and convert an array into uint8
-    :param an_array:
-    :return:
-    :rtype: uint8
+    Convert array values to uint8.
+
+    Round the input array values and convert them to unsigned 8-bit integers.
+
+    Parameters
+    ----------
+    an_array : numpy.ndarray
+        Input array whose values are to be converted.
+
+    Returns
+    -------
+    numpy.ndarray
+        The numpy.ndarray of uint8 type containing rounded values of the input
+        array.
+
+    Raises
+    ------
+    TypeError
+        If the input is not a numpy.ndarray.
+    ValueError
+        If the array contains values that cannot be rounded.
+
+    Notes
+    -----
+    This function uses Numba's @njit decorator for performance.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> an_array = np.array([1.2, 2.7, 3.4])
+    >>> to_uint8(an_array)
+    array([1, 3, 3], dtype=uint8)
+
+    >>> an_array = np.array([-1.2, -2.7, 3.4])
+    >>> to_uint8(an_array)
+    array([0, 0, 3], dtype=uint8)
     """
-    out = empty_like(an_array)
-    return round(an_array, 0, out).astype(uint8)
+    out = np.empty_like(an_array)
+    return np.round(an_array, 0, out).astype(np.uint8)
 
 
 @njit()
 def bracket_to_uint8_image_contrast(image):
     """
-    Increased an image contrast by:
-    Standardizing values so that all values become distributed between 0 and 255
-    :param image: any array
-    :return: an image with increased contrast
-    :rtype: uint8
+    Convert a float image with dynamic range from [min, max] to an 8-bit integer
+    image with a specified contrast.
+
+    Parameters
+    ----------
+    image : numpy.ndarray
+        Input image as a 2D NumPy array of floats.
+
+    Returns
+    -------
+    numpy.ndarray
+        Output image as a 2D NumPy array of uint8.
+
+    Raises
+    ------
+    TypeError
+        If `image` is not a NumPy array.
+    ValueError
+        If `image` contains non-finite values.
+
+    Notes
+    -----
+    This function uses Numba’s `@njit` decorator for performance.
+
+    Examples
+    --------
+
+    >>> image = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
+    >>> result = bracket_to_uint8_image_contrast(image)
+    >>> print(result)
+    [[ 64 128]
+     [192 255]]
     """
-    image -= min(image)
-    return to_uint8(255 * (image / max(image)))
+    image -= np.min(image)
+    return to_uint8(255 * (image / np.max(image)))
 
 
 @njit()
@@ -77,8 +148,8 @@ def get_power_dists(binary_image, cx, cy, n):
     :param n: power
     :return: a vector of these power distances
     """
-    xn = (arange(binary_image.shape[1]) - cx) ** n
-    yn = (arange(binary_image.shape[0]) - cy) ** n
+    xn = (np.arange(binary_image.shape[1]) - cx) ** n
+    yn = (np.arange(binary_image.shape[0]) - cy) ** n
     return xn, yn
 
 
@@ -92,8 +163,8 @@ def get_var(mo, binary_image, Xn, Yn):
     :param Yn:
     :return: variance of the shape over the y and x axes
     """
-    vx = sum(binary_image * Xn) / mo["m00"]
-    vy = sum(binary_image * Yn) / mo["m00"]
+    vx = np.sum(binary_image * Xn) / mo["m00"]
+    vy = np.sum(binary_image * Yn) / mo["m00"]
     return vx, vy
 
 @njit()
@@ -121,9 +192,9 @@ def get_standard_deviations(mo, binary_image, cx, cy):
 
     """
     x2, y2 = get_power_dists(binary_image, cx, cy, 2)
-    X2, Y2 = meshgrid(x2, y2)
+    X2, Y2 = np.meshgrid(x2, y2)
     vx, vy = get_var(mo, binary_image, X2, Y2)
-    return sqrt(vx), sqrt(vy)
+    return np.sqrt(vx), np.sqrt(vy)
 
 
 def get_skewness(mo, binary_image, cx, cy, sx, sy):
@@ -138,7 +209,7 @@ def get_skewness(mo, binary_image, cx, cy, sx, sy):
     :return: x_skewness, y_skewness
     """
     x3, y3 = get_power_dists(binary_image, cx, cy, 3)
-    X3, Y3 = meshgrid(x3, y3)
+    X3, Y3 = np.meshgrid(x3, y3)
     m3x, m3y = get_var(mo, binary_image, X3, Y3)
     return get_skewness_kurtosis(m3x, m3y, sx, sy, 3)
 
@@ -155,7 +226,7 @@ def get_kurtosis(mo, binary_image, cx, cy, sx, sy):
     :return: x_kurtosis, y_kurtosis
     """
     x4, y4 = get_power_dists(binary_image, cx, cy, 4)
-    X4, Y4 = meshgrid(x4, y4)
+    X4, Y4 = np.meshgrid(x4, y4)
     m4x, m4y = get_var(mo, binary_image, X4, Y4)
     return get_skewness_kurtosis(m4x, m4y, sx, sy, 4)
 
@@ -176,16 +247,14 @@ def get_inertia_axes(mo):
     cx = mo["m10"] / mo["m00"]
     cy = mo["m01"] / mo["m00"]
     # Calculate central moments
-    c20 = (mo["m20"] / mo["m00"]) - square(cx)
-    c02 = (mo["m02"] / mo["m00"]) - square(cy)
+    c20 = (mo["m20"] / mo["m00"]) - np.square(cx)
+    c02 = (mo["m02"] / mo["m00"]) - np.square(cy)
     c11 = (mo["m11"] / mo["m00"]) - (cx * cy)
     # Calculate major and minor axi lengths OK
-    # major_axis_len = sqrt(8 * (c20 + c02 + sqrt(4 * square(c11) + square(c20 - c02))))
-    # minor_axis_len = sqrt(8 * (c20 + c02 - sqrt(4 * square(c11) + square(c20 - c02))))
-    major_axis_len = sqrt(6 * (c20 + c02 + sqrt(square(2 * c11) + square(c20 - c02))))
-    minor_axis_len = sqrt(6 * (c20 + c02 - sqrt(square(2 * c11) + square(c20 - c02))))
+    major_axis_len = np.sqrt(6 * (c20 + c02 + np.sqrt(np.square(2 * c11) + np.square(c20 - c02))))
+    minor_axis_len = np.sqrt(6 * (c20 + c02 - np.sqrt(np.square(2 * c11) + np.square(c20 - c02))))
     if (c20 - c02) != 0:
-        axes_orientation = (0.5 * arctan((2 * c11) / (c20 - c02))) + ((c20 < c02) * (pi /2))
+        axes_orientation = (0.5 * np.arctan((2 * c11) / (c20 - c02))) + ((c20 < c02) * (np.pi /2))
     else:
         axes_orientation = 0
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
@@ -199,7 +268,7 @@ def eudist(v1, v2):
     :return: euclidian distance
     """
     dist = [(a - b)**2 for a, b in zip(v1, v2)]
-    dist = sqrt(sum(dist))
+    dist = np.sqrt(np.sum(dist))
     return dist
 
 
@@ -210,8 +279,8 @@ def cart2pol(x, y):
     :param y: coordinate over the y axis
     :return: distance, angle
     """
-    rho = sqrt(x**2 + y**2)
-    phi = arctan2(y, x)
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
     return(rho, phi)
 
 
@@ -222,8 +291,8 @@ def pol2cart(rho, phi):
     :param phi: angle
     :return: x coordinate, y coordinate
     """
-    x = rho * cos(phi)
-    y = rho * sin(phi)
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
     return x, y
 
 
@@ -235,14 +304,14 @@ def cohen_d_95(vector_1, vector_2, nbboot=100000):
     :param nbboot:
     :return:
     """
-    boot = zeros(nbboot, dtype=int)
+    boot = np.zeros(nbboot, dtype=int)
     n1 = len(vector_1)
     n2 = len(vector_2)
-    for i in arange(nbboot):
-        v1bis = random.choice(vector_1, size=n1, replace=True)
-        v2bis = random.choice(vector_2, size=n2, replace=True)
+    for i in np.arange(nbboot):
+        v1bis = np.random.choice(vector_1, size=n1, replace=True)
+        v2bis = np.random.choice(vector_2, size=n2, replace=True)
         boot[i] = cohen_d(v1bis,v2bis)
-    effect_low_top = append(cohen_d(vector_1, vector_2), quantile(boot, (0.025, 0.975)))
+    effect_low_top = np.append(cohen_d(vector_1, vector_2), np.quantile(boot, (0.025, 0.975)))
     return effect_low_top
 
 
@@ -253,13 +322,13 @@ def cohen_d(vector_1, vector_2):
     :param vector_2:
     :return: Cohen d
     """
-    m1 = mean(vector_1)
-    m2 = mean(vector_2)
-    s1 = std(vector_1)
-    s2 = std(vector_2)
+    m1 = np.mean(vector_1)
+    m2 = np.mean(vector_2)
+    s1 = np.std(vector_1)
+    s2 = np.std(vector_2)
     n1 = len(vector_1)
     n2 = len(vector_2)
-    spooled = sqrt(((n2 - 1) * s2 ** 2 + (n1 - 1) * s1 ** 2) / (n1 + n2 - 2))
+    spooled = np.sqrt(((n2 - 1) * s2 ** 2 + (n1 - 1) * s1 ** 2) / (n1 + n2 - 2))
     return (m2 - m1) / spooled
 
 
@@ -270,15 +339,15 @@ def moving_average(vector, step):
     :param step: the window size to compute averages
     :return: the averaged/smoothed vector
     """
-    substep = array((- int(floor((step - 1) / 2)), int(ceil((step - 1) / 2))))
-    sums = zeros(vector.shape)
+    substep = np.array((- int(np.floor((step - 1) / 2)), int(np.ceil((step - 1) / 2))))
+    sums = np.zeros(vector.shape)
     n_okays = deepcopy(sums)
-    true_numbers = logical_not(isnan(vector))
-    vector[logical_not(true_numbers)] = 0
-    for step_i in arange(substep[1] + 1):
+    true_numbers = np.logical_not(np.isnan(vector))
+    vector[np.logical_not(true_numbers)] = 0
+    for step_i in np.arange(substep[1] + 1):
         sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[(2 * step_i):]
         n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[(2 * step_i):]
-        if logical_and(step_i > 0, step_i < absolute(substep[0])):
+        if np.logical_and(step_i > 0, step_i < np.absolute(substep[0])):
             sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[:(sums.size - (2 * step_i)):]
             n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[:(
                         true_numbers.size - (2 * step_i))]
@@ -313,7 +382,7 @@ def max_cum_sum_from_rolling_window(side_length, window_step):
     The ceiling operation ensures full coverage of the grid when dividing into discrete
     windows, preventing underestimation due to partial remainder windows.
     """
-    return square(ceil(side_length / window_step))
+    return np.square(np.ceil(side_length / window_step))
 
 
 def find_common_coord(array1, array2):
@@ -357,14 +426,14 @@ def find_duplicates_coord(array1):
     numpy.unique : Used for finding unique rows and generating inverse indices mapping.
     numpy.bincount : Counts occurrences of each unique row based on inverse indices.
     """
-    unique_rows, inverse_indices = unique(array1, axis=0, return_inverse=True)
-    counts = bincount(inverse_indices)
+    unique_rows, inverse_indices = np.unique(array1, axis=0, return_inverse=True)
+    counts = np.bincount(inverse_indices)
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
 
 def remove_excedent_duplicates_coord(array1):
     # np.unique(array1, axis=0)
-    unique_rows, inverse_indices = unique(array1, axis=0, return_inverse=True)
+    unique_rows, inverse_indices = np.unique(array1, axis=0, return_inverse=True)
     to_remove = []
     seen_indices = []
     for i in inverse_indices:
@@ -373,4 +442,4 @@ def remove_excedent_duplicates_coord(array1):
         else:
             to_remove.append(False)
             seen_indices.append(i)
-    return delete(array1, to_remove, 0)
+    return np.delete(array1, to_remove, 0)
