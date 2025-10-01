@@ -118,7 +118,7 @@ class ProcessFirstImage:
                                                                                    connectivity=8)
         if nb_components > 1:
             if shape == 'circle':
-                surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint), pi * np.square(horizontal_size // 2) * (1 + confint)]
+                surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint), np.pi * np.square(horizontal_size // 2) * (1 + confint)]
                 cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             elif shape == 'rectangle':
                 # If the smaller side is the horizontal one, use the user provided horizontal side

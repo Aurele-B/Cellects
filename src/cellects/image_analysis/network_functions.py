@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import pandas as pd
-from poetry.console.commands import self
 
 from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, get_line_points
 from cellects.utils.utilitarian import remove_coordinates
