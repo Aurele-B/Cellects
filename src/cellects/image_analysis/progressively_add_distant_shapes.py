@@ -3,8 +3,6 @@
 from copy import deepcopy
 import numpy as np
 import cv2
-from numpy import isin, argmax, delete, arange, zeros, uint8, max, min, any, logical_and, logical_or, uint64, nonzero, sum, unique, append, empty, uint32
-from cv2 import getStructuringElement, MORPH_CROSS, erode, dilate, BORDER_CONSTANT, BORDER_ISOLATED, connectedComponents, BORDER_CONSTANT, connectedComponentsWithStats, CV_16U
 from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
 
 
@@ -133,7 +131,7 @@ class ProgressivelyAddDistantShapes:
         order_of_shapes_to_expand = np.empty(0, dtype=np.uint32)
         nb = 3
         while nb > 2:
-            main_shape = dilate(main_shape, kernel)
+            main_shape = cv2.dilate(main_shape, kernel)
             connections = deepcopy(main_shape)
             connections *= new_order
             new_connections = np.unique(connections)[2:]
@@ -154,7 +152,7 @@ class ProgressivelyAddDistantShapes:
             # Dilate that shape until it overlaps the main shape
             while np.logical_and(dil <= self.max_distance, not np.any(current_shape * expanded_main)):
                 dil += 1
-                rings = dilate(current_shape, simple_disk, iterations=1, borderType=cv2.BORDER_CONSTANT,
+                rings = cv2.dilate(current_shape, simple_disk, iterations=1, borderType=cv2.BORDER_CONSTANT,
                                borderValue=0)
 
                 rings = self.gravity_field * (rings - current_shape)
@@ -230,7 +228,7 @@ class ProgressivelyAddDistantShapes:
 
     def find_expansion_timings(self):
         max_t = self.binary_video.shape[0] - 1
-        dilated_one = dilate(self.expanded_shape, cross_33)
+        dilated_one = cv2.dilate(self.expanded_shape, cross_33)
         # Find the time at which the nearest pixel of the expanded_shape si reached by the main shape
         closest_pixels = np.zeros(self.main_shape.shape, dtype=np.uint8)
         closest_pixels[self.expanded_shape == np.max(dilated_one)] = 1
