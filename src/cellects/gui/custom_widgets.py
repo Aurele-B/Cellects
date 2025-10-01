@@ -401,7 +401,7 @@ class Spinbox(QtWidgets.QWidget):
         max_str = f"{self._maximum:.{self._decimals}f}"
         w = fm.horizontalAdvance(max_str) + self._button_width + 5  # Add some padding
         h = self._line_edit.sizeHint().height()
-        return QtCore.QSize(np.max(w, 100), h)  # Ensure a minimum width of 100 pixels
+        return QtCore.QSize(np.max((w, 100)), h)  # Ensure a minimum width of 100 pixels
 
     def minimumSizeHint(self):
         return QtCore.QSize(self._button_width * 3, self._line_edit.minimumSizeHint().height())

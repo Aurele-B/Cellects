@@ -19,6 +19,7 @@ from copy import deepcopy
 import numpy as np
 import cv2
 import psutil
+
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 
@@ -563,6 +564,8 @@ class OneVideoPerBlob:
         # Read the image
         if not os.path.exists(image_name):
             raise FileNotFoundError(image_name)
+
+        from cellects.utils.load_display_save import readim
         img = readim(image_name, self.raw_images)
 
         # Use a reference image to make sure that the read image is landscape or not

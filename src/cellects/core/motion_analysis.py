@@ -601,7 +601,7 @@ class MotionAnalysis:
                                                                self.vars['lighter_background'])
 
                 changing_pixel_number = np.sum(np.absolute(np.diff(starting_segmentation.astype(np.int8), 1, 0)), (1, 2))
-                validation = np.max(sum(starting_segmentation, (1, 2))) < max_motion_per_frame and (
+                validation = np.max(np.sum(starting_segmentation, (1, 2))) < max_motion_per_frame and (
                         np.max(changing_pixel_number) < max_motion_per_frame)
                 validated_thresholds[counter] = validation
                 if np.any(validated_thresholds):
@@ -744,7 +744,7 @@ class MotionAnalysis:
                     gradient_threshold = (1 - ease_slope_segmentation) * np.min(covering_slopes)
                     sample = np.greater(derive[:self.substantial_time], gradient_threshold)
                 changing_pixel_number = np.sum(np.absolute(np.diff(sample.astype(np.int8), 1, 0)), (1, 2))
-                validation = np.max(sum(sample, (1, 2))) < max_motion_per_frame and (
+                validation = np.max(np.sum(sample, (1, 2))) < max_motion_per_frame and (
                         np.max(changing_pixel_number) < max_motion_per_frame)
                 validated_thresholds[counter] = validation
                 if np.any(validated_thresholds):
@@ -819,7 +819,7 @@ class MotionAnalysis:
         self.surfarea = np.zeros(self.dims[0], dtype =np.uint64)
         self.surfarea[:self.start] = np.sum(self.binary[:self.start, :, :], (1, 2))
         self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
-                                           np.sqrt(sum(self.binary[(self.start - 1), :, :])))
+                                           np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
         if self.vars['correct_errors_around_initial']:
             self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = np.zeros(self.dims[1:], dtype=np.uint8)
@@ -868,8 +868,8 @@ class MotionAnalysis:
         maximal_size = 0.5 * new_potentials.size
         if (self.vars["do_threshold_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > np.max((self.start + self.step, 6)):
            maximal_size = np.min((np.max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['maximal_growth_factor']), self.borders.sum()))
-        while np.logical_and(sum(new_potentials) > maximal_size,
-                             frame_counter <= 5):  # np.logical_and(sum(new_potentials > 0) > 5 * np.sum(dila_ring), frame_counter <= 5):
+        while np.logical_and(np.sum(new_potentials) > maximal_size,
+                             frame_counter <= 5):  # np.logical_and(np.sum(new_potentials > 0) > 5 * np.sum(dila_ring), frame_counter <= 5):
             frame_counter += 1
             if frame_counter > self.t:
                 break

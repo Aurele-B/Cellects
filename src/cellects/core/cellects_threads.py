@@ -151,10 +151,10 @@ class UpdateImageThread(QtCore.QThread):
             logging.info('Add the segmentation mask to the image')
             if self.parent().imageanalysiswindow.is_first_image_flag:
                 im_combinations = self.parent().po.first_image.im_combinations
-                im_mean = self.parent().po.first_image.image.np.mean()
+                im_mean = self.parent().po.first_image.image.mean()
             else:
                 im_combinations = self.parent().po.last_image.im_combinations
-                im_mean = self.parent().po.last_image.bgr.np.mean()
+                im_mean = self.parent().po.last_image.bgr.mean()
             # If there are image combinations, get the current corresponding binary image
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
@@ -522,7 +522,7 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
             self.parent().po.fast_image_segmentation(False)
-        self.parent().po.find_if_lighter_backgnp.round()
+        self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
         self.parent().po.data_to_save['coordinates'] = True
@@ -1326,7 +1326,7 @@ class RunAllThread(QtCore.QThread):
                             self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
                             
                             # Save cytosol_oscillations
-                        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
+                        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
                             if self.parent().po.vars['oscilacyto_analysis']:
                                 oscil_i = pd.DataFrame(
                                     np.c_[np.repeat(arena,
@@ -1393,7 +1393,7 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
                                                                               results_i['arena'] * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
-                                if not isna(results_i['first_move']):
+                                if not pd.isna(results_i['first_move']):
                                     # Save cytosol_oscillations
                                     if self.parent().po.vars['oscilacyto_analysis']:
                                         if self.parent().po.one_row_per_oscillating_cluster is None:
@@ -1446,7 +1446,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             # Save cytosol_oscillations
 
         results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
-        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
+        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
             if vars['oscilacyto_analysis']:
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
                 results_i['one_row_per_oscillating_cluster'] = pd.DataFrame(
