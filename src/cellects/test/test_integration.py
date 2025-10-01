@@ -6,19 +6,15 @@ import os.path
 import unittest
 import logging
 from glob import glob
-from pandas import read_csv
 from cellects.test.cellects_unit_test import CellectsUnitTest
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.cellects_paths import TEST_DIR
 from cellects.utils.load_display_save import PickleRick
-
-from numpy import ndarray, allclose, arange, array_equal, int8, int64, min, max, all, any, zeros_like, argmin, logical_and, pi, square, mean, median, float32, histogram, cumsum, logical_not, float64, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
+import numpy as np
 from numba.typed import Dict as TDict
-from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 
 
 class TestCellects(CellectsUnitTest):

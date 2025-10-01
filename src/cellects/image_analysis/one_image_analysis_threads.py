@@ -8,8 +8,6 @@ import logging
 from copy import deepcopy
 import numpy as np
 import cv2
-from numpy import min, max, any, argmin, logical_and, pi, square, mean, median, float32, logical_not, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
-from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from cellects.image_analysis.image_segmentation import otsu_thresholding, combine_color_spaces
 
 
@@ -120,7 +118,7 @@ class ProcessFirstImage:
                                                                                    connectivity=8)
         if nb_components > 1:
             if shape == 'circle':
-                surf_interval = [pi * np.square(horizontal_size // 2) * (1 - confint), pi * np.square(horizontal_size // 2) * (1 + confint)]
+                surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint), pi * np.square(horizontal_size // 2) * (1 + confint)]
                 cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             elif shape == 'rectangle':
                 # If the smaller side is the horizontal one, use the user provided horizontal side
@@ -129,7 +127,7 @@ class ProcessFirstImage:
                     cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
                 # If the smaller side is the vertical one, use the median vertical length shape
                 else:
-                    surf_interval = [np.square(median(self.stats[1:, 3])) * (1 - confint), np.square(median(self.stats[1:, 3])) * (1 + confint)]
+                    surf_interval = [np.square(np.median(self.stats[1:, 3])) * (1 - confint), np.square(np.median(self.stats[1:, 3])) * (1 + confint)]
                     cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             else:
                 logging.info("Original blob shape not well written")
@@ -158,8 +156,8 @@ class ProcessFirstImage:
         """
         image = self.image.reshape((-1, 1))
         image = np.float32(image)
-        criteria = (TERM_CRITERIA_EPS + TERM_CRITERIA_MAX_ITER, 10, 1.0)
-        compactness, label, center = kmeans(image, cluster_number, None, criteria, attempts=10, flags=KMEANS_RANDOM_CENTERS)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        compactness, label, center = cv2.kmeans(image, cluster_number, None, criteria, attempts=10, flags=cv2.KMEANS_RANDOM_CENTERS)
         kmeans_image = np.uint8(label.flatten().reshape(self.image.shape[:2]))
         sum_per_label = np.zeros(cluster_number)
         self.binary_image = np.zeros(self.image.shape[:2], np.uint8)
