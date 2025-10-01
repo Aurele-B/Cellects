@@ -125,11 +125,11 @@ class ProcessFirstImage:
             elif shape == 'rectangle':
                 # If the smaller side is the horizontal one, use the user provided horizontal side
                 if np.argmin((np.mean(self.stats[1:, 2]), np.mean(self.stats[1:, 3]))) == 0:
-                    surf_interval = [square(horizontal_size) * (1 - confint), np.square(horizontal_size) * (1 + confint)]
+                    surf_interval = [np.square(horizontal_size) * (1 - confint), np.square(horizontal_size) * (1 + confint)]
                     cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
                 # If the smaller side is the vertical one, use the median vertical length shape
                 else:
-                    surf_interval = [square(median(self.stats[1:, 3])) * (1 - confint), np.square(median(self.stats[1:, 3])) * (1 + confint)]
+                    surf_interval = [np.square(median(self.stats[1:, 3])) * (1 - confint), np.square(median(self.stats[1:, 3])) * (1 + confint)]
                     cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             else:
                 logging.info("Original blob shape not well written")
