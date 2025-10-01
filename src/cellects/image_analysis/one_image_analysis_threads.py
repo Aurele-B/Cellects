@@ -6,6 +6,8 @@ They are threads to process the first image and save the selected combinations s
 import threading
 import logging
 from copy import deepcopy
+import numpy as np
+import cv2
 from numpy import min, max, any, argmin, logical_and, pi, square, mean, median, float32, logical_not, array, zeros, std, sum, uint8, round, isin, append, delete, argmax, diff, argsort, argwhere, logical_or, unique, nonzero
 from cv2 import TERM_CRITERIA_EPS, TERM_CRITERIA_MAX_ITER, kmeans, KMEANS_RANDOM_CENTERS, filter2D, cvtColor, COLOR_BGR2LAB, COLOR_BGR2HSV, COLOR_BGR2LUV, COLOR_BGR2HLS, COLOR_BGR2YUV, connectedComponents, connectedComponentsWithStats
 from cellects.image_analysis.image_segmentation import otsu_thresholding, combine_color_spaces
@@ -40,9 +42,9 @@ class ProcessFirstImage:
                 # self.parent.image = self.image
                 # self.parent.kmeans(kmeans_clust_nb, self.biomask, self.backmask)
                 # self.binary_image = self.parent.binary_image
-            self.unaltered_concomp_nb, shapes = connectedComponents(self.binary_image)
+            self.unaltered_concomp_nb, shapes = cv2.connectedComponents(self.binary_image)
             if 1 < self.unaltered_concomp_nb < 10000:
-                self.total_area = sum(self.binary_image)
+                self.total_area = np.sum(self.binary_image)
                 if 100 < self.total_area < self.binary_image.size * 0.75:
                     self.process_binary_image()
                     self.parent.save_combination_features(self)
@@ -63,10 +65,10 @@ class ProcessFirstImage:
 
                 k2 = list(csc_dict2.keys())[0]
                 v2 = csc_dict2[k2]
-                if isin(k2, keys) and sum(v2 * csc_dict[k2]) != 0:
+                if np.isin(k2, keys) and np.sum(v2 * csc_dict[k2]) != 0:
                     break
                 for factor in [2, 1]:
-                    if isin(k2, keys):
+                    if np.isin(k2, keys):
                         csc_dict[k2] += v2 * factor
                     else:
                         csc_dict[k2] = v2 * factor
@@ -104,50 +106,44 @@ class ProcessFirstImage:
 
         # First, remove each stain which horizontal size varies too much from reference
         size_interval = [horizontal_size * (1 - confint), horizontal_size * (1 + confint)]
-        cc_to_remove = argwhere(logical_or(self.stats[:, 2] < size_interval[0], self.stats[:, 2] > size_interval[1]))
+        cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 2] < size_interval[0], self.stats[:, 2] > size_interval[1]))
 
         if do_not_delete is None:
-            self.shapes2[isin(self.shapes2, cc_to_remove)] = 0
+            self.shapes2[np.isin(self.shapes2, cc_to_remove)] = 0
         else:
-            self.shapes2[logical_and(isin(self.shapes2, cc_to_remove), logical_not(isin(self.shapes2, do_not_delete)))] = 0
-        # There was only that before:
-        # self.shapes2[isin(self.shapes2, cc_to_remove)] = 0
+            self.shapes2[np.logical_and(np.isin(self.shapes2, cc_to_remove), np.logical_not(np.isin(self.shapes2, do_not_delete)))] = 0
 
         # Second, determine the shape of each stain to only keep the ones corresponding to the reference shape
-        shapes = zeros(self.binary_image.shape, dtype=uint8)
+        shapes = np.zeros(self.binary_image.shape, dtype=np.uint8)
         shapes[self.shapes2 > 0] = 1
-        nb_components, self.shapes2, self.stats, self.centroids = connectedComponentsWithStats(shapes,
+        nb_components, self.shapes2, self.stats, self.centroids = cv2.connectedComponentsWithStats(shapes,
                                                                                    connectivity=8)
         if nb_components > 1:
             if shape == 'circle':
-                surf_interval = [pi * square(horizontal_size // 2) * (1 - confint), pi * square(horizontal_size // 2) * (1 + confint)]
-                cc_to_remove = argwhere(logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
+                surf_interval = [pi * np.square(horizontal_size // 2) * (1 - confint), pi * np.square(horizontal_size // 2) * (1 + confint)]
+                cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             elif shape == 'rectangle':
                 # If the smaller side is the horizontal one, use the user provided horizontal side
-                if argmin((mean(self.stats[1:, 2]), mean(self.stats[1:, 3]))) == 0:
-                    surf_interval = [square(horizontal_size) * (1 - confint), square(horizontal_size) * (1 + confint)]
-                    cc_to_remove = argwhere(logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
+                if np.argmin((np.mean(self.stats[1:, 2]), np.mean(self.stats[1:, 3]))) == 0:
+                    surf_interval = [square(horizontal_size) * (1 - confint), np.square(horizontal_size) * (1 + confint)]
+                    cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
                 # If the smaller side is the vertical one, use the median vertical length shape
                 else:
-                    surf_interval = [square(median(self.stats[1:, 3])) * (1 - confint), square(median(self.stats[1:, 3])) * (1 + confint)]
-                    cc_to_remove = argwhere(logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
+                    surf_interval = [square(median(self.stats[1:, 3])) * (1 - confint), np.square(median(self.stats[1:, 3])) * (1 + confint)]
+                    cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
             else:
                 logging.info("Original blob shape not well written")
 
             if do_not_delete is None:
-                self.shapes2[isin(self.shapes2, cc_to_remove)] = 0
+                self.shapes2[np.isin(self.shapes2, cc_to_remove)] = 0
             else:
-                self.shapes2[logical_and(isin(self.shapes2, cc_to_remove),
-                                            logical_not(isin(self.shapes2, do_not_delete)))] = 0
+                self.shapes2[np.logical_and(np.isin(self.shapes2, cc_to_remove),
+                                            np.logical_not(np.isin(self.shapes2, do_not_delete)))] = 0
             # There was only that before:
-            # self.shapes2[isin(self.shapes2, cc_to_remove)] = 0
-            shapes = zeros(self.binary_image.shape, dtype=uint8)
-            shapes[nonzero(self.shapes2)] = 1
+            shapes = np.zeros(self.binary_image.shape, dtype=np.uint8)
+            shapes[np.nonzero(self.shapes2)] = 1
 
-        #resized_img = resize(shapes, (960, 540))
-        #imshow(' gh', resized_img)
-        #waitKey(0); destroyAllWindows()
-            nb_components, self.shapes2, self.stats, self.centroids = connectedComponentsWithStats(shapes, connectivity=8)
+            nb_components, self.shapes2, self.stats, self.centroids = cv2.connectedComponentsWithStats(shapes, connectivity=8)
         self.validated_shapes = shapes
         self.shape_number = nb_components - 1
 
@@ -161,31 +157,31 @@ class ProcessFirstImage:
         :return:
         """
         image = self.image.reshape((-1, 1))
-        image = float32(image)
+        image = np.float32(image)
         criteria = (TERM_CRITERIA_EPS + TERM_CRITERIA_MAX_ITER, 10, 1.0)
         compactness, label, center = kmeans(image, cluster_number, None, criteria, attempts=10, flags=KMEANS_RANDOM_CENTERS)
-        kmeans_image = uint8(label.flatten().reshape(self.image.shape[:2]))
-        sum_per_label = zeros(cluster_number)
-        self.binary_image = zeros(self.image.shape[:2], uint8)
+        kmeans_image = np.uint8(label.flatten().reshape(self.image.shape[:2]))
+        sum_per_label = np.zeros(cluster_number)
+        self.binary_image = np.zeros(self.image.shape[:2], np.uint8)
         if bio_label is not None:
-            self.binary_image[nonzero(kmeans_image == bio_label)] = 1
+            self.binary_image[np.nonzero(kmeans_image == bio_label)] = 1
             self.bio_label = bio_label
         else:
             if biomask is not None:
                 all_labels = kmeans_image[biomask[0], biomask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
-                self.bio_label = nonzero(sum_per_label == max(sum_per_label))
+                self.bio_label = np.nonzero(sum_per_label == np.max(sum_per_label))
             elif backmask is not None:
                 all_labels = kmeans_image[backmask[0], backmask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
-                self.bio_label = nonzero(sum_per_label == min(sum_per_label))
+                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
             else:
                 for i in range(cluster_number):
                     sum_per_label[i] = (kmeans_image == i).sum()
-                self.bio_label = nonzero(sum_per_label == min(sum_per_label))
-            self.binary_image[nonzero(kmeans_image == self.bio_label)] = 1
+                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
+            self.binary_image[np.nonzero(kmeans_image == self.bio_label)] = 1
 
     def process_binary_image(self, use_bio_and_back_masks=False):
         """
@@ -195,19 +191,19 @@ class ProcessFirstImage:
         :param use_bio_and_back_masks: if true, will use the cell(s) and background matked by the user
         :return:
         """
-        self.shape_number, self.shapes, self.stats, self.centroids = connectedComponentsWithStats(
+        self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
             self.binary_image, connectivity=8)
         do_not_delete = None
         if use_bio_and_back_masks:
             if self.backmask is not None:
-                if any(self.shapes[self.backmask]):
-                    self.shapes[isin(self.shapes, unique(self.shapes[self.backmask]))] = 0
-                    self.shape_number, self.shapes, self.stats, self.centroids = connectedComponentsWithStats(
-                        (self.shapes > 0).astype(uint8), connectivity=8)
+                if np.any(self.shapes[self.backmask]):
+                    self.shapes[np.isin(self.shapes, np.unique(self.shapes[self.backmask]))] = 0
+                    self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
+                        (self.shapes > 0).astype(np.uint8), connectivity=8)
             self.shape_number -= 1
             if self.biomask is not None:
-                if any(self.shapes[self.biomask]):
-                    do_not_delete = unique(self.shapes[self.biomask])
+                if np.any(self.shapes[self.biomask]):
+                    do_not_delete = np.unique(self.shapes[self.biomask])
                     do_not_delete = do_not_delete[do_not_delete != 0]
         if not self.several_blob_per_arena and self.spot_size is not None:
             counter = 0
@@ -220,43 +216,43 @@ class ProcessFirstImage:
             if self.shape_number == self.sample_number:
                 self.shapes = self.shapes2
         if self.shape_number == self.sample_number:
-            self.validated_shapes = zeros(self.shapes.shape, dtype=uint8)
+            self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
             self.validated_shapes[self.shapes > 0] = 1
         else:
             max_size = self.binary_image.size * 0.75
             min_size = 10
-            cc_to_remove = argwhere(logical_or(self.stats[1:, 4] < min_size, self.stats[1:, 4] > max_size)) + 1
-            self.shapes[isin(self.shapes, cc_to_remove)] = 0
-            self.validated_shapes = zeros(self.shapes.shape, dtype=uint8)
+            cc_to_remove = np.argwhere(np.logical_or(self.stats[1:, 4] < min_size, self.stats[1:, 4] > max_size)) + 1
+            self.shapes[np.isin(self.shapes, cc_to_remove)] = 0
+            self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
             self.validated_shapes[self.shapes > 0] = 1
-            self.shape_number, self.shapes, self.stats, self.centroids = connectedComponentsWithStats(
+            self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
                 self.validated_shapes,
                 connectivity=8)
             if not self.several_blob_per_arena and self.sample_number is not None and self.shape_number > self.sample_number:
                 # Sort shapes by size and compare the largest with the second largest
                 # If the difference is too large, remove that largest shape.
-                cc_to_remove = array([], dtype=uint8)
-                to_remove = array([], dtype=uint8)
+                cc_to_remove = np.array([], dtype=np.uint8)
+                to_remove = np.array([], dtype=np.uint8)
                 self.stats = self.stats[1:, :]
                 while self.stats.shape[0] > self.sample_number and to_remove is not None:
                     # 1) rank by height
-                    sorted_height = argsort(self.stats[:, 2])
+                    sorted_height = np.argsort(self.stats[:, 2])
                     # and only consider the number of shapes we want to detect
-                    standard_error = std(self.stats[sorted_height, 2][-self.sample_number:])
-                    differences = diff(self.stats[sorted_height, 2])
+                    standard_error = np.std(self.stats[sorted_height, 2][-self.sample_number:])
+                    differences = np.diff(self.stats[sorted_height, 2])
                     # Look for very big changes from one height to the next
-                    if max(differences) > 2 * standard_error:
+                    if np.max(differences) > 2 * standard_error:
                         # Within these, remove shapes that are too large
-                        to_remove = sorted_height[argmax(differences)]
-                        cc_to_remove = append(cc_to_remove, to_remove + 1)
-                        self.stats = delete(self.stats, to_remove, 0)
+                        to_remove = sorted_height[np.argmax(differences)]
+                        cc_to_remove = np.append(cc_to_remove, to_remove + 1)
+                        self.stats = np.delete(self.stats, to_remove, 0)
 
                     else:
                         to_remove = None
-                self.shapes[isin(self.shapes, cc_to_remove)] = 0
-                self.validated_shapes = zeros(self.shapes.shape, dtype=uint8)
+                self.shapes[np.isin(self.shapes, cc_to_remove)] = 0
+                self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
                 self.validated_shapes[self.shapes > 0] = 1
-                self.shape_number, self.shapes, self.stats, self.centroids = connectedComponentsWithStats(
+                self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
                     self.validated_shapes,
                     connectivity=8)
 
@@ -276,20 +272,20 @@ class SaveCombinationThread(threading.Thread):
         """
         logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct spots detected.")
         self.parent.saved_images_list.append(self.process_i.validated_shapes)
-        self.parent.converted_images_list.append(round(self.process_i.image).astype(uint8))
+        self.parent.converted_images_list.append(np.round(self.process_i.image).astype(np.uint8))
         self.parent.saved_color_space_list.append(self.process_i.csc_dict)
         self.parent.combination_features[self.parent.saved_csc_nb, :3] = list(self.process_i.csc_dict.values())[0]
         self.parent.combination_features[self.parent.saved_csc_nb, 3] = self.process_i.unaltered_concomp_nb - 1  # unaltered_cc_nb
         self.parent.combination_features[self.parent.saved_csc_nb, 4] = self.process_i.shape_number  # cc_nb
         self.parent.combination_features[self.parent.saved_csc_nb, 5] = self.process_i.total_area  # area
-        self.parent.combination_features[self.parent.saved_csc_nb, 6] = std(self.process_i.stats[1:, 2])  # width_std
-        self.parent.combination_features[self.parent.saved_csc_nb, 7] = std(self.process_i.stats[1:, 3])  # height_std
-        self.parent.combination_features[self.parent.saved_csc_nb, 8] = std(self.process_i.stats[1:, 4])  # area_std
+        self.parent.combination_features[self.parent.saved_csc_nb, 6] = np.std(self.process_i.stats[1:, 2])  # width_std
+        self.parent.combination_features[self.parent.saved_csc_nb, 7] = np.std(self.process_i.stats[1:, 3])  # height_std
+        self.parent.combination_features[self.parent.saved_csc_nb, 8] = np.std(self.process_i.stats[1:, 4])  # area_std
         if self.process_i.biomask is not None:
-            self.parent.combination_features[self.parent.saved_csc_nb, 9] = sum(
+            self.parent.combination_features[self.parent.saved_csc_nb, 9] = np.sum(
                 self.process_i.validated_shapes[self.process_i.biomask[0], self.process_i.biomask[1]])
         if self.process_i.backmask is not None:
-            self.parent.combination_features[self.parent.saved_csc_nb, 10] = sum(
+            self.parent.combination_features[self.parent.saved_csc_nb, 10] = np.sum(
                 (1 - self.process_i.validated_shapes)[self.process_i.backmask[0], self.process_i.backmask[1]])
         self.parent.saved_csc_nb += 1
         logging.info("end")

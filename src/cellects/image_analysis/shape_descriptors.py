@@ -9,9 +9,9 @@
         attribute a None value to the variable that store it
         add a if condition in the for loop to compute that variable when its name appear in the wanted_descriptors_list
 """
+import cv2
+import numpy as np
 from copy import deepcopy
-from numpy import square, sqrt, empty, zeros, float64, uint8, argmax, sum, pi
-from cv2 import convexHull, arcLength, contourArea, minAreaRect, moments, findContours, RETR_TREE, CHAIN_APPROX_NONE, connectedComponents, CV_16U
 from cellects.utils.utilitarian import translate_dict
 from cellects.utils.formulas import get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis
 from cellects.image_analysis.morphological_operations import cc
@@ -27,7 +27,7 @@ descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False
 descriptors_names_to_display = ['Area', 'Perimeter', 'Circularity', 'Rectangularity', 'Total hole area',
                                 'Solidity', 'Convexity', 'Eccentricity', 'Euler number', 'Standard deviation xy',
                                 'Skewness xy', 'Kurtosis xy', 'Major axes lengths and angle',
-                                'Growth transitions', 'Oscillations', 'Network', 'Graph'
+                                'Growth transitions', 'Oscillations', 'Network', 'Graph',
                                 'Fractals'
                                 ]#, 'Oscillating cluster nb and size'
 
@@ -80,9 +80,9 @@ class ShapeDescriptors:
 
         self.binary_image = binary_image
         if self.binary_image.dtype == 'bool':
-            self.binary_image = self.binary_image.astype(uint8)
+            self.binary_image = self.binary_image.astype(np.uint8)
 
-        self.descriptors = {i: empty(0, dtype=float64) for i in wanted_descriptors_list}
+        self.descriptors = {i: np.empty(0, dtype=np.float64) for i in wanted_descriptors_list}
 
         self.get_area()
 
@@ -161,32 +161,26 @@ class ShapeDescriptors:
     """
 
     def get_mo(self):
-        self.mo = translate_dict(moments(self.binary_image))
+        self.mo = translate_dict(cv2.moments(self.binary_image))
 
     def get_area(self):
         self.area = self.binary_image.sum()
 
     def get_contours(self):
-        contours, hierarchy = findContours(self.binary_image, RETR_TREE, CHAIN_APPROX_NONE)
-        nb, shapes = connectedComponents(self.binary_image, ltype=CV_16U)
+        contours, hierarchy = cv2.findContours(self.binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        nb, shapes = cv2.connectedComponents(self.binary_image, ltype=cv2.CV_16U)
         self.euler_number = (nb - 1) - len(contours)
         self.contours = contours[0]
         if len(contours) > 1:
-            all_lengths = zeros(len(contours))
+            all_lengths = np.zeros(len(contours))
             for i, contour in enumerate(contours):
                 all_lengths[i] = len(contour)
-            self.contours = contours[argmax(all_lengths)]
-
-        # self.contours = contours[0]
-        # if len(contours) > 1:
-        #     for i in arange(1, len(contours)):
-        #         self.contours = concatenate((self.contours, contours[i]))
-            # self.contours = max(self.contours, key=contourArea)
+            self.contours = contours[np.argmax(all_lengths)]
 
     def get_min_bounding_rectangle(self):
         if self.contours is None:
             self.get_contours()
-        self.min_bounding_rectangle = minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
+        self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
 
     def get_inertia_axes(self):
         if self.mo is None:
@@ -217,7 +211,7 @@ class ShapeDescriptors:
     def get_convex_hull(self):
         if self.contours is None:
             self.get_contours()
-        self.convex_hull = convexHull(self.contours)
+        self.convex_hull = cv2.convexHull(self.contours)
 
     """
        The following methods are shape descriptors calculus
@@ -226,12 +220,12 @@ class ShapeDescriptors:
     def get_perimeter(self):
         if self.contours is None:
             self.get_contours()
-        self.perimeter = arcLength(self.contours, True)
+        self.perimeter = cv2.arcLength(self.contours, True)
 
     def get_circularity(self):
         if self.perimeter is None:
             self.get_perimeter()
-        self.circularity = (4 * pi * self.binary_image.sum()) / square(self.perimeter)
+        self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
 
     def get_rectangularity(self):
         if self.min_bounding_rectangle is None:
@@ -241,18 +235,10 @@ class ShapeDescriptors:
             self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
         else:
             self.rectangularity = 1
-        # with self.min_bounding_rectangle[0] the x and y coordinates of the center point of the box
-        # and self.min_bounding_rectangle[1] the widht and height of the box
-        # box = boxPoints(self.min_bounding_rectangle)
-        # box = int0(box)
-        # img_to_display = drawContours(self.binary_image, [box], 0, (0, 0, 255), 2)
-        # imtoshow = resize(img_to_display.astype(uint8)*120, (1000, 1000))
-        # imshow('Rough detection', imtoshow)
-        # waitKey(1)
 
     def get_total_hole_area(self):
         new_order, stats, centers = cc(1 - self.binary_image)
-        self.total_hole_area = sum(stats[2:, 4])#  / self.binary_image.sum()
+        self.total_hole_area = np.sum(stats[2:, 4])
 
     def get_solidity(self):
         """
@@ -260,9 +246,9 @@ class ShapeDescriptors:
         """
         if self.convex_hull is None:
             self.get_convex_hull()
-        conv_h_cont_area = contourArea(self.convex_hull)
+        conv_h_cont_area = cv2.contourArea(self.convex_hull)
         if conv_h_cont_area != 0:
-            self.solidity = contourArea(self.contours) / contourArea(self.convex_hull)
+            self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
         else:
             self.solidity = 1
 
@@ -275,11 +261,11 @@ class ShapeDescriptors:
             self.get_perimeter()
         if self.convex_hull is None:
             self.get_convex_hull()
-        self.convexity = arcLength(self.convex_hull, True) / self.perimeter
+        self.convexity = cv2.arcLength(self.convex_hull, True) / self.perimeter
 
     def get_eccentricity(self):
         self.get_inertia_axes()
-        self.eccentricity = sqrt(1 - square(self.minor_axis_len / self.major_axis_len))
+        self.eccentricity = np.sqrt(1 - np.square(self.minor_axis_len / self.major_axis_len))
 
     def get_euler_number(self):
         if self.contours is None:

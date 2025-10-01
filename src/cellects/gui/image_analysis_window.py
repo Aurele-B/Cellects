@@ -10,9 +10,7 @@ Then, Cellects will take into account the user’s input as follows: For each of
 import logging
 import time
 from copy import deepcopy
-from numpy import (
-    array, int8, uint8, uint16, zeros, nonzero,  isin,
-    stack, concatenate, arange, sort, all)
+import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 
 from cellects.core.cellects_threads import (
@@ -57,12 +55,12 @@ class ImageAnalysisWindow(MainTabsType):
         self.bio_masks_number = 0
         self.back_masks_number = 0
         self.arena_masks_number = 0
-        self.available_bio_names = arange(1, 1000, dtype=uint16)
-        self.available_back_names = arange(1, 1000, dtype=uint16)
+        self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
+        self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.parent().po.current_combination_id = 0
         greyscale = len(self.parent().po.first_im.shape) == 2
 
-        self.display_image = zeros((self.parent().im_max_width, self.parent().im_max_width, 3), uint8)
+        self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
         self.display_image.mousePressEvent = self.get_click_coordinates
         self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
@@ -502,8 +500,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.bio_masks_number = 0
             self.back_masks_number = 0
             self.arena_masks_number = 0
-            self.available_bio_names = arange(1, 1000, dtype=uint16)
-            self.available_back_names = arange(1, 1000, dtype=uint16)
+            self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
+            self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
             self.parent().po.current_combination_id = 0
             self.parent().last_tab = "data_specifications"
             self.parent().change_widget(0)  # First
@@ -532,11 +530,7 @@ class ImageAnalysisWindow(MainTabsType):
             # self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_im)
-
-    # def sample_number_changed(self):
-    #     self.parent().po.all['first_folder_sample_number'] = int(self.sample_number.value())
-    #     self.parent().po.all['sample_number_per_folder'] = repeat(int(self.sample_number.value()), len(self.parent().po.all['folder_list']))
-    #     self.parent().po.sample_number = int(self.sample_number.value())
+            
 
     def several_blob_per_arena_check(self):
         is_checked = self.one_blob_per_arena.isChecked()
@@ -623,7 +617,7 @@ class ImageAnalysisWindow(MainTabsType):
 
     def reinitialize_image_and_masks(self, image):
         if len(image.shape) == 2:
-            self.parent().po.current_image = stack((image, image, image), axis=2)
+            self.parent().po.current_image = np.stack((image, image, image), axis=2)
             # self.sample_number.setVisible(True)
             # self.sample_number_label.setVisible(True)
             # self.one_blob_per_arena.setVisible(True)
@@ -656,8 +650,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.display_image.update_image(self.parent().po.current_image)
 
         self.arena_mask = None
-        self.bio_mask = zeros(self.parent().po.current_image.shape[:2], dtype=uint16)
-        self.back_mask = zeros(self.parent().po.current_image.shape[:2], dtype=uint16)
+        self.bio_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
+        self.back_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
 
     def scale_with_changed(self):
         self.parent().po.all['scale_with_image_or_cells'] = self.scale_with.currentIndex()
@@ -762,7 +756,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
             # img = resize(self.drawn_image, (self.parent().screen_width, self.parent().screen_height))
-            # imshow("Full screen image display", img)
+            # cv2.imshow("Full screen image display", img)
             # waitKey(0)
             # destroyAllWindows()
 
@@ -873,26 +867,26 @@ class ImageAnalysisWindow(MainTabsType):
         if not self.is_image_analysis_display_running and not self.thread["UpdateImage"].isRunning() and hasattr(self.sender(), 'text'):
             pbutton_name = self.sender().text()
             if pbutton_name[2:6] == "Back":
-                line_name = uint8(pbutton_name[6:])
+                line_name = np.uint8(pbutton_name[6:])
                 self.back_mask[self.back_mask == line_name] = 0
                 self.back_added_lines_layout.removeWidget(self.back_lines[line_name][pbutton_name])
                 self.back_lines[line_name][pbutton_name].deleteLater()
                 self.back_lines.pop(line_name)
                 self.back_masks_number -= 1
-                self.available_back_names = sort(concatenate(([line_name], self.available_back_names)))
+                self.available_back_names = np.sort(np.concatenate(([line_name], self.available_back_names)))
                 # self.back_pbuttons_table.removeRow(line_name - 1)
             elif pbutton_name[2:6] == "Cell":
-                line_name = uint8(pbutton_name[6:])
+                line_name = np.uint8(pbutton_name[6:])
                 self.bio_mask[self.bio_mask == line_name] = 0
                 self.bio_added_lines_layout.removeWidget(self.bio_lines[line_name][pbutton_name])
                 self.bio_lines[line_name][pbutton_name].deleteLater()
                 self.bio_lines.pop(line_name)
                 self.bio_masks_number -= 1
-                self.available_bio_names = sort(concatenate(([line_name], self.available_bio_names)))
+                self.available_bio_names = np.sort(np.concatenate(([line_name], self.available_bio_names)))
                 # self.bio_pbuttons_table.removeRow(line_name - 1)
                 self.display_more_than_two_colors_option()
             else:
-                line_name = uint8(pbutton_name[7:])
+                line_name = np.uint8(pbutton_name[7:])
                 self.arena_mask[self.arena_mask == line_name] = 0
                 if line_name % 2 == 1:
                     self.bio_added_lines_layout.removeWidget(self.arena_lines[line_name][pbutton_name])
@@ -902,7 +896,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.arena_lines.pop(line_name)
 
                 self.arena_masks_number -= 1
-                self.available_arena_names = sort(concatenate(([line_name], self.available_arena_names)))
+                self.available_arena_names = np.sort(np.concatenate(([line_name], self.available_arena_names)))
                 # if line_name % 2 == 1:
                 #     self.bio_pbuttons_table.removeRow((line_name + 1) // 2)
                 # else:
@@ -960,10 +954,6 @@ class ImageAnalysisWindow(MainTabsType):
         logging.info(self.parent().po.all['starting_blob_shape'])
         logging.info(self.parent().po.vars['arena_shape'])
 
-        # self.parent().po.all['first_folder_sample_number'] = int(self.sample_number.value())
-        # self.parent().po.all['sample_number_per_folder'] = repeat(int(self.sample_number.value()),
-        #                                                           len(self.parent().po.all['folder_list']))
-        # self.parent().po.sample_number = int(self.sample_number.value())
         if self.parent().po.visualize:
             self.save_user_defined_csc()
             self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
@@ -1112,7 +1102,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.parent().po.current_combination_id + 1 > len(im_combinations):
                 self.parent().po.current_combination_id = 0
             self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
-            self.parent().po.current_image = stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
+            self.parent().po.current_image = np.stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
             self.drawn_image = deepcopy(self.parent().po.current_image)
@@ -1439,7 +1429,7 @@ class ImageAnalysisWindow(MainTabsType):
                     current_row_number = row_number2
                     k = k[:-1]
                 if current_row_number <= 3:
-                    row_to_change[0].setCurrentIndex(nonzero(isin(c_space_order, k))[0][0])
+                    row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
                     row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
                     for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
                         row_to_change[i1].setValue(v[i2])
@@ -1507,27 +1497,27 @@ class ImageAnalysisWindow(MainTabsType):
 
     def save_user_defined_csc(self):
         self.csc_dict = {}
-        spaces = array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
-        channels = array(
+        spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
+        channels = np.array(
             ((self.row1[1].value(), self.row1[2].value(), self.row1[3].value()),
              (self.row2[1].value(), self.row2[2].value(), self.row2[3].value()),
              (self.row3[1].value(), self.row3[2].value(), self.row3[3].value()),
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=int8)
+            dtype=np.int8)
         if self.logical_operator_between_combination_result.currentText() != 'None':
-            spaces = concatenate((spaces, array((
+            spaces = np.concatenate((spaces, np.array((
                         self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
                         self.row23[0].currentText() + "2"))))
-            channels = concatenate((channels, array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
+            channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=int8)))
+             dtype=np.int8)))
             self.csc_dict['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.csc_dict['logical'] = 'None'
-        if not all(spaces == "None"):# and sum(sum(channels)) > 0:
+        if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
                     self.csc_dict[space] = channels[i, :]
@@ -1796,9 +1786,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.parent().po.get_average_pixel_size()
         self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
         self.reinitialize_bio_and_back_legend()
-        self.available_arena_names = arange(1, self.parent().po.sample_number + 1)
+        self.available_arena_names = np.arange(1, self.parent().po.sample_number + 1)
         self.saved_coord = []
-        self.arena_mask = zeros(self.parent().po.current_image.shape[:2], dtype=uint16)
+        self.arena_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
         # self.next.setVisible(True)
         self.decision_label.setVisible(True)
         self.yes.setVisible(True)

@@ -76,10 +76,10 @@ def run_one_video_analysis(po):
     i=2
     show_seg= True
     if os.path.isfile(f"coord_specimen{i + 1}_t720_y1475_x1477.npy"):
-        binary_coord = load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
+        binary_coord = np.load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
         l = [i, i + 1, po.vars, False, False, show_seg, None]
         self = MotionAnalysis(l)
-        self.binary = zeros((720, 1475, 1477), dtype=uint8)
+        self.binary = np.zeros((720, 1475, 1477), dtype=np.uint8)
         self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
     else:
         l = [i, i + 1, po.vars, True, False, show_seg, None]

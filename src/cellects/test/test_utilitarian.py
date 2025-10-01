@@ -16,29 +16,29 @@ class TestGreaterAlongFirstAxis(CellectsUnitTest):
     def test_greater_along_first_axis(self):
         test_cases = [
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([3, 6, 9]),
-                'expected_result': array([[False, False, False],
+                'array_in_2': np.array([3, 6, 9]),
+                'expected_result': np.array([[False, False, False],
                                           [False, False, False],
                                           [False, False, False]])
             },
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([0, 4, 7]),
-                'expected_result': array([[True, True, True],
+                'array_in_2': np.array([0, 4, 7]),
+                'expected_result': np.array([[True, True, True],
                                           [False, True, True],
                                           [False, True, True]])
             },
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([0, 0, 0]),
-                'expected_result': array([[True, True, True],
+                'array_in_2': np.array([0, 0, 0]),
+                'expected_result': np.array([[True, True, True],
                                           [True, True, True],
                                           [True, True, True]])
             }
@@ -59,29 +59,29 @@ class TestLessAlongFirstAxis(CellectsUnitTest):
     def test_less_along_first_axis(self):
         test_cases = [
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([3, 6, 9]),
-                'expected_result': array([[True, True, False],
+                'array_in_2': np.array([3, 6, 9]),
+                'expected_result': np.array([[True, True, False],
                                           [True, True, False],
                                           [True, True, False]])
             },
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([0, 0, 0]),
-                'expected_result': array([[False, False, False],
+                'array_in_2': np.array([0, 0, 0]),
+                'expected_result': np.array([[False, False, False],
                                           [False, False, False],
                                           [False, False, False]])
             },
             {
-                'array_in_1': array([[1, 2, 3],
+                'array_in_1': np.array([[1, 2, 3],
                                      [4, 5, 6],
                                      [7, 8, 9]]),
-                'array_in_2': array([10, 10, 10]),
-                'expected_result': array([[True, True, True],
+                'array_in_2': np.array([10, 10, 10]),
+                'expected_result': np.array([[True, True, True],
                                           [True, True, True],
                                           [True, True, True]])
             }
@@ -138,7 +138,7 @@ class TestFindNearest(CellectsUnitTest):
 
         self.assertEqual(result, 6)
 
-        arr = array((0.5, 1.5, 2.5, 3.5, 4.5))
+        arr = np.array((0.5, 1.5, 2.5, 3.5, 4.5))
         value = 2.2
 
         result = find_nearest(arr, value)
@@ -148,23 +148,23 @@ class TestFindNearest(CellectsUnitTest):
 
 class TestRollingWindow(CellectsUnitTest):
     def test_rolling_window(self):
-        input_array = array([1, 2, 3, 4, 5])
+        input_array = np.array([1, 2, 3, 4, 5])
         window_size = 3
 
         result = rolling_window(input_array, window_size)
 
-        expected_result = array([[1, 2, 3],
+        expected_result = np.array([[1, 2, 3],
                                     [2, 3, 4],
                                     [3, 4, 5]])
 
-        testing.assert_array_equal(result, expected_result)
+        np.testing.assert_array_equal(result, expected_result)
 
 
 class TestPercentAndTimeTracker(CellectsUnitTest):
     def test_get_progress(self):
         total_iterations = 100
         tracker = PercentAndTimeTracker(total_iterations)
-        for i in arange(total_iterations):
+        for i in np.arange(total_iterations):
             progress, eta = tracker.get_progress()
             if i == 0:
                 self.assertEqual(progress, 0)
@@ -175,8 +175,8 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations, compute_with_elements_number=True)
 
-        element = arange(100)
-        for i in arange(total_iterations):
+        element = np.arange(100)
+        for i in np.arange(total_iterations):
             progress, eta = tracker_with_elements_and_step.get_progress(step=i, element_number=element[i])
             if i == 0:
                 self.assertEqual(progress, 0)
@@ -187,7 +187,7 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations)
 
-        for i in arange(total_iterations):
+        for i in np.arange(total_iterations):
             progress, eta = tracker_with_elements_and_step.get_progress(step=i)
             if i == 0:
                 self.assertEqual(progress, 0)
@@ -197,8 +197,8 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations, compute_with_elements_number=True)
 
-        element = arange(100)
-        for i in arange(total_iterations):
+        element = np.arange(100)
+        for i in np.arange(total_iterations):
             progress, eta = tracker_with_elements_and_step.get_progress(element_number=element[i])
             if i == 0:
                 self.assertEqual(progress, 0)

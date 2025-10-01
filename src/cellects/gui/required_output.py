@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""
+This module contains the widget allowing the user to set which variables Cellects will compute during analysis.
+A first kind of variable is raw data: presence/absence coordinates of the specimens, network, oscillating pixels
+A second kind of variable describe the specimen at each time frame and for each arena of the image stack or video
+"""
 
 from PySide6 import QtWidgets, QtCore
 import logging
@@ -104,11 +108,6 @@ class RequiredOutput(WindowType):
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_widget = QtWidgets.QWidget()
 
-        # self.binary_mask_label = FixedText('Save binary mask coordinates', 14, tip="If checked, saves the binary mask coordinates used to compute the selected descriptors.\nMost of them only require the cell presence mask.\nThe oscillatory and network analyses require additional masks (also saved if checked)\nWarning: these masks may take a lot of hard drive space.", night_mode=self.parent().po.all['night_mode'])
-        # self.binary_mask = Checkbox(self.parent().po.vars['save_binary_masks'])
-        # self.binary_mask.stateChanged.connect(self.binary_mask_saving)
-        # self.last_row_layout.addWidget(self.binary_mask_label)
-        # self.last_row_layout.addWidget(self.binary_mask)
         self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
         self.cancel.clicked.connect(self.cancel_is_clicked)
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
@@ -119,8 +118,6 @@ class RequiredOutput(WindowType):
 
         self.vlayout.addItem(horzspaceItem)
         vertspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
-        # self.vlayout.addItem(vertspaceItem, 0, 10, 15, 1)
-        # self.vlayout.addItem(vertspaceItem, 0, 0, 15, 1)
 
         self.last_row_widget.setLayout(self.last_row_layout)
         self.vlayout.addWidget(self.last_row_widget)
@@ -154,24 +151,11 @@ class RequiredOutput(WindowType):
             self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name]))
             cb_index = label_index + 1
 
-            # To remove:
             if name == 'fractal_analysis':# or name == 'network_analysis':
                 self.descriptor_widgets_list[label_index].setVisible(False)
                 self.descriptor_widgets_list[cb_index].setVisible(False)
 
             self.save_descriptors_layout.addWidget(self.descriptor_widgets_list[cb_index], row, col + 1)
-        #if not self.parent().po.vars['oscilacyto_analysis']:
-            #self.descriptor_widgets_list[cb_index].setVisible(False)
-
-    # def save_coord_specimen_saving(self):
-    #     self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
-    # def save_coord_contour_saving(self):
-    #     self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
-    # def save_coord_thickening_slimming_saving(self):
-    #     self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
-    # def save_coord_network_saving(self):
-    #     self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
-
 
     def cancel_is_clicked(self):
         self.save_coord_specimen.setChecked(self.parent().po.vars['save_coord_specimen'])

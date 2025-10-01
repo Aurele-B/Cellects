@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""ADD DETAIL OF THE MODULE"""
+"""
+This is the third main widget of the GUI of Cellects
+It process the video analysis computations by running threads connected to the program_organizer,
+especially, most computation are then processed by the MotionAnalysis class
+"""
 import logging
-
-from numpy import min, max, all, any, uint8, zeros, round, stack
-from cv2 import morphologyEx, MORPH_GRADIENT, resize, imshow, waitKey, destroyAllWindows
+import numpy as np
+import cv2
 from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import (
@@ -171,7 +174,7 @@ class VideoAnalysisWindow(MainTabsType):
 
 
         # Add the central video display widget
-        self.display_image = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
+        self.display_image = np.zeros((self.parent().im_max_height, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
         self.display_image.mousePressEvent = self.full_screen_display
         self.video_display_layout.addWidget(self.display_image)
@@ -367,10 +370,6 @@ class VideoAnalysisWindow(MainTabsType):
     def full_screen_display(self, event):
         self.popup_img = FullScreenImage(self.parent().image_to_display, self.parent().screen_width, self.parent().screen_height)
         self.popup_img.show()
-        # img = resize(self.parent().image_to_display, (self.parent().screen_width, self.parent().screen_height))
-        # imshow("Full screen image display", img)
-        # waitKey(0)
-        # destroyAllWindows()
 
     def option_changed(self):
         """
@@ -456,17 +455,12 @@ class VideoAnalysisWindow(MainTabsType):
         # self.parent().change_widget(2)  # SecondWidget
 
     def save_all_vars_thread(self):
-        # self.parent().po.all['arena'] = int(round(self.arena.value()))
-        # self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
-        # self.parent().po.vars['fading'] = self.fading.value()
-        # self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
-
         if not self.parent().thread['SaveAllVars'].isRunning():
             self.parent().thread['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
 
     def save_current_settings(self):
         self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
-        self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
+        self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
         self.parent().po.vars['do_fading'] = self.do_fading.isChecked()
         self.parent().po.vars['fading'] = self.fading.value()
         self.parent().po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
@@ -474,7 +468,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.save_all_vars_thread()
 
     def repeat_video_smoothing_changed(self):
-        self.parent().po.vars['repeat_video_smoothing'] = int(round(self.repeat_video_smoothing.value()))
+        self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
         # self.save_all_vars_is_clicked()
 
     def do_fading_check(self):
@@ -496,8 +490,8 @@ class VideoAnalysisWindow(MainTabsType):
         if not self.thread['VideoReader'].isRunning() and not self.thread['OneArena'].isRunning() and not self.thread['ChangeOneRepResult'].isRunning():
             self.parent().po.motion = None
             self.reset_general_step()
-            self.parent().po.computed_video_options = zeros(5, bool)
-            self.parent().po.all['arena'] = int(round(self.arena.value()))
+            self.parent().po.computed_video_options = np.zeros(5, bool)
+            self.parent().po.all['arena'] = int(np.round(self.arena.value()))
 
     def load_one_arena_is_clicked(self):
         self.reset_general_step()
@@ -560,14 +554,12 @@ class VideoAnalysisWindow(MainTabsType):
             self.thread['VideoReader'].wait()
         if self.parent().po.load_quick_full > 0:
             image = self.parent().po.motion.segmentation[-1, ...]
-        # image = morphologyEx(self.parent().po.origins_list[self.parent().po.all['arena'] - 1], MORPH_GRADIENT,
-        #                      self.parent().po.motion.cross_33)
         if self.parent().po.motion.visu is None:
             image = self.parent().po.motion.converted_video[-1, ...] * (1 - image)
-            image = round(image).astype(uint8)
-            image = stack((image, image, image), axis=2)
+            image = np.round(image).astype(np.uint8)
+            image = np.stack((image, image, image), axis=2)
         else:
-            image = stack((image, image, image), axis=2)
+            image = np.stack((image, image, image), axis=2)
             image = self.parent().po.motion.visu[-1, ...] * (1 - image)
         self.parent().image_to_display = image
         self.display_image.update_image(image)

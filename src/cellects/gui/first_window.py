@@ -4,8 +4,8 @@
 import os
 import logging
 from pathlib import Path
-from numpy import min, max, all, any, uint8, zeros
-from cv2 import resize, waitKey, destroyAllWindows
+import numpy as np
+import cv2
 from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import (
@@ -141,7 +141,7 @@ class FirstWindow(MainTabsType):
         self.Vlayout.addItem(self.vertical_space)
 
         # Add the central image display widget
-        self.display_image = zeros((self.parent().im_max_height, self.parent().im_max_width, 3), uint8)
+        self.display_image = np.zeros((self.parent().im_max_height, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
         self.Vlayout.addWidget(self.display_image, alignment=QtCore.Qt.AlignCenter)
         self.display_image.setVisible(False)
@@ -210,18 +210,6 @@ class FirstWindow(MainTabsType):
     def full_screen_display(self, event):
         self.popup_img = FullScreenImage(self.parent().image_to_display, self.parent().screen_width, self.parent().screen_height)
         self.popup_img.show()
-        # img = resize(self.parent().image_to_display, (self.parent().screen_width, self.parent().screen_height))
-        # imshow("Full screen image display", img)
-        # waitKey(0)
-        # destroyAllWindows()
-
-    #def display_shortcuts_checked(self):
-    #    is_checked = self.shortcut_cb.isChecked()
-    #    self.parent().po.all['display_shortcuts'] = is_checked
-    #    self.Video_analysis_window.setVisible(is_checked)
-    #    self.Run_all_directly.setVisible(is_checked)
-        # self.advanced_parameters.setVisible(is_checked)
-        # self.required_outputs.setVisible(is_checked)
 
     def browse_is_clicked(self):
         dialog = QtWidgets.QFileDialog()

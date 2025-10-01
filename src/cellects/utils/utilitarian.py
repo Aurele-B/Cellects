@@ -1,23 +1,15 @@
-import logging
-import os
 
-from numpy import asarray, lib, round, arange, zeros_like, zeros, uint8, logical_and, \
-    iinfo, uint16, uint32, uint64, ndarray, int64, linalg, floor, max, unravel_index, diff, sign, empty, float64, mean, pad, convolve, equal, where, array, ones
-
-import pickle
+import numpy as np
 from timeit import default_timer
 import time
-# from numba import njit, vectorize, cuda
-# methods = ["get_" in i for i in elem_list] # grepl
 from numba.typed import Dict
 from numba import njit
-from pathlib import Path
 from glob import glob
 
 
 @njit()
 def equal_along_first_axis(array_in_1, array_in_2):
-    array_out = zeros_like(array_in_1)
+    array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] == value
     return array_out
@@ -25,7 +17,7 @@ def equal_along_first_axis(array_in_1, array_in_2):
 
 @njit()
 def greater_along_first_axis(array_in_1, array_in_2):
-    array_out = zeros_like(array_in_1)
+    array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] > value
     return array_out
@@ -33,7 +25,7 @@ def greater_along_first_axis(array_in_1, array_in_2):
 
 @njit()
 def less_along_first_axis(array_in_1, array_in_2):
-    array_out = zeros_like(array_in_1)
+    array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] < value
     return array_out
@@ -67,8 +59,8 @@ def reduce_path_len(pathway, to_start, from_end):
 
 
 def find_nearest(array, value):
-    array = asarray(array)
-    idx = (abs(array - value)).argmin()
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
     return array[idx]
 
 
@@ -83,7 +75,7 @@ def rolling_window(a, window):
     """
     shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
     strides = a.strides + (a.strides[-1],)
-    return lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
+    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
 
 
 class PercentAndTimeTracker:
@@ -102,7 +94,7 @@ class PercentAndTimeTracker:
         self.total = total
         self.current_step = 0
         if compute_with_elements_number:
-            self.element_vector = zeros(total, dtype=int64)
+            self.element_vector = np.zeros(total, dtype=np.int64)
         self.core_number = core_number
 
     def get_progress(self, step=None, element_number=None):
@@ -131,14 +123,14 @@ class PercentAndTimeTracker:
                 else:
                     current_prop = (self.current_step + 1) / self.total
             else:
-                x_mat = array([ones(self.current_step - 4), arange(5, self.current_step + 1)]).T
-                coefs = linalg.lstsq(x_mat, self.element_vector[5:self.current_step + 1], rcond=-1)[0]
-                self.element_vector = coefs[0] + (arange(self.total) * coefs[1])
+                x_mat = np.array([np.ones(self.current_step - 4), np.arange(5, self.current_step + 1)]).T
+                coefs = np.linalg.lstsq(x_mat, self.element_vector[5:self.current_step + 1], rcond=-1)[0]
+                self.element_vector = coefs[0] + (np.arange(self.total) * coefs[1])
                 self.element_vector[self.element_vector < 0] = 0
                 current_prop = self.element_vector[:self.current_step + 1].sum() / self.element_vector.sum()
 
             total_time = elapsed_time / current_prop
-            current_prop = int(round(current_prop * 100))
+            current_prop = int(np.round(current_prop * 100))
             remaining_time_s = total_time - elapsed_time
 
             local_time = time.localtime()
@@ -147,9 +139,9 @@ class PercentAndTimeTracker:
             remaining_time_h = remaining_time_s // 3600
             reste_s = remaining_time_s % 3600
             reste_m = reste_s // 60
-            # + str(int(floor(reste_s % 60))) + "S"
-            hours = int(floor(remaining_time_h))
-            minutes = int(floor(reste_m))
+            # + str(int(np.floor(reste_s % 60))) + "S"
+            hours = int(np.floor(remaining_time_h))
+            minutes = int(np.floor(reste_m))
 
             if (local_m + minutes) < 60:
                 eta_m = local_m + minutes
@@ -166,7 +158,7 @@ class PercentAndTimeTracker:
                 output = current_prop, f", ETA {eta_d} {eta_h}:{eta_m} ({hours}:{minutes} left)"
             # return current_prop, str(local_h + hours) + ":" + str(local_m + minutes) + "(" + str()
         else:
-            output = int(round(100 / self.total)), ", wait..."
+            output = int(np.round(100 / self.total)), ", wait..."
         if step is None:
             self.current_step += 1
         if element_number is not None:
@@ -188,23 +180,23 @@ def insensitive_glob(pattern):
 
 
 def smallest_memory_array(array_object, array_type='uint'):
-    if isinstance(array_object, ndarray):
+    if isinstance(array_object, np.ndarray):
         value_max = array_object.max()
     else:
         if len(array_object[0]) > 0:
-            value_max = max((array_object[0].max(), array_object[1].max()))
+            value_max = np.max((array_object[0].max(), array_object[1].max()))
         else:
             value_max = 0
 
     if array_type == 'uint':
-        if value_max <= iinfo(uint8).max:
-            array_object = array(array_object, dtype=uint8)
-        elif value_max <= iinfo(uint16).max:
-            array_object = array(array_object, dtype=uint16)
-        elif value_max <= iinfo(uint32).max:
-            array_object = array(array_object, dtype=uint32)
+        if value_max <= np.iinfo(np.uint8).max:
+            array_object = np.array(array_object, dtype=np.uint8)
+        elif value_max <= np.iinfo(np.uint16).max:
+            array_object = np.array(array_object, dtype=np.uint16)
+        elif value_max <= np.iinfo(np.uint32).max:
+            array_object = np.array(array_object, dtype=np.uint32)
         else:
-            array_object = array(array_object, dtype=uint64)
+            array_object = np.array(array_object, dtype=np.uint64)
     return array_object
 
 
@@ -217,4 +209,4 @@ def remove_coordinates(arr1, arr2):
     """
     # Convert to set of tuples
     coords_to_remove = set(map(tuple, arr2))
-    return array([coord for coord in arr1 if tuple(coord) not in coords_to_remove])
+    return np.array([coord for coord in arr1 if tuple(coord) not in coords_to_remove])

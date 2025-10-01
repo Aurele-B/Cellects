@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""This module creates the Advanced Parameters window of the user interface of Cellects"""
+"""This module creates the Advanced Parameters window of the user interface of Cellects
+This windows contains most parameters
+"""
 
 
 import logging
 import os
 from copy import deepcopy
-from numpy import min, max, all, any, uint8, uint32, round, concatenate, int8, nonzero, isin, array, all
+from pathlib import Path
+
 from PySide6 import QtWidgets, QtCore
+import numpy as np
+from cellects.config.all_vars_dict import DefaultDicts
+from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Spinbox, Combobox, Checkbox, FixedText)
-from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
-from cellects.config.all_vars_dict import DefaultDicts
-from pathlib import Path
 
 
 class AdvancedParameters(WindowType):
@@ -614,15 +617,6 @@ class AdvancedParameters(WindowType):
         self.last_row_widget.setLayout(self.last_row_layout)
         self.layout.addWidget(self.last_row_widget)
 
-        # curr_row = max((curr_row_1st_col, curr_row_2nd_col))
-        # self.layout.addItem(horzspaceItem, curr_row, 0, 1, 6)
-        # self.layout.addItem(vertspaceItem, 0, 10, curr_row, 1)
-        # self.layout.addItem(vertspaceItem, 0, 0, curr_row, 1)
-        # self.layout.addWidget(self.night_mode_cb, curr_row + 1, 0)
-        # self.layout.addWidget(self.night_mode_label, curr_row + 1, 1)
-        # # self.layout.addItem(horzspaceItem, curr_row, 2, 1, 1)
-        # self.layout.addWidget(self.message, curr_row + 1, 2)
-        # self.layout.addWidget(self.ok, curr_row + 1, 5)
         self.setLayout(self.layout)
 
     def display_conditionally_visible_widgets(self):
@@ -983,7 +977,7 @@ class AdvancedParameters(WindowType):
                     current_row_number = row_number2
                     k = k[:-1]
                 if current_row_number <= 3:
-                    row_to_change[0].setCurrentIndex(nonzero(isin(c_space_order, k))[0][0])
+                    row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
                     row_to_change[0].setVisible(True)
                     for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
                         row_to_change[i1].setValue(v[i2])
@@ -1044,27 +1038,27 @@ class AdvancedParameters(WindowType):
 
     def save_user_defined_csc(self):
         self.parent().po.vars['convert_for_motion'] = {}
-        spaces = array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
-        channels = array(
+        spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
+        channels = np.array(
             ((self.row1[1].value(), self.row1[2].value(), self.row1[3].value()),
              (self.row2[1].value(), self.row2[2].value(), self.row2[3].value()),
              (self.row3[1].value(), self.row3[2].value(), self.row3[3].value()),
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=int8)
+            dtype=np.int8)
         if self.logical_operator_between_combination_result.currentText() != 'None':
-            spaces = concatenate((spaces, array((
+            spaces = np.concatenate((spaces, np.array((
                         self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
                         self.row23[0].currentText() + "2"))))
-            channels = concatenate((channels, array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
+            channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=int8)))
+             dtype=np.int8)))
             self.parent().po.vars['convert_for_motion']['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.parent().po.vars['convert_for_motion']['logical'] = 'None'
-        if not all(spaces == "None"):# and sum(sum(channels)) > 0:
+        if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
                     self.parent().po.vars['convert_for_motion'][space] = channels[i, :]
@@ -1194,38 +1188,32 @@ class AdvancedParameters(WindowType):
         self.parent().po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
         self.parent().po.vars['expected_oscillation_period'] = self.oscillation_period.value()
         self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
-        # self.parent().po.vars['fractal_box_side_threshold'] = int(self.fractal_box_side_threshold.value())
-        # self.parent().po.vars['fractal_zoom_step'] = int(self.fractal_zoom_step.value())
 
-        self.parent().po.vars['network_detection_threshold'] = int(round(self.network_detection_threshold.value()))
-        # self.parent().po.vars['network_mesh_side_length'] = int(round(self.mesh_side_length.value()))
-        # self.parent().po.vars['network_mesh_step_length'] = int(round(self.mesh_step_length.value()))
+        self.parent().po.vars['network_detection_threshold'] = int(np.round(self.network_detection_threshold.value()))
 
         self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
-        self.parent().po.all['cores'] = uint8(self.max_core_nb.value())
+        self.parent().po.all['cores'] = np.uint8(self.max_core_nb.value())
         self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
         self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
         self.parent().po.vars['video_fps'] = float(self.video_fps.value())
-        # self.parent().po.all['overwrite_unaltered_videos'] = self.overwrite_unaltered_videos.isChecked()
         self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
         self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
         self.parent().po.all['extract_time_interval'] = self.extract_time.isChecked()
         self.parent().po.vars['time_step'] = float(self.time_step.value())
-        # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
 
         do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
         self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
         if do_distant_shape_int:
             self.parent().po.vars['detection_range_factor'] = int(
-                round(self.detection_range_factor.value()))
+                np.round(self.detection_range_factor.value()))
         else:
             self.parent().po.vars['detection_range_factor'] = 0
         if self.use_max_size.isChecked():
-            self.parent().po.vars['max_size_for_connection'] = int(round(self.max_size_for_connection.value()))
+            self.parent().po.vars['max_size_for_connection'] = int(np.round(self.max_size_for_connection.value()))
         else:
             self.parent().po.vars['max_size_for_connection'] = None
         if self.use_min_size.isChecked():
-            self.parent().po.vars['min_size_for_connection'] = int(round(self.min_size_for_connection.value()))
+            self.parent().po.vars['min_size_for_connection'] = int(np.round(self.min_size_for_connection.value()))
         else:
             self.parent().po.vars['min_size_for_connection'] = None
 
@@ -1238,10 +1226,10 @@ class AdvancedParameters(WindowType):
             are_dicts_equal: bool = True
             for key in previous_csc.keys():
                 if key != 'logical':
-                    are_dicts_equal = are_dicts_equal and all(key in self.parent().po.vars['convert_for_motion'] and previous_csc[key] == self.parent().po.vars['convert_for_motion'][key])
+                    are_dicts_equal = are_dicts_equal and np.all(key in self.parent().po.vars['convert_for_motion'] and previous_csc[key] == self.parent().po.vars['convert_for_motion'][key])
             for key in self.parent().po.vars['convert_for_motion'].keys():
                 if key != 'logical':
-                    are_dicts_equal = are_dicts_equal and all(
+                    are_dicts_equal = are_dicts_equal and np.all(
                         key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
                         previous_csc[key])
             if not are_dicts_equal:

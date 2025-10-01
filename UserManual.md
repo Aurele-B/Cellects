@@ -495,7 +495,7 @@ Apply this algorithm when there the computer does not have enough RAM to run the
 
 Additional note:
 
-- When applied, this algorithm types the video in uint8 (instead of float64) to save RAM but results in a slight loss of precision.
+- When applied, this algorithm types the video in uint8 (instead of =np.float64) to save RAM but results in a slight loss of precision.
 
 ### Video fps
 The number of images per second of the validation videos.
