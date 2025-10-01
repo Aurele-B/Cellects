@@ -99,15 +99,12 @@ import weakref
 from gc import collect
 from time import sleep
 from numba.typed import Dict as TDict
-import numpy as np
-import pandas as pd
-import cv2
 from psutil import virtual_memory
 
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.fractal_analysis import box_counting, prepare_box_counting
-from cellects.image_analysis.image_segmentation import segment_with_lum_value, generate_color_space_combination
+from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               make_gravity_field, expand_to_fill_holes)
 from cellects.image_analysis.network_functions import *
@@ -1012,7 +1009,7 @@ class MotionAnalysis:
         if show_seg:
             if self.visu is not None:
                 im_to_display = deepcopy(self.visu[self.t, ...])
-                contours = np.nonzero(morphologyEx(self.binary[self.t, :, :], cv2.MORPH_GRADIENT, cross_33))
+                contours = np.nonzero(cv2.morphologyEx(self.binary[self.t, :, :], cv2.MORPH_GRADIENT, cross_33))
                 if self.vars['lighter_background']:
                     im_to_display[contours[0], contours[1]] = 0
                 else:
