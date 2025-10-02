@@ -455,7 +455,7 @@ class OneVideoPerBlob:
         counter = 0
         while ind_i < (self.first_image.shape_number + number_to_add):
             ind_i += 1
-            while np.any(np.in1d(self.not_analyzed_individuals, ind_i)):
+            while np.any(np.isin(self.not_analyzed_individuals, ind_i)):
                 ind_i += 1
             vid_names.append("ind_" + str(ind_i) + ".npy")
             counter += 1
@@ -618,7 +618,7 @@ class OneVideoPerBlob:
         counter = 0
         while ind_i < (self.first_image.shape_number + number_to_add):
             ind_i += 1
-            while np.any(np.in1d(self.not_analyzed_individuals, ind_i)):
+            while np.any(np.isin(self.not_analyzed_individuals, ind_i)):
                 ind_i += 1
             vid_name = f"ind_{ind_i}{extension}"
             vid_list.insert(counter, cv2.VideoWriter(vid_name, fourcc, float(fps), tuple(sizes[counter, :]), is_color))

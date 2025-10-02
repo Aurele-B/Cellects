@@ -419,7 +419,7 @@ class LastImageAnalysisThread(QtCore.QThread):
                     out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
                     self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
             ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_backgnp.round(self.parent().po.vars['convert_for_motion'])
+            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'])
             kmeans_clust_nb = None
             self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
                                                          ref_image, self.parent().po.first_image.subtract_background,

@@ -45,7 +45,7 @@ class ProgressivelyAddDistantShapes:
                     pixel_sum_per_label = np.zeros(len(main_shape_label), dtype =np.uint64)
                     # Find out the label corresponding to the largest shape
                     for li, label in enumerate(main_shape_label):
-                        pixel_sum_per_label[li] = self.new_order[self.new_order == label].np.sum()
+                        pixel_sum_per_label[li] = self.new_order[self.new_order == label].sum()
                     main_shape_label = main_shape_label[np.argmax(pixel_sum_per_label)]
                 # Attribute the correct main shape
                 self.main_shape[self.new_order == main_shape_label] = 1

@@ -668,7 +668,7 @@ class OneImageAnalysis:
             # The while loop until one col space remains or the removal of one implies a strong enough area change
             previous_c_space = list(potentials.keys())[-1]
             for c_space in potentials.keys():
-                try_potentials = deepcopy(potentials)
+                try_potentials = potentials.copy()
                 try_potentials.pop(c_space)
                 if i > 0:
                     try_potentials.pop(previous_c_space)

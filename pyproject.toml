@@ -46,7 +46,7 @@ Issues = "https://github.com/Aurele-B/Cellects/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["cellects*"]
+exclude = ["tests*"]
 
 [tool.setuptools.package-data]
 # include every file under icons/ (recursively)
@@ -55,3 +55,7 @@ cellects = ["icons/**"]
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
+
+[tool.unittest]
+pattern = "test_*.py"
+start-directory = "tests"

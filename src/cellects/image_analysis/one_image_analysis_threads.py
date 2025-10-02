@@ -239,7 +239,7 @@ class ProcessFirstImage:
                     standard_error = np.std(self.stats[sorted_height, 2][-self.sample_number:])
                     differences = np.diff(self.stats[sorted_height, 2])
                     # Look for very big changes from one height to the next
-                    if np.max(differences) > 2 * standard_error:
+                    if differences.any() and np.max(differences) > 2 * standard_error:
                         # Within these, remove shapes that are too large
                         to_remove = sorted_height[np.argmax(differences)]
                         cc_to_remove = np.append(cc_to_remove, to_remove + 1)
