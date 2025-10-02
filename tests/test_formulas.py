@@ -4,11 +4,12 @@ This script contains all unit tests of the formulas script
 14 tests
 """
 import unittest
-from tests._base import CellectsUnitTest
+
+import cv2
+import numpy as np
 from cellects.utils.formulas import *
 from cellects.utils.utilitarian import translate_dict
-import numpy as np
-import cv2
+from tests._base import CellectsUnitTest
 
 
 class TestSumOfAbsDifferences(CellectsUnitTest):

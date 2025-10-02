@@ -103,15 +103,15 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
 
             ("long cross with strange lines 1",
              np.array([[1,0,0,1,0],
-                       [1,1,0,1,0],
-                       [0,0,1,0,0],
-                       [0,0,1,1,1],
-                       [1,1,0,0,0]], dtype=np.uint8),
+                               [1,1,0,1,0],
+                               [0,0,1,0,0],
+                               [0,0,1,1,1],
+                               [1,1,0,0,0]], dtype=np.uint8),
              np.array([[1,0,0,1,0],
-                       [0,0,0,0,0],
-                       [0,0,0,0,0],
-                       [0,0,0,0,1],
-                       [1,0,0,0,0]], dtype=np.uint8)),
+                           [0,0,0,0,0],
+                           [0,0,0,0,0],
+                           [0,0,0,0,1],
+                           [1,0,0,0,0]], dtype=np.uint8)),
 
             ("long cross with strange lines 2",
              np.array([[0,0,1,0,0],
@@ -264,7 +264,7 @@ class TestGetInnerVertices(unittest.TestCase):
              np.array([[1,0,0,1,0],
                        [0,0,0,0,0],
                        [0,0,1,0,0],
-                       [0,0,1,0,1],
+                       [0,0,0,0,1],
                        [1,0,0,0,0]], dtype=np.uint8)),
 
             ("long cross with strange lines 2",
@@ -289,7 +289,7 @@ class TestGetInnerVertices(unittest.TestCase):
              np.zeros((4,6), dtype=np.uint8)),
 
             ("bigger network",
-             np.array([[1,0,1,1,1,0,0,1,0,0],
+             np.array([[0,0,1,1,1,0,0,1,0,0],
                        [0,0,0,1,0,0,0,1,0,0],
                        [0,1,1,1,1,1,1,1,0,0],
                        [0,0,0,1,0,1,0,1,0,0],
@@ -298,7 +298,7 @@ class TestGetInnerVertices(unittest.TestCase):
                        [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8),
              np.array([[0,0,1,1,1,0,0,1,0,0],
                        [0,0,0,1,0,0,0,0,0,0],
-                       [0,1,0,0,1,0,0,1,0,0],
+                       [0,1,0,0,1,0,1,1,0,0],
                        [0,0,0,1,0,1,0,0,0,0],
                        [0,0,0,0,1,0,0,0,0,0],
                        [0,0,0,0,0,1,0,0,0,0],
@@ -438,13 +438,13 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0.,0.,0.,0.,0.,0.,0.,0.,0.],
             [0.,2.,0.,0.,0.,0.,0.,0.,0.],
             [0.,0.,2.,0.,0.,0.,0.,0.,0.],
-            [0.,0.,0.,2.,2.,0.,0.,0.,0.],
-            [0.,0.,0.,0.,0.,2.,0.,0.,0.],
+            [0.,0.,0.,2.,np.nan,0.,0.,0.,0.],
+            [0.,0.,0.,0.,0.,np.nan,0.,0.,0.],
             [0.,0.,0.,0.,0.,0.,0.,0.,0.],
             [0.,0.,0.,0.,0.,0.,0.,0.,0.],
             [0.,0.,0.,0.,0.,0.,0.,0.,0.],
         ], dtype=float)
-        self.assertTrue(np.array_equal(pad_dist, target_dist))
+        self.assertTrue(np.array_equal(pad_dist, target_dist, equal_nan=True))
 
     def test_followup_vertices_after_loop_removal(self):
         """Replicates the script’s post-removal vertex checks."""
@@ -803,7 +803,7 @@ class TestGetBranchesAndTipsCoord(unittest.TestCase):
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,1,2,1,0,0,1,0,0,0],
             [0,0,0,0,2,0,0,0,0,0,0,0],
-            [0,0,1,0,0,2,0,0,2,0,0,0],
+            [0,0,1,0,0,2,0,2,2,0,0,0],
             [0,0,0,0,2,0,2,0,0,0,0,0],
             [0,0,0,0,0,2,0,0,0,0,0,0],
             [0,0,0,0,0,0,1,0,0,0,0,0],

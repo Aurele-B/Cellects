@@ -7,7 +7,7 @@ import unittest
 from tests._base import CellectsUnitTest
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
-from numba.typed import Dict as TDict
+from numba.typed import Dict, List
 import cv2
 
 
@@ -20,7 +20,7 @@ class TestGetAllColorSpaces(CellectsUnitTest):
         # Call the get_color_spaces function
         self.result = get_color_spaces(self.bgr_image)
         # Add assertions to verify the expected behavior
-        self.assertIsInstance(self.result, TDict)
+        self.assertIsInstance(self.result, Dict)
 
     def test_complete_dict(self):
         # Create a BGR image for testing
@@ -64,15 +64,15 @@ class TestGenerateColorSpaceCombination(CellectsUnitTest):
 
         # Create a BGR image for testing
         self.bgr_image = np.zeros((100, 100, 3), dtype=np.uint8)
-        c_space_dict = TDict()
+        c_space_dict = Dict()
         c_space_dict['bgr'] = np.array((1, 0, 1), np.uint8)
         c_space_dict['hsv'] = np.array((0.5, 5, 0.5), np.uint8)
-        all_c_spaces = get_color_spaces(self.bgr_image)
+        c_spaces = List(['bgr', 'hsv'])
 
         subtract_background = np.zeros((100, 100), dtype=np.float64)
         expected_result = np.zeros((100, 100), dtype=np.float64)
 
-        result = generate_color_space_combination(c_space_dict, all_c_spaces, subtract_background)
+        result, _ = generate_color_space_combination(self.bgr_image, c_spaces, c_space_dict, background=subtract_background)
         self.assertEqual(result.shape, (100, 100))
         self.assertTrue(np.allclose(result, expected_result))
 

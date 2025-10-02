@@ -5,6 +5,7 @@ import time
 from numba.typed import Dict
 from numba import njit
 from glob import glob
+vectorized_len = np.vectorize(len)
 
 
 @njit()

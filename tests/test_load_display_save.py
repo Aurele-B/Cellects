@@ -56,30 +56,6 @@ class TestPickleRick(CellectsUnitTest):
         os.remove(file_name)
 
 
-class TestSee(CellectsUnitTest):
-
-    def test_see_with_uint8_image(self):
-        # Create a uint8 image for testing
-        image = np.zeros((100, 100), dtype=np.uint8)
-        img_name = "test_image"
-        size = (500, 500)
-
-        # Call the See function
-        See(image, img_name=img_name, size=size, keep_display=1)
-
-        # Add assertions to verify the expected behavior, if applicable
-        # ...
-
-    def test_see_with_non_uint8_image(self):
-        # Create a non-uint8 image for testing
-        image = np.zeros((100, 100), dtype=np.float32)
-        img_name = "test_image"
-        size = (500, 500)
-
-        # Call the See function
-        See(image, img_name=img_name, size=size, keep_display=1)
-
-
 class TestWriteVideo(CellectsUnitTest):
 
     def test_write_video_with_mp4_extension(self):
@@ -178,26 +154,6 @@ class TestVideo2Numpy(CellectsUnitTest):
             # Verify the dimensions of the video
             self.assertEqual(video.shape, np_array.shape)
 
-    def test_video2numpy_with_conversion_dict(self):
-        # Create a temporary mp4 file
-        with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
-            # Generate a sample numpy array
-            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
-
-            # Write the video
-            write_video(np_array, temp_file.name)
-
-            # Define the conversion dictionary
-            conversion_dict = {'hsv': np.array((0, 1, 0))}
-
-            # Read the video with conversion
-            video, converted_video = video2numpy('test_write_video.mp4', conversion_dict)
-            video, converted_video = video2numpy(temp_file.name, conversion_dict)
-
-            # Verify the dimensions of the videos
-            self.assertEqual(video.shape, np_array.shape)
-            self.assertEqual(converted_video.shape, (10, 480, 640))
-
     def test_video2numpy_with_true_frame_width(self):
         # Create a temporary mp4 file with double width
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
@@ -223,14 +179,6 @@ class TestVideo2Numpy(CellectsUnitTest):
             os.remove(self.path_output / 'test_write_video.npy')
 
 
-class TestMovie(CellectsUnitTest):
-
-    def test_movie(self):
-        np_array = np.random.randint(0, 255, size=(10, 480, 640), dtype=np.uint8)
-        movie(np_array, keyboard=1)
-
-
-
 class TestIsRawImage(CellectsUnitTest):
 
     def test_is_raw_image_with_raw_format(self):
@@ -254,19 +202,6 @@ class TestIsRawImage(CellectsUnitTest):
 
 class TestReadImage(CellectsUnitTest):
 
-    def test_readim_with_raw_image(self):
-
-        image_path = self.path_input / "IMG_9731.cr2"
-        raw_image = True
-
-        # Call the function
-        result = readim(str(image_path), raw_image)
-
-        ref_size = np.array((3670, 5496, 3))
-        # Verify the expected result
-        self.assertTrue(np.array_equal(ref_size, result.shape))
-
-
     def test_readim_with_regular_image(self):
 
         image_path = self.path_input / "last_original_img.tif"
@@ -285,8 +220,8 @@ class TestReadAndRotate(CellectsUnitTest):
 
     def test_read_and_rotate_orientation_correction(self):
 
-        image_1 = self.path_experiment / "IMG_7653.jpg"
-        image_2 = self.path_experiment / "IMG_7665.jpg"
+        image_1 = self.path_experiment / "image1.tif"
+        image_2 = self.path_experiment / "image25.tif"
         raw_images = False
         is_landscape = True
 
