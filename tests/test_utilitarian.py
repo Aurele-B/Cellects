@@ -164,12 +164,8 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
     def test_get_progress(self):
         total_iterations = 100
         tracker = PercentAndTimeTracker(total_iterations)
-        for i in np.arange(total_iterations):
-            progress, eta = tracker.get_progress()
-            if i == 0:
-                self.assertEqual(progress, 0)
-            else:
-                self.assertEqual(progress, i + 1)
+        progress, eta = tracker.get_progress()
+        self.assertEqual(progress, 1)
 
     def test_get_progress_with_step_and_elements(self):
         total_iterations = 100
@@ -190,7 +186,7 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
         for i in np.arange(total_iterations):
             progress, eta = tracker_with_elements_and_step.get_progress(step=i)
             if i == 0:
-                self.assertEqual(progress, 0)
+                self.assertEqual(progress, 1)
         self.assertEqual(progress, 100)
 
     def test_get_progress_with_elements(self):

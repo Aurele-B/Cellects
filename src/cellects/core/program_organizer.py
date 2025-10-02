@@ -19,12 +19,13 @@ import pandas as pd
 import numpy as np
 from psutil import virtual_memory
 from pathlib import Path
+import natsort
 from cellects.image_analysis.image_segmentation import generate_color_space_combination
 from cellects.image_analysis.extract_exif import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
-from cellects.utils.utilitarian import insensitive_glob
+from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.image_analysis.morphological_operations import Ellipse, cross_33
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
@@ -251,7 +252,10 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
-        self.data_list = np.sort(self.data_list)
+        lengths = vectorized_len(self.data_list)
+        if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+            logging.error(f"File names present strong variations and cannot be correctly sorted.")
+        self.data_list = natsort.natsorted(self.data_list)
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
         if len(self.data_list) == 0:
@@ -283,7 +287,10 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
-        self.data_list = np.sort(self.data_list)
+        lengths = vectorized_len(self.data_list)
+        if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+            logging.error(f"File names present strong variations and cannot be correctly sorted.")
+        self.data_list = natsort.natsorted(self.data_list)
         if self.all['im_or_vid'] == 1:
             self.sample_number = len(self.data_list)
         else:

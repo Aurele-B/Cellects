@@ -4,6 +4,9 @@ This script contains all unit tests of the morphological_operations script
 """
 
 import unittest
+
+import numpy as np
+
 from tests._base import CellectsUnitTest
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.one_video_per_blob import OneVideoPerBlob
@@ -387,50 +390,25 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.po = ProgramOrganizer()
-        cls.po.load_variable_dict()
 
-        # use the test data folders provided by _base
-        cls.po.all['global_pathway'] = str(cls.path_experiment)
-        cls.po.all['first_folder_sample_number'] = 100
+        cls.validated_shapes = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+                                          [0,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0],
+                                          [0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  0],
+                                          [0,  0,  1,  0,  0,  1,  1,  0,  1,  1,  0],
+                                          [0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
+                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+                                          [0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0],
+                                          [0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0],
+                                          [0,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0],
+                                          [0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0],
+                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]], dtype=np.uint8)
+        cls.y_boundaries = np.array([0,  1,  0,  -1,  0,  1,  -1,  0,  1,  -1,  0], dtype=np.int8)
 
-        cls.po.look_for_data()
-        cls.po.load_data_to_run_cellects_quickly()
-        cls.po.update_output_list()
-
-    def test_with_y_boundaries(self):
-        self.po.get_first_image()
-        backmask = np.zeros(self.po.first_im.shape[:2], np.uint8)
-        backmask[-30:, :] = 1
-        backmask = np.nonzero(backmask)
-        self.po.vars['convert_for_origin'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
-        self.po.vars['convert_for_motion'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
-        self.po.fast_image_segmentation(True, backmask=backmask)
-        self.po.all['automatically_crop'] = True
-        self.po.cropping(is_first_image=True)
-        self.po.all['scale_with_image_or_cells'] = 1
-        self.po.all['starting_blob_hsize_in_mm'] = 15
-        self.po.get_average_pixel_size()
-        self.po.videos = OneVideoPerBlob(self.po.first_image, self.po.starting_blob_hsize_in_pixels,
-                                         self.po.all['raw_images'])
-        self.po.videos.first_image.shape_number = self.po.sample_number
-
-        self.po.videos.big_kernel = Ellipse((self.po.videos.k_size, self.po.videos.k_size)).create()  # fromfunction(self.circle_fun, (self.k_size, self.k_size))
-        self.po.videos.big_kernel = self.po.videos.big_kernel.astype(np.uint8)
-        self.po.videos.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
-        self.po.videos.ordered_stats, ordered_centroids, self.po.videos.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
-            self.po.videos.first_image.validated_shapes, self.po.videos.first_image.y_boundaries, get_ordered_image=True)
-        self.assertEqual(ordered_centroids.shape[0], self.po.sample_number)
-
-
-        self.assertTrue(np.array_equal(np.unique(self.po.videos.ordered_first_image), np.arange(self.po.sample_number + 1)))
-
-        self.po.videos.ordered_stats, ordered_centroids, without_y_boundaries = rank_from_top_to_bottom_from_left_to_right(
-            self.po.videos.first_image.validated_shapes, None,
-            get_ordered_image=True)
-
-        self.assertTrue(not array_equal(self.po.videos.ordered_first_image, without_y_boundaries))
-        self.assertTrue(np.array_equal(self.po.videos.ordered_first_image > 0, without_y_boundaries > 0))
+    def test_rank_from_top_to_bottom_from_left_to_right(self):
+        ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.validated_shapes, self.y_boundaries, get_ordered_image=True)
+        self.assertTrue(len(np.unique(ordered_image)) == 7)
+        self.assertTrue(ordered_centroids.shape[0] == 6)
+        self.assertTrue(ordered_stats[:, 4].sum() == self.validated_shapes.sum())
 
 
 class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
@@ -604,7 +582,7 @@ class TestExpandToFillHoles(CellectsUnitTest):
              [1, 1, 1],
              [0, 1, 0]], dtype=uint8
         )
-        expanded_video, holes_time_end, distance_against_time = expand_to_fill_holes(binary_video, holes, cross_33)
+        expanded_video, holes_time_end, distance_against_time = expand_to_fill_holes(binary_video, holes)
         expected_expanded_video = np.array([[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                           [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],

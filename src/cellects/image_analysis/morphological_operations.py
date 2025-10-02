@@ -211,6 +211,8 @@ def cc(binary_img):
     # background = ((size_ranked_stats[:, 0] == 0) & (size_ranked_stats[:, 1] == 0) & (size_ranked_stats[:, 2] == img.shape[1]) & (size_ranked_stats[:, 3] == img.shape[0]))
 
     touch_borders = np.nonzero(background > 2)[0]
+    # if not isinstance(touch_borders, np.int64):
+    #     touch_borders = touch_borders[0]
     # Most of the time, the background should be the largest shape and therefore has the index 0,
     # Then, if there is at least one shape touching more than 2 borders and having not the index 0, solve:
     if np.any(touch_borders != 0):
@@ -218,8 +220,8 @@ def cc(binary_img):
         if len(touch_borders) == 1:
             # Then exchange that shape position with background position
             shape = sorted_idx[0]  # Store shape position in the first place
-            back = sorted_idx[touch_borders]  # Store back position in the first place
-            sorted_idx[touch_borders] = shape  # Put shape position at the previous place of back and conversely
+            back = sorted_idx[touch_borders[0]]  # Store back position in the first place
+            sorted_idx[touch_borders[0]] = shape  # Put shape position at the previous place of back and conversely
             sorted_idx[0] = back
         # If there are two shapes, it means that the main shape grew sufficiently to reach at least 3 borders
         # We assume that it grew larger than background
