@@ -200,21 +200,6 @@ class MotionAnalysis:
 
     def load_images_and_videos(self, videos_already_in_ram, i):
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        # pickle_rick = PickleRick()
-        # data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
-        # try:
-        #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #         data_to_run_cellects_quickly = pickle.load(fileopen)
-        # except pickle.UnpicklingError:
-        #     try:
-        #         with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #             data_to_run_cellects_quickly = pickle.load(fileopen)
-        #     except pickle.UnpicklingError:
-        #         logging.info(f"Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
-
-        # if data_to_run_cellects_quickly is None or not 'background_and_origin_list' in data_to_run_cellects_quickly:
-        #     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
-        # self.origin = data_to_run_cellects_quickly['background_and_origin_list'][0][i]# self.vars['origins_list'][i]
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
         if videos_already_in_ram is None:
             true_frame_width = self.origin.shape[1]
@@ -227,13 +212,7 @@ class MotionAnalysis:
                 self.background2 = None
             else:
                 self.background2 = self.vars['background_list2'][i]
-            # self.background2 = None
-            # if len(data_to_run_cellects_quickly['background_and_origin_list'][1]) == 0: # len(self.vars['background_list']) == 0:
-            #     self.background = None
-            # else:
-            #     self.background = data_to_run_cellects_quickly['background_and_origin_list'][1][i]# self.vars['background_list'][i]
-            #     if self.vars['convert_for_motion']['logical'] != 'None':
-            #         self.background2 = data_to_run_cellects_quickly['background_and_origin_list'][2][i]# self.vars['background_list2'][i]
+
             if self.vars['already_greyscale']:
                 self.converted_video = video2numpy(
                     vid_name, None, self.background, true_frame_width)
