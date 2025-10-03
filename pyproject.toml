@@ -35,6 +35,7 @@ dependencies = [
   "natsort",
   "mkdocs", # docs
   "mkdocs-material", # docs
+  "pymdown-extensions", # docs
 ]
 
 [project.scripts]
