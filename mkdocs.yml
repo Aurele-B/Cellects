@@ -1,0 +1,63 @@
+site_name: Cellects Documentation
+repo_url: https://github.com/Aurele-B/Cellects
+docs_dir: doc
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.instant       # fast page transitions
+    - navigation.tabs          # top-level tabs
+    - navigation.sections      # grouped sidebar
+    - navigation.top           # back-to-top button
+    - toc.integrate            # TOC in the sidebar
+    - search.suggest
+    - search.highlight
+    - content.tabs.link        # linkable content tabs
+    - content.code.copy        # copy button on code blocks
+  palette:
+    - scheme: default
+      primary: teal
+      accent: purple
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: lime
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+
+plugins:
+  - search
+
+extra_css:
+  - static/extra.css
+
+markdown_extensions:
+  - attr_list         # enables {...} after elements (e.g., {: .center width="600"})
+  - md_in_html        # allows <figure> blocks in Markdown
+  - admonition        # nice callouts
+  - pymdownx.details  # collapsible details/summary
+  - pymdownx.highlight:
+      anchor_linenums: true   # syntax highlight + line anchors
+  - pymdownx.tabbed:
+      alternate_style: true   # content tabs style
+  - pymdownx.superfences      # better fenced code blocks (pairs well with highlight)
+  - toc:
+      toc_depth: 2
+
+nav:
+  - Home: index.md
+  - Foreword: foreword.md
+  - Setting up a first analysis:
+      - Overview: first-analysis/index.md
+      - Data localisation: first-analysis/data-localisation.md
+      - Image analysis: first-analysis/image-analysis.md
+      - Video tracking: first-analysis/video-tracking.md
+  - Improving & Personalizing:
+      - Overview: advanced/index.md
+      - Advanced parameters: advanced/parameters.md
+      - Required outputs: advanced/outputs.md
+      - Multiple folders: advanced/multiple-folders.md

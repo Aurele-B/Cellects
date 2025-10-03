@@ -1,0 +1,24 @@
+/* Center images with the "center" class */
+img.center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Optional: figure captions */
+.figcaption {
+  text-align: center;
+  font-style: italic;
+  margin-top: 0.5rem;
+  color: var(--md-default-fg-color--lighter);
+}
+
+/* Paragraph justification across the docs */
+.md-typeset p {
+  text-align: justify;
+}
+
+/* (Optional) nicer justified text with hyphenation */
+.md-typeset {
+  hyphens: auto;
+}

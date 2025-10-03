@@ -33,6 +33,9 @@ dependencies = [
   "h5py",
   "matplotlib",
   "natsort",
+  "mkdocs", # docs
+  "mkdocs-material", # docs
+  "pymdown-extensions", # docs
 ]
 
 [project.scripts]
