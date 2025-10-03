@@ -1,0 +1,28 @@
+site_name: Cellects Documentation
+repo_url: https://github.com/Aurele-B/Cellects
+docs_dir: doc
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+    - search.highlight
+    - search.suggest
+extra_css:
+  - static/extra.css
+markdown_extensions:
+  - attr_list      # lets you write {...} after Markdown elements
+  - md_in_html     # allows HTML blocks mixed with Markdown
+nav:
+  - Home: index.md
+  - Foreword: foreword.md
+  - Setting up a first analysis:
+      - Overview: first-analysis/index.md
+      - Data localisation: first-analysis/data-localisation.md
+      - Image analysis: first-analysis/image-analysis.md
+      - Video tracking: first-analysis/video-tracking.md
+  - Improving & Personalizing:
+      - Overview: advanced/index.md
+      - Advanced parameters: advanced/parameters.md
+      - Required outputs: advanced/outputs.md
+      - Multiple folders: advanced/multiple-folders.md
