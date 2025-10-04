@@ -33,6 +33,7 @@ dependencies = [
   "h5py",
   "matplotlib",
   "natsort",
+  "coverage", # tests
   "mkdocs", # docs
   "mkdocs-material", # docs
   "pymdown-extensions", # docs
@@ -63,3 +64,17 @@ include-package-data = true
 [tool.unittest]
 pattern = "test_*.py"
 start-directory = "tests"
+
+[tool.coverage.run]
+branch = true
+source = ["src/cellects"] # Measure only the package source
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
+
+[tool.coverage.paths]
+source = [
+  "src/cellects",
+  "*/site-packages/cellects"
+]
