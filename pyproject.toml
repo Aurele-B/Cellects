@@ -33,17 +33,21 @@ dependencies = [
   "h5py",
   "matplotlib",
   "natsort",
-  "coverage", # tests
-  "mkdocs", # docs
-  "mkdocs-material", # docs
-  "pymdown-extensions", # docs
 ]
 
 [project.scripts]
 Cellects = "cellects.__main__:run_cellects"
 
 [project.optional-dependencies]
-dev = ["pytest", "build", "twine"]
+test = [
+  "pytest",
+  "pytest-cov",
+]
+doc = [
+  "mkdocs",
+  "mkdocs-material",
+  "pymdown-extensions",
+]
 
 [project.urls]
 Homepage = "https://github.com/Aurele-B/Cellects"
@@ -61,20 +65,6 @@ cellects = ["icons/**"]
 package-dir = {"" = "src"}
 include-package-data = true
 
-[tool.unittest]
-pattern = "test_*.py"
-start-directory = "tests"
-
-[tool.coverage.run]
-branch = true
-source = ["src/cellects"] # Measure only the package source
-
-[tool.coverage.report]
-show_missing = true
-skip_empty = true
-
-[tool.coverage.paths]
-source = [
-  "src/cellects",
-  "*/site-packages/cellects"
-]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/cellects --cov-report=term-missing"
