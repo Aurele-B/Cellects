@@ -60,6 +60,14 @@ Run the test suite (with coverage enabled by default via `pyproject.toml`):
 pytest
 ```
 
+You can access the coverage report with `coverage html` and open `htmlcov/index.html` in your browser.
+
+```bash
+open htmlcov/index.html        # macOS
+xdg-open htmlcov/index.html    # Linux
+start htmlcov\index.html       # Windows (PowerShell)
+```
+
 Or explicitly:
 ```bash
 pytest --cov=src/cellects --cov-report=term-missing

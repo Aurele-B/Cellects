@@ -67,4 +67,4 @@ include-package-data = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/cellects --cov-report=term-missing"
+addopts = "--cov=src/cellects --cov-report=term-missing --cov-report=html"
