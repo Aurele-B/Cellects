@@ -130,7 +130,7 @@ def run_all_arenas(po):
 
 
 if __name__ == "__main__":
-    po = load_one_folder(Path("/Users/Directory/Scripts/python/Cellects/tests/data/experiment"), 1)
+    po = load_one_folder(Path("/data/experiment"), 1)
     po = run_image_analysis(po)
     po = write_videos(po)
     # MA = run_one_video_analysis(po)
