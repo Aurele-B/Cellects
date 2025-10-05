@@ -391,7 +391,7 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
     def setUpClass(cls):
         super().setUpClass()
 
-        cls.validated_shapes = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
+        cls.binary_image = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
                                           [0,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0],
                                           [0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  0],
                                           [0,  0,  1,  0,  0,  1,  1,  0,  1,  1,  0],
@@ -405,10 +405,10 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         cls.y_boundaries = np.array([0,  1,  0,  -1,  0,  1,  -1,  0,  1,  -1,  0], dtype=np.int8)
 
     def test_rank_from_top_to_bottom_from_left_to_right(self):
-        ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.validated_shapes, self.y_boundaries, get_ordered_image=True)
+        ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.binary_image, self.y_boundaries, get_ordered_image=True)
         self.assertTrue(len(np.unique(ordered_image)) == 7)
         self.assertTrue(ordered_centroids.shape[0] == 6)
-        self.assertTrue(ordered_stats[:, 4].sum() == self.validated_shapes.sum())
+        self.assertTrue(ordered_stats[:, 4].sum() == self.binary_image.sum())
 
 
 class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
