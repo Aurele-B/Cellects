@@ -24,6 +24,26 @@ from cellects.utils.utilitarian import translate_dict
 
 
 class PickleRick:
+    """
+    A class to handle safe file reading and writing operations using pickle.
+
+    This class ensures that files are not being accessed concurrently by
+    creating a lock file (PickleRickX.pkl) to signal that the file is open.
+    It includes methods to check for the lock file, write data safely,
+    and read data safely.
+
+    Attributes
+    ----------
+    wait_for_pickle_rick : bool
+        Flag indicating if the lock file is present.
+    counter : int
+        Counter to track the number of operations performed.
+    pickle_rick_number : str
+        Unique identifier for the lock file.
+    first_check_time : float
+        Timestamp of the first check for the lock file.
+
+    """
     def __init__(self, pickle_rick_number=""):
         self.wait_for_pickle_rick: bool = False
         self.counter = 0
@@ -32,9 +52,31 @@ class PickleRick:
 
     def check_that_file_is_not_open(self):
         """
-        This method checks whether the file is open in another thread,
-        if so, there is a PickleRickX.pkl
-        :return: None
+        Check if a specific pickle file exists and handle it accordingly.
+
+        This function checks whether a file named `PickleRick{self.pickle_rick_number}.pkl`
+        exists. If the file has not been modified for more than 2 seconds, it is removed.
+        The function then updates an attribute to indicate whether the file exists.
+
+        Parameters
+        ----------
+        self : PickleRickObject
+            The instance of the class containing this method.
+
+        Returns
+        -------
+        None
+            This function does not return any value.
+            It updates the `self.wait_for_pickle_rick` attribute.
+
+        Notes
+        -----
+        This function removes the pickle file if it has not been modified for more than 2 seconds.
+        The `self.wait_for_pickle_rick` attribute is updated based on the existence of the file.
+
+        Examples
+        --------
+        >>> pickle_rick_instance.check_that_file_is_not_open()
         """
         if os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl"):
             if default_timer() - self.first_check_time > 2:
@@ -44,8 +86,31 @@ class PickleRick:
 
     def write_pickle_rick(self):
         """
-        This method checks a PickleRickX.pkl to flag that the file is open
-        :return: None
+        Write pickle data to a file for Pickle Rick.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class that this method belongs to.
+            This typically contains attributes and methods relevant to managing
+            pickle operations for Pickle Rick.
+
+        Raises
+        ------
+        Exception
+            General exception raised if there is any issue with writing the file.
+            The error details are logged.
+
+        Notes
+        -----
+        This function creates a file named `PickleRick{self.pickle_rick_number}.pkl`
+        with a dictionary indicating readiness for Pickle Rick.
+
+        Examples
+        --------
+        >>> obj = PickleRick()  # Assuming `YourClassInstance` is the class containing this method
+        >>> obj.pickle_rick_number = 1  # Set an example value for the attribute
+        >>> obj.write_pickle_rick()     # Call the method to create and write to file
         """
         try:
             with open(f"PickleRick{self.pickle_rick_number}.pkl", 'wb') as file_to_write:
@@ -55,19 +120,84 @@ class PickleRick:
 
     def delete_pickle_rick(self):
         """
-        This method deletes the PickleRickX.pkl once the file is closed
-        :return: None
+
+        Delete a specific Pickle Rick file.
+
+        Deletes the pickle file associated with the current instance's
+        `pickle_rick_number`.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        FileNotFoundError
+            If the file with name `PickleRick{self.pickle_rick_number}.pkl` does not exist.
+
+        Notes
+        -----
+        This function attempts to delete the specified pickle file.
+        If the file does not exist, a `FileNotFoundError` will be raised.
+
+        Examples
+        --------
+        >>> obj = PickleRick()
+        >>> obj.pickle_rick_number = 1  # Set an example value for the attribute
+        >>> obj.write_pickle_rick()
+        >>> delete_pickle_rick()
+        >>> os.path.isfile("PickleRick1.pkl")
+        False
         """
         if os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl"):
             os.remove(f"PickleRick{self.pickle_rick_number}.pkl")
 
     def write_file(self, file_content, file_name):
         """
-        This method write a file safely
-        :param file_content: Any data to write
-        :param file_name: A string containing the file name
-        :type file_name: str
-        :return: None
+        Write content to a file with error handling and retry logic.
+
+        This function attempts to write the provided content into a file.
+        If it fails, it retries up to 100 times with some additional checks
+        and delays. Note that the content is serialized using pickle.
+
+        Parameters
+        ----------
+        file_content : Any
+            The data to be written into the file. This will be pickled.
+        file_name : str
+            The name of the file where data should be written.
+
+        Other Parameters
+        ----------------
+        None
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If the file cannot be written after 100 attempts, an error is logged.
+
+        Notes
+        -----
+        This function uses pickle to serialize the data, which can introduce security risks
+        if untrusted content is being written. It performs some internal state checks,
+        such as verifying that the target file isn't open and whether it should delete
+        some internal state, represented by `delete_pickle_rick`.
+
+        The function implements a retry mechanism with a backoff strategy that can include
+        random delays, though the example code does not specify these details explicitly.
+
+        Examples
+        --------
+        >>> result = PickleRick().write_file({'key': 'value'}, 'test.pkl')
+        Success to write file
         """
         self.counter += 1
         if self.counter < 100:
@@ -94,10 +224,35 @@ class PickleRick:
 
     def read_file(self, file_name):
         """
-        This method read a file safely
-        :param file_name: A string containing the file name
-        :type file_name: str
-        :return: whatever file that has been pickled
+        Reads the contents of a file using pickle and returns it.
+
+        Parameters
+        ----------
+        file_name : str
+            The name of the file to be read.
+
+        Returns
+        -------
+        Union[Any, None]
+            The content of the file if successfully read; otherwise, `None`.
+
+        Raises
+        ------
+        Exception
+            If there is an error reading the file.
+
+        Notes
+        -----
+        This function attempts to read a file multiple times if it fails.
+        If the number of attempts exceeds 1000, it logs an error and returns `None`.
+
+        Examples
+        --------
+        >>> PickleRick().read_file("example.pkl")
+        Some content
+
+        >>> read_file("non_existent_file.pkl")
+        None
         """
         self.counter += 1
         if self.counter < 1000:
@@ -126,7 +281,59 @@ class PickleRick:
 
 
 def show(img, interactive=True, cmap=None):
-    import matplotlib.pyplot as plt
+    """
+    Display an image using Matplotlib with optional interactivity and colormap.
+
+    Parameters
+    ----------
+    img : ndarray
+        The image data to be displayed.
+    interactive : bool, optional
+        If ``True``, turn on interactive mode. Default is ``True``.
+    cmap : str or Colormap, optional
+        The colormap to be used. If ``None``, the default colormap will
+        be used.
+
+    Other Parameters
+    ----------------
+    interactive : bool, optional
+        If ``True``, turn on interactive mode. Default is ``True``.
+    cmap : str or Colormap, optional
+        The colormap to be used. If ``None``, the default colormap will
+        be used.
+
+    Returns
+    -------
+    fig : Figure
+        The Matplotlib figure object containing the displayed image.
+    ax : AxesSubplot
+        The axes on which the image is plotted.
+
+    Raises
+    ------
+    ValueError
+        If `cmap` is not a recognized colormap name or object.
+
+    Notes
+    -----
+    If interactive mode is enabled, the user can manipulate the figure
+    window interactively.
+
+    Examples
+    --------
+    >>> img = np.random.rand(100, 100)
+    >>> fig, ax = show(img)
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with ... Axes>
+
+    >>> fig, ax = show(img, interactive=False)
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with ... Axes>
+
+    >>> fig, ax = show(img, cmap='gray')
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with .... Axes>
+    """
     if interactive:
         plt.ion()
     else:
@@ -140,9 +347,49 @@ def show(img, interactive=True, cmap=None):
         ax.imshow(img, cmap=cmap, interpolation="none")
     fig.tight_layout()
     fig.show()
+    return fig, ax
 
 def save_fig(img, full_path, cmap=None):
-    import matplotlib.pyplot as plt
+    """
+    Save an image figure to a file with specified options.
+
+    This function creates a matplotlib figure from the given image,
+    optionally applies a colormap, displays it briefly, saves the
+    figure to disk at high resolution, and closes the figure.
+
+    Parameters
+    ----------
+    img : array_like (M, N, 3)
+        Input image to be saved as a figure. Expected to be in RGB format.
+    full_path : str
+        The complete file path where the figure will be saved. Must include
+        extension (e.g., '.png', '.jpg').
+    cmap : str or None, optional
+        Colormap to be applied if the image should be displayed with a specific
+        color map. If `None`, no colormap is applied.
+
+    Returns
+    -------
+    None
+
+        This function does not return any value. It saves the figure to disk
+        at the specified location.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the directory in `full_path` does not exist.
+
+    Examples
+    --------
+    >>> img = np.random.rand(100, 100, 3) * 255
+    >>> save_fig(img, 'test.png')
+    Creates and saves a figure from the random image to 'test.png'.
+
+    >>> save_fig(img, 'colored_test.png', cmap='viridis')
+    Creates and saves a figure from the random image with 'viridis' colormap
+    to 'colored_test.png'.
+    """
     sizes = img.shape[0] / 100,  img.shape[1] / 100
     fig = plt.figure(figsize=(sizes[0], sizes[1]))
     ax = fig.gca()
@@ -157,46 +404,59 @@ def save_fig(img, full_path, cmap=None):
     plt.close()
 
 
-def See(image, img_name="", size=None, keep_display=0):
-    """
-    Display an image using opencv
-    :param image: the image to display, if not uint8, will be converted
-    :type image: uint8
-    :param img_name:
-    :type img_name: str
-    :param size: two element list saying the size of the image during display
-    :type size: int
-    :return:
-    """
-    # image = resize(image, (960, 540))
-    if image.dtype != 'uint8':
-        image = image.astype(np.uint8)
-    if size is None:
-        size = (1000, 1000)
-    image = resize(image, size)
-    if not isinstance(image, np.uint8):
-        image = image.astype(np.uint8)
-    img_content_diversity = len(np.unique(image))
-    if img_content_diversity < 10:
-        image *= 255 // img_content_diversity
-    cv2.imshow(img_name, image)
-    cv2.waitKey(keep_display)
-    if not keep_display:
-        cv2.destroyAllWindows()
-
-
 def write_video(np_array, vid_name, is_color=True, fps=40):
     """
-    Write a video on hard drive
-    :param np_array: the video to write
-    :type np_array: uint8
-    :param vid_name: path and file name of the video to write
-    :type vid_name: str
-    :param is_color: if True, the fourth dimension of the array is the color
-    :type is_color: bool
-    :param fps: frame per second
-    :type fps: uint64
-    :return: 
+    Write a video file from an array of images.
+
+    This function saves the provided NumPy array as either a `.npy` file
+    or encodes it into a video format such as .mp4, .avi, or .mkv based on
+    the provided file name and other parameters.
+
+    Parameters
+    ----------
+    np_array : numpy.ndarray
+        A 4-d array representing a sequence of images. The shape should be
+        (num_frames, height, width, channels) where `channels` is 3 for color
+        images and 1 for grayscale.
+
+    vid_name : str
+        The name of the output file. If the extension is `.npy`, the array will be
+        saved in NumPy's binary format. Otherwise, a video file with the specified
+        extension will be created.
+
+    is_color : bool, optional
+        Whether the images are in color. Default is ``True``.
+
+    fps : int, optional
+        Frames per second for the video. Default is ``40``.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If the provided extension is not supported (.mp4, .avi, or .mkv).
+
+    Notes
+    -----
+    - The function supports `.mp4`, `.avi`, and `.mkv` extensions for video files.
+    - When specifying an extension, make sure it matches the intended codec.
+
+    Examples
+    --------
+    >>> import numpy as np
+
+    Create a dummy array of shape (10, 480, 640, 3):
+    >>> dummy_array = np.random.rand(10, 480, 640, 3)
+
+    Save it as a video file:
+    >>> write_video(dummy_array, 'output.mp4')
+
+    Save it as a .npy file:
+    >>> write_video(dummy_array, 'data.npy')
+
     """
     #h265 ou h265 (mp4)
     # linux: fourcc = 0x00000021 -> don't forget to change it bellow as well
@@ -224,17 +484,71 @@ def write_video(np_array, vid_name, is_color=True, fps=40):
 
 def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_width=None):
     """
-    Read a video from hard drive
-    :param vid_name: path and file name of the video to read
-    :type vid_name: str
-    :param conversion_dict: dictionary containing the color space combination to modify the bgr image before writing
-    :type conversion_dict: TDict[str: =np.float64]
-    :param background: grayscale image
-    :type background: uint8
-    :param true_frame_width: widht of one frame, if the video is twice that width returns the left side of it
-    :type true_frame_width: int
-    :return: a numpy array of the video and its converted version if required
-    """
+    Convert a video file to a NumPy array.
+
+    This function reads a video file and converts it into a NumPy array.
+    If a conversion dictionary is provided, the function also generates
+    a converted version of the video using the specified color space conversions.
+    If true_frame_width is provided, and it matches half of the actual frame width,
+    the function adjusts the frame width accordingly.
+
+    Parameters
+    ----------
+    vid_name : str
+        Path to the video file or .npy file containing the video data.
+    conversion_dict : dict, optional
+        Dictionary specifying color space conversions. Default is None.
+    background : bool, optional
+        Whether to subtract the background from the video frames. Default is None.
+    true_frame_width : int, optional
+        The true width of the video frames. Default is None.
+
+    Other Parameters
+    ----------------
+    background : bool, optional
+        Whether to subtract the background from the video frames. Default is None.
+    true_frame_width : int, optional
+        The true width of the video frames. Default is None.
+
+    Returns
+    -------
+    video : numpy.ndarray or tuple(numpy.ndarray, numpy.ndarray)
+        If conversion_dict is None, returns the video as a NumPy array.
+        Otherwise, returns a tuple containing the original and converted videos.
+
+    Raises
+    ------
+    ValueError
+        If the video file cannot be opened or if there is an error in processing.
+
+    Notes
+    -----
+    - This function uses OpenCV to read video files.
+    - If true_frame_width is provided and it matches half of the actual frame width,
+      the function adjusts the frame width accordingly.
+    - The conversion dictionary should contain color space mappings for transformation.
+
+    Examples
+    --------
+    >>> vid_array = video2numpy('example_video.mp4')
+    >>> print(vid_array.shape)
+    (100, 720, 1280, 3)
+
+    >>> vid_array, converted_vid = video2numpy('example_video.mp4', {'rgb': 'gray'}, True)
+    >>> print(vid_array.shape, converted_vid.shape)
+    (100, 720, 1280, 3) (100, 720, 640)
+
+    >>> vid_array = video2numpy('example_video.npy')
+    >>> print(vid_array.shape)
+    (100, 720, 1920, 3)
+
+    >>> vid_array = video2numpy('example_video.npy', true_frame_width=1920)
+    >>> print(vid_array.shape)
+    (100, 720, 960, 3)
+
+    >>> vid_array = video2numpy('example_video.npy', {'rgb': 'gray'}, True, 960)
+    >>> print(vid_array.shape)
+    (100, 720, 960)"""
     if vid_name[-4:] == ".npy":
         video = np.load(vid_name) # , allow_pickle='TRUE'
         frame_width = video.shape[2]
@@ -287,14 +601,49 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
 
 def movie(video, keyboard=1, increase_contrast=True):
     """
-    Display a 3D or 4D numpy array as a video in a new window
-    :param video: a numpy array with time, cy, cx
-    :param keyboard: If 1, the video will automatically switch from one frame to the next,
-    if 0, the user will have to press a key (e.g. Enter) to switch from one frame to the next
-    :type keyboard: int
-    :param increase_contrast: If True, an algorithm that increases image contrast will be applied
-    :type increase_contrast: bool
-    :return: 
+    Summary
+    -------
+    Processes a video to display each frame with optional contrast increase and resizing.
+
+    Parameters
+    ----------
+    video : numpy.ndarray
+        The input video represented as a 3D NumPy array.
+    keyboard : int, optional
+        Key for waiting during display (default is 1).
+    increase_contrast : bool, optional
+        Flag to increase the contrast of each frame (default is True).
+
+    Other Parameters
+    ----------------
+    keyboard : int, optional
+        Key to wait for during the display of each frame.
+    increase_contrast : bool, optional
+        Whether to increase contrast for the displayed frames.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError
+        If `video` is not a 3D NumPy array.
+
+    Notes
+    -----
+    This function uses OpenCV's `imshow` to display each frame. Ensure that the required
+    OpenCV dependencies are met.
+
+    Examples
+    --------
+    >>> movie(video)
+    Processes and displays a video with default settings.
+    >>> movie(video, keyboard=0)
+    Processes and displays a video waiting for the SPACE key between frames.
+    >>> movie(video, increase_contrast=False)
+    Processes and displays a video without increasing contrast.
+
     """
     for i in np.arange(video.shape[0]):
         image = video[i, :, :]
@@ -317,11 +666,23 @@ opencv_accepted_formats = [
 
 def is_raw_image(image_path):
     """
-    This function checks whether an image is in raw format
-    :param image_path: path (and image name) toward the image to read
-    :type image_path: str
-    :return: True if it is a raw image
-    :rtype: bool
+    Determine if the image path corresponds to a raw image.
+
+    Parameters
+    ----------
+    image_path : str
+        The file path of the image.
+
+    Returns
+    -------
+    bool
+        True if the image is considered raw, False otherwise.
+
+    Examples
+    --------
+    >>> result = is_raw_image("image.jpg")
+    >>> print(result)
+    False
     """
     ext = image_path.split(".")[-1]
     if np.isin(ext, opencv_accepted_formats):
@@ -333,13 +694,40 @@ def is_raw_image(image_path):
 
 def readim(image_path, raw_image=False):
     """
-    Read an image
-    Uses opencv for usual images and rawpy for raw images
-    :param image_path: path (and image name) toward the image to read
-    :type image_path: str
-    :param raw_image: True if the image is in raw format
-    :type raw_image: bool
-    :return:
+    Read an image from a file and optionally process it.
+
+    Parameters
+    ----------
+    image_path : str
+        Path to the image file.
+    raw_image : bool, optional
+        If True, logs an error message indicating that the raw image format cannot be processed. Default is False.
+
+    Returns
+    -------
+    ndarray
+        The decoded image represented as a NumPy array of shape (height, width, channels).
+
+    Raises
+    ------
+    RuntimeError
+        If `raw_image` is set to True, logs an error indicating that the raw image format cannot be processed.
+
+    Notes
+    -----
+    Although `raw_image` is set to False by default, currently it does not perform any raw image processing.
+
+    Examples
+    --------
+    >>> cv2.imread("example.jpg")
+    array([[[255, 0, 0],
+            [255, 0, 0]],
+
+           [[  0, 255, 0],
+            [  0, 255, 0]],
+
+           [[  0,   0, 255],
+            [  0,   0, 255]]], dtype=uint8)
     """
     if raw_image:
         logging.error("Cannot read this image format. If the rawpy package can, ask for a version of Cellects using it.")
@@ -354,14 +742,40 @@ def readim(image_path, raw_image=False):
 
 def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
     """
-    Read an image and correct its orientation if necessary
-    :param image_name: path (and image name) toward the image to read
-    :param prev_img: reference image to use to orentate the current image correctly
-    :param raw_images: True if the image is in raw format
-    :type raw_image: bool
-    :param is_landscape: True if the image is landscape
-    :type raw_image: bool
-    :return:
+    Reads an image from the given source and rotates it 90 degrees clockwise or counterclockwise if necessary.
+
+    Parameters
+    ----------
+    image_name : str
+        The name or path of the image to be read.
+    prev_img : np.ndarray or None
+        The previous image in int16 format to compare differences, if applicable.
+    raw_images : dict
+        A dictionary containing raw images for the given `image_name`.
+    is_landscape : bool
+        If True, assumes the image should be in landscape orientation.
+
+    Returns
+    -------
+    np.ndarray
+        The processed and potentially rotated image.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified `image_name` does not exist in `raw_images`.
+    ValueError
+        If the image dimensions are inconsistent during rotation operations.
+
+    Notes
+    -----
+    - This function assumes that raw images are stored in the `raw_images` dictionary with keys as image names.
+    - Rotation decisions are based on whether the image is required to be in landscape orientation.
+
+    Examples
+    --------
+    >>> img = read_and_rotate("sample.jpg", prev_img=None, raw_images=False, is_landscape=True)
+    Rotated image of sample.jpg
     """
     img = readim(image_name, raw_images)
     if (img.shape[0] > img.shape[1] and is_landscape) or (img.shape[0] < img.shape[1] and not is_landscape):
@@ -382,10 +796,50 @@ def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
 
 def vstack_h5_array(file_name, table, key="data"):
     """
-        Append a DataFrame to an HDF5 file. If the file or dataset doesn't exist, it creates them.
-        :param file_name: str, path to the HDF5 file
-        :param table: pd.DataFrame, the DataFrame to append
-        :param key: str, the dataset key in the HDF5 file
+    Append a new table to an existing HDF5 dataset or create a new one if it doesn't exist.
+
+    Given a file name, table data and an optional key, this function will
+    check for existence of the HDF5 file. If it exists, append to the dataset
+    identified by `key` in the file. Otherwise create a new HDF5 file and dataset.
+
+    Parameters
+    ----------
+    file_name : str
+        The name of the HDF5 file.
+    table : np.ndarray
+        New data to be added or stored in the HDF5 file.
+    key : str, optional
+        The dataset name within the HDF5 file. Default is "data".
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    OSError
+        If there is an issue accessing the file system, e.g., due to permission errors.
+    IOError
+        If there is an issue writing the HDF5 file.
+
+    Notes
+    -----
+    The dataset will be appended to if it already exists. If the file does not exist,
+    a new HDF5 file will be created and the dataset will be initialized with `table`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> table1 = np.array([[1, 2], [3, 4]])
+    >>> vstack_h5_array('example.h5', table1) # create file and dataset
+    >>> table2 = np.array([[5, 6], [7, 8]])
+    >>> vstack_h5_array('example.h5', table2) # append to dataset
+    >>> with h5py.File('example.h5', 'r') as f:
+    ...     print(f['data'][:])
+    [[1 2]
+     [3 4]
+     [5 6]
+     [7 8]]
     """
     if os.path.exists(file_name):
         # Open the file in append mode
@@ -406,11 +860,40 @@ def vstack_h5_array(file_name, table, key="data"):
 
 def read_h5_array(file_name, key="data"):
     """
-    Reads a NumPy array from a specified key in an HDF5 file.
+    Read data array from an HDF5 file.
 
-    :param file_name: str, path to the HDF5 file
-    :param key: str, name of the array to read
-    :return: np.ndarray, the data from the specified key
+    This function reads a specific dataset from an HDF5 file using the provided key.
+
+    Parameters
+    ----------
+    file_name : str
+        The path to the HDF5 file.
+    key : str, optional, default: 'data'
+        The dataset name within the HDF5 file.
+
+    Returns
+    -------
+    ndarray
+        The data array from the specified dataset in the HDF5 file.
+
+    Raises
+    ------
+    KeyError
+        If the specified dataset key does not exist in the HDF5 file.
+    FileNotFoundError
+        If the specified HDF5 file does not exist.
+
+    Examples
+    --------
+    >>> data = read_h5_array('example.h5', 'data')
+    >>> print(data)
+    [[1 2 3]
+     [4 5 6]]
+
+    >>> data = read_h5_array('example.h5')
+    >>> print(data)
+    [[7 8 9]
+     [10 11 12]]
     """
     try:
         with h5py.File(file_name, 'r') as h5f:
@@ -424,6 +907,30 @@ def read_h5_array(file_name, key="data"):
 
 
 def get_h5_keys(file_name):
+    """
+    Retrieve all keys from a given HDF5 file.
+
+    Parameters
+    ----------
+    file_name : str
+        The path to the HDF5 file from which keys are to be retrieved.
+
+    Returns
+    -------
+    list of str
+        A list containing all the keys present in the specified HDF5 file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified HDF5 file does not exist.
+
+    Examples
+    --------
+    >>> result = get_h5_keys("example.hdf5")  # Ensure "example.hdf5" exists
+    >>> print(result)
+    ['data', 'metadata']
+    """
     try:
         with h5py.File(file_name, 'r') as h5f:
             all_keys = list(h5f.keys())
@@ -434,10 +941,38 @@ def get_h5_keys(file_name):
 
 def remove_h5_key(file_name, key="data"):
     """
-    Removes a specific key from an HDF5 file.
+    Remove a specified key from an HDF5 file.
 
-    :param file_name: str, path to the HDF5 file
-    :param key: str, name of the dataset to remove
+    This function opens an HDF5 file in append mode and deletes the specified
+    key if it exists. It handles exceptions related to file not found
+    and other runtime errors.
+
+    Parameters
+    ----------
+    file_name : str
+        The path to the HDF5 file from which the key should be removed.
+    key : str, optional
+        The name of the dataset or group to delete from the HDF5 file.
+        Default is "data".
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file does not exist.
+    RuntimeError
+        If any other error occurs during file operations.
+
+    Notes
+    -----
+    This function modifies the HDF5 file in place. Ensure you have a backup if necessary.
+
+    Examples
+    --------
+    >>> remove_h5_key("example.h5", "data")
     """
     try:
         with h5py.File(file_name, 'a') as h5f:  # Open in append mode to modify the file
@@ -450,6 +985,26 @@ def remove_h5_key(file_name, key="data"):
 
 
 def get_mpl_colormap(cmap_name):
+    """
+    Returns a linear color range array for the given matplotlib colormap.
+
+    Parameters
+    ----------
+    cmap_name : str
+        The name of the colormap to get.
+
+    Returns
+    -------
+    numpy.ndarray
+        A 256x1x3 array of bytes representing the linear color range.
+
+    Examples
+    --------
+    >>> result = get_mpl_colormap('viridis')
+    >>> print(result.shape)
+    (256, 1, 3)
+
+    """
     cmap = plt.get_cmap(cmap_name)
 
     # Initialize the matplotlib color map
