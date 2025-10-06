@@ -48,14 +48,17 @@ jobs:
           name: coverage-${{ matrix.python }}
           path: coverage.xml
 
+      # Build & publish the artifacts only once (python 3.12)
       - name: Build sdist and wheel
+        if: matrix.python == '3.12'
         shell: bash -l {0}
         run: |
           python -m build
           ls -lh dist
 
       - name: Upload dist artifacts
+        if: matrix.python == '3.12'
         uses: actions/upload-artifact@v4
         with:
-          name: dist-${{ matrix.python }}
+          name: dist
           path: dist/*
