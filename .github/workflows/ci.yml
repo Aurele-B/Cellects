@@ -21,7 +21,7 @@ jobs:
       - name: Set up micromamba
         uses: mamba-org/setup-micromamba@v2
         with:
-          environment-file: conda/env.yml
+          environment-file: conda/env.yaml
           cache-environment: true
           create-args: >-
             python=${{ matrix.python }}
