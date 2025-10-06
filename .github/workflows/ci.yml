@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Dummy CI job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Simulate build & test
+        run: |
+          echo "✅ CI workflow placeholder running on branch: ${{ github.ref }}"
+          echo "This is a fake workflow to activate the Run workflow button."

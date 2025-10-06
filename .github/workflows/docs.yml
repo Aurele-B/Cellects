@@ -1,0 +1,19 @@
+name: Docs
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  docs:
+    name: Dummy Docs job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Simulate docs build
+        run: |
+          echo "📘 Docs workflow placeholder running on branch: ${{ github.ref }}"
+          echo "This is a fake workflow to activate the Run workflow button."
