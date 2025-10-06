@@ -192,13 +192,13 @@ class TestInsensitiveGlob(CellectsUnitTest):
         os.chdir(self.path_input)
         result = insensitive_glob("Last" + "*")
         expected_result = ['last_binary_img.tif', 'last_original_img.tif']
-        self.assertEqual(result, expected_result)
+        self.assertCountEqual(result, expected_result)
 
     def test_insensitive_glob_suffix(self):
         os.chdir(self.path_input)
         result = insensitive_glob("*.TIF")
         expected_result = ['last_binary_img.tif', 'last_original_img.tif']
-        self.assertEqual(result, expected_result)
+        self.assertCountEqual(result, expected_result)
 
 
 
