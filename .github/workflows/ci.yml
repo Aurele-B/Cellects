@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]     # auto on main
+    branches: ["main"]     # auto on main
   pull_request:
   workflow_dispatch:        # manual run from any branch
 

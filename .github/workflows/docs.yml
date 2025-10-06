@@ -2,7 +2,7 @@ name: Docs
 
 on:
   push:
-    branches: [ main ]      # auto on main updates
+    branches: ["main"]      # auto on main updates
     paths:
       - "docs/**"
       - "mkdocs.yml"
