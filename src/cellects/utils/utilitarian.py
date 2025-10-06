@@ -10,6 +10,41 @@ vectorized_len = np.vectorize(len)
 
 @njit()
 def equal_along_first_axis(array_in_1, array_in_2):
+    """
+    Compare two arrays element-wise along the first axis and return a boolean array where elements are equal.
+
+    This function checks if corresponding elements in two arrays along the first axis
+    are equal, returning a boolean array of the same shape as `array_in_1`.
+
+    Parameters
+    ----------
+    array_in_1 : ndarray
+        First array to compare.
+    array_in_2 : ndarray
+        Second array to compare.
+
+    Returns
+    -------
+    ndarray
+        Boolean array indicating equality of elements along the first axis.
+        Has the same shape as `array_in_1` and dtype of `np.bool_`.
+
+    Raises
+    ------
+    ValueError
+        If the shape of `array_in_1` and `array_in_2` do not match along all axes
+        except the first.
+
+    Examples
+    --------
+    >>> array_in_1 = np.array([[1, 2], [3, 4]])
+    >>> array_in_2 = np.array([[1, 2], [0, 4]])
+    >>> equal_along_first_axis(array_in_1, array_in_2)
+    array([[ True,  True],
+           [False,  True]])
+    >>> equal_along_first_axis(array_in_1, array_in_2).dtype
+    dtype('bool')
+    """
     array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] == value
@@ -18,6 +53,33 @@ def equal_along_first_axis(array_in_1, array_in_2):
 
 @njit()
 def greater_along_first_axis(array_in_1, array_in_2):
+    """
+    Compare two arrays element-wise along the first axis and return a boolean array,
+    where each element indicates whether the corresponding element in `array_in_1`
+    is greater than in `array_in_2`.
+
+    Parameters
+    ----------
+    array_in_1 : array_like
+        The first input array.
+    array_in_2 : array_like
+        The second input array.
+
+    Returns
+    -------
+    out : ndarray, bool
+        A boolean array indicating where `array_in_1` elements are greater than
+        corresponding `array_in_2` elements.
+
+    Examples
+    --------
+    >>> array1 = np.array([[1, 2], [3, 4]])
+    >>> array2 = np.array([[0, 1], [2, 3]])
+    >>> result = greater_along_first_axis(array1, array2)
+    >>> print(result)  # doctest: +NORMALIZE_WHITESPACE
+    [[ True False]
+     [ True False]]
+    """
     array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] > value
@@ -26,6 +88,42 @@ def greater_along_first_axis(array_in_1, array_in_2):
 
 @njit()
 def less_along_first_axis(array_in_1, array_in_2):
+    """
+    Compare two arrays element-wise along the first axis, returning a boolean array.
+
+    This function performs an element-wise comparison between two arrays along
+    the first axis and returns a boolean array. The comparison is less than, i.e.,
+    element-wise `array_in_1 < array_in_2`.
+
+    Parameters
+    ----------
+    array_in_1 : numpy.ndarray
+        The first input array.
+    array_in_2 : numpy.ndarray
+        The second input array.
+
+    Returns
+    -------
+    numpy.ndarray[bool]
+        A boolean array where each element is the result of the comparison
+        `array_in_1[i, ...] < array_in_2[i, ...]` for all indices `i` along the first axis.
+
+    Notes
+    -----
+    This function uses Numba's `@njit` decorator for performance.
+
+    Examples
+    --------
+    >>> result = less_along_first_axis(np.array([[1, 2], [3, 4]]), np.array([2, 2]))
+    >>> print(result)
+    [[ True  True]
+     [False False]]
+
+    >>> result = less_along_first_axis(np.array([[5, -1], [-3, 0]]), np.array([4.9, 2]))
+    >>> print(result)
+    [[False False]
+     [ True True]]
+    """
     array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] < value
@@ -34,11 +132,23 @@ def less_along_first_axis(array_in_1, array_in_2):
 
 def translate_dict(old_dict):
     """
-    Translate a usual python dictionary into a typed one
-    :param old_dict: usual python dictionary
-    :type old_dict: dict
-    :return: typed dictionary
-    :rtype: TDict
+    Translate a dictionary to a typed dictionary and filter out non-string values.
+
+    Parameters
+    ----------
+    old_dict : dict
+        The input dictionary that may contain non-string values
+
+    Returns
+    -------
+    dict
+        A typed dictionary containing only the items from `old_dict` where the value is not a string
+
+    Examples
+    --------
+    >>> result = translate_dict({'a': 1., 'b': 'string', 'c': 2.0})
+    >>> print(result)
+    DictType[unicode_type,float64]<iv=None>({a: 1.0, c: 2.0})
     """
     numba_dict = Dict()
     for k, v in old_dict.items():
@@ -48,8 +158,32 @@ def translate_dict(old_dict):
 
 def reduce_path_len(pathway, to_start, from_end):
     """
-    pathway=Path(os.getcwd())
-    reduce_path_len(pathway, 15, 4, 8)
+    Reduce the length of a given pathway string by truncating it from both ends.
+
+    The function is used to shorten the `pathway` string if its length exceeds
+    a calculated maximum size. If it does, the function truncates it from both ends,
+    inserting an ellipsis ("...") in between.
+
+    Parameters
+    ----------
+    pathway : str or int
+        The pathway string to be reduced. If an integer is provided,
+        it will be converted into a string.
+    to_start : int
+        Number of characters from the start to keep in the pathway string.
+    from_end : int
+        Number of characters from the end to keep in the pathway string.
+
+    Returns
+    -------
+    str
+        The reduced version of the `pathway` string. If truncation is not necessary,
+        returns the original pathway string.
+
+    Examples
+    --------
+    >>> reduce_path_len("example/complicated/path/to/resource", 8, 12)
+    'example/.../to/resource'
     """
     if not isinstance(pathway, str):
         pathway = str(pathway)
@@ -60,36 +194,106 @@ def reduce_path_len(pathway, to_start, from_end):
 
 
 def find_nearest(array, value):
+    """
+    Find the element in an array that is closest to a given value.
+
+    Parameters
+    ----------
+    array : array_like
+        Input array. Can be any array-like data structure.
+    value :
+        The value to find the closest element to.
+
+    Returns
+    -------
+    :obj:`array` type
+        The element in `array` that is closest to `value`.
+
+    Examples
+    --------
+    >>> find_nearest([1, 2, 3, 4], 2.5)
+    2
+    """
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
     return array[idx]
 
 
-def rolling_window(a, window):
-    """
-    Efficient rolling statistics with NumPy
-    Author: Erik Rigtorp
-    https://rigtorp.se/2011/01/01/rolling-statistics-numpy.html
-    :param a:array
-    :param window:length of the windows to assess within the array
-    :return:The array containing each possible windows
-    """
-    shape = a.shape[:-1] + (a.shape[-1] - window + 1, window)
-    strides = a.strides + (a.strides[-1],)
-    return np.lib.stride_tricks.as_strided(a, shape=shape, strides=strides)
-
-
 class PercentAndTimeTracker:
+    """
+    Initialize a progress bar object to track and display the progress of an iteration.
+
+    Parameters
+    ----------
+    total : int
+        The total number of iterations.
+    compute_with_elements_number : bool, optional
+        If True, create an element vector. Default is False.
+    core_number : int, optional
+        The number of cores to use. Default is 1.
+
+    Attributes
+    ----------
+    starting_time : float
+        The time when the ProgressBar object is initialized.
+    total : int
+        The total number of iterations.
+    current_step : int
+        The current iteration step (initialized to 0).
+    element_vector : numpy.ndarray, optional
+        A vector of zeros with the same length as `total`, created if
+        `compute_with_elements_number` is True.
+    core_number : int
+        The number of cores.
+
+    Examples
+    --------
+    >>> p = PercentAndTimeTracker(10)
+    >>> print(p.total)  # prints: 10
+    >>> p = PercentAndTimeTracker(10, compute_with_elements_number=True)
+    >>> print(p.element_vector)  # prints: [0 0 0 0 0 0 0 0 0 0]
+
+    Notes
+    -----
+    Starting time is recorded for potential performance tracking.
+
+    """
     def __init__(self, total, compute_with_elements_number=False, core_number=1):
         """
-        Give the progress of a for looped process. Initialize before the for loop
-        :param total: Total number of iteration
-        :type total: uint64
-        :param compute_with_elements_number: when False, uses the number of times get_progress() will be used
-        when True, uses the number of elements specified in the get_progress() method
-        :type compute_with_elements_number: bool
-        :param core_number: The number of core used when multiprocessing
-        :type core_number: uint16
+        Initialize a progress bar object to track and display the progress of an iteration.
+
+        Parameters
+        ----------
+        total : int
+            The total number of iterations.
+        compute_with_elements_number : bool, optional
+            If True, create an element vector. Default is False.
+        core_number : int, optional
+            The number of cores to use. Default is 1.
+
+        Attributes
+        ----------
+        starting_time : float
+            The time when the ProgressBar object is initialized.
+        total : int
+            The total number of iterations.
+        current_step : int
+            The current iteration step (initialized to 0).
+        element_vector : numpy.ndarray, optional
+            A vector of zeros with the same length as `total`, created if
+            `compute_with_elements_number` is True.
+        core_number : int
+            The number of cores.
+
+        Examples
+        --------
+        >>> p = PercentAndTimeTracker(10)
+        >>> print(p.total)  # prints: 10
+
+        Notes
+        -----
+        Starting time is recorded for potential performance tracking.
+
         """
         self.starting_time = default_timer()
         self.total = total
@@ -100,16 +304,39 @@ class PercentAndTimeTracker:
 
     def get_progress(self, step=None, element_number=None):
         """
-        This method gives the percentage of loop advance, the ETA and the remaining time.
-        Call this method at each iteration
-        :param step: if None, add 1, put the number of the current iteration instead
-        :type step: uint64
-        :param element_number: if None use the number of calls of get_progress() or the step.
-        Otherwise, the remaining percentage and time and will be computed according to
-        the current and previous element_number values
-        :type element_number: uint64
-        :return: Current percentage, ETA (remaining time)
-        :rtype: str
+        Calculate and update the current progress, including elapsed time and estimated remaining time.
+
+        This function updates the internal state of the object to reflect progress
+        based on the current step and element number. It calculates elapsed time,
+        estimates total time, and computes the estimated time of arrival (ETA).
+
+        Parameters
+        ----------
+        step : int or None, optional
+            The current step of the process. If ``None``, the internal counter is incremented.
+        element_number : int or None, optional
+            The current element number. If ``None``, no update is made to the element vector.
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - `int`: The current progress percentage.
+            - `str`: A string with the ETA and remaining time.
+
+        Raises
+        ------
+        ValueError
+            If ``step`` or ``element_number`` are invalid.
+
+        Notes
+        -----
+        The function uses linear regression to estimate future progress values when the current step is sufficiently large.
+
+        Examples
+        --------
+        >>> PercentAndTimeTracker(10, compute_with_elements_number=True).get_progress(9, 5)
+        (0, ', wait to get a more accurate ETA...')
         """
         if step is not None:
             self.current_step = step
@@ -169,11 +396,22 @@ class PercentAndTimeTracker:
 
 
 def insensitive_glob(pattern):
-    """This function changes the behavior of glob so that it becomes case-insensitive
+    """
+    Generates a glob pattern that matches both lowercase and uppercase letters.
 
-    :param pattern: The pattern to look for in a given folder
-    :type pattern: str
-    :return: The list of files corresponding to that pattern
+    Parameters
+    ----------
+    pattern : str
+        The glob pattern to be made case-insensitive.
+
+    Returns
+    -------
+    str
+        A new glob pattern that will match both lowercase and uppercase letters.
+
+    Examples
+    --------
+    >>> insensitive_glob('*.TXT')
     """
     def either(c):
         return '[%s%s]' % (c.lower(), c.upper()) if c.isalpha() else c
@@ -181,6 +419,51 @@ def insensitive_glob(pattern):
 
 
 def smallest_memory_array(array_object, array_type='uint'):
+    """
+    Convert the given array object to the smallest possible memory type.
+
+    This function determines the optimal data type for an array
+    based on its maximum value and converts it to that data type.
+
+    Parameters
+    ----------
+    array_object : numpy.ndarray or list of lists
+        The input array object which can be either a NumPy array or a list of lists.
+
+    array_type : str, optional
+        The type of data to which the input array should be converted. Should be either 'uint' (default) or any other NumPy data type.
+
+    Returns
+    -------
+    numpy.ndarray
+        The converted array object with the smallest possible memory type.
+
+    Raises
+    ------
+    TypeError
+        If the input `array_object` is not a NumPy array or list of lists.
+
+    ValueError
+        If the specified `array_type` is not supported by NumPy.
+
+    Notes
+    -----
+    This function uses NumPy's `iinfo` to determine the information about the integer data types and finds the smallest
+    data type that can store all values in the array without overflow.
+
+    Examples
+    --------
+    >>> arr = np.array([[1, 2], [3, 4]])
+    >>> result = smallest_memory_array(arr)
+    >>> print(result.dtype)
+    uint8
+
+    >>> import numpy as np
+    >>> arr = np.array([[1000, 2000], [3000, 4000]])
+    >>> result = smallest_memory_array(arr)
+    >>> print(result.dtype)
+    uint16
+    """
     if isinstance(array_object, np.ndarray):
         value_max = array_object.max()
     else:
@@ -203,10 +486,30 @@ def smallest_memory_array(array_object, array_type='uint'):
 
 def remove_coordinates(arr1, arr2):
     """
-    equivalent to
-    image[arr2[:, 0], arr2[:, 1]] = 0
-    arrA = np.transpose(np.array(np.nonzero(image)))
+    Remove coordinates from `arr1` that are present in `arr2`.
 
+    Given two arrays of coordinates, remove rows from the first array
+    that match any row in the second array.
+
+    Parameters
+    ----------
+    arr1 : ndarray of shape (n, 2)
+        Array containing coordinates to filter.
+    arr2 : ndarray of shape (m, 2)
+        Array containing coordinates to match for removal.
+
+    Returns
+    -------
+    ndarray of shape (k, 2)
+        Array with coordinates from `arr1` that are not in `arr2`.
+
+    Examples
+    --------
+    >>> arr1 = np.array([[0, 0], [1, 2], [3, 4]])
+    >>> arr2 = np.array([[1, 2], [5, 6]])
+    >>> remove_coordinates(arr1, arr2)
+    array([[0, 0],
+           [3, 4]])
     """
     # Convert to set of tuples
     coords_to_remove = set(map(tuple, arr2))

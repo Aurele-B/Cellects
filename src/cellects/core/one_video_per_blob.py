@@ -383,7 +383,6 @@ class OneVideoPerBlob:
             self.right[shape_i] = np.max(shape_i_indices[1])
             self.top[shape_i] = np.min(shape_i_indices[0])
             self.bot[shape_i] = np.max(shape_i_indices[0])
-        #new See(previous_ordered_image_i)
         self.ordered_first_image = previous_ordered_image_i
 
     def segment_blob_motion(self, image, color_space_combination, color_number):
@@ -673,7 +672,6 @@ if __name__ == "__main__":
     first_image.validated_shapes = process_i.validated_shapes
     first_image.shape_number = 8
     first_image.get_crop_coordinates()
-    # See(first_image.binary_image)
     self = OneVideoPerBlob(first_image, 100, False)
     are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_specimens_have_same_direction=True
     self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=False, display=True)

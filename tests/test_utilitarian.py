@@ -146,20 +146,6 @@ class TestFindNearest(CellectsUnitTest):
         self.assertAlmostEqual(result, 2.5, places=6)
 
 
-class TestRollingWindow(CellectsUnitTest):
-    def test_rolling_window(self):
-        input_array = np.array([1, 2, 3, 4, 5])
-        window_size = 3
-
-        result = rolling_window(input_array, window_size)
-
-        expected_result = np.array([[1, 2, 3],
-                                    [2, 3, 4],
-                                    [3, 4, 5]])
-
-        np.testing.assert_array_equal(result, expected_result)
-
-
 class TestPercentAndTimeTracker(CellectsUnitTest):
     def test_get_progress(self):
         total_iterations = 100

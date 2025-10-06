@@ -584,7 +584,6 @@ class OneImageAnalysis:
                 self.kmeans(kmeans_clust_nb, biomask, backmask)
             else:
                 self.binary_image = otsu_thresholding(self.image)
-            # See(self.binary_image)
             surf = np.sum(self.binary_image)
             if surf < total_surfarea:
                 # nb, shapes = cv2.connectedComponents(oia.binary_image)
