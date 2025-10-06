@@ -402,13 +402,19 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
                                           [0,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0],
                                           [0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0],
                                           [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]], dtype=np.uint8)
-        cls.y_boundaries = np.array([0,  1,  0,  -1,  0,  1,  -1,  0,  1,  -1,  0], dtype=np.int8)
+        cls.y_boundaries = np.array([0,  1,  0,  0,  -1,  0,  1,  0,  0,  -1,  0], dtype=np.int8)
 
     def test_rank_from_top_to_bottom_from_left_to_right(self):
         ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.binary_image, self.y_boundaries, get_ordered_image=True)
         self.assertTrue(len(np.unique(ordered_image)) == 7)
         self.assertTrue(ordered_centroids.shape[0] == 6)
         self.assertTrue(ordered_stats[:, 4].sum() == self.binary_image.sum())
+        self.assertTrue(ordered_image[2, 2] == 1)
+        self.assertTrue(ordered_image[2, 6] == 2)
+        self.assertTrue(ordered_image[2, 8] == 3)
+        self.assertTrue(ordered_image[6, 1] == 4)
+        self.assertTrue(ordered_image[7, 5] == 5)
+        self.assertTrue(ordered_image[7, 8] == 6)
 
 
 class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
