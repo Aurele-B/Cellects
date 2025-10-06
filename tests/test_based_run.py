@@ -2,8 +2,6 @@
 """This file contains lines to run Cellects without user interface"""
 
 import logging
-import os
-from pathlib import Path
 import numpy as np
 import pandas as pd
 import cv2
@@ -12,36 +10,23 @@ from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.utils.load_display_save import show
 
 
-def load_one_folder(pathway, sample_number):
+def load_test_folder(pathway, sample_number):
     po = ProgramOrganizer()
-    po.load_variable_dict()
-    # dd = DefaultDicts()
-    # po.all = dd.all
-    # po.vars = dd.vars
+    dd = DefaultDicts()
+    po.all = dd.all
+    po.vars = dd.vars
     po.all['global_pathway'] = pathway
     po.all['first_folder_sample_number'] = sample_number
-    # po.all['first_folder_sample_number'] = 6
-    # po.all['radical'] = "IMG"
-    # po.all['extension'] = ".jpg"
-    # po.all['im_or_vid'] = 0
     po.look_for_data()
-    po.load_data_to_run_cellects_quickly()
     return po
 
-def run_image_analysis(po):
+
+def run_image_analysis_for_testing(po):
     if not po.first_exp_ready_to_run:
         po.get_first_image()
         po.fast_image_segmentation(True)
-        # po.first_image.find_first_im_csc(sample_number=po.sample_number,
-        #                                    several_blob_per_arena=None,
-        #                                    spot_shape=None, spot_size=None,
-        #                                    kmeans_clust_nb=2,
-        #                                    biomask=None, backmask=None,
-        #                                    color_space_dictionaries=None,
-        #                                    carefully=True)
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         po.delineate_each_arena()
@@ -56,7 +41,7 @@ def run_image_analysis(po):
     return po
 
 
-def write_videos(po):
+def run_write_videos_for_testing(po):
     po.update_output_list()
     look_for_existing_videos = insensitive_glob('ind_' + '*' + '.npy')
     there_already_are_videos = len(look_for_existing_videos) == len(po.vars['analyzed_individuals'])
@@ -77,16 +62,9 @@ def write_videos(po):
     return po
 
 
-def run_one_video_analysis(po):
+def run_one_video_analysis_for_testing(po):
     i=0
     show_seg= False
-    # if os.path.isfile(f"coord_specimen{i + 1}_t720_y1475_x1477.npy"):
-    #     binary_coord = np.load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
-    #     l = [i, i + 1, po.vars, False, False, show_seg, None]
-    #     MA = MotionAnalysis(l)
-    #     MA.binary = np.zeros((720, 1475, 1477), dtype=np.uint8)
-    #     MA.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
-    # else:
     l = [i, i + 1, po.vars, True, False, show_seg, None]
     MA = MotionAnalysis(l)
     MA.get_descriptors_from_binary()
@@ -96,7 +74,7 @@ def run_one_video_analysis(po):
     return MA
 
 
-def run_all_arenas(po):
+def run_all_arenas_for_testing(po):
     po.instantiate_tables()
     for i, arena in enumerate(po.vars['analyzed_individuals']):
         l = [i, arena, po.vars, True, True, False, None]
@@ -127,28 +105,3 @@ def run_all_arenas(po):
     cv2.imwrite(f"Analysis efficiency, last image.jpg", po.last_image.bgr)
     cv2.imwrite(f"Analysis efficiency, {np.ceil(po.vars['img_number'] / 10).astype(np.uint64)}th image.jpg",
         po.first_image.bgr)
-
-
-
-if __name__ == "__main__":
-    po = load_one_folder(Path("/data/experiment"), 1)
-    po = run_image_analysis(po)
-    po = write_videos(po)
-    # MA = run_one_video_analysis(po)
-    run_all_arenas(po)
-
-    # MA.one_row_per_frame.to_csv(
-    #     "/Users/Directory/Scripts/python/Cellects/tests/data/experiment/motion_analysis_thresh.csv")
-
-    # path = Path("/Users/Directory/Scripts/python/Cellects/tests/data/experiment")
-    # po.load_variable_dict()
-    # run_image_analysis(po)
-    # os.chdir(path)
-    # from glob import glob
-    # from cellects.utils.load_display_save import readim
-    # im_names = np.sort(glob("*.JPG"))
-    # for i, im_name in enumerate(im_names): #  im_name = im_names[-1]
-    #     im = readim(im_name)
-    #     cv2.imwrite(f"image{i + 1}.tif", im[2925:3170, 1200:1500, :])
-    #
-    #     show(im[2925:3170,1200:1500, :])

@@ -35,8 +35,6 @@ import cv2  # named opencv-python
 import multiprocessing.pool as mp
 from numba.typed import List as TList
 from numba.typed import Dict as TDict
-from numpy.core.numeric import ones_like
-
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage

@@ -108,6 +108,7 @@ class ProgramOrganizer:
                 with open(ALL_VARS_PKL_FILE, 'rb') as fileopen:  # NEW
                     self.all = pickle.load(fileopen)  # NEW
                 self.vars = self.all['vars']
+                self.update_data()
                 logging.info("Success to load the parameters dictionaries from the Cellects folder")
                 logging.info(os.getcwd())
             except Exception as exc:  # NEW
@@ -325,7 +326,7 @@ class ProgramOrganizer:
                 # then put a breakpoint here and run the following + self.save_data_to_run_cellects_quickly() :
                 # self.all['vars']['lose_accuracy_to_save_memory'] = False
                 self.vars = self.all['vars']
-                self.is_data_up_to_date()
+                self.update_data()
                 print(self.vars['convert_for_motion'])
                 folder_changed = False
                 if current_global_pathway != self.all['global_pathway']:
@@ -378,7 +379,7 @@ class ProgramOrganizer:
         else:
             logging.info("The current (or the first) folder is not ready to run")
 
-    def is_data_up_to_date(self):
+    def update_data(self):
         dd = DefaultDicts()
         all = len(dd.all) != len(self.all)
         vars = len(dd.vars) != len(self.vars)
