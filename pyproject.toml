@@ -64,6 +64,7 @@ cellects = ["icons/**"]
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
+license-files = ["LICENSE*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
