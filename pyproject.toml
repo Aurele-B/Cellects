@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77", "wheel>=0.44"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,13 +7,13 @@ name = "cellects"
 version = "0.1.0.dev1"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "GPL-3.0-only"
+license-files = ["LICENSE*"]
 requires-python = ">=3.11,<3.13"
 authors = [{ name = "Aurèle Boussard" }]
 classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
-  "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
 ]
 
 dependencies = [
@@ -58,13 +58,11 @@ where = ["src"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-# include every file under icons/ (recursively)
 cellects = ["icons/**"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
-license-files = ["LICENSE*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
