@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77", "wheel>=0.44", "packaging>=25.0"]
+requires = ["setuptools==76.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,13 +7,13 @@ name = "cellects"
 version = "0.1.0.dev1"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
-license = "GPL-3.0-only"
-license-files = ["LICENSE*"]
+license = { file = "LICENSE" }
 requires-python = ">=3.11,<3.13"
 authors = [{ name = "Aurèle Boussard" }]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
 ]
 
 dependencies = [
