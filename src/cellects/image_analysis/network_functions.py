@@ -14,7 +14,8 @@ import cv2
 import numpy as np
 import pandas as pd
 
-from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, get_line_points
+from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_until_no_holes
+from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.utilitarian import remove_coordinates
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
@@ -26,8 +27,8 @@ from skimage.segmentation import flood_fill
 from skimage.filters import frangi, sato, threshold_otsu
 from skimage.measure import perimeter
 from collections import deque
-from scipy.ndimage import distance_transform_edt
 from scipy.spatial.distance import cdist
+from scipy.ndimage import distance_transform_edt
 import networkx as nx
 
 # 8-connectivity neighbors
@@ -38,7 +39,7 @@ neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
 
 
-class NetworkDetection:
+class  NetworkDetection:
     def __init__(self, greyscale_image, possibly_filled_pixels, lighter_background, add_rolling_window=False, origin_to_add=None, best_result=None):
         self.greyscale_image = greyscale_image
         self.lighter_background = lighter_background
@@ -197,51 +198,125 @@ class NetworkDetection:
     def change_greyscale(self, img, c_space_dict):
         self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
 
-    def get_best_pseudopod_detection_method(self):
-        # This adds a lot of noise in the network instead of only detecting pseudopods
-        pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
-        pad_skeleton = pad_skeleton.astype(np.uint8)
+    def get_best_pseudopod_detection_method(self, pseudopod_min_size=50):
+        closed_im = close_until_no_holes(self.possibly_filled_pixels)
+        dist_trans = distance_transform_edt(closed_im)
 
-        unique_distances = np.unique(pad_distances)
-        counter = 1
-        while pad_skeleton.sum() > 1000:
-            counter += 1
-            width_threshold = unique_distances[counter]
-            pad_skeleton[pad_distances < width_threshold] = 0
-        self.best_result['width_threshold'] = width_threshold
-        potential_tips = np.nonzero(pad_skeleton)
+        dist_trans = dist_trans.max() - dist_trans
         if self.lighter_background:
-            max_tip_int = self.greyscale_image[potential_tips].max()
-            low_pixels = self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
+            grey = self.greyscale_image.max() - self.greyscale_image
+        if self.origin_to_add is not None:
+            dist_trans_ori = distance_transform_edt(1 - self.origin_to_add)
+            scored_im = dist_trans * dist_trans_ori * grey
         else:
-            min_tip_int = self.greyscale_image[potential_tips].min()
-            high_pixels = self.greyscale_image >= min_tip_int  # mean_tip_int
-
-        not_in_cell = 1 - self.possibly_filled_pixels
-        error_threshold = not_in_cell.sum() * 0.01
-        tolerances = np.arange(150, 0, - 1)
-        for t_i, tolerance in enumerate(tolerances):
-            potential_network = self.incomplete_network.copy()
-            for y, x in zip(potential_tips[0],
-                            potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
-                filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=tolerance)
-                filled = filled == 255
-                if (filled * not_in_cell).sum() > error_threshold:
-                    break
-                if self.lighter_background:
-                    filled *= low_pixels
-                else:
-                    filled *= high_pixels
-                potential_network[filled] = 1
-            # show(potential_network)
-            if not np.array_equal(potential_network, self.incomplete_network):
+            scored_im = (dist_trans**2) * grey
+        scored_im *= self.possibly_filled_pixels
+        scored_im = bracket_to_uint8_image_contrast(scored_im)
+        thresh = threshold_otsu(scored_im)
+        for i in range(255-thresh):
+            bin_im = (scored_im > thresh).astype(np.uint8)
+            SD = ShapeDescriptors(bin_im, ["circularity"])
+            if SD.circularity > 0.5:
                 break
-        self.best_result['tolerance'] = tolerance
+            thresh += 1
+        opened_bin_im = cv2.morphologyEx(bin_im, cv2.MORPH_OPEN, Ellipse((5, 5)).create().astype(np.uint8), iterations=1)
 
-        complete_network = potential_network * self.possibly_filled_pixels
-        complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
-        self.complete_network, stats, centers = cc(complete_network)
-        self.complete_network[self.complete_network > 1] = 0
+        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(opened_bin_im)
+        pseud_idx = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        potential_pseudopods = np.zeros_like(self.possibly_filled_pixels)
+        potential_pseudopods[np.isin(shapes, pseud_idx)] = 1
+
+        potential_pseudopods = cv2.dilate(potential_pseudopods, Ellipse((5, 5)).create().astype(np.uint8), iterations=1)
+        potential_pseudopods *= bin_im
+        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(potential_pseudopods)
+        true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        true_pseudopods = np.isin(shapes, true_pseudopods)
+        self.pseudopods = np.zeros_like(self.possibly_filled_pixels)
+        self.pseudopods[true_pseudopods] = 1
+        self.complete_network = self.incomplete_network.copy()
+        self.complete_network[true_pseudopods] = 1
+        self.incomplete_network *= (1 - self.pseudopods)
+
+        #
+        # new_bin_im = np.zeros_like(self.possibly_filled_pixels)
+        # for sh_i in range(1, nb):
+        #     sh_bin = shapes == sh_i
+        #     if sh_bin.sum() > pseudopod_min_size:
+        #
+        #         sh_im = np.zeros_like(self.possibly_filled_pixels)
+        #         sh_im[sh_bin] = scored_im[sh_bin]
+        #         for th_i in range(thresh + 1, 255):
+        #             bin_sh_im = sh_im > th_i
+        #             SD = ShapeDescriptors(bin_sh_im.astype(np.uint8), ["solidity"])
+        #             if SD.solidity > 0.5:
+        #                 new_bin_im[bin_sh_im] = 1
+        #                 break
+        # show(self.greyscale_image)
+        # show(new_bin_im)
+        # show(bin_im)
+        # np.ptp(scored_im[scored_im > thresh])
+        # show(scored_im > thresh)
+        # # apply edt, add flood_fill and keep only large
+        # potential_network = np.zeros_like(self.incomplete_network)
+        # y_coord, x_coord = np.nonzero(self.incomplete_network * (dist_trans))
+        # sample_size = np.min([len(y_coord), 500])
+        # samples = np.random.choice(len(y_coord), size=sample_size, replace=False)
+        # y_coord, x_coord = y_coord[samples], x_coord[samples]
+        # for y, x in zip(y_coord, x_coord):
+        #     filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=20)
+        #     filled_pix = filled == 255
+        #     SD = ShapeDescriptors(filled_pix, ["circularity"])
+        #     if SD.circularity > 0.2:
+        #         print(SD.circularity)
+        #         potential_network[filled_pix] = 1
+        # show(potential_network)
+        # potential_network.sum()
+        #
+        #
+        # # This adds a lot of noise in the network instead of only detecting pseudopods
+        # pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
+        # pad_skeleton = pad_skeleton.astype(np.uint8)
+        #
+        # unique_distances = np.unique(pad_distances)
+        # counter = 1
+        # while pad_skeleton.sum() > 1000:
+        #     counter += 1
+        #     width_threshold = unique_distances[counter]
+        #     pad_skeleton[pad_distances < width_threshold] = 0
+        # self.best_result['width_threshold'] = width_threshold
+        # potential_tips = np.nonzero(pad_skeleton)
+        # if self.lighter_background:
+        #     max_tip_int = self.greyscale_image[potential_tips].max()
+        #     low_pixels = self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
+        # else:
+        #     min_tip_int = self.greyscale_image[potential_tips].min()
+        #     high_pixels = self.greyscale_image >= min_tip_int  # mean_tip_int
+        #
+        # not_in_cell = 1 - self.possibly_filled_pixels
+        # error_threshold = not_in_cell.sum() * 0.01
+        # tolerances = np.arange(150, 0, - 1)
+        # for t_i, tolerance in enumerate(tolerances):
+        #     potential_network = self.incomplete_network.copy()
+        #     for y, x in zip(potential_tips[0],
+        #                     potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
+        #         filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=tolerance)
+        #         filled = filled == 255
+        #         if (filled * not_in_cell).sum() > error_threshold:
+        #             break
+        #         if self.lighter_background:
+        #             filled *= low_pixels
+        #         else:
+        #             filled *= high_pixels
+        #         potential_network[filled] = 1
+        #     # show(potential_network)
+        #     if not np.array_equal(potential_network, self.incomplete_network):
+        #         break
+        # self.best_result['tolerance'] = tolerance
+        #
+        # complete_network = potential_network * self.possibly_filled_pixels
+        # complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
+        # self.complete_network, stats, centers = cc(complete_network)
+        # self.complete_network[self.complete_network > 1] = 0
 
 
     def detect_pseudopods(self):
@@ -597,7 +672,7 @@ class EdgeIdentification:
                     branches_to_remove[vertex_to_remove] = True
                 # If that pixel became a tip connected to another vertex remove it from the skeleton
                 if sub_tips[3, 3]:
-                    if sub_vertices[2:5, 2:5]. np.sum() > 1:
+                    if sub_vertices[2:5, 2:5].sum() > 1:
                         self.pad_skeleton[Y, X] = 0
                         self.edge_pix_coord = np.delete(self.edge_pix_coord, np.all(self.edge_pix_coord[:, :2] == [Y, X], axis=1), 0)
                         vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]

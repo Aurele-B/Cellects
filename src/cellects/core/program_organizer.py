@@ -116,42 +116,13 @@ class ProgramOrganizer:
                 default_dicts = DefaultDicts()  # NEW
                 self.all = default_dicts.all  # NEW
                 self.vars = default_dicts.vars  # NEW
-
-            # pickle_rick = PickleRick(0)
-            # self.all = pickle_rick.read_file(ALL_VARS_PKL_FILE)
-            # self.vars = self.all['vars']
-            # logging.info("Success to load the parameters dictionaries from the Cellects folder")
-            # logging.info(os.getcwd())
         else:
             logging.info("Initialize default parameters")
             default_dicts = DefaultDicts()
             self.all = default_dicts.all
             self.vars = default_dicts.vars
-
-            # self.initialize_all_dict()
-            # self.initialize_vars_dict()
-
-        # if os.path.isfile(ALL_VARS_PKL_FILE):
-        #     try:
-        #         with open(ALL_VARS_PKL_FILE, 'rb') as fileopen:
-        #             self.all = pickle.load(fileopen)
-        #             self.vars = self.all['vars']
-        #             logging.info("Success to load the parameters dictionaries from the Cellects folder")
-        #     except EOFError:
-        #         logging.error("Pickle error, reinitialize the parameters dictionaries")
-        #         self.initialize_all_dict()
-        #         self.initialize_vars_dict()
-        #     # self.all = np.load(
-        #     #     soft_path + "\\all_vars.npy", allow_pickle='TRUE').item()
-        # else:
-        #     self.initialize_all_dict()
-        #     self.initialize_vars_dict()
-
         if self.all['cores'] == 1:
             self.all['cores'] = os.cpu_count() - 1
-        # if self.vars['min_ram_free'] == 0.87:
-        #     self.vars['min_ram_free'] = (
-        #         20709376) * 0.10
 
     def analyze_without_gui(self):
         # Eventually load "all" dir before calling this function
@@ -253,13 +224,15 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
-        lengths = vectorized_len(self.data_list)
-        if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
-            logging.error(f"File names present strong variations and cannot be correctly sorted.")
-        self.data_list = natsort.natsorted(self.data_list)
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
-        if len(self.data_list) == 0:
+        if len(self.data_list) > 0:
+            lengths = vectorized_len(self.data_list)
+            if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+                logging.error(f"File names present strong variations and cannot be correctly sorted.")
+            self.data_list = natsort.natsorted(self.data_list)
+            self.sample_number = self.all['first_folder_sample_number']
+        else:
             content = os.listdir()
             for obj in content:
                 if not os.path.isfile(obj):
@@ -272,16 +245,6 @@ class ProgramOrganizer:
             if isinstance(self.all['sample_number_per_folder'], int) or len(self.all['sample_number_per_folder']) == 1:
                 self.all['sample_number_per_folder'] = np.repeat(self.all['sample_number_per_folder'],
                                                               self.all['folder_number'])
-        else:
-            # if isinstance(self.all['sample_number_per_folder'], int):
-            #     self.sample_number = self.all['sample_number_per_folder']
-            # else:
-            self.sample_number = self.all['first_folder_sample_number']
-            # if len(self.all['folder_list']) > 0:
-            #     self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
-            # else:
-            #     self.all['folder_list'] = []
-            #     self.sample_number = self.all['sample_number_per_folder']
 
     def update_folder_id(self, sample_number, folder_name=""):
         os.chdir(Path(self.all['global_pathway']) / folder_name)

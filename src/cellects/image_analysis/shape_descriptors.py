@@ -14,7 +14,6 @@ import numpy as np
 from copy import deepcopy
 from cellects.utils.utilitarian import translate_dict
 from cellects.utils.formulas import get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis
-from cellects.image_analysis.morphological_operations import cc
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
@@ -694,7 +693,7 @@ class ShapeDescriptors:
         >>> print(SD.total_hole_area)
         0
         """
-        new_order, stats, centers = cc(1 - self.binary_image)
+        np, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
         self.total_hole_area = np.sum(stats[2:, 4])
 
     def get_solidity(self):

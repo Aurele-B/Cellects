@@ -16,7 +16,7 @@ It contains the following functions:
     - expand_until_one
     - expand_and_rate_until_one
     - expand_until_overlap
-    - expand_to_fill_holes
+    - dynamically_expand_to_fill_holes
     - expand_smalls_toward_biggest
     - change_thresh_until_one
     - Ellipse
@@ -28,6 +28,7 @@ import cv2
 import numpy as np
 from scipy.spatial import KDTree
 from numba import njit
+from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average
 from skimage.filters import threshold_otsu
 from skimage.measure import label
@@ -757,7 +758,33 @@ def get_radius_distance_against_time(binary_video, field):
     return distance_against_time, time_start, time_end
 
 
-def expand_to_fill_holes(binary_video, holes):
+def close_until_no_holes(binary_img):
+    # SD = ShapeDescriptors(binary_img, ["convex_hull"])
+    # SD.convex_hull
+    # test = np.zeros_like(binary_img)
+    SD = ShapeDescriptors(binary_img, ["euler_number"])
+    if SD.euler_number != 0:
+        sample_size = 25
+        y_coord, x_coord = np.nonzero(binary_img)
+        max_y, min_y, max_x, min_x = np.max(y_coord), np.min(y_coord), np.max(x_coord), np.min(x_coord)
+        kernel_max_size = np.min((max_y - min_y, max_x - min_x)) // 3
+        kernel_min_size = 3
+        while kernel_max_size - kernel_min_size > sample_size:
+            kernel_sizes = np.int32(np.logspace(np.log10(kernel_min_size), np.log10(kernel_max_size), num=sample_size))
+            for k_idx in range(len(kernel_sizes)):
+                # print(k_idx)
+                test_im = binary_img.copy()
+                test_im = cv2.morphologyEx(test_im, cv2.MORPH_CLOSE, Ellipse((kernel_sizes[k_idx], kernel_sizes[k_idx])).create().astype(np.uint8), iterations=1)
+                SD = ShapeDescriptors(test_im, ["euler_number"])
+                if SD.euler_number == 0:
+                    break
+            kernel_max_size= kernel_sizes[k_idx]
+            kernel_min_size = kernel_sizes[k_idx - 1]
+        binary_img = test_im
+    return binary_img
+
+
+def dynamically_expand_to_fill_holes(binary_video, holes):
     #first move should be the time at wich the first pixel hole could have been covered
     #it should ask how much time the shape made to cross a distance long enough to overlap all holes
     holes_contours = cv2.dilate(holes, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)

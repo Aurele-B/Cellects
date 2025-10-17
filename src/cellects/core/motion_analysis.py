@@ -106,7 +106,7 @@ from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.fractal_analysis import box_counting, prepare_box_counting
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
-                                                              make_gravity_field, expand_to_fill_holes)
+                                                              make_gravity_field, dynamically_expand_to_fill_holes)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
@@ -951,7 +951,7 @@ class MotionAnalysis:
                     # If some holes are not covered by now
                     if np.any(self.holes * (1 - self.binary[self.t, :, :])):
                         self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
-                            expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
+                            dynamically_expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
                         if holes_time_end is not None:
                             self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
                             self.binary[holes_time_end:(self.t + 1), :, :][
@@ -1269,6 +1269,7 @@ class MotionAnalysis:
                                           lighter_background=self.vars['lighter_background'],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
+                NetDet_fast.get_best_pseudopod_detection_method()
                 self.network_dynamics[t, ...] = NetDet_fast.complete_network
 
                 imtoshow = self.visu[t, ...]
