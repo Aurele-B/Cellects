@@ -531,7 +531,7 @@ class TestGetRadiusDistance(CellectsUnitTest):
 
 
 class TestExpandToFillHoles(CellectsUnitTest):
-    def test_expand_to_fill_holes(self):
+    def test_dynamically_expand_to_fill_holes(self):
         # Test 1: Verify expansion to fill holes
         binary_video = np.array(
             [[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -588,7 +588,7 @@ class TestExpandToFillHoles(CellectsUnitTest):
              [1, 1, 1],
              [0, 1, 0]], dtype=uint8
         )
-        expanded_video, holes_time_end, distance_against_time = expand_to_fill_holes(binary_video, holes)
+        expanded_video, holes_time_end, distance_against_time = dynamically_expand_to_fill_holes(binary_video, holes)
         expected_expanded_video = np.array([[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                           [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
