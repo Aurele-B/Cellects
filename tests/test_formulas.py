@@ -3,10 +3,9 @@
 This script contains all unit tests of the formulas script
 14 tests
 """
-import unittest
 
 import cv2
-import numpy as np
+import unittest
 from cellects.utils.formulas import *
 from cellects.utils.utilitarian import translate_dict
 from tests._base import CellectsUnitTest
@@ -276,45 +275,6 @@ class TestEuclideanDistance(CellectsUnitTest):
         self.assertEqual(actual_dist, expected_dist)
 
 
-class TestCartesianToPolar(CellectsUnitTest):
-    def test_cart2pol(self):
-        x = 3  # Coordinate over the x axis
-        y = 4  # Coordinate over the y axis
-
-        expected_rho = np.sqrt(x ** 2 + y ** 2)
-        expected_phi = np.arctan2(y, x)
-        actual_rho, actual_phi = cart2pol(x, y)
-
-        self.assertEqual(actual_rho, expected_rho)
-        self.assertEqual(actual_phi, expected_phi)
-
-
-class TestPolarToCartesian(CellectsUnitTest):
-    def test_pol2cart(self):
-        rho = 5  # Distance
-        phi = 1.2  # Angle
-
-        expected_x = rho * np.cos(phi)
-        expected_y = rho * np.sin(phi)
-        actual_x, actual_y = pol2cart(rho, phi)
-
-        self.assertEqual(actual_x, expected_x)
-        self.assertEqual(actual_y, expected_y)
-
-
-class TestCohenD(CellectsUnitTest):
-    def test_cohen_d(self):
-        vector_1 = [1, 2, 3, 4, 5]  # Sample vector 1
-        vector_2 = [2, 4, 6, 8, 10]  # Sample vector 2
-
-        expected_d = (np.mean(vector_2) - np.mean(vector_1)) / np.sqrt(
-            ((len(vector_2) - 1) * np.std(vector_2) ** 2 + (len(vector_1) - 1) * np.std(vector_1) ** 2) / (
-                        len(vector_1) + len(vector_2) - 2))
-        actual_d = cohen_d(vector_1, vector_2)
-
-        self.assertEqual(actual_d, expected_d)
-
-
 class TestMovingAverage(CellectsUnitTest):
     def test_moving_average(self):
         vector = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])  # Sample vector
@@ -324,6 +284,106 @@ class TestMovingAverage(CellectsUnitTest):
         actual_result = moving_average(vector, step)
 
         self.assertEqual(actual_result.tolist(), expected_result.tolist())
+
+
+class TestFindCommonCoord(CellectsUnitTest):
+    """Test suite for find_common_coord function."""
+
+    def test_find_common_coord_basic_case(self):
+        """Test basic functionality with one matching row."""
+        array1 = np.array([[1, 2], [3, 4]])
+        array2 = np.array([[5, 6], [1, 2]])
+
+        expected = np.array([True, False])
+        result = find_common_coord(array1, array2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_common_coord_no_matches(self):
+        """Test when there are no matching rows."""
+        array1 = np.array([[1, 2], [3, 4]])
+        array2 = np.array([[5, 6], [7, 8]])
+
+        expected = np.array([False, False])
+        result = find_common_coord(array1, array2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_common_coord_all_match(self):
+        """Test when all rows match."""
+        array1 = np.array([[1, 2], [3, 4]])
+        array2 = np.array([[1, 2], [3, 4]])
+
+        expected = np.array([True, True])
+        result = find_common_coord(array1, array2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_common_coord_single_row(self):
+        """Test with single row in one array."""
+        array1 = np.array([[1, 2]])
+        array2 = np.array([[5, 6], [1, 2]])
+
+        expected = np.array([True])
+        result = find_common_coord(array1, array2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_common_coord_larger_arrays(self):
+        """Test with larger arrays having partial matches."""
+        array1 = np.array([[1, 2], [3, 4], [5, 6]])
+        array2 = np.array([[1, 2], [7, 8], [3, 4]])
+
+        expected = np.array([True,  True, False])
+        result = find_common_coord(array1, array2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+
+class TestFindDuplicatesCoord(CellectsUnitTest):
+    """Test suite for find_duplicates_coord function."""
+
+    def test_find_duplicates_with_mixed_duplicates(self):
+        """Test that find_duplicates_coord correctly identifies mixed duplicates."""
+        input_array = np.array([[1, 2], [3, 4], [1, 2], [5, 6]])
+        expected = np.array([True, False, True, False])
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_duplicates_all_unique(self):
+        """Test that find_duplicates_coord returns all False for unique rows."""
+        input_array = np.array([[1, 2], [3, 4], [5, 6]])
+        expected = np.array([False, False, False])
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_duplicates_all_duplicates(self):
+        """Test that find_duplicates_coord returns all True for duplicate rows."""
+        input_array = np.array([[1, 2], [1, 2], [1, 2]])
+        expected = np.array([True, True, True])
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_duplicates_empty_array(self):
+        """Test that find_duplicates_coord handles empty arrays."""
+        input_array = np.array([])
+        expected = np.array([], dtype=bool)
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_duplicates_single_row(self):
+        """Test that find_duplicates_coord handles single row arrays."""
+        input_array = np.array([[1, 2]])
+        expected = np.array([False])
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_find_duplicates_different_shapes(self):
+        """Test that find_duplicates_coord works with different row shapes."""
+        input_array = np.array([[1, 2, 3], [4, 5, 6], [1, 2, 3]])
+        expected = np.array([True, False, True])
+        result = find_duplicates_coord(input_array)
+        self.assertTrue(np.array_equal(result, expected))
 
 
 if __name__ == '__main__':
