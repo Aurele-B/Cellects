@@ -195,7 +195,7 @@ def segment_with_lum_value(converted_video, basic_bckgrnd_values, l_threshold, l
     if lighter_background:
         l_threshold_over_time = l_threshold - (basic_bckgrnd_values[-1] - basic_bckgrnd_values)
         if np.all(np.logical_and(0 <= l_threshold_over_time, l_threshold_over_time <= 255)):
-            segmentation = less_along_first_axis(converted_video, l_threshold_over_time)
+            segmentation = less_along_first_axis(converted_video, l_threshold_over_time, np.zeros(converted_video.shape, dtype=bool))
         else:
             segmentation = np.zeros_like(converted_video)
             if l_threshold > 255:
@@ -204,7 +204,7 @@ def segment_with_lum_value(converted_video, basic_bckgrnd_values, l_threshold, l
     else:
         l_threshold_over_time = l_threshold - (basic_bckgrnd_values[-1] - basic_bckgrnd_values)
         if np.all(np.logical_and(0 <= l_threshold_over_time, l_threshold_over_time <= 255)):
-            segmentation = greater_along_first_axis(converted_video, l_threshold_over_time)
+            segmentation = greater_along_first_axis(converted_video, l_threshold_over_time, np.zeros(converted_video.shape, dtype=bool))
         else:
             segmentation = np.zeros_like(converted_video)
             if l_threshold > 255:

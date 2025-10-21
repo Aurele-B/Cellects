@@ -1,5 +1,31 @@
 #!/usr/bin/env python3
-"""Contains the class: ProgressivelyAddDistantShapes"""
+
+"""
+Progressively Add Distant Shapes Module
+
+This module contains the `ProgressivelyAddDistantShapes` class which is designed to analyze
+and connect shapes in binary images based on their size and distance from a main shape. It can
+progressively grow bridges between shapes in binary video sequences, with growth speeds that depend on neighboring growth speed.
+
+The module provides functionality to:
+- Check and adjust main shape labels
+- Consider shapes based on size criteria
+- Connect shapes that meet distance and size requirements
+- Expand small shapes toward the main shape
+- Modify past analysis by progressively filling pixels based on shape growth patterns
+
+Classes:
+    ProgressivelyAddDistantShapes: Main class for analyzing and connecting shapes in binary images.
+
+Functions:
+    make_gravity_field: Creates a gravity field around the main shape.
+    CompareNeighborsWithValue: Compares neighbor values in an array.
+    get_radius_distance_against_time: Calculates the relationship between distance and time for shape expansion.
+
+This module is particularly useful in image analysis tasks where shapes need to be tracked and connected over time based on spatial relationships.
+"""
+
+
 from copy import deepcopy
 import numpy as np
 import cv2
@@ -8,6 +34,59 @@ from cellects.image_analysis.morphological_operations import cross_33, make_grav
 
 
 class ProgressivelyAddDistantShapes:
+    """
+    This class checks new potential shapes sizes and distance to a main shape.
+
+    If these sizes and distance match requirements, create a bridge between
+    these and the main shape. Then, the `modify_past_analysis` method progressively grows that bridge
+    in a binary video. Bridge growth speed depends on neighboring growth speed.
+
+    Attributes
+    ----------
+    new_order : numpy.ndarray
+        A binary image of all shapes detected at t.
+    main_shape : numpy.ndarray
+        A binary image of the main shape (1) at t - 1.
+    stats : numpy.ndarray
+        Statistics about the connected components found in `new_order`.
+    max_distance : int
+        The maximal distance for a shape from new_potentials to get bridged.
+    gravity_field : numpy.ndarray
+        The gravity field used for connecting shapes.
+
+    Parameters
+    ----------
+    new_potentials : numpy.ndarray
+        A binary image of all shapes detected at t.
+    previous_shape : numpy.ndarray
+        A binary image of the main shape (1) at t - 1.
+    max_distance : int
+        The maximal distance for a shape from new_potentials to get bridged.
+
+    Methods
+    -------
+    check_main_shape_label(previous_shape)
+        Check if the main shape label is correctly set.
+    consider_shapes_sizes(min_shape_size=None, max_shape_size=None)
+        Consider shapes sizes and eliminate too small or large ones.
+    connect_shapes(only_keep_connected_shapes, rank_connecting_pixels, intensity_valley=None)
+        Connect shapes that are within the maximal distance and of appropriate size.
+    expand_smalls_toward_main()
+        Expand small shapes toward the main shape.
+
+    Example
+    -------
+    >>> new_potentials = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    >>> previous_shape = np.array([[0, 1, 0], [1, 0, 0], [0, 1, 0]])
+    >>> max_distance = 5
+    >>> bridge_shapes = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
+    >>> bridge_shapes.consider_shapes_sizes(min_shape_size=2, max_shape_size=10)
+    >>> bridge_shapes.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
+    >>> print(bridge_shapes.expanded_shape)
+    [[0 1 0]
+     [1 1 1]
+     [0 1 0]]
+    """
     def __init__(self, new_potentials, previous_shape, max_distance):
         """
         This class check new potential shapes sizes and distance to a main

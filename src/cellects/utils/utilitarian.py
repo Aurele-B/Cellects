@@ -1,3 +1,30 @@
+#!/usr/bin/env python3
+"""
+Utility module with array operations, path manipulation, and progress tracking.
+
+This module provides performance-optimized utilities for numerical comparisons using Numba,
+path string truncation, dictionary filtering, and iteration progress monitoring. It is designed
+for applications requiring efficient data processing pipelines with both low-level optimization
+and human-readable output formatting.
+
+Classes
+-------
+PercentAndTimeTracker : Track iteration progress with time estimates and percentage completion
+
+Functions
+---------
+greater_along_first_axis : Compare arrays element-wise along first axis (>) using Numba
+less_along_first_axis    : Compare arrays element-wise along first axis (<) using Numba
+translate_dict           : Convert standard dict to typed dict, filtering non-string values
+reduce_path_len          : Truncate long path strings with ellipsis insertion
+find_nearest             : Find array element closest to target value
+
+Notes
+-----
+Numba-optimized functions (greater_along_first_axis and less_along_first_axis) require
+input arrays of identical shape. String manipulation utilities include automatic type conversion.
+The progress tracker records initialization time for potential performance analysis.
+"""
 
 import numpy as np
 from timeit import default_timer
@@ -9,122 +36,83 @@ vectorized_len = np.vectorize(len)
 
 
 @njit()
-def equal_along_first_axis(array_in_1, array_in_2):
+def greater_along_first_axis(array_in_1, array_in_2, array_out):
     """
-    Compare two arrays element-wise along the first axis and return a boolean array where elements are equal.
+    Compare two arrays along the first axis and store the result in a third array.
 
-    This function checks if corresponding elements in two arrays along the first axis
-    are equal, returning a boolean array of the same shape as `array_in_1`.
+    This function performs a comparison between two input arrays
+    along their first axis and stores the result in a third array. The comparison is
+    made to determine which elements of each row of the first array are greater than
+    the elements(s) corresponding to that row in the second array.
 
     Parameters
     ----------
-    array_in_1 : ndarray
-        First array to compare.
-    array_in_2 : ndarray
-        Second array to compare.
+    array_in_1 : numpy.ndarray
+        First input array.
+    array_in_2 : numpy.ndarray
+        Second input array. Must have the same shape as `array_in_1`.
+    array_out : numpy.ndarray
+        Output array where the result of the comparison will be stored.
+        Must have the same shape as `array_in_1`.
 
     Returns
     -------
-    ndarray
-        Boolean array indicating equality of elements along the first axis.
-        Has the same shape as `array_in_1` and dtype of `np.bool_`.
-
-    Raises
-    ------
-    ValueError
-        If the shape of `array_in_1` and `array_in_2` do not match along all axes
-        except the first.
+    numpy.ndarray
+        A boolean array where each element is `True` if the corresponding
+        element in `array_in_1` is greater than the corresponding element
+        in `array_in_2`, and `False` otherwise.
 
     Examples
     --------
-    >>> array_in_1 = np.array([[1, 2], [3, 4]])
-    >>> array_in_2 = np.array([[1, 2], [0, 4]])
-    >>> equal_along_first_axis(array_in_1, array_in_2)
-    array([[ True,  True],
-           [False,  True]])
-    >>> equal_along_first_axis(array_in_1, array_in_2).dtype
-    dtype('bool')
+    >>> array_in_1 = np.array([[2, 4], [5, 8]])
+    >>> array_in_2 = np.array([3, 6])
+    >>> array_out = greater_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+    >>> print(array_out)
+    [[False  True]
+     [False  True]]
+
     """
-    array_out = np.zeros_like(array_in_1)
-    for i, value in enumerate(array_in_2):
-        array_out[i, ...] = array_in_1[i, ...] == value
-    return array_out
-
-
-@njit()
-def greater_along_first_axis(array_in_1, array_in_2):
-    """
-    Compare two arrays element-wise along the first axis and return a boolean array,
-    where each element indicates whether the corresponding element in `array_in_1`
-    is greater than in `array_in_2`.
-
-    Parameters
-    ----------
-    array_in_1 : array_like
-        The first input array.
-    array_in_2 : array_like
-        The second input array.
-
-    Returns
-    -------
-    out : ndarray, bool
-        A boolean array indicating where `array_in_1` elements are greater than
-        corresponding `array_in_2` elements.
-
-    Examples
-    --------
-    >>> array1 = np.array([[1, 2], [3, 4]])
-    >>> array2 = np.array([[0, 1], [2, 3]])
-    >>> result = greater_along_first_axis(array1, array2)
-    >>> print(result)  # doctest: +NORMALIZE_WHITESPACE
-    [[ True False]
-     [ True False]]
-    """
-    array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] > value
     return array_out
 
 
 @njit()
-def less_along_first_axis(array_in_1, array_in_2):
+def less_along_first_axis(array_in_1, array_in_2, array_out):
     """
-    Compare two arrays element-wise along the first axis, returning a boolean array.
+    Compare two arrays along the first axis and store the result in a third array.
 
-    This function performs an element-wise comparison between two arrays along
-    the first axis and returns a boolean array. The comparison is less than, i.e.,
-    element-wise `array_in_1 < array_in_2`.
+    This function performs a comparison between two input arrays
+    along their first axis and stores the result in a third array. The comparison is
+    made to determine which elements of each row of the first array are lesser than
+    the elements(s) corresponding to that row in the second array.
 
     Parameters
     ----------
     array_in_1 : numpy.ndarray
-        The first input array.
+        First input array.
     array_in_2 : numpy.ndarray
-        The second input array.
+        Second input array. Must have the same shape as `array_in_1`.
+    array_out : numpy.ndarray
+        Output array where the result of the comparison will be stored.
+        Must have the same shape as `array_in_1`.
 
     Returns
     -------
-    numpy.ndarray[bool]
-        A boolean array where each element is the result of the comparison
-        `array_in_1[i, ...] < array_in_2[i, ...]` for all indices `i` along the first axis.
-
-    Notes
-    -----
-    This function uses Numba's `@njit` decorator for performance.
+    numpy.ndarray
+        A boolean array where each element is `True` if the corresponding
+        element in `array_in_1` is lesser than the corresponding element
+        in `array_in_2`, and `False` otherwise.
 
     Examples
     --------
-    >>> result = less_along_first_axis(np.array([[1, 2], [3, 4]]), np.array([2, 2]))
-    >>> print(result)
-    [[ True  True]
-     [False False]]
-
-    >>> result = less_along_first_axis(np.array([[5, -1], [-3, 0]]), np.array([4.9, 2]))
-    >>> print(result)
-    [[False False]
-     [ True True]]
+    >>> array_in_1 = np.array([[2, 4], [5, 8]])
+    >>> array_in_2 = np.array([3, 6])
+    >>> array_out = less_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+    >>> print(array_out)
+    [[ True False]
+     [ True False]]
     """
-    array_out = np.zeros_like(array_in_1)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] < value
     return array_out
@@ -148,13 +136,14 @@ def translate_dict(old_dict):
     --------
     >>> result = translate_dict({'a': 1., 'b': 'string', 'c': 2.0})
     >>> print(result)
-    DictType[unicode_type,float64]<iv=None>({a: 1.0, c: 2.0})
+    {a: 1.0, c: 2.0}
     """
     numba_dict = Dict()
     for k, v in old_dict.items():
         if not isinstance(v, str):
             numba_dict[k] = v
     return numba_dict
+
 
 def reduce_path_len(pathway, to_start, from_end):
     """
@@ -420,53 +409,44 @@ def insensitive_glob(pattern):
 
 def smallest_memory_array(array_object, array_type='uint'):
     """
-    Convert the given array object to the smallest possible memory type.
-
-    This function determines the optimal data type for an array
-    based on its maximum value and converts it to that data type.
+    Convert input data to the smallest possible NumPy array type that can hold it.
 
     Parameters
     ----------
     array_object : numpy.ndarray or list of lists
-        The input array object which can be either a NumPy array or a list of lists.
-
-    array_type : str, optional
-        The type of data to which the input array should be converted. Should be either 'uint' (default) or any other NumPy data type.
+        The input data to be converted.
+    array_type : str, optional, default is 'uint'
+        The type of NumPy data type to use ('uint').
 
     Returns
     -------
     numpy.ndarray
-        The converted array object with the smallest possible memory type.
-
-    Raises
-    ------
-    TypeError
-        If the input `array_object` is not a NumPy array or list of lists.
-
-    ValueError
-        If the specified `array_type` is not supported by NumPy.
-
-    Notes
-    -----
-    This function uses NumPy's `iinfo` to determine the information about the integer data types and finds the smallest
-    data type that can store all values in the array without overflow.
+        A NumPy array of the smallest data type that can hold all values in `array_object`.
 
     Examples
     --------
-    >>> arr = np.array([[1, 2], [3, 4]])
-    >>> result = smallest_memory_array(arr)
-    >>> print(result.dtype)
-    uint8
-
     >>> import numpy as np
-    >>> arr = np.array([[1000, 2000], [3000, 4000]])
-    >>> result = smallest_memory_array(arr)
-    >>> print(result.dtype)
-    uint16
+    >>> array = [[1, 2], [3, 4]]
+    >>> smallest_memory_array(array)
+    array([[1, 2],
+           [3, 4]], dtype=uint8)
+
+    >>> array = [[1000, 2000], [3000, 4000]]
+    >>> smallest_memory_array(array)
+    array([[1000, 2000],
+           [3000, 4000]], dtype=uint16)
+
+    >>> array = [[2**31, 2**32], [2**33, 2**34]]
+    >>> smallest_memory_array(array)
+    array([[         2147483648,          4294967296],
+           [         8589934592,        17179869184]], dtype=uint64)
     """
+    if isinstance(array_object, list):
+        array_object = np.array(array_object)
     if isinstance(array_object, np.ndarray):
         value_max = array_object.max()
     else:
+
         if len(array_object[0]) > 0:
             value_max = np.max((array_object[0].max(), array_object[1].max()))
         else:

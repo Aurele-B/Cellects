@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
-""" This script contains formula functions,
-they mainly are simple mathematical expressions, used many times by Cellects.
-This is part of the lower level of the software. When possible, these functions are optimized using Numba's decorator
-@njit.
-    - linear_model
-    - get_divisor
-    - eudist
-    - cart2pol
-    - pol2cart
-    - get_peak_number
-    - cohen_d_95
-    - cohen_d
-    - SlopeDeviation
-    - acf_fft
-    - moving_average
-    - max_cum_sum_from_rolling_window
+"""
+Optimized mathematical and image processing utilities for Cellects.
+
+This module provides a collection of performance-optimized functions primarily used for numerical array operations,
+statistical calculations, and basic image transformation tasks. All implementations leverage NumPy for numerical
+computations and are accelerated via Numba's JIT compilation (`@njit`) to ensure low-latency execution in production workflows.
+Functions include statistical moment analysis, coordinate-based variance calculation, and pixel-level normalization routines.
+
+Functions:
+    sum_of_abs_differences: Calculate element-wise absolute differences between arrays.
+    linear_model: Execute affine transformations on numerical data.
+    get_power_dists: Generate spatial distribution patterns for image coordinates.
+    get_var: Compute weighted centroids using moments and pixel positions.
+    get_skewness_kurtosis: Derive skewness/kurtosis from statistical moments.
+    bracket_to_uint8_image_contrast: Normalize images to 8-bit unsigned integer format.
+
+Notes:
+- All Numba-accelerated functions require NumPy arrays as inputs
+- Division-by-zero operations will raise exceptions for invalid input shapes/moments
+- Image processing functions expect binary (boolean/int8) input matrices
 """
 from copy import deepcopy
 from numba import njit
@@ -504,176 +508,6 @@ def eudist(v1, v2):
     return dist
 
 
-def cart2pol(x, y):
-    """
-    Convert Cartesian coordinates to polar coordinates.
-
-    Given kartesian coordinates x and y, return the corresponding
-    polar coordinates rho and phi. This is done by using the formula for
-    conversion from Cartesian to Polar.
-
-    Parameters
-    ----------
-    x : float
-        The x-coordinate of the point in Cartesian space.
-    y : float
-        The y-coordinate of the point in Cartesian space.
-
-    Returns
-    -------
-    tuple[float, float]
-        A tuple containing (rho, phi) where rho is the radial distance
-        and phi is the angle in radians.
-
-    Examples
-    --------
-    >>> cart2pol(1, 0)
-    (1.0, 0.0)
-
-    >>> cart2pol(0, 1)
-    (1.0, 1.5707963267948966)
-
-    >>> cart2pol(-1, 0)
-    (1.0, 3.141592653589793)
-    """
-    rho = np.sqrt(x**2 + y**2)
-    phi = np.arctan2(y, x)
-    return(rho, phi)
-
-
-def pol2cart(rho, phi):
-    """
-    Convert from polar to Cartesian coordinates.
-
-    Given a point in polar coordinates (rho, phi), this function
-    calculates the corresponding Cartesian coordinates (x, y).
-
-    Parameters
-    ----------
-    rho : float
-        The radius in polar coordinates.
-    phi : float
-        The angle in radians in polar coordinates.
-
-    Returns
-    -------
-    tuple[float, float]
-        A tuple containing the x and y coordinates in Cartesian
-        representation.
-
-    Notes
-    -----
-    This function assumes the input values for phi are in radians.
-    If they are provided in degrees, convert them using
-    `np.radians(phi)` before calling this function.
-
-    Examples
-    --------
-    >>> pol2cart(1.0, 0)
-    (1.0, 0.0)
-
-    >>> pol2cart(5.0, np.pi / 4)
-    (3.5355339059327378, 3.5355339059327373)
-    """
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return x, y
-
-
-def cohen_d_95(vector_1, vector_2, nbboot=100000):
-    """
-    Calculate Cohen's d with a 95% confidence interval through bootstrapping.
-
-    Performs bootstrapping on the provided data vectors to calculate Cohen's d
-    effect size along with its 95% confidence interval.
-
-    Parameters
-    ----------
-    vector_1 : array_like
-        The first data vector.
-    vector_2 : array_like
-        The second data vector.
-    nbboot : int, optional
-        Number of bootstrap iterations. Default is ``100000``.
-
-    Returns
-    -------
-    ndarray
-        An array containing Cohen's d effect size and its 95% confidence interval.
-        The first element is the Cohen's d value, followed by the lower and upper
-        bounds of the confidence interval.
-
-    Raises
-    ------
-    ValueError
-        If `vector_1` and `vector_2` are not of the same length.
-    TypeError
-        If `vector_1` or `vector_2` are not array-like.
-
-    Notes
-    -----
-    This function uses bootstrapping to estimate the 95% confidence interval for
-    Cohen's d. The calculation of Cohen’s d assumes equal population variances.
-
-    Examples
-    --------
-    >>> vector_1 = np.array([2.3, 3.4, 5.6, 7.8])
-    >>> vector_2 = np.array([1.1, 4.3, 9.8])
-    >>> result = cohen_d_95(vector_1, vector_2)
-    >>> print(result)
-    [ 0.73864592 -1.46522    1.88307 ]
-    """
-    boot = np.zeros(nbboot, dtype=int)
-    n1 = len(vector_1)
-    n2 = len(vector_2)
-    for i in np.arange(nbboot):
-        v1bis = np.random.choice(vector_1, size=n1, replace=True)
-        v2bis = np.random.choice(vector_2, size=n2, replace=True)
-        boot[i] = cohen_d(v1bis,v2bis)
-    effect_low_top = np.append(cohen_d(vector_1, vector_2), np.quantile(boot, (0.025, 0.975)))
-    return effect_low_top
-
-
-def cohen_d(vector_1, vector_2):
-    """
-    Calculate Cohen's d effect size between two independent groups.
-
-    Parameters
-    ----------
-    vector_1 : array_like
-        First group's data.
-    vector_2 : array_like
-        Second group's data.
-
-    Returns
-    -------
-    float
-        Cohen's d effect size statistic between the two groups.
-
-    Notes
-    -----
-    Cohen's d is a measure of the difference between two means in terms
-    of standard deviation units. It can be used to compare the mean difference
-    between two groups, normalized by pooled standard deviation.
-
-    Examples
-    --------
-    >>> vector_1 = [2.3, 4.5, 6.7]
-    >>> vector_2 = [5.3, 7.8, 9.1]
-    >>> result = cohen_d(vector_1, vector_2)
-    >>> print(result)
-    0.864
-    """
-    m1 = np.mean(vector_1)
-    m2 = np.mean(vector_2)
-    s1 = np.std(vector_1)
-    s2 = np.std(vector_2)
-    n1 = len(vector_1)
-    n2 = len(vector_2)
-    spooled = np.sqrt(((n2 - 1) * s2 ** 2 + (n1 - 1) * s1 ** 2) / (n1 + n2 - 2))
-    return (m2 - m1) / spooled
-
-
 def moving_average(vector, step):
     """
     Calculate the moving average of a given vector with specified step size.
@@ -731,42 +565,6 @@ def moving_average(vector, step):
     return vector
 
 
-def max_cum_sum_from_rolling_window(side_length, window_step):
-    """
-    Calculate the maximum cumulative sum from a rolling window.
-
-    Parameters
-    ----------
-    side_length : int
-        The length of the side of the square window.
-    window_step : int
-        The step size for rolling the window.
-
-    Returns
-    -------
-    int
-        The maximum cumulative sum calculated from the rolling window.
-
-    Raises
-    ------
-    ValueError
-        If `side_length` or `window_step` are not positive integers.
-
-    Notes
-    -----
-    - The function assumes that `side_length` and `window_step` are both positive integers.
-    - This function uses NumPy's ceiling function to handle non-integer division results.
-
-    Examples
-    --------
-    >>> result = max_cum_sum_from_rolling_window(10, 2)
-    >>> print(result)
-    9
-
-    """
-    return np.square(np.ceil(side_length / window_step))
-
-
 def find_common_coord(array1, array2):
     """
     Find common coordinates between two arrays.
@@ -776,9 +574,9 @@ def find_common_coord(array1, array2):
 
     Parameters
     ----------
-    array1 : array_like
+    array1 : array_like of type int
         First 2D array of shape (M, N).
-    array2 : array_like
+    array2 : array_like of type int
         Second 2D array of shape (P, N).
 
     Returns
@@ -824,58 +622,3 @@ def find_duplicates_coord(array1):
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
 
-def remove_excedent_duplicates_coord(array1):
-    """
-    Remove duplicate rows in a 2D array based on coordinate order.
-
-    This function removes all but the first occurrence of duplicate rows in a 2D array.
-    The removal is based on the order of appearance (coordinates) in the input array.
-
-    Parameters
-    ----------
-    array1 : numpy.ndarray
-        A 2D array of shape (n, m) containing rows to be deduplicated.
-
-    Other Parameters
-    ----------------
-    None
-
-    Returns
-    -------
-    numpy.ndarray
-        A 2D array with duplicate rows removed.
-
-    Raises
-    ------
-    None
-
-    Notes
-    -----
-    This function uses NumPy's `np.unique` for performance and efficiency.
-
-    Examples
-    --------
-    >>> array1 = np.array([[1, 2], [3, 4], [1, 2]])
-    >>> result = remove_excedent_duplicates_coord(array1)
-    >>> print(result)
-    [[1 2]
-     [3 4]]
-
-    >>> array1 = np.array([[5, 6], [7, 8], [9, 0], [5, 6]])
-    >>> result = remove_excedent_duplicates_coord(array1)
-    >>> print(result)
-    [[5 6]
-     [7 8]
-     [9 0]]
-    """
-    # np.unique(array1, axis=0)
-    unique_rows, inverse_indices = np.unique(array1, axis=0, return_inverse=True)
-    to_remove = []
-    seen_indices = []
-    for i in inverse_indices:
-        if i in seen_indices:
-            to_remove.append(True)
-        else:
-            to_remove.append(False)
-            seen_indices.append(i)
-    return np.delete(array1, to_remove, 0)
