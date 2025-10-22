@@ -103,10 +103,10 @@ from psutil import virtual_memory
 
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
-from cellects.image_analysis.fractal_analysis import box_counting, prepare_box_counting
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
-                                                              make_gravity_field, dynamically_expand_to_fill_holes)
+                                                              make_gravity_field, dynamically_expand_to_fill_holes,
+                                                              box_counting_dimension, prepare_box_counting)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
@@ -1568,7 +1568,7 @@ class MotionAnalysis:
                                                                                        zoom_step=self.vars[
                                                                                            'fractal_zoom_step'],
                                                                                        contours=True)
-                                    box_count_dim, r_value, box_nb = box_counting(zoomed_binary, side_lengths)
+                                    box_count_dim, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
 
                                     if np.any(inner_network):
                                         zoomed_binary, side_lengths = prepare_box_counting(inner_network,
@@ -1577,7 +1577,7 @@ class MotionAnalysis:
                                                                                            zoom_step=self.vars[
                                                                                                'fractal_zoom_step'],
                                                                                            contours=False)
-                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(
+                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting_dimension(
                                             zoomed_binary, side_lengths)
                                     else:
                                         inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = 0, 0, 0
@@ -1638,19 +1638,19 @@ class MotionAnalysis:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars[
                         'fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
-                        t, 3] = box_counting(zoomed_binary, side_lengths)
+                        t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
                     zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...],
                                                                        side_threshold=self.vars[
                                                                            'fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'],
                                                                        contours=False)
                     box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[
-                        t, 6] = box_counting(zoomed_binary, side_lengths)
+                        t, 6] = box_counting_dimension(zoomed_binary, side_lengths)
                 else:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
                                                                        side_threshold=self.vars['fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
-                    box_counting_dimensions[t, :] = box_counting(zoomed_binary, side_lengths)
+                    box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
 
             if self.vars['network_analysis']:
                 self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]

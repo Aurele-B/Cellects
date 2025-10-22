@@ -193,7 +193,7 @@ class  NetworkDetection:
         else:
             thresh_otsu = threshold_otsu(filtered_result)
             binary_image = filtered_result > thresh_otsu
-        return binary_image
+        self.incomplete_network = binary_image * self.possibly_filled_pixels
 
     def change_greyscale(self, img, c_space_dict):
         self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
@@ -216,7 +216,7 @@ class  NetworkDetection:
         for i in range(255-thresh):
             bin_im = (scored_im > thresh).astype(np.uint8)
             SD = ShapeDescriptors(bin_im, ["circularity"])
-            if SD.circularity > 0.5:
+            if SD.descriptors["circularity"] > 0.5:
                 break
             thresh += 1
         opened_bin_im = cv2.morphologyEx(bin_im, cv2.MORPH_OPEN, Ellipse((5, 5)).create().astype(np.uint8), iterations=1)
@@ -248,7 +248,7 @@ class  NetworkDetection:
         #         for th_i in range(thresh + 1, 255):
         #             bin_sh_im = sh_im > th_i
         #             SD = ShapeDescriptors(bin_sh_im.astype(np.uint8), ["solidity"])
-        #             if SD.solidity > 0.5:
+        #             if SD.descriptors["solidity"] > 0.5:
         #                 new_bin_im[bin_sh_im] = 1
         #                 break
         # show(self.greyscale_image)

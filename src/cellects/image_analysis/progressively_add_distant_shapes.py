@@ -78,7 +78,7 @@ class ProgressivelyAddDistantShapes:
     -------
     >>> new_potentials = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
     >>> previous_shape = np.array([[0, 1, 0], [1, 0, 0], [0, 1, 0]])
-    >>> max_distance = 5
+    >>> max_distance = 2
     >>> bridge_shapes = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
     >>> bridge_shapes.consider_shapes_sizes(min_shape_size=2, max_shape_size=10)
     >>> bridge_shapes.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
@@ -110,7 +110,30 @@ class ProgressivelyAddDistantShapes:
         self.check_main_shape_label(previous_shape)
 
     def check_main_shape_label(self, previous_shape):
+        """
+        Check and update main shape label based on previous shape data when multiple shapes exist in new_order.
 
+        This method ensures consistent labeling of the primary shape (labeled 1) in `new_order` by analyzing overlaps
+        with labels from a prior segmentation step. If multiple candidate labels exist for the main shape, it selects
+        the one with the highest pixel count and swaps its label with '1' in both `new_order` and associated statistics.
+
+        Parameters
+        ----------
+        previous_shape
+            Input array representing previous segmentation labels used to identify the primary shape when
+            `new_order` contains multiple potential candidates (labels > 1).
+
+        Examples
+        --------
+        >>> new_potentials = np.array([[1, 1, 0], [0, 0, 0], [0, 1, 1]])
+        >>> previous_shape = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]])
+        >>> max_distance = 2
+        >>> pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
+        >>> pads.main_shape
+        array([[0, 0, 0],
+               [0, 0, 0],
+               [0, 1, 1]], dtype=uint8)
+        """
         if np.any(self.new_order > 1):
             # If there is at least one pixel of the previous shape that is not among pixels labelled 1,
             # clarify who's main shape
@@ -145,6 +168,32 @@ class ProgressivelyAddDistantShapes:
             self.main_shape[np.nonzero(self.new_order)] = 1
 
     def consider_shapes_sizes(self, min_shape_size=None, max_shape_size=None):
+        """Filter shapes based on minimum and maximum size thresholds.
+
+        This method adjusts `new_order` by excluding indices of shapes that are either
+        smaller than `min_shape_size` or larger than `max_shape_size`. The main shape index
+        (1) is preserved even if it meets the filtering criteria. When no constraints apply,
+        the expanded shape defaults to the main shape.
+
+        Parameters
+        ----------
+        min_shape_size : int, optional
+            Minimum allowed size for shapes (compared against 4th column of `self.stats`).
+        max_shape_size : int, optional
+            Maximum allowed size for shapes (compared against 4th column of `self.stats`).
+
+        Examples
+        --------
+        >>> new_potentials = np.array([[1, 1, 0], [0, 0, 0], [0, 1, 1]])
+        >>> previous_shape = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]])
+        >>> max_distance = 2
+        >>> pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
+        >>> pads.consider_shapes_sizes(min_shape_size=2, max_shape_size=10)
+        >>> pads.new_order
+        array([[2, 2, 0],
+       [0, 0, 0],
+       [0, 1, 1]], dtype=uint8)
+        """
         if self.max_distance != 0:
             # Eliminate too small and too large shapes
             if min_shape_size is not None or max_shape_size is not None:
@@ -165,6 +214,38 @@ class ProgressivelyAddDistantShapes:
             self.expanded_shape = self.main_shape
 
     def connect_shapes(self, only_keep_connected_shapes, rank_connecting_pixels, intensity_valley=None):
+        """Connects small shapes to a main shape using gravity field expansion and filtering based on distance and intensity conditions.
+
+        Extended Description
+        --------------------
+        When distant shapes of sufficient size are present, this method generates a gravity field around the main shape. It then expands smaller shapes toward the main one according to gradient values. If shapes fall within the gravity field range:
+        - Shapes not connected to the main one (via `only_keep_connected_shapes`) are filtered out.
+        - Connecting pixels between small and main shapes (via `rank_connecting_pixels`) receive distance-based ranking.
+
+        Parameters
+        ----------
+        only_keep_connected_shapes : bool
+            If True, filters expanded shapes to retain only those connected directly to the main shape.
+        rank_connecting_pixels : bool
+            If True, ranks connecting pixel extensions based on distance between small/main shapes.
+        intensity_valley : array-like, optional
+            Optional intensity values defining a valley region for gravity field calculation. Default is None.
+
+        Attributes
+        ----------
+        gravity_field : ndarray or array-like
+            Stores the computed gravity field used to guide shape expansion.
+        expanded_shape : ndarray of dtype uint8
+            Final combined shape after processing; contains main and connected small shapes.
+        Examples
+        --------
+        >>> new_potentials = np.array([[1, 1, 0], [0, 0, 0], [0, 1, 1]])
+        >>> previous_shape = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]])
+        >>> max_distance = 2
+        >>> pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
+        >>> pads.connect_shapes(only_keep_connected_shapes=False, rank_connecting_pixels=True)
+        >>> pads.expanded_shape
+        """
         # If there are distant shapes of the good size, run the following:
         if self.max_distance != 0 and np.any(self.new_order > 1):
             # The intensity valley method does not work yet, don't use it
