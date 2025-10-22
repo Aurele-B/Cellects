@@ -1,13 +1,27 @@
-"""
-    Shape descriptors: The following names, lists and computes all the variables describing a shape in a binary image. 
-    If you want to allow the software to compute another variable:
-    1) In the following dicts and list, you need to:
-            add the variable name and whether to compute it (True/False) by default
-    2) In the ShapeDescriptors class:
-            add a method to compute that variable 
-    3) In the init method of the ShapeDescriptors class
-        attribute a None value to the variable that store it
-        add a if condition in the for loop to compute that variable when its name appear in the wanted_descriptors_list
+"""Module for computing shape descriptors from binary images.
+
+This module provides a framework for calculating various geometric and statistical
+descriptors of shapes in binary images through configurable dictionaries and a core class.
+Supported metrics include area, perimeter, axis lengths, orientation, and more.
+Descriptor computation is controlled via category dictionaries (e.g., `descriptors_categories`)
+and implemented as methods in the ShapeDescriptors class.
+
+Classes
+-------
+ShapeDescriptors : Class to compute various descriptors for a binary image
+
+Notes
+-----
+Relies on OpenCV and NumPy for image processing operations.
+Shape descriptors: The following names, lists and computes all the variables describing a shape in a binary image.
+If you want to allow the software to compute another variable:
+1) In the following dicts and list, you need to:
+        add the variable name and whether to compute it (True/False) by default
+2) In the ShapeDescriptors class:
+        add a method to compute that variable
+3) In the init method of the ShapeDescriptors class
+    attribute a None value to the variable that store it
+    add a if condition in the for loop to compute that variable when its name appear in the wanted_descriptors_list
 """
 import cv2
 import numpy as np
@@ -133,7 +147,6 @@ class ShapeDescriptors:
             self.binary_image = self.binary_image.astype(np.uint8)
 
         self.descriptors = {i: np.empty(0, dtype=np.float64) for i in wanted_descriptors_list}
-
         self.get_area()
 
         for name in self.descriptors.keys():
@@ -616,7 +629,10 @@ class ShapeDescriptors:
         """
         if self.perimeter is None:
             self.get_perimeter()
-        self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
+        if self.perimeter == 0:
+            self.circularity = 0
+        else:
+            self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
 
     def get_rectangularity(self):
         """
@@ -694,7 +710,10 @@ class ShapeDescriptors:
         0
         """
         np, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
-        self.total_hole_area = np.sum(stats[2:, 4])
+        if stats.shape[0] > 2:
+            self.total_hole_area = np.sum(stats[2:, 4])
+        else:
+            self.total_hole_area = 0
 
     def get_solidity(self):
         """

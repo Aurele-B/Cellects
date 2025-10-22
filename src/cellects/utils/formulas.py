@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
 """
-Optimized mathematical and image processing utilities for Cellects.
+Statistical and geometric analysis tools for numerical arrays.
 
-This module provides a collection of performance-optimized functions primarily used for numerical array operations,
-statistical calculations, and basic image transformation tasks. All implementations leverage NumPy for numerical
-computations and are accelerated via Numba's JIT compilation (`@njit`) to ensure low-latency execution in production workflows.
-Functions include statistical moment analysis, coordinate-based variance calculation, and pixel-level normalization routines.
+This module provides a collection of functions and unit tests for calculating distances,
+statistical properties (skewness, kurtosis), array transformations, and image moment-based
+analysis. The tools are optimized for applications involving binary images, coordinate data,
+and mathematical modeling operations where performance-critical calculations benefit from
+vectorized or JIT-compiled implementations.
 
 Functions:
-    sum_of_abs_differences: Calculate element-wise absolute differences between arrays.
-    linear_model: Execute affine transformations on numerical data.
-    get_power_dists: Generate spatial distribution patterns for image coordinates.
-    get_var: Compute weighted centroids using moments and pixel positions.
-    get_skewness_kurtosis: Derive skewness/kurtosis from statistical moments.
-    bracket_to_uint8_image_contrast: Normalize images to 8-bit unsigned integer format.
+eudist : Calculate Euclidean distance between two vectors
+to_uint8 : Convert array to 8-bit unsigned integers using NumBA acceleration
+translate_dict : Transform dictionary structures into alternative formats
+linear_model : Compute y = a*x + b regression model values (JIT-compiled)
+moving_average : Calculate sliding window averages with specified step size
+get_var : Derive variance from image moments and spatial coordinates
+find_common_coord : Identify shared coordinate pairs between two arrays
+get_skewness/get_kurtosis : Calculate third/fourth standardized moment statistics
+sum_of_abs_differences : Compute total absolute differences between arrays (JIT)
+bracket_to_uint8_image_contrast : Convert images to 8-bit with contrast normalization
+find_duplicates_coord : Locate rows with duplicate coordinate values
+get_power_dists : Generate radial distance measures from image centers
+get_inertia_axes : Calculate principal axes of inertia for binary shapes
 
 Notes:
-- All Numba-accelerated functions require NumPy arrays as inputs
-- Division-by-zero operations will raise exceptions for invalid input shapes/moments
+- All Numba-accelerated functions require congruent NumPy arrays as inputs
 - Image processing functions expect binary (boolean/int8) input matrices
 """
 from copy import deepcopy
@@ -621,4 +628,3 @@ def find_duplicates_coord(array1):
     counts = np.bincount(inverse_indices)
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
-

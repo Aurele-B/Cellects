@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-This script contains all unit tests of the utilitarian script
-10 tests
+Test suite for utility functions in utilitarian module.
+
+This test suite covers core utilitarian functions including array comparison operations,
+dictionary conversion, path abbreviation, nearest value lookup, and progress tracking.
+Tests include unit tests and edge cases validation across different input types.
 """
 import os
 import unittest
-
 from cellects.utils.utilitarian import *
 from tests._base import CellectsUnitTest
 
 
 class TestGreaterAlongFirstAxis(CellectsUnitTest):
+    """Test suite for greater_along_first_axis function."""
     def test_greater_along_first_axis(self):
+        """Test basic functionality."""
         test_cases = [
             {
                 'array_in_1': np.array([[1, 2, 3],
@@ -57,7 +61,9 @@ class TestGreaterAlongFirstAxis(CellectsUnitTest):
 
 
 class TestLessAlongFirstAxis(CellectsUnitTest):
+    """Test suite for less_along_first_axis function."""
     def test_less_along_first_axis(self):
+        """Test basic functionality."""
         test_cases = [
             {
                 'array_in_1': np.array([[1, 2, 3],
@@ -106,14 +112,15 @@ class TestLessAlongFirstAxis(CellectsUnitTest):
 
 
 class TestTranslateDict(CellectsUnitTest):
-
+    """Test suite for translate_dict function."""
     def test_translate_dict(self):
+        """Test basic functionality."""
         old_dict = {'key1': 1, 'key2': 2, 'key3': 3}
-
         typed_dict = translate_dict(old_dict)
         self.assertEqual(len(typed_dict), len(old_dict))
 
     def test_translate_dict_wrong_value(self):
+        """Test functionality with one str as value."""
         old_dict = {'key1': 1, 'key2': "2", 'key3': 3}
 
         typed_dict = translate_dict(old_dict)
@@ -121,7 +128,9 @@ class TestTranslateDict(CellectsUnitTest):
 
 
 class TestReducePathLen(CellectsUnitTest):
+    """Test suite for reduce_path_len function."""
     def test_reduce_path_len(self):
+        """Test basic functionality."""
         pathway = "some/long/path/to/a/file.txt"
         to_start = 15
         from_end = 8
@@ -140,7 +149,9 @@ class TestReducePathLen(CellectsUnitTest):
 
 
 class TestFindNearest(CellectsUnitTest):
+    """Test suite for find_nearest function."""
     def test_find_nearest(self):
+        """Test basic functionality."""
         arr = [1, 4, 6, 9, 12]
         value = 7
 
@@ -157,13 +168,16 @@ class TestFindNearest(CellectsUnitTest):
 
 
 class TestPercentAndTimeTracker(CellectsUnitTest):
+    """Test suite for PercentAndTimeTracker class."""
     def test_get_progress(self):
+        """Test basic functionality."""
         total_iterations = 100
         tracker = PercentAndTimeTracker(total_iterations)
         progress, eta = tracker.get_progress()
         self.assertEqual(progress, 1)
 
     def test_get_progress_with_step_and_elements(self):
+        """Test with with_elements_number and step."""
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations, compute_with_elements_number=True)
 
@@ -176,6 +190,7 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
 
 
     def test_get_progress_with_step(self):
+        """Test by setting step."""
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations)
 
@@ -186,6 +201,7 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
         self.assertEqual(progress, 100)
 
     def test_get_progress_with_elements(self):
+        """Test with with_elements_number."""
         total_iterations = 100
         tracker_with_elements_and_step = PercentAndTimeTracker(total_iterations, compute_with_elements_number=True)
 
@@ -198,13 +214,16 @@ class TestPercentAndTimeTracker(CellectsUnitTest):
 
 
 class TestInsensitiveGlob(CellectsUnitTest):
+    """Test suite for insensitive_glob function."""
     def test_insensitive_glob_prefix(self):
+        """Test basic functionality."""
         os.chdir(self.path_input)
         result = insensitive_glob("Last" + "*")
         expected_result = ['last_binary_img.tif', 'last_original_img.tif']
         self.assertCountEqual(result, expected_result)
 
     def test_insensitive_glob_suffix(self):
+        """Test with caps extension."""
         os.chdir(self.path_input)
         result = insensitive_glob("*.TIF")
         expected_result = ['last_binary_img.tif', 'last_original_img.tif']

@@ -280,130 +280,6 @@ class PickleRick:
             logging.error(f"Failed to read {file_name}")
 
 
-def show(img, interactive=True, cmap=None):
-    """
-    Display an image using Matplotlib with optional interactivity and colormap.
-
-    Parameters
-    ----------
-    img : ndarray
-        The image data to be displayed.
-    interactive : bool, optional
-        If ``True``, turn on interactive mode. Default is ``True``.
-    cmap : str or Colormap, optional
-        The colormap to be used. If ``None``, the default colormap will
-        be used.
-
-    Other Parameters
-    ----------------
-    interactive : bool, optional
-        If ``True``, turn on interactive mode. Default is ``True``.
-    cmap : str or Colormap, optional
-        The colormap to be used. If ``None``, the default colormap will
-        be used.
-
-    Returns
-    -------
-    fig : Figure
-        The Matplotlib figure object containing the displayed image.
-    ax : AxesSubplot
-        The axes on which the image is plotted.
-
-    Raises
-    ------
-    ValueError
-        If `cmap` is not a recognized colormap name or object.
-
-    Notes
-    -----
-    If interactive mode is enabled, the user can manipulate the figure
-    window interactively.
-
-    Examples
-    --------
-    >>> img = np.random.rand(100, 100)
-    >>> fig, ax = show(img)
-    >>> print(fig) # doctest: +SKIP
-    <Figure size ... with ... Axes>
-
-    >>> fig, ax = show(img, interactive=False)
-    >>> print(fig) # doctest: +SKIP
-    <Figure size ... with ... Axes>
-
-    >>> fig, ax = show(img, cmap='gray')
-    >>> print(fig) # doctest: +SKIP
-    <Figure size ... with .... Axes>
-    """
-    if interactive:
-        plt.ion()
-    else:
-        plt.ioff()
-    sizes = img.shape[0] / 100,  img.shape[1] / 100
-    fig = plt.figure(figsize=(sizes[0], sizes[1]))
-    ax = fig.gca()
-    if cmap is None:
-        ax.imshow(img, interpolation="none")
-    else:
-        ax.imshow(img, cmap=cmap, interpolation="none")
-    fig.tight_layout()
-    fig.show()
-    return fig, ax
-
-def save_fig(img, full_path, cmap=None):
-    """
-    Save an image figure to a file with specified options.
-
-    This function creates a matplotlib figure from the given image,
-    optionally applies a colormap, displays it briefly, saves the
-    figure to disk at high resolution, and closes the figure.
-
-    Parameters
-    ----------
-    img : array_like (M, N, 3)
-        Input image to be saved as a figure. Expected to be in RGB format.
-    full_path : str
-        The complete file path where the figure will be saved. Must include
-        extension (e.g., '.png', '.jpg').
-    cmap : str or None, optional
-        Colormap to be applied if the image should be displayed with a specific
-        color map. If `None`, no colormap is applied.
-
-    Returns
-    -------
-    None
-
-        This function does not return any value. It saves the figure to disk
-        at the specified location.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the directory in `full_path` does not exist.
-
-    Examples
-    --------
-    >>> img = np.random.rand(100, 100, 3) * 255
-    >>> save_fig(img, 'test.png')
-    Creates and saves a figure from the random image to 'test.png'.
-
-    >>> save_fig(img, 'colored_test.png', cmap='viridis')
-    Creates and saves a figure from the random image with 'viridis' colormap
-    to 'colored_test.png'.
-    """
-    sizes = img.shape[0] / 100,  img.shape[1] / 100
-    fig = plt.figure(figsize=(sizes[0], sizes[1]))
-    ax = fig.gca()
-    if cmap is None:
-        ax.imshow(img, interpolation="none")
-    else:
-        ax.imshow(img, cmap=cmap, interpolation="none")
-    plt.axis('off')
-    fig.tight_layout()
-    fig.show()
-    fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
-    plt.close()
-
-
 def write_video(np_array, vid_name, is_color=True, fps=40):
     """
     Write a video file from an array of images.
@@ -876,13 +752,6 @@ def read_h5_array(file_name, key="data"):
     ndarray
         The data array from the specified dataset in the HDF5 file.
 
-    Raises
-    ------
-    KeyError
-        If the specified dataset key does not exist in the HDF5 file.
-    FileNotFoundError
-        If the specified HDF5 file does not exist.
-
     Examples
     --------
     >>> data = read_h5_array('example.h5', 'data')
@@ -1014,3 +883,164 @@ def get_mpl_colormap(cmap_name):
     color_range = sm.to_rgba(np.linspace(0, 1, 256), bytes=True)[:, 2::-1]
 
     return color_range.reshape(256, 1, 3)
+
+
+
+def show(img, interactive=True, cmap=None):
+    """
+    Display an image using Matplotlib with optional interactivity and colormap.
+
+    Parameters
+    ----------
+    img : ndarray
+        The image data to be displayed.
+    interactive : bool, optional
+        If ``True``, turn on interactive mode. Default is ``True``.
+    cmap : str or Colormap, optional
+        The colormap to be used. If ``None``, the default colormap will
+        be used.
+
+    Other Parameters
+    ----------------
+    interactive : bool, optional
+        If ``True``, turn on interactive mode. Default is ``True``.
+    cmap : str or Colormap, optional
+        The colormap to be used. If ``None``, the default colormap will
+        be used.
+
+    Returns
+    -------
+    fig : Figure
+        The Matplotlib figure object containing the displayed image.
+    ax : AxesSubplot
+        The axes on which the image is plotted.
+
+    Raises
+    ------
+    ValueError
+        If `cmap` is not a recognized colormap name or object.
+
+    Notes
+    -----
+    If interactive mode is enabled, the user can manipulate the figure
+    window interactively.
+
+    Examples
+    --------
+    >>> img = np.random.rand(100, 50)
+    >>> fig, ax = show(img)
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with ... Axes>
+
+    >>> fig, ax = show(img, interactive=False)
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with ... Axes>
+
+    >>> fig, ax = show(img, cmap='gray')
+    >>> print(fig) # doctest: +SKIP
+    <Figure size ... with .... Axes>
+    """
+    if interactive:
+        plt.ion()
+    else:
+        plt.ioff()
+    sizes = img.shape[0] / 100,  img.shape[1] / 100
+    fig = plt.figure(figsize=(sizes[1], sizes[0]))
+    ax = fig.gca()
+    if cmap is None:
+        ax.imshow(img, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
+    else:
+        ax.imshow(img, cmap=cmap, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
+    fig.tight_layout()
+    fig.show()
+    return fig, ax
+
+def save_fig(img, full_path, cmap=None):
+    """
+    Save an image figure to a file with specified options.
+
+    This function creates a matplotlib figure from the given image,
+    optionally applies a colormap, displays it briefly, saves the
+    figure to disk at high resolution, and closes the figure.
+
+    Parameters
+    ----------
+    img : array_like (M, N, 3)
+        Input image to be saved as a figure. Expected to be in RGB format.
+    full_path : str
+        The complete file path where the figure will be saved. Must include
+        extension (e.g., '.png', '.jpg').
+    cmap : str or None, optional
+        Colormap to be applied if the image should be displayed with a specific
+        color map. If `None`, no colormap is applied.
+
+    Returns
+    -------
+    None
+
+        This function does not return any value. It saves the figure to disk
+        at the specified location.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the directory in `full_path` does not exist.
+
+    Examples
+    --------
+    >>> img = np.random.rand(100, 100, 3) * 255
+    >>> save_fig(img, 'test.png')
+    Creates and saves a figure from the random image to 'test.png'.
+
+    >>> save_fig(img, 'colored_test.png', cmap='viridis')
+    Creates and saves a figure from the random image with 'viridis' colormap
+    to 'colored_test.png'.
+    """
+    sizes = img.shape[0] / 100,  img.shape[1] / 100
+    fig = plt.figure(figsize=(sizes[0], sizes[1]))
+    ax = fig.gca()
+    if cmap is None:
+        ax.imshow(img, interpolation="none")
+    else:
+        ax.imshow(img, cmap=cmap, interpolation="none")
+    plt.axis('off')
+    fig.tight_layout()
+    fig.show()
+    fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
+    plt.close()
+
+
+def display_boxes(binary_image, box_diameter):
+    """Display grid lines on binary image using matplotlib with specified box spacing.
+
+    Plots vertical and horizontal white lines at intervals defined by box_diameter
+    across the 2D binary image. The resulting visualization shows a grid overlay that
+    segments the image into regular-sized boxes for analysis or display purposes.
+
+    Parameters
+    ----------
+    binary_image : array-like
+        Input binary image represented as a 2D array of shape (height, width).
+    box_diameter : int
+        Distance between adjacent vertical/horizontal lines in pixels.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> binary_image = np.random.rand(5, 10)
+    >>> display_boxes(binary_image, box_diameter=2)
+    """
+    plt.imshow(binary_image, cmap='gray', extent=(0, binary_image.shape[1], 0, binary_image.shape[0]))
+    height, width = binary_image.shape
+    line_nb = 0
+    for x in range(0, width + 1, box_diameter):
+        line_nb += 1
+        plt.axvline(x=x, color='white', linewidth=1)
+    for y in range(0, height + 1, box_diameter):
+        line_nb += 1
+        plt.axhline(y=y, color='white', linewidth=1)
+    plt.show()
+    return line_nb

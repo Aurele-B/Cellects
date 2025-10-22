@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-"""
-This script contains all unit tests of the formulas script
-14 tests
+"""Test suite for statistical and geometric analysis tools used in numerical arrays.
+
+This test module verifies functions from `cellects.utils.formulas` related to image processing,
+statistical modeling, and coordinate transformations. Tests focus on basic functionality with edge cases
+for accuracy validation across computer vision and scientific computing scenarios.
+
+Each class includes unit tests covering typical and boundary conditions like negative values,
+zero inputs, and non-uniform distributions.
 """
 
 import cv2
@@ -12,8 +17,9 @@ from tests._base import CellectsUnitTest
 
 
 class TestSumOfAbsDifferences(CellectsUnitTest):
-
+    """Test suite for sum_of_abs_differences function."""
     def test_sum_of_abs_differences(self):
+        """Test basic functionality."""
         # Test case 1: Arrays with same values
         array1 = np.array([1, 2, 3])
         array2 = np.array([1, 2, 3])
@@ -37,8 +43,9 @@ class TestSumOfAbsDifferences(CellectsUnitTest):
 
 
 class TestToUint8(CellectsUnitTest):
-
+    """Test suite for to_uint8 function."""
     def test_to_uint8(self):
+        """Test basic functionality."""
         # Test case 1: Array with positive values
         an_array = np.array([1.5, 2.7, 3.9])
         result = to_uint8(an_array)
@@ -59,8 +66,9 @@ class TestToUint8(CellectsUnitTest):
 
 
 class TestBracketToUint8ImageContrast(CellectsUnitTest):
-
+    """Test suite for bracket_to_uint8_image_contrast function."""
     def test_zeros_with_one(self):
+        """Test only zeros except one 1."""
         image = np.zeros((3, 3))
         image[1, 1] = 1
         result = bracket_to_uint8_image_contrast(image)
@@ -70,6 +78,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         np.testing.assert_array_equal(result, expected_result)
 
     def test_zeros_with_twofivefive(self):
+        """Test only zeros except one 255."""
         image = np.zeros((3, 3))
         image[1, 1] = 255
         result = bracket_to_uint8_image_contrast(image)
@@ -79,6 +88,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         np.testing.assert_array_equal(result, expected_result)
 
     def test_ones_with_zero(self):
+        """Test only ones except one 0."""
         image = np.ones((3, 3))
         image[1, 1] = 0
         result = bracket_to_uint8_image_contrast(image)
@@ -88,6 +98,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         np.testing.assert_array_equal(result, expected_result)
 
     def test_ones_with_twofivefive(self):
+        """Test only ones except one 255."""
         image = np.ones((3, 3))
         image[1, 1] = 255
         result = bracket_to_uint8_image_contrast(image)
@@ -97,6 +108,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         np.testing.assert_array_equal(result, expected_result)
 
     def test_negative_with_higher(self):
+        """Test higher values than 255."""
         image = - np.ones((3, 3)) * 3
         image[1, 1] = 600
         image[2, 1] = 300
@@ -107,6 +119,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         np.testing.assert_array_equal(result, expected_result)
 
     def test_complex(self):
+        """Test float, negative and high values."""
         image = - np.ones((3, 3)) * 0.54
         image[1, 1] = -60
         image[2, 1] = 300
@@ -119,8 +132,9 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
 
 
 class TestLinearModel(CellectsUnitTest):
-
+    """Test suite for linear_model function."""
     def test_linear_model(self):
+        """Test basic functionality."""
         # Test case 1: Positive slope and intercept
         x = np.array([1, 2, 3])
         a = 2
@@ -147,8 +161,9 @@ class TestLinearModel(CellectsUnitTest):
 
 
 class TestGetPowerDists(CellectsUnitTest):
-
+    """Test suite for get_power_dists function."""
     def test_get_power_dists(self):
+        """Test basic functionality."""
         binary_image = np.array([[1, 1, 0, 0, 0],
                                  [1, 1, 1, 0, 0],
                                  [0, 1, 1, 1, 0],
@@ -165,8 +180,9 @@ class TestGetPowerDists(CellectsUnitTest):
 
 
 class TestGetStandardDeviations(CellectsUnitTest):
-
+    """Test suite for get_kurtosis function."""
     def test_get_standard_deviations(self):
+        """Test basic functionality."""
         binary_image = np.array([[1, 1, 0, 0, 0],
                                  [1, 1, 1, 0, 0],
                                  [0, 1, 1, 1, 0],
@@ -189,7 +205,9 @@ class TestGetStandardDeviations(CellectsUnitTest):
 
 
 class TestGetSkewness(CellectsUnitTest):
+    """Test suite for get_skewness function."""
     def test_get_skewness(self):
+        """Test basic functionality."""
         binary_image = np.array([[1, 1, 0, 0, 0],
                               [1, 1, 1, 0, 0],
                               [0, 1, 1, 1, 0],
@@ -214,8 +232,9 @@ class TestGetSkewness(CellectsUnitTest):
 
 
 class TestGetKurtosis(CellectsUnitTest):
-
+    """Test suite for get_kurtosis function."""
     def test_get_kurtosis(self):
+        """Test basic functionality."""
         binary_image = np.array([[1, 1, 0, 0, 0],
                                  [1, 1, 1, 0, 0],
                                  [0, 1, 1, 1, 0],
@@ -239,7 +258,9 @@ class TestGetKurtosis(CellectsUnitTest):
 
 
 class TestGetInertiaAxes(CellectsUnitTest):
+    """Test suite for eudist function."""
     def test_get_inertia_axes(self):
+        """Test basic functionality."""
         binary_image = np.array([[1, 1, 0, 0, 0],
                               [1, 1, 1, 0, 0],
                               [0, 1, 1, 1, 0],
@@ -265,7 +286,9 @@ class TestGetInertiaAxes(CellectsUnitTest):
 
 
 class TestEuclideanDistance(CellectsUnitTest):
+    """Test suite for eudist function."""
     def test_eudist(self):
+        """Test basic functionality."""
         v1 = [1, 2, 3]  # Coordinates of point 1
         v2 = [4, 5, 6]  # Coordinates of point 2
 
@@ -276,7 +299,9 @@ class TestEuclideanDistance(CellectsUnitTest):
 
 
 class TestMovingAverage(CellectsUnitTest):
+    """Test suite for moving_average function."""
     def test_moving_average(self):
+        """Test basic functionality."""
         vector = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])  # Sample vector
         step = 3  # Step/window size
 
