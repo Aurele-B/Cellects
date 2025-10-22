@@ -29,7 +29,7 @@ This module is particularly useful in image analysis tasks where shapes need to 
 from copy import deepcopy
 import numpy as np
 import cv2
-from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse, keep_shape_connected_with_ref
 
 
 
@@ -213,74 +213,34 @@ class ProgressivelyAddDistantShapes:
         else:
             self.expanded_shape = self.main_shape
 
-    def connect_shapes(self, only_keep_connected_shapes, rank_connecting_pixels, intensity_valley=None):
-        """Connects small shapes to a main shape using gravity field expansion and filtering based on distance and intensity conditions.
+    def expand_smalls_toward_main(self):
+        """Expands small shapes toward a main shape using morphological operations and gravity field analysis.
 
-        Extended Description
-        --------------------
-        When distant shapes of sufficient size are present, this method generates a gravity field around the main shape. It then expands smaller shapes toward the main one according to gradient values. If shapes fall within the gravity field range:
-        - Shapes not connected to the main one (via `only_keep_connected_shapes`) are filtered out.
-        - Connecting pixels between small and main shapes (via `rank_connecting_pixels`) receive distance-based ranking.
+        The method dilates the main shape to determine an order of expansion for connected regions.
+        Each identified region is iteratively expanded until overlapping with the main shape, guided by a gravity field gradient.
+        Results include both the final expanded binary mask and peak values from the gravity field during expansion phases.
 
-        Parameters
-        ----------
-        only_keep_connected_shapes : bool
-            If True, filters expanded shapes to retain only those connected directly to the main shape.
-        rank_connecting_pixels : bool
-            If True, ranks connecting pixel extensions based on distance between small/main shapes.
-        intensity_valley : array-like, optional
-            Optional intensity values defining a valley region for gravity field calculation. Default is None.
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            Binary array where small shapes are fully expanded to connect with the main shape.
+        numpy.ndarray[numpy.uint32]
+            Array containing maximum detected field strengths for each expanded region, in order of connection.
 
-        Attributes
-        ----------
-        gravity_field : ndarray or array-like
-            Stores the computed gravity field used to guide shape expansion.
-        expanded_shape : ndarray of dtype uint8
-            Final combined shape after processing; contains main and connected small shapes.
         Examples
         --------
         >>> new_potentials = np.array([[1, 1, 0], [0, 0, 0], [0, 1, 1]])
         >>> previous_shape = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]])
-        >>> max_distance = 2
+        >>> max_distance = 3
         >>> pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
-        >>> pads.connect_shapes(only_keep_connected_shapes=False, rank_connecting_pixels=True)
-        >>> pads.expanded_shape
+        >>> pads.consider_shapes_sizes(min_shape_size=2, max_shape_size=10)
+        >>> pads.gravity_field = make_gravity_field(pads.main_shape, max_distance=pads.max_distance, with_erosion=0)
+        >>> expanded_main, max_field_feelings = pads.expand_smalls_toward_main()
+        >>> print(expanded_main)
+        [[1 1 0]
+         [0 1 1]
+         [0 1 1]]
         """
-        # If there are distant shapes of the good size, run the following:
-        if self.max_distance != 0 and np.any(self.new_order > 1):
-            # The intensity valley method does not work yet, don't use it
-            if intensity_valley is not None:
-                self.gravity_field = intensity_valley # make sure that the values correspond to the coord
-            else:
-                # 1) faire un champ gravitationnel autour de la forme principale
-                self.gravity_field = make_gravity_field(self.main_shape, max_distance=self.max_distance, with_erosion=1)
-
-                # If there are near enough shapes, run the following
-                # 2) Dilate other shapes toward the main according to the gradient
-            other_shapes, max_field_feelings = self.expand_smalls_toward_main()
-
-
-            # plt.imshow(other_shapes)
-            # If there are shapes within gravity field range
-            if np.any(max_field_feelings > 0):
-                self.expanded_shape = np.zeros(self.main_shape.shape, np.uint8)
-                self.expanded_shape[np.nonzero(self.main_shape + other_shapes)] = 1
-                if only_keep_connected_shapes:
-                    # Make sure that only shapes connected with the main one remain on the final image
-                    self.keep_connected_shapes()
-                    if rank_connecting_pixels:
-                        # Rate the extension of small shapes according to the distance between the small and the main shapes
-                        self.distance_ranking_of_connecting_pixels()
-                #self.expanded_shape
-                # plt.imshow(self.expanded_shape)
-            else:
-                self.expanded_shape = self.main_shape
-        # Otherwise, end by putting the main shape as output
-        else:
-            self.expanded_shape = self.main_shape
-
-    def expand_smalls_toward_main(self):
-
         other_shapes = np.zeros(self.main_shape.shape, np.uint8)
         other_shapes[self.new_order > 1] = 1
         simple_disk = cross_33
@@ -334,15 +294,81 @@ class ProgressivelyAddDistantShapes:
         return expanded_main, max_field_feelings
 
 
-    def keep_connected_shapes(self):
-        number, order = cv2.connectedComponents(self.expanded_shape, ltype=cv2.CV_16U)
-        if number > 2:
-            for i in np.arange(1, number):
-                expanded_shape_test = np.zeros(order.shape, np.uint8)
-                expanded_shape_test[order == i] = 1
-                if np.any(expanded_shape_test * self.main_shape):
-                    break
-            self.expanded_shape = expanded_shape_test
+    def connect_shapes(self, only_keep_connected_shapes, rank_connecting_pixels, intensity_valley=None):
+        """Connects small shapes to a main shape using gravity field expansion and filtering based on distance and intensity conditions.
+
+        Extended Description
+        --------------------
+        When distant shapes of sufficient size are present, this method generates a gravity field around the main shape. It then expands smaller shapes toward the main one according to gradient values. If shapes fall within the gravity field range:
+        - Shapes not connected to the main one (via `only_keep_connected_shapes`) are filtered out.
+        - Connecting pixels between small and main shapes (via `rank_connecting_pixels`) receive distance-based ranking.
+
+        Parameters
+        ----------
+        only_keep_connected_shapes : bool
+            If True, filters expanded shapes to retain only those connected directly to the main shape.
+        rank_connecting_pixels : bool
+            If True, ranks connecting pixel extensions based on distance between small/main shapes.
+        intensity_valley : array-like, optional
+            Optional intensity values defining a valley region for gravity field calculation. Default is None.
+
+        Attributes
+        ----------
+        gravity_field : ndarray or array-like
+            Stores the computed gravity field used to guide shape expansion.
+        expanded_shape : ndarray of dtype uint8
+            Final combined shape after processing; contains main and connected small shapes.
+        Examples
+        --------
+        >>> new_potentials = np.array([[1, 1, 0], [0, 0, 0], [0, 1, 1]])
+        >>> previous_shape = np.array([[0, 0, 0], [0, 0, 0], [0, 1, 1]])
+        >>> max_distance = 3
+        >>> pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance)
+        >>> pads.consider_shapes_sizes(min_shape_size=2, max_shape_size=10)
+        >>> pads.gravity_field = make_gravity_field(pads.main_shape, max_distance=pads.max_distance, with_erosion=0)
+        >>> pads.connect_shapes(only_keep_connected_shapes=False, rank_connecting_pixels=True)
+        >>> expanded_main, max_field_feelings = pads.expand_smalls_toward_main()
+        >>> print(expanded_main)
+        [[1 1 0]
+         [0 1 1]
+         [0 1 1]]
+        """
+        # If there are distant shapes of the good size, run the following:
+        if self.max_distance != 0 and np.any(self.new_order > 1):
+            # The intensity valley method does not work yet, don't use it
+            if intensity_valley is not None:
+                self.gravity_field = intensity_valley # make sure that the values correspond to the coord
+            else:
+                # 1) faire un champ gravitationnel autour de la forme principale
+                self.gravity_field = make_gravity_field(self.main_shape, max_distance=self.max_distance, with_erosion=1)
+
+                # If there are near enough shapes, run the following
+                # 2) Dilate other shapes toward the main according to the gradient
+            other_shapes, max_field_feelings = self.expand_smalls_toward_main()
+
+
+            # plt.imshow(other_shapes)
+            # If there are shapes within gravity field range
+            if np.any(max_field_feelings > 0):
+                self.expanded_shape = np.zeros(self.main_shape.shape, np.uint8)
+                self.expanded_shape[np.nonzero(self.main_shape + other_shapes)] = 1
+                if only_keep_connected_shapes:
+                    # Make sure that only shapes connected with the main one remain on the final image
+                    expanded_shape = keep_shape_connected_with_ref(self.expanded_shape, self.main_shape)
+                    if expanded_shape is not None:
+                        self.expanded_shape = expanded_shape
+                    self.keep_connected_shapes()
+                    if rank_connecting_pixels:
+                        # Rate the extension of small shapes according to the distance between the small and the main shapes
+                        self.distance_ranking_of_connecting_pixels()
+                #self.expanded_shape
+                # plt.imshow(self.expanded_shape)
+            else:
+                self.expanded_shape = self.main_shape
+        # Otherwise, end by putting the main shape as output
+        else:
+            self.expanded_shape = self.main_shape
+
         # else:
         #     self.expanded_shape = other_shapes + self.main_shape
         # self.expanded_shape[self.expanded_shape > 1] = 1

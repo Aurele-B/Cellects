@@ -106,7 +106,8 @@ from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               make_gravity_field, dynamically_expand_to_fill_holes,
-                                                              box_counting_dimension, prepare_box_counting)
+                                                              box_counting_dimension, prepare_box_counting,
+                                                              keep_one_connected_component)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
