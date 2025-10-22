@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
 This script contains the class for detecting networks out of a grayscale image of Physarum polycephalum
-"""
+
 
 # A completely different strategy could be to segment the network by layers of luminosity.
 # The first layer captures the brightest veins and replace their pixels by background pixels.
 # The second layer captures other veins, (make sure that they are connected to the first?) and replace their pixels too.
 # During one layer segmentation, the algorithm make sure that all detected veins are as long as possible
 # but less long than and connected to the previous.
-
+"""
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import pandas as pd
 
-from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_until_no_holes
+from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_until_no_holes, keep_one_connected_component
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.utilitarian import remove_coordinates
 from cellects.utils.formulas import *
@@ -443,25 +443,6 @@ def get_neighbor_comparisons(pad_skeleton):
     cnv8 = CompareNeighborsWithValue(pad_skeleton, 8)
     cnv8.is_equal(1, and_itself=True)
     return cnv4, cnv8
-
-
-def keep_one_connected_component(pad_skeleton):
-    """
-    """
-    nb_pad_skeleton, stats, _ = cc(pad_skeleton)
-    pad_skeleton[nb_pad_skeleton > 1] = 0
-    return pad_skeleton
-
-
-def keep_components_larger_than_one(pad_skeleton):
-    """
-    """
-    nb_pad_skeleton, stats, _ = cc(pad_skeleton)
-    for i in np.nonzero(stats[:, 4] == 1)[0]:
-        pad_skeleton[nb_pad_skeleton == i] = 0
-    # nb, nb_pad_skeleton = cv2.connectedComponents(pad_skeleton)
-    # pad_skeleton[nb_pad_skeleton > 1] = 0
-    return pad_skeleton
 
 
 def get_vertices_and_tips_from_skeleton(pad_skeleton):

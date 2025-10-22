@@ -247,6 +247,27 @@ def cc(binary_img):
 
 
 def get_largest_connected_component(segmentation):
+    """
+    Find the largest connected component in a segmentation mask.
+
+    This function labels the connected components in a given segmentation
+    mask and identifies the largest one based on the number of pixels.
+
+    Parameters
+    ----------
+    segmentation : ndarray
+        Input binary segmentation mask where 0 represents background and
+        non-zero values represent different objects.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - int: The number of connected components in the segmentation mask.
+        - ndarray: A boolean mask where True indicates pixels belonging
+          to the largest connected component.
+
+    """
     labels = label(segmentation)
     assert(labels.max() != 0) # assume at least 1 CC
     con_comp = np.bincount(labels.flat)[1:]
@@ -761,9 +782,35 @@ def get_radius_distance_against_time(binary_video, field):
 
 
 def close_until_no_holes(binary_img):
-    # SD = ShapeDescriptors(binary_img, ["convex_hull"])
-    # SD.convex_hull
-    # test = np.zeros_like(binary_img)
+    """
+    Close holes in a binary image using morphological operations.
+
+    This function closes all the holes inside an object of a binary image
+    using successive morphological closings with varying kernel sizes,
+    stopping when no holes are detected. It uses the Euler number as a
+    topological descriptor to detect holes.
+
+    Parameters
+    ----------
+    binary_img : numpy.ndarray of bool or int
+        Input binary image with values typically 0 and 1. Must be a
+        2D array.
+
+    Returns
+    -------
+    numpy.ndarray of bool or int
+        The binary image with closed holes, using the same data type as `binary_img`.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> binary_img = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
+    >>> result = close_until_no_holes(binary_img)
+    >>> print(result)
+    [[1 1 1]
+     [1 0 1]
+     [1 1 1]]
+    """
     SD = ShapeDescriptors(binary_img, ["euler_number"])
     if SD.descriptors["euler_number"] != 0:
         sample_size = 25
@@ -787,6 +834,36 @@ def close_until_no_holes(binary_img):
 
 
 def dynamically_expand_to_fill_holes(binary_video, holes):
+    """
+    Fills holes in a binary video frame sequence by progressively expanding the shape.
+
+    This function analyzes how quickly a moving shape can cover holes in a binary
+    video sequence and progressively fills these holes at the same speed. It uses
+    several image processing techniques to determine when and how to fill holes.
+
+    Parameters
+    ----------
+    binary_video : numpy.ndarray
+        A 3D array representing the binary video frames.
+    holes : numpy.ndarray
+        A boolean or integer array indicating hole positions.
+
+    Returns
+    -------
+    binary_video : numpy.ndarray
+        The modified video frames with holes filled.
+    holes_time_end : int or None
+        The frame index at which all holes are covered, or `None` if no holes.
+    distance_against_time : list
+        A list of distances representing the progressive filling of holes over time.
+
+    Examples
+    --------
+    >>> binary_video = np.zeros((10, 5, 5), dtype=np.uint8)
+    >>> holes = np.zeros((5, 5), dtype=np.uint8)
+    >>> holes[1:3, 1:3] = 1
+    >>> filled_video, end_time, distances = dynamically_expand_to_fill_holes(binary_video, holes)
+    """
     #first move should be the time at wich the first pixel hole could have been covered
     #it should ask how much time the shape made to cross a distance long enough to overlap all holes
     holes_contours = cv2.dilate(holes, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
@@ -819,6 +896,27 @@ def dynamically_expand_to_fill_holes(binary_video, holes):
 
 
 def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
+    """
+    Adjusts threshold on a grayscale image until it satisfies specific conditions,
+    and applies this threshold to generate a binary image.
+
+    Parameters
+    ----------
+    grayscale_image : numpy.ndarray
+        The grayscale image to process.
+    binary_image : numpy.ndarray
+        A binary image initialized or partially processed.
+    lighter_background : bool
+        Indicates if the background is lighter than objects.
+
+    Returns
+    -------
+    numpy.ndarray
+        The processed binary image with adjusted thresholds applied.
+
+    Examples
+    --------
+    """
     coord = np.nonzero(binary_image)
     min_cx = np.min(coord[0])
     max_cx = np.max(coord[0])
@@ -843,9 +941,32 @@ def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
 
 
 class Ellipse:
+    """
+    Create an ellipse with given vertical and horizontal sizes.
+
+    This class represents an ellipse defined by its vertical and horizontal
+    dimensions. It provides methods to check if a point lies within the ellipse
+    and to generate a 2D array representing the ellipse shape.
+    """
     def __init__(self, sizes):
         """
-        Usage: Ellipse
+        Initialize the object with given vertical and horizontal sizes.
+
+        Parameters
+        ----------
+        sizes : list or tuple of int, length 2
+            List containing two integers representing vertical and horizontal sizes.
+
+        Attributes
+        ----------
+        vsize : int
+            Vertical size of the object.
+        hsize : int
+            Horizontal size of the object.
+        vr : int
+            Half of the horizontal size.
+        hr : int
+            Half of the vertical size.
         """
         self.vsize = sizes[0]
         self.hsize = sizes[1]
@@ -854,22 +975,70 @@ class Ellipse:
 
     def ellipse_fun(self, x, y):
         """
-        Create an ellipse of size x and y in a 2D array of size vsize and hsize
-        :param x: ellipse size on x axis
-        :param y: ellipse size on y axis
-        :return: a binary image containing the ellipse
+        Check if a point (x,y) lies within or on the ellipse.
+
+        This function checks if a given point lies inside or on the boundary
+        of an ellipse defined by its horizontal radius (`self.hr`) and vertical
+        radius (`self.vr`). The center of the ellipse is at (0, 0).
+
+        Parameters
+        ----------
+        x : float
+            The x-coordinate of the point to be checked.
+        y : float
+            The y-coordinate of the point to be checked.
+
+        Returns
+        -------
+        bool
+            True if the point (x, y) lies within or on the ellipse; False otherwise.
+
         """
         return (((x - self.hr) ** 2) / (self.hr ** 2)) + (((y - self.vr) ** 2) / (self.vr ** 2)) <= 1
 
     def create(self):
-        # if self.hsize % 2 == 0:
-        #     self.hsize += 1
-        # if self.vsize % 2 == 0:
-        #     self.vsize += 1
+        """
+        Create a 2D array representing an ellipse.
+
+        This method generates a NumPy array where each element is determined by
+        the `ellipse_fun` function, which computes values based on the horizontal
+        and vertical sizes of the ellipse.
+
+        Returns
+        -------
+        ndarray
+            A 2D NumPy array representing the ellipse shape.
+        """
         return np.fromfunction(self.ellipse_fun, (self.vsize, self.hsize))
 
 
 def get_rolling_window_coordinates_list(height, width, side_length, window_step, allowed_pixels=None):
+    """
+    Generate a list of rolling window coordinates.
+
+    This function calculates the coordinates for a series of rolling windows
+    over an image or array, given its dimensions and window parameters.
+
+    Parameters
+    ----------
+    height : int
+        The height of the image or array.
+    width : int
+        The width of the image or array.
+    side_length : int
+        The side length of each window.
+    window_step : int
+        The step size between consecutive windows along one dimension.
+    allowed_pixels : np.array, optional
+        An array of pixels to check for validity. Default is None.
+
+    Returns
+    -------
+    List[List[int]]
+        A list of coordinates for each window, where each coordinate is
+        represented by a list [start_y, end_y, start_x, end_x].
+
+    """
     y_remain = height % side_length
     x_remain = width % side_length
     y_nb = height // side_length
@@ -897,6 +1066,34 @@ def get_contours(binary_image):
 
 
 def prepare_box_counting(binary_image, min_im_side=128, min_mesh_side=8, zoom_step=0, contours=True):
+    """
+    Prepare a binary image and compute side lengths for box counting.
+
+    This function processes a binary image by extracting the non-zero region, optionally applying
+    contour detection through erosion, and then computing side lengths for box counting.
+    The side lengths are calculated based on the size of the extracted region and input parameters.
+
+    Parameters
+    ----------
+    binary_image : ndarray
+        2D binary image where non-zero pixels represent the object of interest.
+    min_im_side : int, optional
+        Minimum side length for the extracted binary image region. Default is 128.
+    min_mesh_side : int, optional
+        Minimum side length for the mesh in box counting. Default is 8.
+    zoom_step : int, optional
+        Step size for the side length calculation. Default is 0.
+    contours : bool, optional
+        Flag indicating whether to apply contour detection. Default is True.
+
+    Returns
+    -------
+    tuple
+        A tuple containing two elements:
+        - zoomed_binary : ndarray, the cropped and optionally processed binary image.
+        - side_lengths : ndarray or None, the computed side lengths for box counting.
+
+    """
     side_lengths = None
     zoomed_binary = binary_image
     binary_idx = np.nonzero(binary_image)
@@ -978,3 +1175,79 @@ def box_counting_dimension(zoomed_binary, side_lengths, display=False):
                 # plt.close()
 
     return box_counting_dimension, r_value, box_nb
+
+
+def keep_shape_connected_with_ref(all_shapes: np.uint8, reference_shape: np.uint8):
+    """
+    Identify the connected components in `all_shapes` that intersect with
+    `reference_shape`.
+
+    This function finds connected components within the binary image `all_shapes`
+    and checks which of these components intersect with a specified
+    `reference_shape`. The first intersecting component is returned.
+
+    Parameters
+    ----------
+    all_shapes : np.uint8
+        Binary image containing multiple connected components.
+    reference_shape : np.uint8
+        Binary mask used to identify intersecting components.
+
+    Returns
+    -------
+    np.optional(np.uint8)
+        Binary image of the first connected component that intersects with
+        `reference_shape`. If no components intersect, returns None.
+
+    Examples
+    --------
+    >>> all_shapes = np.array([[0, 1, 1], [0, 0, 0], [1, 1, 0]], np.uint8)
+    >>> reference_shape = np.array([[0, 0, 0], [1, 0, 0], [1, 0, 0]], np.uint8)
+    >>> result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+    >>> print(result)
+    [[0 0 0]
+     [0 0 0]
+     [1 1 0]]
+    """
+    number, order = cv2.connectedComponents(all_shapes, ltype=cv2.CV_16U)
+    expanded_shape = None
+    if number > 2:
+        for i in np.arange(1, number):
+            expanded_shape_test = np.zeros(order.shape, np.uint8)
+            expanded_shape_test[order == i] = 1
+            if np.any(expanded_shape_test * reference_shape):
+                break
+        expanded_shape = expanded_shape_test
+    return expanded_shape
+
+
+def keep_one_connected_component(binary_image: np.uint8):
+    """
+    Keep only the largest connected component in a binary image, setting all other components to zero.
+
+    This function isolates the biggest connected component within a binary image by
+    setting all pixels belonging to smaller components to zero. It uses connected-component
+    labeling and keeps the component with the largest area.
+
+    Parameters
+    ----------
+    binary_image : np.uint8
+        The binary image represented as an 8-bit numpy array.
+
+    Returns
+    -------
+    np.uint8
+        The modified binary image with only the largest connected component retained.
+
+    Examples
+    --------
+    >>> binary_image = np.array([[0, 0, 1], [1, 0, 0], [1, 1, 0]], np.uint8)
+    >>> result = keep_one_connected_component(binary_image)
+    >>> print(result)
+    [[0 0 0]
+     [1 0 0]
+     [1 1 0]]
+    """
+    nb_binary_image, stats, _ = cc(binary_image)
+    binary_image[nb_binary_image > 1] = 0
+    return binary_image
