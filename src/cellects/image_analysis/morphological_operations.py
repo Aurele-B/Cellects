@@ -41,7 +41,15 @@ square_33 = np.ones((3, 3), np.uint8)
 
 
 class CompareNeighborsWithValue:
-    def __init__(self, array, connectivity=None, data_type=np.int8):
+    """
+    CompareNeighborsWithValue class to summarize each pixel by comparing its neighbors to a value.
+
+    This class analyzes pixels in a 2D array, comparing each pixel's neighbors
+    to a specified value. The comparison can be equality, superiority,
+    or inferiority, and neighbors can be the 4 or 8 nearest pixels based on
+    the connectivity parameter.
+    """
+    def __init__(self, array: np.ndarray, connectivity: int=None, data_type: np.dtype=np.int8):
         """
         Summarize each pixel (cell) of a 2D array by comparing its neighbors to a value.
         This comparison can be equal, inferior or superior.
@@ -62,7 +70,6 @@ class CompareNeighborsWithValue:
         else:
             # Build 4 window of the original array, each missing one of the four borders
             # Grow each window with a copy of the last border at the opposite of the side a border have been deleted
-
             if self.connectivity == 4 or self.connectivity == 8:
                 self.on_the_right = np.column_stack((array[:, 1:], array[:, -1]))
                 self.on_the_left = np.column_stack((array[:, 0], array[:, :-1]))
@@ -86,7 +93,7 @@ class CompareNeighborsWithValue:
                 self.on_the_botright = np.vstack((self.on_the_botright, self.on_the_botright[-1, :]))
                 self.on_the_botright = np.column_stack((self.on_the_botright, self.on_the_botright[:, -1]))
 
-    def is_equal(self, value, and_itself=False):
+    def is_equal(self, value, and_itself: bool=False):
         """
         Give, for each pixel, the number neighboring pixels having the value "value"
         :param value: any number. The equal_neighbor_nb matrix will contain, for each pixel,
@@ -739,18 +746,23 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_s
     return previous_shape_to_expand
 
 
-def image_borders(dimensions):
+def image_borders(dimensions: tuple, shape: str="rectangular"):
     """
     Create a matrix of dimensions "dimensions" containing ones everywhere except at borders (0)
     :param dimensions:
     :return:
     :rtype: uint8
     """
-    borders = np.ones(dimensions, dtype=np.uint8)
-    borders[0, :] = 0
-    borders[:, 0] = 0
-    borders[- 1, :] = 0
-    borders[:, - 1] = 0
+    if shape == "circular":
+        borders = Ellipse(dimensions).create()
+        img_contours = image_borders(dimensions)
+        borders = borders * img_contours
+    else:
+        borders = np.ones(dimensions, dtype=np.uint8)
+        borders[0, :] = 0
+        borders[:, 0] = 0
+        borders[- 1, :] = 0
+        borders[:, - 1] = 0
     return borders
 
 
@@ -781,56 +793,66 @@ def get_radius_distance_against_time(binary_video, field):
     return distance_against_time, time_start, time_end
 
 
-def close_until_no_holes(binary_img):
+def close_holes(binary_img):
     """
-    Close holes in a binary image using morphological operations.
+    Close the image until no holes are detected.
 
-    This function closes all the holes inside an object of a binary image
-    using successive morphological closings with varying kernel sizes,
-    stopping when no holes are detected. It uses the Euler number as a
-    topological descriptor to detect holes.
+    This function uses morphological operations to close any holes in a binary
+    image. It iteratively applies closing with kernels of decreasing sizes until
+    the Euler number indicates no holes remain.
 
     Parameters
     ----------
-    binary_img : numpy.ndarray of bool or int
-        Input binary image with values typically 0 and 1. Must be a
-        2D array.
+    binary_img : ndarray
+        Binary image (0s and 255s) to process.
 
     Returns
     -------
-    numpy.ndarray of bool or int
-        The binary image with closed holes, using the same data type as `binary_img`.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> binary_img = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]])
-    >>> result = close_until_no_holes(binary_img)
-    >>> print(result)
-    [[1 1 1]
-     [1 0 1]
-     [1 1 1]]
+    ndarray
+        Processed binary image with no holes.
     """
+    #### Third version ####
+    nb, new_order = cv2.connectedComponents(1 - binary_img)
+    if nb > 2:
+        binary_img[new_order > 1] = 1
+    return binary_img
+    filled_holes = binary_img.copy()
     SD = ShapeDescriptors(binary_img, ["euler_number"])
     if SD.descriptors["euler_number"] != 0:
-        sample_size = 25
-        y_coord, x_coord = np.nonzero(binary_img)
-        max_y, min_y, max_x, min_x = np.max(y_coord), np.min(y_coord), np.max(x_coord), np.min(x_coord)
-        kernel_max_size = np.min((max_y - min_y, max_x - min_x)) // 3
-        kernel_min_size = 3
-        while kernel_max_size - kernel_min_size > sample_size:
-            kernel_sizes = np.int32(np.logspace(np.log10(kernel_min_size), np.log10(kernel_max_size), num=sample_size))
-            for k_idx in range(len(kernel_sizes)):
-                # print(k_idx)
-                test_im = binary_img.copy()
-                test_im = cv2.morphologyEx(test_im, cv2.MORPH_CLOSE, Ellipse((kernel_sizes[k_idx], kernel_sizes[k_idx])).create().astype(np.uint8), iterations=1)
-                SD = ShapeDescriptors(test_im, ["euler_number"])
-                if SD.descriptors["euler_number"] == 0:
-                    break
-            kernel_max_size= kernel_sizes[k_idx]
-            kernel_min_size = kernel_sizes[k_idx - 1]
-        binary_img = test_im
-    return binary_img
+
+        #### Second version ####
+        nb, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - binary_img)
+        hole_width, hole_heigh = stats[2:, 2].max(), stats[2:, 3].max()
+        filled_holes = cv2.morphologyEx(filled_holes, cv2.MORPH_CLOSE,
+                                   Ellipse((hole_heigh // 2, hole_width // 2)).create().astype(np.uint8),
+                                   iterations=1)
+        SD = ShapeDescriptors(filled_holes, ["euler_number"])
+        if SD.descriptors["euler_number"] !=0:
+            print("Not all holes were detected.")
+
+        #### First version ####
+        # tic = default_timer()
+        # sample_size = 5
+        # y_coord, x_coord = np.nonzero(binary_img)
+        # max_y, min_y, max_x, min_x = np.max(y_coord), np.min(y_coord), np.max(x_coord), np.min(x_coord)
+        # kernel_max_size = np.min((max_y - min_y, max_x - min_x)) // 3
+        # kernel_min_size = 3
+        # while kernel_max_size - kernel_min_size > sample_size:
+        #     kernel_sizes = np.int32(np.logspace(np.log10(kernel_min_size), np.log10(kernel_max_size), num=sample_size))
+        #     for k_idx in range(len(kernel_sizes)):
+        #         # print(k_idx)
+        #         test_im = binary_img.copy()
+        #         test_im = cv2.morphologyEx(test_im, cv2.MORPH_CLOSE, Ellipse((kernel_sizes[k_idx], kernel_sizes[k_idx])).create().astype(np.uint8), iterations=1)
+        #         SD = ShapeDescriptors(test_im, ["euler_number"])
+        #         if SD.descriptors["euler_number"] == 0:
+        #             break
+        #     kernel_max_size= kernel_sizes[k_idx]
+        #     kernel_min_size = kernel_sizes[k_idx - 1]
+        # filled_holes = test_im
+        # tac = default_timer()
+        # print( tac-tic)
+    # return filled_holes
+    return filled_holes
 
 
 def dynamically_expand_to_fill_holes(binary_video, holes):
@@ -1012,6 +1034,9 @@ class Ellipse:
         return np.fromfunction(self.ellipse_fun, (self.vsize, self.hsize))
 
 
+rhombus_55 = Ellipse((5, 5)).create().astype(np.uint8)
+
+
 def get_rolling_window_coordinates_list(height, width, side_length, window_step, allowed_pixels=None):
     """
     Generate a list of rolling window coordinates.
@@ -1135,12 +1160,12 @@ def box_counting_dimension(zoomed_binary, side_lengths, display=False):
     N(s) = C(1/s)^D
     log(N(s)) = D*log(1/s) + log(C)
 
-    box_counting_dimension = log(N)/log(1/s)
-    The line of y=log(N(r)) vs x=log(1/r) has a slope equal to the box_counting_dimension
+    dimension = log(N)/log(1/s)
+    The line of y=log(N(r)) vs x=log(1/r) has a slope equal to the dimension
     :param zoomed_binary:
     :return:
     """
-    box_counting_dimension:float = 0.
+    dimension:float = 0.
     r_value:float = 0.
     box_nb:float = 0.
     if side_lengths is not None:
@@ -1160,7 +1185,7 @@ def box_counting_dimension(zoomed_binary, side_lengths, display=False):
             log_reciprocal_lengths = np.log(1 / side_lengths)
             slope, intercept, r_value, p_value, stderr = linregress(log_reciprocal_lengths, log_box_counts)
             # coefficients = np.polyfit(log_reciprocal_lengths, log_box_counts, 1)
-            box_counting_dimension = slope
+            dimension = slope
             box_nb = len(side_lengths)
             if display:
                 plt.scatter(log_reciprocal_lengths, log_box_counts, label="Box counting")
@@ -1174,7 +1199,7 @@ def box_counting_dimension(zoomed_binary, side_lengths, display=False):
                 plt.show()
                 # plt.close()
 
-    return box_counting_dimension, r_value, box_nb
+    return dimension, r_value, box_nb
 
 
 def keep_shape_connected_with_ref(all_shapes: np.uint8, reference_shape: np.uint8):
@@ -1248,6 +1273,46 @@ def keep_one_connected_component(binary_image: np.uint8):
      [1 0 0]
      [1 1 0]]
     """
-    nb_binary_image, stats, _ = cc(binary_image)
-    binary_image[nb_binary_image > 1] = 0
-    return binary_image
+    # nb_binary_image, stats, _ = cc(binary_image)
+    # binary_image[nb_binary_image > 1] = 0
+    if binary_image.dtype != np.uint8:
+        binary_image = binary_image.astype(np.uint8)
+    num_labels, sh = cv2.connectedComponents(binary_image)
+    if num_labels <= 1:
+        return binary_image.astype(np.uint8)
+    else:
+        return keep_largest_shape(sh)
+
+
+@njit()
+def keep_largest_shape(indexed_shapes: np.int32) -> np.bool:
+    """Keep only the largest shape in a labeled array.
+
+    This function identifies and retains only the largest connected component
+    (shape) in a labeled array of integers, returning a boolean mask where the
+    largest shape is marked as True and all other shapes are False.
+
+    Parameters
+    ----------
+    indexed_shapes : np.int32
+        A 2D array where each unique integer value represents a different connected component.
+
+    Returns
+    -------
+    np.bool
+        A boolean array with the same shape as `indexed_shapes`,
+        where True indicates pixels belonging to the largest shape.
+
+    Examples
+    --------
+    >>> indexed_shapes = np.array([[1, 1, 2],
+                                   [1, 3, 3],
+                                   [2, 0, 4]])
+    >>> keep_largest_shape(indexed_shapes)
+    array([[1, 1, 0],
+           [1, 0, 0],
+           [0, 0, 0]], dtype=uint8)
+    """
+    label_counts = np.bincount(indexed_shapes.flatten())
+    largest_label = 1 + np.argmax(label_counts[1:])
+    return (indexed_shapes == largest_label).astype(np.uint8)

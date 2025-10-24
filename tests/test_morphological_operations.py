@@ -440,7 +440,7 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
              [0, 0, 0, 0, 0, 1, 1, 1, 0],
              [0, 0, 0, 0, 0, 1, 1, 1, 0],
              [0, 0, 0, 0, 0, 1, 1, 1, 0],
-             [0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8
+             [0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8
         )
         self.assertTrue(np.array_equal(expanded_shape, expected_result))
 
@@ -467,7 +467,7 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
              [0, 0, 0, 0, 1, 1, 1, 1, 1, 0],
              [0, 0, 0, 0, 1, 1, 1, 1, 1, 0],
              [0, 0, 0, 0, 0, 1, 1, 1, 0, 0],
-             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8
+             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8
         )
         self.assertTrue(np.array_equal(expanded_shape, expected_result))
 
@@ -480,7 +480,7 @@ class TestImageBorders(CellectsUnitTest):
         expected_result = np.array(
             [[0, 0, 0],
              [0, 1, 0],
-             [0, 0, 0]], dtype=uint8
+             [0, 0, 0]], dtype=np.uint8
         )
         self.assertTrue(np.array_equal(borders, expected_result))
 
@@ -493,7 +493,7 @@ class TestImageBorders(CellectsUnitTest):
              [0, 1, 1, 1, 1, 1, 0],
              [0, 1, 1, 1, 1, 1, 0],
              [0, 1, 1, 1, 1, 1, 0],
-             [0, 0, 0, 0, 0, 0, 0]], dtype=uint8
+             [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8
         )
         self.assertTrue(np.array_equal(borders, expected_result))
 
@@ -518,7 +518,7 @@ class TestGetRadiusDistance(CellectsUnitTest):
               [0, 1, 1, 1, 0],
               [1, 1, 1, 1, 1],
               [0, 1, 1, 1, 0],
-              [0, 0, 1, 0, 0]]], dtype=uint8
+              [0, 0, 1, 0, 0]]], dtype=np.uint8
         )
         field = make_gravity_field(binary_video[0, ...],  2)
         distance_against_time, time_start, time_end = get_radius_distance_against_time(binary_video, field)
@@ -568,7 +568,7 @@ class TestExpandToFillHoles(CellectsUnitTest):
               [0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0],
               [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
               [0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0],
-              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]], dtype=uint8
+              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]], dtype=np.uint8
         )
         holes = np.array(
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -581,12 +581,12 @@ class TestExpandToFillHoles(CellectsUnitTest):
              [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8
+             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8
         )
         cross_33 = np.array(
             [[0, 1, 0],
              [1, 1, 1],
-             [0, 1, 0]], dtype=uint8
+             [0, 1, 0]], dtype=np.uint8
         )
         expanded_video, holes_time_end, distance_against_time = dynamically_expand_to_fill_holes(binary_video, holes)
         expected_expanded_video = np.array([[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

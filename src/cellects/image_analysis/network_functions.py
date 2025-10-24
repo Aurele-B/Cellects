@@ -9,23 +9,15 @@ This script contains the class for detecting networks out of a grayscale image o
 # During one layer segmentation, the algorithm make sure that all detected veins are as long as possible
 # but less long than and connected to the previous.
 """
-import matplotlib.pyplot as plt
-import cv2
-import numpy as np
-import pandas as pd
 
-from cellects.image_analysis.morphological_operations import square_33, cross_33, cc, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_until_no_holes, keep_one_connected_component
-from cellects.image_analysis.shape_descriptors import ShapeDescriptors
-from cellects.utils.utilitarian import remove_coordinates
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
+from cellects.utils.utilitarian import remove_coordinates, find_threshold_given_mask
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
-from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index
 from numba.typed import Dict as TDict
 from skimage import morphology
-from skimage.segmentation import flood_fill
 from skimage.filters import frangi, sato, threshold_otsu
-from skimage.measure import perimeter
 from collections import deque
 from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
@@ -40,9 +32,8 @@ neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
 
 class  NetworkDetection:
-    def __init__(self, greyscale_image, possibly_filled_pixels, lighter_background, add_rolling_window=False, origin_to_add=None, best_result=None):
+    def __init__(self, greyscale_image, possibly_filled_pixels, add_rolling_window=False, origin_to_add=None, best_result=None):
         self.greyscale_image = greyscale_image
-        self.lighter_background = lighter_background
         self.possibly_filled_pixels = possibly_filled_pixels
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
@@ -198,44 +189,89 @@ class  NetworkDetection:
     def change_greyscale(self, img, c_space_dict):
         self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
 
-    def get_best_pseudopod_detection_method(self, pseudopod_min_size=50):
-        closed_im = close_until_no_holes(self.possibly_filled_pixels)
-        dist_trans = distance_transform_edt(closed_im)
+    def detect_pseudopods(self, lighter_background, pseudopod_min_width=5, pseudopod_min_size=50):
+        """
+        Ideas:
+        - Add a floodfill as a function of width
+        a =np.array([
+        [0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 2, 0, 0, 0, 0],
+        [0, 0, 0, 2, 2, 0, 0, 0],
+        [0, 0, 0, 0, 3, 3, 0, 0],
+        [0, 0, 0, 0, 3, 4, 0, 0],
+        [0, 0, 0, 0, 4, 0, 0, 0],
+        [0, 0, 0, 0, 0, 5, 5, 0],], dtype=np.uint8)
+        b = cv2.dilate(a, cross_33, iterations=1) ---> USe dilate
+        - Increase pseudopod detection when they are detected after and before the current frame
+        Parameters
+        ----------
+        pseudopod_min_size
 
+        Returns
+        -------
+
+        """
+        # from timeit import default_timer
+        # tic = default_timer()
+        closed_im = close_holes(self.possibly_filled_pixels)
+        dist_trans = distance_transform_edt(closed_im)
         dist_trans = dist_trans.max() - dist_trans
-        if self.lighter_background:
+        # Add dilatation of bracket of distances from medial_axis to the multiplication
+        if lighter_background:
             grey = self.greyscale_image.max() - self.greyscale_image
+        else:
+            grey = self.greyscale_image
         if self.origin_to_add is not None:
             dist_trans_ori = distance_transform_edt(1 - self.origin_to_add)
             scored_im = dist_trans * dist_trans_ori * grey
         else:
             scored_im = (dist_trans**2) * grey
-        scored_im *= self.possibly_filled_pixels
+        ## new:
         scored_im = bracket_to_uint8_image_contrast(scored_im)
         thresh = threshold_otsu(scored_im)
-        for i in range(255-thresh):
-            bin_im = (scored_im > thresh).astype(np.uint8)
-            SD = ShapeDescriptors(bin_im, ["circularity"])
-            if SD.descriptors["circularity"] > 0.5:
-                break
-            thresh += 1
-        opened_bin_im = cv2.morphologyEx(bin_im, cv2.MORPH_OPEN, Ellipse((5, 5)).create().astype(np.uint8), iterations=1)
+        thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=thresh)
+        high_int_in_periphery = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
+        ## old
+        # scored_im *= self.possibly_filled_pixels
+        # scored_im = bracket_to_uint8_image_contrast(scored_im)
+        # thresh = threshold_otsu(scored_im[scored_im > 0])
+        # high_int_in_periphery = (scored_im > thresh).astype(np.uint8)
 
-        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(opened_bin_im)
-        pseud_idx = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-        potential_pseudopods = np.zeros_like(self.possibly_filled_pixels)
-        potential_pseudopods[np.isin(shapes, pseud_idx)] = 1
+        _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
+        # pseudopod_widths = bracket_to_uint8_image_contrast(pseudopod_widths)
+        # while np.any((pseudopod_widths == 0) * bin_im):
+        #     pseudopod_widths = cv2.dilate(bracket_to_uint8_image_contrast(pseudopod_widths), kernel=cross_33, iterations=1)
+        bin_im = pseudopod_widths >= pseudopod_min_width
+        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
+        bin_im = high_int_in_periphery * dil_bin_im
 
-        potential_pseudopods = cv2.dilate(potential_pseudopods, Ellipse((5, 5)).create().astype(np.uint8), iterations=1)
-        potential_pseudopods *= bin_im
-        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(potential_pseudopods)
+        # tic = default_timer()
+        # print( tic-tac)
+        # nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
+        # pseud_idx = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        # potential_pseudopods = np.zeros_like(self.possibly_filled_pixels)
+        # potential_pseudopods[np.isin(shapes, pseud_idx)] = 1
+        #
+        # potential_pseudopods = cv2.dilate(potential_pseudopods, Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
+        # potential_pseudopods *= high_int_in_periphery
+
+        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
         true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
         true_pseudopods = np.isin(shapes, true_pseudopods)
-        self.pseudopods = np.zeros_like(self.possibly_filled_pixels)
-        self.pseudopods[true_pseudopods] = 1
-        self.complete_network = self.incomplete_network.copy()
-        self.complete_network[true_pseudopods] = 1
-        self.incomplete_network *= (1 - self.pseudopods)
+
+        # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
+        complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
+        complete_network = keep_one_connected_component(complete_network)
+        without_pseudopods = complete_network.copy()
+        without_pseudopods[true_pseudopods] = 0
+        only_connected_network = keep_one_connected_component(without_pseudopods)
+        self.pseudopods = (1 - only_connected_network) * complete_network
+
+        # tac = default_timer()
+        # print( tac-tic)
+        # show((1 - only_connected_network) * complete_network)
+        # self.pseudopods = np.zeros_like(self.possibly_filled_pixels)
+        # self.pseudopods[true_pseudopods] = 1
 
         #
         # new_bin_im = np.zeros_like(self.possibly_filled_pixels)
@@ -285,7 +321,7 @@ class  NetworkDetection:
         #     pad_skeleton[pad_distances < width_threshold] = 0
         # self.best_result['width_threshold'] = width_threshold
         # potential_tips = np.nonzero(pad_skeleton)
-        # if self.lighter_background:
+        # if lighter_background:
         #     max_tip_int = self.greyscale_image[potential_tips].max()
         #     low_pixels = self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
         # else:
@@ -303,7 +339,7 @@ class  NetworkDetection:
         #         filled = filled == 255
         #         if (filled * not_in_cell).sum() > error_threshold:
         #             break
-        #         if self.lighter_background:
+        #         if lighter_background:
         #             filled *= low_pixels
         #         else:
         #             filled *= high_pixels
@@ -318,39 +354,42 @@ class  NetworkDetection:
         # self.complete_network, stats, centers = cc(complete_network)
         # self.complete_network[self.complete_network > 1] = 0
 
+    def merge_network_with_pseudopods(self):
+        self.complete_network = np.logical_or(self.incomplete_network, self.pseudopods).astype(np.uint8)
+        self.incomplete_network *= (1 - self.pseudopods)
 
-    def detect_pseudopods(self):
-        pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
-        pad_skeleton = pad_skeleton.astype(np.uint8)
-        pad_skeleton[pad_distances < self.best_result['width_threshold']] = 0
-        potential_tips = np.nonzero(pad_skeleton)
-        if self.lighter_background:
-            max_tip_int = self.greyscale_image[potential_tips].max()
-        else:
-            min_tip_int = self.greyscale_image[potential_tips].min()
-
-        complete_network = self.incomplete_network.copy()
-        for y, x in zip(potential_tips[0],
-                        potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
-            filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=self.best_result['tolerance'])
-            filled = filled == 255
-            if self.lighter_background:
-                filled *= self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
-            else:
-                filled *= self.greyscale_image >= min_tip_int  # mean_tip_int
-            complete_network[filled] = 1
-
-        # Check that the current parameters do not produce images full of ones
-        # If so, update the width_threshold and tolerance parameters
-        not_in_cell = 1 - self.possibly_filled_pixels
-        error_threshold = not_in_cell.sum() * 0.1
-        if (complete_network * not_in_cell).sum() > error_threshold:
-            self.get_best_network_detection_method()
-        else:
-            complete_network = complete_network * self.possibly_filled_pixels
-            complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
-            self.complete_network, stats, centers = cc(complete_network)
-            self.complete_network[self.complete_network > 1] = 0
+    # def detect_pseudopods(self):
+    #     pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
+    #     pad_skeleton = pad_skeleton.astype(np.uint8)
+    #     pad_skeleton[pad_distances < self.best_result['width_threshold']] = 0
+    #     potential_tips = np.nonzero(pad_skeleton)
+    #     if lighter_background:
+    #         max_tip_int = self.greyscale_image[potential_tips].max()
+    #     else:
+    #         min_tip_int = self.greyscale_image[potential_tips].min()
+    #
+    #     complete_network = self.incomplete_network.copy()
+    #     for y, x in zip(potential_tips[0],
+    #                     potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
+    #         filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=self.best_result['tolerance'])
+    #         filled = filled == 255
+    #         if lighter_background:
+    #             filled *= self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
+    #         else:
+    #             filled *= self.greyscale_image >= min_tip_int  # mean_tip_int
+    #         complete_network[filled] = 1
+    #
+    #     # Check that the current parameters do not produce images full of ones
+    #     # If so, update the width_threshold and tolerance parameters
+    #     not_in_cell = 1 - self.possibly_filled_pixels
+    #     error_threshold = not_in_cell.sum() * 0.1
+    #     if (complete_network * not_in_cell).sum() > error_threshold:
+    #         self.get_best_network_detection_method()
+    #     else:
+    #         complete_network = complete_network * self.possibly_filled_pixels
+    #         complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
+    #         self.complete_network, stats, centers = cc(complete_network)
+    #         self.complete_network[self.complete_network > 1] = 0
 
 
 def get_skeleton_and_widths(pad_network, pad_origin=None, pad_origin_centroid=None):
@@ -1242,7 +1281,7 @@ def add_central_contour(pad_skeleton, pad_distances, pad_origin, pad_network, pa
     # Make a hole at the skeleton center and find the vertices connecting it
     holed_skeleton = pad_skeleton * (1 - pad_origin)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
-    dil_origin = cv2.dilate(pad_origin, Ellipse((5, 5)).create().astype(np.uint8), iterations=20)
+    dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=20)
     pad_vertices *= dil_origin
     connecting_pixels = np.transpose(np.array(np.nonzero(pad_vertices)))
 

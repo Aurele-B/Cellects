@@ -29,7 +29,7 @@ This module is particularly useful in image analysis tasks where shapes need to 
 from copy import deepcopy
 import numpy as np
 import cv2
-from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, Ellipse, keep_shape_connected_with_ref
+from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, rhombus_55, keep_shape_connected_with_ref
 
 
 
@@ -132,7 +132,7 @@ class ProgressivelyAddDistantShapes:
         >>> pads.main_shape
         array([[0, 0, 0],
                [0, 0, 0],
-               [0, 1, 1]], dtype=uint8)
+               [0, 1, 1]], dtype=np.uint8)
         """
         if np.any(self.new_order > 1):
             # If there is at least one pixel of the previous shape that is not among pixels labelled 1,
@@ -192,7 +192,7 @@ class ProgressivelyAddDistantShapes:
         >>> pads.new_order
         array([[2, 2, 0],
        [0, 0, 0],
-       [0, 1, 1]], dtype=uint8)
+       [0, 1, 1]], dtype=np.uint8)
         """
         if self.max_distance != 0:
             # Eliminate too small and too large shapes
@@ -244,7 +244,7 @@ class ProgressivelyAddDistantShapes:
         other_shapes = np.zeros(self.main_shape.shape, np.uint8)
         other_shapes[self.new_order > 1] = 1
         simple_disk = cross_33
-        kernel = Ellipse((5, 5)).create().astype(np.uint8)
+        kernel = rhombus_55
         # Dilate the main shape, progressively to infer in what order other shapes should be expanded toward it
         main_shape = deepcopy(self.main_shape)
         new_order = deepcopy(self.new_order)
