@@ -100,14 +100,14 @@ from gc import collect
 from time import sleep
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
-
+import pandas as pd
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               make_gravity_field, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting,
-                                                              keep_one_connected_component)
+                                                              keep_one_connected_component, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
@@ -147,12 +147,14 @@ class MotionAnalysis:
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
         self.mean_intensity_per_frame = np.mean(self.converted_video, (1, 2))
-        if self.vars['arena_shape'] == "circle":
-            self.borders = Ellipse(self.dims[1:]).create()
-            img_contours = image_borders(self.dims[1:])
-            self.borders = self.borders * img_contours
-        else:
-            self.borders = image_borders(self.dims[1:])
+
+        self.borders = image_borders(self.dims[1:], shape=self.vars['arena_shape'])
+        # if self.vars['arena_shape'] == "circle":
+        #     self.borders = Ellipse(self.dims[1:]).create()
+        #     img_contours = image_borders(self.dims[1:])
+        #     self.borders = self.borders * img_contours
+        # else:
+        #     self.borders = image_borders(self.dims[1:])
         self.pixel_ring_depth = 9
         self.step = 10
         self.lost_frames = 10
@@ -1257,21 +1259,55 @@ class MotionAnalysis:
     def networks_detection(self, show_seg=False):
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
+            smooth_segmentation_over_time = True
             self.check_converted_video_type()
-            self.network_dynamics = np.zeros_like(self.binary, dtype=bool)
+            pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
+            potential_network = np.zeros_like(self.binary, dtype=bool)
+            self.network_dynamics = np.zeros_like(self.binary, dtype=np.uint8)
             greyscale = self.visu[-1, ...].mean(axis=-1)
             NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[-1, ...],
-                                      lighter_background=self.vars['lighter_background'],
                                       origin_to_add=self.origin)
             NetDet.get_best_network_detection_method()
+            NetDet.change_greyscale(self.visu[-1, ...], c_space_dict=self.vars['convert_for_motion'])
+            lighter_background = NetDet.greyscale_image[self.binary[-1, ...] > 0].mean() < NetDet.greyscale_image[self.binary[-1, ...] == 0].mean()
+
+
             for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
                 greyscale = self.visu[t, ...].mean(axis=-1)
                 NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
-                                          lighter_background=self.vars['lighter_background'],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
-                NetDet_fast.get_best_pseudopod_detection_method()
-                self.network_dynamics[t, ...] = NetDet_fast.complete_network
+                NetDet_fast.detect_pseudopods(lighter_background)
+                NetDet_fast.merge_network_with_pseudopods()
+                potential_network[t, ...] = NetDet_fast.complete_network
+                pseudopod_vid[t, ...] = NetDet_fast.pseudopods
+            for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
+                if smooth_segmentation_over_time:
+                    if 2 <= t <= (self.dims[0] - 2):
+                        computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
+                        computed_network[computed_network == 1] = 0
+                        computed_network[computed_network > 1] = 1
+                    else:
+                        if t < 2:
+                            computed_network = potential_network[:2, :, :].sum(axis=0)
+                        elif t > (self.dims[0] - 2):
+                            computed_network = potential_network[-2:, :, :].sum(axis=0)
+                        computed_network[computed_network > 0] = 1
+                else:
+                    computed_network = computed_network[t, :, :].copy()
+
+                if self.origin is not None:
+                    computed_network = computed_network * (1 - self.origin)
+                    origin_contours = get_contours(self.origin)
+                    complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+                complete_network = keep_one_connected_component(complete_network)
+                # Make sure that removing pseudopods do not cut the network:
+                without_pseudopods = complete_network * (1 - pseudopod_vid[t])
+                only_connected_network = keep_one_connected_component(without_pseudopods)
+                pseudopods = (1 - only_connected_network) * complete_network
+                pseudopod_vid[t] = pseudopods
+                self.network_dynamics[t] = complete_network
+
 
                 imtoshow = self.visu[t, ...]
                 eroded_binary = cv2.erode(self.network_dynamics[t, ...], cross_33)
@@ -1285,10 +1321,14 @@ class MotionAnalysis:
                 if show_seg:
                     cv2.destroyAllWindows()
             self.network_dynamics = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
+            pseudopod_vid = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
             if self.vars['save_coord_network']:
                  np.save(
                     f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
                     self.network_dynamics)
+                 np.save(
+                    f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                    pseudopod_vid)
 
     def graph_extraction(self):
         if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:

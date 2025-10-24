@@ -709,9 +709,26 @@ class ShapeDescriptors:
         >>> print(SD.total_hole_area)
         0
         """
-        np, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
-        if stats.shape[0] > 2:
-            self.total_hole_area = np.sum(stats[2:, 4])
+        # FIRST VERSION
+        # nb, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
+        # if stats.shape[0] > 2:
+        #     self.total_hole_area = stats[2:, 4].sum()
+        # else:
+        #     self.total_hole_area = 0
+        # tic = default_timer()
+        # SECOND VERSION
+        # nb, new_order = cv2.connectedComponents(1 - self.binary_image)
+        # if nb <= 1:
+        #     self.total_hole_area = 0
+        # else:
+        #     label_counts = np.bincount(new_order.flatten())
+        #     self.total_hole_area = label_counts[2:].sum()
+        # tac = default_timer()
+        # print( tac-tic)
+        # THIDS VERSION
+        nb, new_order = cv2.connectedComponents(1 - self.binary_image)
+        if nb > 2:
+            self.total_hole_area = (new_order > 2).sum()
         else:
             self.total_hole_area = 0
 

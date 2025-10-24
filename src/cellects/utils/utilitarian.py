@@ -36,7 +36,7 @@ vectorized_len = np.vectorize(len)
 
 
 @njit()
-def greater_along_first_axis(array_in_1, array_in_2, array_out):
+def greater_along_first_axis(array_in_1, array_in_2):
     """
     Compare two arrays along the first axis and store the result in a third array.
 
@@ -66,19 +66,20 @@ def greater_along_first_axis(array_in_1, array_in_2, array_out):
     --------
     >>> array_in_1 = np.array([[2, 4], [5, 8]])
     >>> array_in_2 = np.array([3, 6])
-    >>> array_out = greater_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+    >>> array_out = greater_along_first_axis(array_in_1, array_in_2)
     >>> print(array_out)
     [[False  True]
      [False  True]]
 
     """
+    array_out = np.zeros(array_in_1.shape, dtype=np.uint8)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] > value
     return array_out
 
 
 @njit()
-def less_along_first_axis(array_in_1, array_in_2, array_out):
+def less_along_first_axis(array_in_1, array_in_2):
     """
     Compare two arrays along the first axis and store the result in a third array.
 
@@ -108,11 +109,12 @@ def less_along_first_axis(array_in_1, array_in_2, array_out):
     --------
     >>> array_in_1 = np.array([[2, 4], [5, 8]])
     >>> array_in_2 = np.array([3, 6])
-    >>> array_out = less_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+    >>> array_out = less_along_first_axis(array_in_1, array_in_2, )
     >>> print(array_out)
     [[ True False]
      [ True False]]
     """
+    array_out = np.zeros(array_in_1.shape, dtype=np.uint8)
     for i, value in enumerate(array_in_2):
         array_out[i, ...] = array_in_1[i, ...] < value
     return array_out
@@ -429,7 +431,7 @@ def smallest_memory_array(array_object, array_type='uint'):
     >>> array = [[1, 2], [3, 4]]
     >>> smallest_memory_array(array)
     array([[1, 2],
-           [3, 4]], dtype=uint8)
+           [3, 4]], dtype=np.uint8)
 
     >>> array = [[1000, 2000], [3000, 4000]]
     >>> smallest_memory_array(array)
@@ -494,3 +496,38 @@ def remove_coordinates(arr1, arr2):
     # Convert to set of tuples
     coords_to_remove = set(map(tuple, arr2))
     return np.array([coord for coord in arr1 if tuple(coord) not in coords_to_remove])
+
+
+def find_threshold_given_mask(greyscale: np.uint8, mask: np.uint8, min_threshold: np.uint8=0):
+    region_A = greyscale[mask > 0]
+    region_B = greyscale[mask == 0]
+    low = min_threshold
+    high = 255
+
+    best_T = low
+
+    while low <= high:
+        mid = (low + high) // 2
+        count_A, count_B = get_counts_jit(mid, region_A, region_B)
+
+        if count_A > count_B:
+            # Try to find a lower threshold that still satisfies the condition
+            best_T = mid
+            high = mid - 1
+        else:
+            # Need higher threshold
+            low = mid + 1
+    return best_T
+
+
+@njit()
+def get_counts_jit(T, region_A, region_B):
+    count_A = 0
+    count_B = 0
+    for val in region_A:
+        if val > T:
+            count_A += 1
+    for val in region_B:
+        if val > T:
+            count_B += 1
+    return count_A, count_B

@@ -603,7 +603,7 @@ def readim(image_path, raw_image=False):
             [  0, 255, 0]],
 
            [[  0,   0, 255],
-            [  0,   0, 255]]], dtype=uint8)
+            [  0,   0, 255]]], dtype=np.uint8)
     """
     if raw_image:
         logging.error("Cannot read this image format. If the rawpy package can, ask for a version of Cellects using it.")

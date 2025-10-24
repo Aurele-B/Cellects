@@ -56,7 +56,7 @@ class TestGreaterAlongFirstAxis(CellectsUnitTest):
             array_in_1 = test_case['array_in_1']
             array_in_2 = test_case['array_in_2']
             expected_result = test_case['expected_result']
-            actual_result = greater_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+            actual_result = greater_along_first_axis(array_in_1, array_in_2)
             self.assertEqual(actual_result.tolist(), expected_result.tolist())
 
 
@@ -106,7 +106,7 @@ class TestLessAlongFirstAxis(CellectsUnitTest):
             array_in_2 = test_case['array_in_2']
             expected_result = test_case['expected_result']
 
-            actual_result = less_along_first_axis(array_in_1, array_in_2, np.zeros(array_in_1.shape, dtype=bool))
+            actual_result = less_along_first_axis(array_in_1, array_in_2)
 
             self.assertEqual(actual_result.tolist(), expected_result.tolist())
 
