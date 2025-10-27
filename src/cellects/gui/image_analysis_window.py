@@ -569,7 +569,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.thread['CropScaleSubtractDelineate'].wait()
             if self.thread['UpdateImage'].isRunning():
                 self.thread['UpdateImage'].wait()
-            self.message.setText("Display updating...")
+            self.message.setText("Updating display...")
             self.decision_label.setVisible(False)
             self.yes.setVisible(False)
             self.no.setVisible(False)

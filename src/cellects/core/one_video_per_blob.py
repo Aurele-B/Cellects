@@ -20,7 +20,9 @@ import numpy as np
 import cv2
 import psutil
 
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, get_every_coord_between_2_points, rank_from_top_to_bottom_from_left_to_right, expand_until_neighbor_center_gets_nearer_than_own
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, \
+    rank_from_top_to_bottom_from_left_to_right, \
+    expand_until_neighbor_center_gets_nearer_than_own, get_line_points
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 
 
@@ -397,50 +399,6 @@ class OneVideoPerBlob:
         return In.binary_image
 
 
-    def print_bounding_boxes(self, display_or_return=0):
-        imtoshow = deepcopy(self.first_image.bgr)
-        segments = np.zeros((2, 1), dtype=np.uint8)
-        for i in np.arange(self.first_image.shape_number):
-            j = i * 4
-            segments = np.append(segments, get_every_coord_between_2_points(np.array((self.top[i], self.left[i])),
-                                                                            np.array((self.bot[i], self.left[i]))),
-                                 axis=1)
-            j = j + 1
-            segments = np.append(segments, get_every_coord_between_2_points(np.array((self.top[i], self.right[i])),
-                                                                            np.array((self.bot[i], self.right[i]))),
-                                 axis=1)
-            j = j + 1
-            segments = np.append(segments, get_every_coord_between_2_points(np.array((self.top[i], self.left[i])),
-                                                                            np.array((self.top[i], self.right[i]))),
-                                 axis=1)
-            j = j + 1
-            segments = np.append(segments,  get_every_coord_between_2_points(np.array((self.bot[i], self.left[i])),
-                                                                             np.array((self.bot[i], self.right[i]))),
-                                 axis=1)
-
-            text = f"{i + 1}"
-            position = (self.left[i] + 25, self.top[i] + (self.bot[i] - self.top[i]) // 2)
-            imtoshow = cv2.putText(imtoshow,  # numpy array on which text is written
-                            text,  # text
-                            position,  # position at which writing has to start
-                            cv2.FONT_HERSHEY_SIMPLEX,  # font family
-                            1,  # font size
-                            (0, 0, 0, 255),  # (209, 80, 0, 255),
-                            2)  # font stroke
-
-        mask = np.zeros(self.first_image.validated_shapes.shape, dtype=np.uint8)
-        mask[segments[0], segments[1]] = 1
-        mask = cv2.dilate(mask, np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8), iterations=3)
-        if display_or_return == 0:
-            imtoshow[mask == 1, :] = 0
-            imtoshow = cv2.resize(imtoshow, (2000, 1000))
-            cv2.imshow('Video contour', imtoshow)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-        else:
-            return mask
-
-
     def prepare_video_writing(self, img_list, min_ram_free, in_colors=False):
         #https://stackoverflow.com/questions/48672130/saving-to-hdf5-is-very-slow-python-freezing
         #https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
@@ -675,5 +633,4 @@ if __name__ == "__main__":
     self = OneVideoPerBlob(first_image, 100, False)
     are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_specimens_have_same_direction=True
     self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=False, display=True)
-    self.print_bounding_boxes()
 

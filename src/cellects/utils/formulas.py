@@ -30,48 +30,58 @@ Notes:
 from copy import deepcopy
 from numba import njit
 import numpy as np
+from numpy.typing import NDArray
+from typing import Tuple
 
 
 @njit()
-def sum_of_abs_differences(array1, array2):
+def sum_of_abs_differences(array1: NDArray, array2: NDArray):
     """
-    Calculate the sum of absolute differences between two NumPy arrays.
+    Compute the sum of absolute differences between two arrays.
 
     Parameters
     ----------
-    array1 : array_like
-        First input array.
-    array2 : array_like
-        Second input array.
+    array1 : NDArray
+        The first input array.
+    array2 : NDArray
+        The second input array.
 
     Returns
     -------
-    scalar
-        Sum of absolute differences between the two arrays.
+    int
+        Sum of absolute differences between elements of `array1` and `array2`.
+
+    Examples
+    --------
+    >>> arr1 = np.array([1.2, 2.5, -3.7])
+    >>> arr2 = np.array([12, 25, -37])
+    >>> result = sum_of_abs_differences(arr1, arr2)
+    >>> print(result)
+    66.6
     """
     return np.sum(np.absolute(array1 - array2))
 
 
 @njit()
-def to_uint8(an_array):
+def to_uint8(an_array: NDArray):
     """
     Convert an array to unsigned 8-bit integers.
 
     Parameters
     ----------
-    an_array : numpy.ndarray
+    an_array : ndarray
         Input array to be converted. It can be of any numeric dtype.
 
     Returns
     -------
-    numpy.ndarray
+    ndarray
         The input array rounded to the nearest integer and then cast to
         unsigned 8-bit integers.
 
     Raises
     ------
     TypeError
-        If `an_array` is not a numpy.ndarray.
+        If `an_array` is not a ndarray.
 
     Notes
     -----
@@ -79,7 +89,6 @@ def to_uint8(an_array):
 
     Examples
     --------
-    >>> import numpy as np
     >>> result = to_uint8(np.array([1.2, 2.5, -3.7]))
     >>> print(result)
     [1 3 0]
@@ -89,7 +98,7 @@ def to_uint8(an_array):
 
 
 @njit()
-def bracket_to_uint8_image_contrast(image):
+def bracket_to_uint8_image_contrast(image: NDArray):
     """
     Convert an image with bracket contrast values to uint8 type.
 
@@ -99,12 +108,12 @@ def bracket_to_uint8_image_contrast(image):
 
     Parameters
     ----------
-    image : np.ndarray
+    image : ndarray
         Input image as a numpy array with floating-point values.
 
     Returns
     -------
-    np.ndarray
+    ndarray of uint8
         Output image converted to uint8 type after normalization.
     """
     image -= np.min(image)
@@ -112,7 +121,7 @@ def bracket_to_uint8_image_contrast(image):
 
 
 @njit()
-def linear_model(x, a, b):
+def linear_model(x: NDArray, a: float, b: float) -> float:
     """
     Perform a linear transformation on input data using slope and intercept.
 
@@ -144,7 +153,7 @@ def linear_model(x, a, b):
 
 
 @njit()
-def get_power_dists(binary_image, cx, cy, n):
+def get_power_dists(binary_image: np.ndarray, cx: float, cy: float, n: int):
     """
     Calculate the power distributions based on the given center coordinates and exponent.
 
@@ -178,9 +187,8 @@ def get_power_dists(binary_image, cx, cy, n):
     --------
     >>> binary_image = np.zeros((10, 10))
     >>> xn, yn = get_power_dists(binary_image, 5.0, 5.0, 2)
-    >>> print(xn.shape), print(yn.shape
+    >>> print(xn.shape), print(yn.shape)
     (10,) (10,)
-
     """
     xn = (np.arange(binary_image.shape[1]) - cx) ** n
     yn = (np.arange(binary_image.shape[0]) - cy) ** n
@@ -188,7 +196,7 @@ def get_power_dists(binary_image, cx, cy, n):
 
 
 @njit()
-def get_var(mo, binary_image, Xn, Yn):
+def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[float, float]:
     """
     Compute the center of mass in 2D space.
 
@@ -198,7 +206,7 @@ def get_var(mo, binary_image, Xn, Yn):
     Parameters
     ----------
     mo : dict
-        Image moments dictionary with keys 'm00', 'm10', and 'm20'.
+        Dictionary containing moments of binary image.
     binary_image : ndarray
         2D binary image where non-zero pixels are considered.
     Xn : ndarray
@@ -225,8 +233,9 @@ def get_var(mo, binary_image, Xn, Yn):
     vy = np.sum(binary_image * Yn) / mo["m00"]
     return vx, vy
 
+
 @njit()
-def get_skewness_kurtosis(mnx, mny, sx, sy, n):
+def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) -> Tuple[float, float]:
     """
     Calculates skewness and kurtosis of a distribution.
 
@@ -271,7 +280,7 @@ def get_skewness_kurtosis(mnx, mny, sx, sy, n):
     return mnx / sx ** n, mny / sy ** n
 
 
-def get_standard_deviations(mo, binary_image, cx, cy):
+def get_standard_deviations(mo: dict, binary_image: NDArray, cx: float, cy: float) -> Tuple[float, float]:
     """
     Return spatial standard deviations for a given moment and binary image.
 
@@ -280,8 +289,8 @@ def get_standard_deviations(mo, binary_image, cx, cy):
 
     Parameters
     ----------
-    mo : ndarray of float64
-        The moment matrix computed from the binary image.
+    mo : dict
+        Dictionary containing moments of binary image.
     binary_image : ndarray of bool or int8
         The binary input image where the moments are computed.
     cx : float64
@@ -322,39 +331,38 @@ def get_standard_deviations(mo, binary_image, cx, cy):
     return np.sqrt(vx), np.sqrt(vy)
 
 
-def get_skewness(mo, binary_image, cx, cy, sx, sy):
-    """
-    Calculate the skewness of a moment image.
+def get_skewness(mo: dict, binary_image: NDArray, cx: float, cy: float, sx: float, sy: float) -> Tuple[float, float]:
+    """Calculate skewness of the given moment.
+
+    This function computes the skewness based on the third moments
+    and the central moments of a binary image.
 
     Parameters
     ----------
-    mo : ndarray
-        Moment matrix.
+    mo : dict
+        Dictionary containing moments of binary image.
     binary_image : ndarray
-        Binary image of the object.
-    cx, cy : int
-        Center coordinates of the moment calculation.
-    sx, sy : float or int
-        Standard deviation in x and y directions.
+        Binary image as a 2D numpy array.
+    cx : float
+        Description of parameter `cx`.
+    cy : float
+        Description of parameter `cy`.
+    sx : float
+        Description of parameter `sx`.
+    sy : float
+        Description of parameter `sy`.
 
     Returns
     -------
-    float
-        Skewness value. If the values are not defined, returns `None`.
+    Tuple[float, float]
+        Tuple containing skewness values.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> mo = np.array([[1, 2, 3], [4, 5, 6]])  # Example moment matrix
-    >>> binary_image = np.array([[0, 1], [1, 0]])  # Example binary image
-    >>> cx = 1
-    >>> cy = 0
-    >>> sx = 2.5
-    >>> sy = 1.8
-
-    >>> result = get_skewness(mo, binary_image, cx, cy, sx, sy)
-    >>> print(result)  # Expected output may vary based on the input data
-    None
+    >>> result = get_skewness(mo=example_mo, binary_image=binary_img,
+    ... cx=0.5, cy=0.5, sx=1.0, sy=1.0)
+    >>> print(result)
+    (skewness_x, skewness_y)  # Example output
     """
     x3, y3 = get_power_dists(binary_image, cx, cy, 3)
     X3, Y3 = np.meshgrid(x3, y3)
@@ -362,7 +370,7 @@ def get_skewness(mo, binary_image, cx, cy, sx, sy):
     return get_skewness_kurtosis(m3x, m3y, sx, sy, 3)
 
 
-def get_kurtosis(mo, binary_image, cx, cy, sx, sy):
+def get_kurtosis(mo: dict, binary_image: NDArray, cx: float, cy: float, sx: float, sy: float) -> Tuple[float, float]:
     """
     Calculate the kurtosis of a binary image.
 
@@ -372,8 +380,8 @@ def get_kurtosis(mo, binary_image, cx, cy, sx, sy):
 
     Parameters
     ----------
-    mo : np.ndarray
-        A 2D numpy ndarray of moments calculated from the image.
+    mo : dict
+        Dictionary containing moments of binary image.
     binary_image : np.ndarray
         A 2D numpy ndarray representing a binary image.
     cx : int or float
@@ -409,7 +417,7 @@ def get_kurtosis(mo, binary_image, cx, cy, sx, sy):
 
 
 @njit()
-def get_inertia_axes(mo):
+def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     """
     Calculate the inertia axes of a moment object.
 
@@ -472,7 +480,7 @@ def get_inertia_axes(mo):
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
 
 
-def eudist(v1, v2):
+def eudist(v1, v2) -> float:
     """
     Calculate the Euclidean distance between two points in n-dimensional space.
 
@@ -515,7 +523,7 @@ def eudist(v1, v2):
     return dist
 
 
-def moving_average(vector, step):
+def moving_average(vector: NDArray, step: int) -> NDArray[float]:
     """
     Calculate the moving average of a given vector with specified step size.
 
@@ -525,7 +533,7 @@ def moving_average(vector, step):
 
     Parameters
     ----------
-    vector : numpy.ndarray
+    vector : ndarray
         Input vector for which to calculate the moving average.
     step : int
         Size of the window for computing the moving average.
@@ -572,25 +580,24 @@ def moving_average(vector, step):
     return vector
 
 
-def find_common_coord(array1, array2):
-    """
-    Find common coordinates between two arrays.
+def find_common_coord(array1: NDArray[int], array2: NDArray[int]) -> NDArray[bool]:
+    """Find common coordinates between two arrays.
 
-    Given two 2D arrays, this function finds the indices where all corresponding
-    elements are equal.
+    This function compares the given 2D `array1` and `array2`
+    to determine if there are any common coordinates.
 
     Parameters
     ----------
-    array1 : array_like of type int
-        First 2D array of shape (M, N).
-    array2 : array_like of type int
-        Second 2D array of shape (P, N).
+    array1 : ndarray of int
+        A 2D numpy ndarray.
+    array2 : ndarray of int
+        Another 2D numpy ndarray.
 
     Returns
     -------
-    bool_array : ndarray
-        A 2D boolean array of shape (M, P) where each element indicates
-        whether the corresponding rows in `array1` and `array2` are equal.
+    out : ndarray of bool
+        A boolean numpy ndarray where True indicates common
+        coordinates.
 
     Examples
     --------
@@ -602,7 +609,7 @@ def find_common_coord(array1, array2):
     return (array1[:, None, :] == array2[None, :, :]).all(-1).any(-1)
 
 
-def find_duplicates_coord(array1):
+def find_duplicates_coord(array1: NDArray[int]) -> NDArray[bool]:
     """
     Find duplicate rows in a 2D array and return their coordinate indices.
 
@@ -610,12 +617,12 @@ def find_duplicates_coord(array1):
 
     Parameters
     ----------
-    array1 : ndarray
+    array1 : ndarray of int
         Input 2D array of shape (n_rows, n_columns) from which to find duplicate rows.
 
     Returns
     -------
-    duplicates : ndarray
+    duplicates : ndarray of bool
         Boolean array of shape (n_rows,), where `True` indicates that the corresponding row in `array1` is a duplicate.
 
     Examples

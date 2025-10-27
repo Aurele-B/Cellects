@@ -13,6 +13,8 @@ import time
 import h5py
 from timeit import default_timer
 import numpy as np
+from numpy.typing import NDArray
+from typing import Tuple
 import cv2
 from numpy import any, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate, linspace
 from cv2 import VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
@@ -31,26 +33,26 @@ class PickleRick:
     creating a lock file (PickleRickX.pkl) to signal that the file is open.
     It includes methods to check for the lock file, write data safely,
     and read data safely.
-
-    Attributes
-    ----------
-    wait_for_pickle_rick : bool
-        Flag indicating if the lock file is present.
-    counter : int
-        Counter to track the number of operations performed.
-    pickle_rick_number : str
-        Unique identifier for the lock file.
-    first_check_time : float
-        Timestamp of the first check for the lock file.
-
     """
     def __init__(self, pickle_rick_number=""):
+        """
+        Initialize a new instance of the class.
+
+        This constructor sets up initial attributes for tracking Rick's state, including
+        a boolean flag for waiting for Pickle Rick, a counter, the provided pickle Rick number,
+        and the time when the first check was performed.
+
+        Parameters
+        ----------
+        pickle_rick_number : str, optional
+            The number associated with Pickle Rick. Defaults to an empty string.
+        """
         self.wait_for_pickle_rick: bool = False
         self.counter = 0
         self.pickle_rick_number = pickle_rick_number
         self.first_check_time = default_timer()
 
-    def check_that_file_is_not_open(self):
+    def _check_that_file_is_not_open(self):
         """
         Check if a specific pickle file exists and handle it accordingly.
 
@@ -73,10 +75,6 @@ class PickleRick:
         -----
         This function removes the pickle file if it has not been modified for more than 2 seconds.
         The `self.wait_for_pickle_rick` attribute is updated based on the existence of the file.
-
-        Examples
-        --------
-        >>> pickle_rick_instance.check_that_file_is_not_open()
         """
         if os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl"):
             if default_timer() - self.first_check_time > 2:
@@ -84,7 +82,7 @@ class PickleRick:
             # logging.error((f"Cannot read/write, Trying again... tip: unlock by deleting the file named PickleRick{self.pickle_rick_number}.pkl"))
         self.wait_for_pickle_rick = os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl")
 
-    def write_pickle_rick(self):
+    def _write_pickle_rick(self):
         """
         Write pickle data to a file for Pickle Rick.
 
@@ -110,7 +108,7 @@ class PickleRick:
         --------
         >>> obj = PickleRick()  # Assuming `YourClassInstance` is the class containing this method
         >>> obj.pickle_rick_number = 1  # Set an example value for the attribute
-        >>> obj.write_pickle_rick()     # Call the method to create and write to file
+        >>> obj._write_pickle_rick()     # Call the method to create and write to file
         """
         try:
             with open(f"PickleRick{self.pickle_rick_number}.pkl", 'wb') as file_to_write:
@@ -118,7 +116,7 @@ class PickleRick:
         except Exception as exc:
             logging.error(f"Don't know how but Pickle Rick failed... Error is: {exc}")
 
-    def delete_pickle_rick(self):
+    def _delete_pickle_rick(self):
         """
 
         Delete a specific Pickle Rick file.
@@ -126,32 +124,10 @@ class PickleRick:
         Deletes the pickle file associated with the current instance's
         `pickle_rick_number`.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-
         Raises
         ------
         FileNotFoundError
             If the file with name `PickleRick{self.pickle_rick_number}.pkl` does not exist.
-
-        Notes
-        -----
-        This function attempts to delete the specified pickle file.
-        If the file does not exist, a `FileNotFoundError` will be raised.
-
-        Examples
-        --------
-        >>> obj = PickleRick()
-        >>> obj.pickle_rick_number = 1  # Set an example value for the attribute
-        >>> obj.write_pickle_rick()
-        >>> delete_pickle_rick()
-        >>> os.path.isfile("PickleRick1.pkl")
-        False
         """
         if os.path.isfile(f"PickleRick{self.pickle_rick_number}.pkl"):
             os.remove(f"PickleRick{self.pickle_rick_number}.pkl")
@@ -171,10 +147,6 @@ class PickleRick:
         file_name : str
             The name of the file where data should be written.
 
-        Other Parameters
-        ----------------
-        None
-
         Returns
         -------
         None
@@ -189,7 +161,7 @@ class PickleRick:
         This function uses pickle to serialize the data, which can introduce security risks
         if untrusted content is being written. It performs some internal state checks,
         such as verifying that the target file isn't open and whether it should delete
-        some internal state, represented by `delete_pickle_rick`.
+        some internal state, represented by `_delete_pickle_rick`.
 
         The function implements a retry mechanism with a backoff strategy that can include
         random delays, though the example code does not specify these details explicitly.
@@ -202,22 +174,22 @@ class PickleRick:
         self.counter += 1
         if self.counter < 100:
             if self.counter > 95:
-                self.delete_pickle_rick()
+                self._delete_pickle_rick()
             # time.sleep(np.random.choice(np.arange(1, os.cpu_count(), 0.5)))
-            self.check_that_file_is_not_open()
+            self._check_that_file_is_not_open()
             if self.wait_for_pickle_rick:
                 time.sleep(2)
                 self.write_file(file_content, file_name)
             else:
-                self.write_pickle_rick()
+                self._write_pickle_rick()
                 try:
                     with open(file_name, 'wb') as file_to_write:
                         pickle.dump(file_content, file_to_write, protocol=0)
-                    self.delete_pickle_rick()
+                    self._delete_pickle_rick()
                     logging.info(f"Success to write file")
                 except Exception as exc:
                     logging.error(f"The Pickle error on the file {file_name} is: {exc}")
-                    self.delete_pickle_rick()
+                    self._delete_pickle_rick()
                     self.write_file(file_content, file_name)
         else:
             logging.error(f"Failed to write {file_name}")
@@ -257,20 +229,20 @@ class PickleRick:
         self.counter += 1
         if self.counter < 1000:
             if self.counter > 950:
-                self.delete_pickle_rick()
-            self.check_that_file_is_not_open()
+                self._delete_pickle_rick()
+            self._check_that_file_is_not_open()
             if self.wait_for_pickle_rick:
                 time.sleep(2)
                 self.read_file(file_name)
             else:
-                self.write_pickle_rick()
+                self._write_pickle_rick()
                 try:
                     with open(file_name, 'rb') as fileopen:
                         file_content = pickle.load(fileopen)
                 except Exception as exc:
                     logging.error(f"The Pickle error on the file {file_name} is: {exc}")
                     file_content = None
-                self.delete_pickle_rick()
+                self._delete_pickle_rick()
                 if file_content is None:
                     self.read_file(file_name)
                 else:
@@ -280,59 +252,34 @@ class PickleRick:
             logging.error(f"Failed to read {file_name}")
 
 
-def write_video(np_array, vid_name, is_color=True, fps=40):
+def write_video(np_array: NDArray[np.uint8], vid_name: str, is_color: bool=True, fps: int=40):
     """
-    Write a video file from an array of images.
+    Write video from numpy array.
 
-    This function saves the provided NumPy array as either a `.npy` file
-    or encodes it into a video format such as .mp4, .avi, or .mkv based on
-    the provided file name and other parameters.
+    Save a numpy array as a video file. Supports .npy format for saving raw
+    numpy arrays and various video formats (mp4, avi, mkv) using OpenCV.
+    For video formats, automatically selects a suitable codec and handles
+    file extensions.
 
     Parameters
     ----------
-    np_array : numpy.ndarray
-        A 4-d array representing a sequence of images. The shape should be
-        (num_frames, height, width, channels) where `channels` is 3 for color
-        images and 1 for grayscale.
-
+    np_array : ndarray of uint8
+        Input array containing video frames.
     vid_name : str
-        The name of the output file. If the extension is `.npy`, the array will be
-        saved in NumPy's binary format. Otherwise, a video file with the specified
-        extension will be created.
-
+        Filename for the output video. Can include extension or not (defaults to .mp4).
     is_color : bool, optional
-        Whether the images are in color. Default is ``True``.
-
+        Whether the video should be written in color. Defaults to True.
     fps : int, optional
-        Frames per second for the video. Default is ``40``.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    ValueError
-        If the provided extension is not supported (.mp4, .avi, or .mkv).
-
-    Notes
-    -----
-    - The function supports `.mp4`, `.avi`, and `.mkv` extensions for video files.
-    - When specifying an extension, make sure it matches the intended codec.
+        Frame rate for the video in frames per second. Defaults to 40.
 
     Examples
     --------
-    >>> import numpy as np
-
-    Create a dummy array of shape (10, 480, 640, 3):
-    >>> dummy_array = np.random.rand(10, 480, 640, 3)
-
-    Save it as a video file:
-    >>> write_video(dummy_array, 'output.mp4')
-
-    Save it as a .npy file:
-    >>> write_video(dummy_array, 'data.npy')
-
+    >>> video_array = np.random.randint(0, 255, size=(10, 100, 100, 3), dtype=np.uint8)
+    >>> write_video(video_array, 'output.mp4', True, 30)
+    Saves `video_array` as a color video 'output.mp4' with FPS 30.
+    >>> video_array = np.random.randint(0, 255, size=(10, 100, 100), dtype=np.uint8)
+    >>> write_video(video_array, 'raw_data.npy')
+    Saves `video_array` as a raw numpy array file without frame rate.
     """
     #h265 ou h265 (mp4)
     # linux: fourcc = 0x00000021 -> don't forget to change it bellow as well
@@ -358,7 +305,7 @@ def write_video(np_array, vid_name, is_color=True, fps=40):
         vid.release()
 
 
-def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_width=None):
+def video2numpy(vid_name: str, conversion_dict=None, background=None, true_frame_width=None):
     """
     Convert a video file to a NumPy array.
 
@@ -475,7 +422,7 @@ def video2numpy(vid_name, conversion_dict=None, background=None, true_frame_widt
         return video, converted_video
     
 
-def movie(video, keyboard=1, increase_contrast=True):
+def movie(video, keyboard=1, increase_contrast: bool=True):
     """
     Summary
     -------
@@ -540,7 +487,7 @@ opencv_accepted_formats = [
     ]
 
 
-def is_raw_image(image_path):
+def is_raw_image(image_path) -> bool:
     """
     Determine if the image path corresponds to a raw image.
 
@@ -568,7 +515,7 @@ def is_raw_image(image_path):
     return raw_image
 
 
-def readim(image_path, raw_image=False):
+def readim(image_path, raw_image: bool=False):
     """
     Read an image from a file and optionally process it.
 
@@ -616,42 +563,34 @@ def readim(image_path, raw_image=False):
         return cv2.imread(image_path)
 
 
-def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
+def read_and_rotate(image_name, prev_img: NDArray, raw_images: bool, is_landscape: bool):
     """
-    Reads an image from the given source and rotates it 90 degrees clockwise or counterclockwise if necessary.
+    Read and rotate an image based on landscape orientation.
+
+    This function reads an image, checks its dimensions relative to the
+    landscape orientation flag and rotates it if necessary. If a previous
+    image is provided, it determines the optimal rotation to minimize
+    differences between consecutive images.
 
     Parameters
     ----------
     image_name : str
-        The name or path of the image to be read.
-    prev_img : np.ndarray or None
-        The previous image in int16 format to compare differences, if applicable.
-    raw_images : dict
-        A dictionary containing raw images for the given `image_name`.
+        The name of the image file to read.
+    prev_img : ndarray
+        The previous image in int16 format for comparison. Defaults to None.
+    raw_images : bool
+        Flag indicating if the image should be read in raw format.
     is_landscape : bool
-        If True, assumes the image should be in landscape orientation.
+        Boolean flag indicating if the image should be considered as landscape.
 
     Returns
     -------
-    np.ndarray
-        The processed and potentially rotated image.
-
-    Raises
-    ------
-    FileNotFoundError
-        If the specified `image_name` does not exist in `raw_images`.
-    ValueError
-        If the image dimensions are inconsistent during rotation operations.
-
-    Notes
-    -----
-    - This function assumes that raw images are stored in the `raw_images` dictionary with keys as image names.
-    - Rotation decisions are based on whether the image is required to be in landscape orientation.
+    img : ndarray
+        The rotated image if necessary; otherwise, the original image.
 
     Examples
     --------
-    >>> img = read_and_rotate("sample.jpg", prev_img=None, raw_images=False, is_landscape=True)
-    Rotated image of sample.jpg
+    >>> img = read_and_rotate("image1.tif", None, False, True)
     """
     img = readim(image_name, raw_images)
     if (img.shape[0] > img.shape[1] and is_landscape) or (img.shape[0] < img.shape[1] and not is_landscape):
@@ -670,52 +609,26 @@ def read_and_rotate(image_name, prev_img, raw_images, is_landscape):
     return img
 
 
-def vstack_h5_array(file_name, table, key="data"):
+def vstack_h5_array(file_name, table: NDArray, key: str="data"):
     """
-    Append a new table to an existing HDF5 dataset or create a new one if it doesn't exist.
+    Stack tables vertically in an HDF5 file.
 
-    Given a file name, table data and an optional key, this function will
-    check for existence of the HDF5 file. If it exists, append to the dataset
-    identified by `key` in the file. Otherwise create a new HDF5 file and dataset.
+    This function either appends the input table to an existing dataset
+    in the specified HDF5 file or creates a new dataset if the key doesn't exist.
 
     Parameters
     ----------
     file_name : str
-        The name of the HDF5 file.
-    table : np.ndarray
-        New data to be added or stored in the HDF5 file.
+        Path to the HDF5 file.
+    table : NDArray[np.uint8]
+        The table to be stacked vertically with the existing data.
     key : str, optional
-        The dataset name within the HDF5 file. Default is "data".
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    OSError
-        If there is an issue accessing the file system, e.g., due to permission errors.
-    IOError
-        If there is an issue writing the HDF5 file.
-
-    Notes
-    -----
-    The dataset will be appended to if it already exists. If the file does not exist,
-    a new HDF5 file will be created and the dataset will be initialized with `table`.
+        Key under which the dataset will be stored. Defaults to 'data'.
 
     Examples
     --------
-    >>> import numpy as np
-    >>> table1 = np.array([[1, 2], [3, 4]])
-    >>> vstack_h5_array('example.h5', table1) # create file and dataset
-    >>> table2 = np.array([[5, 6], [7, 8]])
-    >>> vstack_h5_array('example.h5', table2) # append to dataset
-    >>> with h5py.File('example.h5', 'r') as f:
-    ...     print(f['data'][:])
-    [[1 2]
-     [3 4]
-     [5 6]
-     [7 8]]
+    >>> table = np.array([[1, 2], [3, 4]], dtype=np.uint8)
+    >>> vstack_h5_array('example.h5', table)
     """
     if os.path.exists(file_name):
         # Open the file in append mode
@@ -734,7 +647,7 @@ def vstack_h5_array(file_name, table, key="data"):
             h5f.create_dataset(key, data=table)
 
 
-def read_h5_array(file_name, key="data"):
+def read_h5_array(file_name, key: str="data"):
     """
     Read data array from an HDF5 file.
 
@@ -751,18 +664,6 @@ def read_h5_array(file_name, key="data"):
     -------
     ndarray
         The data array from the specified dataset in the HDF5 file.
-
-    Examples
-    --------
-    >>> data = read_h5_array('example.h5', 'data')
-    >>> print(data)
-    [[1 2 3]
-     [4 5 6]]
-
-    >>> data = read_h5_array('example.h5')
-    >>> print(data)
-    [[7 8 9]
-     [10 11 12]]
     """
     try:
         with h5py.File(file_name, 'r') as h5f:
@@ -793,12 +694,6 @@ def get_h5_keys(file_name):
     ------
     FileNotFoundError
         If the specified HDF5 file does not exist.
-
-    Examples
-    --------
-    >>> result = get_h5_keys("example.hdf5")  # Ensure "example.hdf5" exists
-    >>> print(result)
-    ['data', 'metadata']
     """
     try:
         with h5py.File(file_name, 'r') as h5f:
@@ -808,7 +703,7 @@ def get_h5_keys(file_name):
         raise FileNotFoundError(f"The file '{file_name}' does not exist.")
 
 
-def remove_h5_key(file_name, key="data"):
+def remove_h5_key(file_name, key: str="data"):
     """
     Remove a specified key from an HDF5 file.
 
@@ -838,10 +733,6 @@ def remove_h5_key(file_name, key="data"):
     Notes
     -----
     This function modifies the HDF5 file in place. Ensure you have a backup if necessary.
-
-    Examples
-    --------
-    >>> remove_h5_key("example.h5", "data")
     """
     try:
         with h5py.File(file_name, 'a') as h5f:  # Open in append mode to modify the file
@@ -853,7 +744,7 @@ def remove_h5_key(file_name, key="data"):
         raise RuntimeError(f"An error occurred: {e}")
 
 
-def get_mpl_colormap(cmap_name):
+def get_mpl_colormap(cmap_name: str):
     """
     Returns a linear color range array for the given matplotlib colormap.
 
@@ -886,7 +777,7 @@ def get_mpl_colormap(cmap_name):
 
 
 
-def show(img, interactive=True, cmap=None):
+def show(img, interactive: bool=True, cmap=None):
     """
     Display an image using Matplotlib with optional interactivity and colormap.
 
@@ -955,7 +846,8 @@ def show(img, interactive=True, cmap=None):
     fig.show()
     return fig, ax
 
-def save_fig(img, full_path, cmap=None):
+
+def save_fig(img: NDArray, full_path, cmap=None):
     """
     Save an image figure to a file with specified options.
 
@@ -1010,28 +902,31 @@ def save_fig(img, full_path, cmap=None):
     plt.close()
 
 
-def display_boxes(binary_image, box_diameter):
-    """Display grid lines on binary image using matplotlib with specified box spacing.
+def display_boxes(binary_image: NDArray, box_diameter: int):
+    """
+    Display grid lines on a binary image at specified box diameter intervals.
 
-    Plots vertical and horizontal white lines at intervals defined by box_diameter
-    across the 2D binary image. The resulting visualization shows a grid overlay that
-    segments the image into regular-sized boxes for analysis or display purposes.
+    This function displays the given binary image with vertical and horizontal
+    grid lines drawn at regular intervals defined by `box_diameter`. The function
+    returns the total number of grid lines drawn.
 
     Parameters
     ----------
-    binary_image : array-like
-        Input binary image represented as a 2D array of shape (height, width).
+    binary_image : ndarray
+        Binary image on which to draw the grid lines.
     box_diameter : int
-        Distance between adjacent vertical/horizontal lines in pixels.
+        Diameter of each box in pixels.
 
     Returns
     -------
-    None
+    line_nb : int
+        Number of grid lines drawn, both vertical and horizontal.
 
     Examples
     --------
-    >>> binary_image = np.random.rand(5, 10)
-    >>> display_boxes(binary_image, box_diameter=2)
+    >>> import numpy as np
+    >>> binary_image = np.random.randint(0, 2, (100, 100), dtype=np.uint8)
+    >>> display_boxes(binary_image, box_diameter=25)
     """
     plt.imshow(binary_image, cmap='gray', extent=(0, binary_image.shape[1], 0, binary_image.shape[0]))
     height, width = binary_image.shape
