@@ -357,7 +357,6 @@ class ProgressivelyAddDistantShapes:
                     expanded_shape = keep_shape_connected_with_ref(self.expanded_shape, self.main_shape)
                     if expanded_shape is not None:
                         self.expanded_shape = expanded_shape
-                    self.keep_connected_shapes()
                     if rank_connecting_pixels:
                         # Rate the extension of small shapes according to the distance between the small and the main shapes
                         self.distance_ranking_of_connecting_pixels()
