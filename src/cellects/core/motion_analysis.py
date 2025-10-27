@@ -803,7 +803,7 @@ class MotionAnalysis:
         self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
                                            np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
         if self.vars['correct_errors_around_initial']:
-            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
+            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = np.zeros(self.dims[1:], dtype=np.uint8)
             self.pixel_ring_depth += 2
             self.update_ring_width()

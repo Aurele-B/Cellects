@@ -226,40 +226,79 @@ class TestMakeGravityField(CellectsUnitTest):
         np.testing.assert_array_equal(field, expected_field)
 
 
-class TestGetEveryCoordBetween2Points(CellectsUnitTest):
+class TestGetLinePoints(CellectsUnitTest):
     def test_get_every_coord_between_2_points_vertical(self):
         point_A = (0, 0)
         point_B = (4, 0)
-        expected_segment = np.array([[0, 1, 2, 3, 4],
-                                  [0, 0, 0, 0, 0]], dtype =np.uint64)
-        segment = get_every_coord_between_2_points(point_A, point_B)
+        expected_segment = np.array([[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], dtype =np.uint64)
+        segment = get_line_points(point_A, point_B)
         np.testing.assert_array_equal(segment, expected_segment)
 
     def test_get_every_coord_between_2_points_horizontal(self):
         point_A = (0, 0)
         point_B = (0, 4)
-        expected_segment = np.array([[0, 0, 0, 0, 0],
-                                  [0, 1, 2, 3, 4]], dtype =np.uint64)
-        segment = get_every_coord_between_2_points(point_A, point_B)
+        expected_segment = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dtype =np.uint64)
+        segment = get_line_points(point_A, point_B)
         np.testing.assert_array_equal(segment, expected_segment)
 
     def test_get_every_coord_between_2_points_diagonal(self):
         point_A = (0, 0)
         point_B = (4, 4)
-        expected_segment = np.array([[0, 1, 2, 3, 4],
-                                  [0, 1, 2, 3, 4]], dtype =np.uint64)
-        segment = get_every_coord_between_2_points(point_A, point_B)
+        expected_segment = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]], dtype =np.uint64)
+        segment = get_line_points(point_A, point_B)
         np.testing.assert_array_equal(segment, expected_segment)
 
     def test_get_every_coord_between_2_points_reversed_diagonal(self):
         point_A = (0, 4)
         point_B = (4, 0)
 
-        expected_segment = np.array([[0, 1, 2, 3, 4],
-                                  [4, 3, 2, 1, 0]], dtype =np.uint64)
-        segment = get_every_coord_between_2_points(point_A, point_B)
+        expected_segment = np.array([[4, 0], [3, 1], [2, 2], [1, 3], [0, 4]], dtype =np.uint64)
+        segment = get_line_points(point_A, point_B)
         np.testing.assert_array_equal(segment, expected_segment)
-        
+
+
+class TestGetAllLineCoordinates(CellectsUnitTest):
+    """Test suite for get_all_line_coordinates function."""
+
+    def test_get_all_line_coordinates_basic(self):
+        """Test normal operation with integer inputs."""
+        mat = np.zeros((10, 10))
+        start_point = np.array((0, 0))
+        end_points = np.array([[1, 2], [3, 4]])
+        expected_first_line = np.array([[0, 0], [0, 1], [1, 2]], dtype=np.uint64)
+        expected_second_line = np.array([[0, 0], [1, 1], [1, 2], [2, 3], [3, 4]], dtype=np.uint64)
+        result = get_all_line_coordinates(start_point, end_points)
+        self.assertEqual(len(result), 2)
+        self.assertTrue(np.array_equal(result[0], expected_first_line))
+        self.assertTrue(np.array_equal(result[1], expected_second_line))
+
+    def test_get_all_line_coordinates_empty_end_points(self):
+        """Test behavior with empty end points array."""
+        start_point = np.array([0, 0])
+        end_points = np.array([])
+
+        result = get_all_line_coordinates(start_point, end_points)
+
+        self.assertEqual(len(result), 0)
+
+    def test_get_all_line_coordinates_single_end_point(self):
+        """Test with single end point."""
+        start_point = np.array([0, 0])
+        end_points = np.array([[1, 2]])
+
+        result = get_all_line_coordinates(start_point, end_points)
+
+        self.assertEqual(len(result), 1)
+
+    def test_get_all_line_coordinates_zero_length(self):
+        """Test with start point equal to end point (zero-length line)."""
+        start_point = np.array([5, 5])
+        end_points = np.array([[5, 5]])
+
+        result = get_all_line_coordinates(start_point, end_points)
+        self.assertEqual(len(result), 1)
+
+
 
 class TestDrawMeASun(CellectsUnitTest):
     main_shape = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -273,27 +312,25 @@ class TestDrawMeASun(CellectsUnitTest):
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
-    cross_33 = np.array([[0, 1, 0],
-                      [1, 1, 1],
-                      [0, 1, 0]], dtype=np.uint8)
 
     def test_draw_me_a_sun(self):
-        expected_rays = np.arange(2, 14, dtype=np.uint32)
-        expected_sun = np.array([[0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0],
-                              [0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0],
-                              [0,  0,  0,  3,  0,  2,  0,  4,  0,  0,  0],
-                              [0,  0,  5,  0,  3,  0,  4,  0,  6,  0,  0],
-                              [0,  0,  0,  5,  0,  0,  0,  6,  0,  0,  0],
-                              [7,  7,  7,  0,  0,  0,  0,  0,  8,  8,  8],
-                              [0,  0,  0,  9,  0,  0,  0, 10,  0,  0,  0],
-                              [0,  0,  9,  0, 11,  0, 12,  0, 10,  0,  0],
-                              [0,  0,  0, 11,  0, 13,  0, 12,  0,  0,  0],
-                              [0,  0,  0,  0,  0, 13,  0,  0,  0,  0,  0],
-                              [0,  0,  0,  0,  0, 13,  0,  0,  0,  0,  0]], dtype=np.uint32)
-        rays, sun = draw_me_a_sun(self.main_shape, self.cross_33)
+        expected_rays = np.arange(1, 13, dtype=np.uint32)
+        expected_sun = np.array([
+           [ 0,  4,  0,  0,  0,  6,  0,  0,  0,  8,  0],
+           [ 2,  0,  4,  0,  0,  6,  0,  0,  8,  0, 10],
+           [ 0,  2,  0,  4,  0,  6,  0,  8,  0, 10,  0],
+           [ 0,  0,  2,  0,  4,  0,  8,  0, 10,  0,  0],
+           [ 0,  0,  0,  2,  0,  0,  0, 10,  0,  0,  0],
+           [ 1,  1,  1,  0,  0,  0,  0,  0, 12, 12, 12],
+           [ 0,  0,  0,  3,  0,  0,  0, 11,  0,  0,  0],
+           [ 0,  0,  3,  0,  5,  0,  9,  0, 11,  0,  0],
+           [ 0,  3,  0,  5,  0,  7,  0,  9,  0, 11,  0],
+           [ 3,  0,  5,  0,  0,  7,  0,  0,  9,  0, 11],
+           [ 0,  5,  0,  0,  0,  7,  0,  0,  0,  9,  0]], dtype=np.uint32)
+        rays, sun = draw_me_a_sun(self.main_shape)
         np.testing.assert_array_equal(rays, expected_rays)
-        np.testing.assert_array_equal(sun, expected_sun)
-
+        self.assertTrue(np.array_equal(sun, expected_sun))
+        self.assertTrue(np.array_equal(rays, expected_rays))
 
 
 class TestFindMedianShape(CellectsUnitTest):

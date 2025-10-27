@@ -788,8 +788,6 @@ class ProgramOrganizer:
                 if np.any(self.videos.ordered_stats[:, 4] < 0.01 * np.median(self.videos.ordered_stats[:, 4])):
                     analysis_status['message'] = "A specimen is at least 100 times smaller: (re)do the first image analysis."
                     analysis_status['continue'] = False
-                # self.all['overwrite_unaltered_videos'] = True
-                # self.videos.print_bounding_boxes(0)
                 logging.info(
                     str(self.videos.not_analyzed_individuals) + " individuals are out of picture scope and cannot be analyzed")
             self.left, self.right, self.top, self.bot = self.videos.left, self.videos.right, self.videos.top, self.videos.bot

@@ -27,6 +27,8 @@ The progress tracker records initialization time for potential performance analy
 """
 
 import numpy as np
+from numpy.typing import NDArray
+from typing import Tuple
 from timeit import default_timer
 import time
 from numba.typed import Dict
@@ -36,7 +38,7 @@ vectorized_len = np.vectorize(len)
 
 
 @njit()
-def greater_along_first_axis(array_in_1, array_in_2):
+def greater_along_first_axis(array_in_1: NDArray, array_in_2: NDArray) -> NDArray[np.uint8]:
     """
     Compare two arrays along the first axis and store the result in a third array.
 
@@ -47,20 +49,16 @@ def greater_along_first_axis(array_in_1, array_in_2):
 
     Parameters
     ----------
-    array_in_1 : numpy.ndarray
+    array_in_1 : ndarray
         First input array.
-    array_in_2 : numpy.ndarray
-        Second input array. Must have the same shape as `array_in_1`.
-    array_out : numpy.ndarray
-        Output array where the result of the comparison will be stored.
-        Must have the same shape as `array_in_1`.
+    array_in_2 : ndarray
+        Second input array.
 
     Returns
     -------
-    numpy.ndarray
-        A boolean array where each element is `True` if the corresponding
-        element in `array_in_1` is greater than the corresponding element
-        in `array_in_2`, and `False` otherwise.
+    out : ndarray of uint8
+        Boolean ndarray with same shape as input arrays,
+        containing the result of element-wise comparison.
 
     Examples
     --------
@@ -68,9 +66,8 @@ def greater_along_first_axis(array_in_1, array_in_2):
     >>> array_in_2 = np.array([3, 6])
     >>> array_out = greater_along_first_axis(array_in_1, array_in_2)
     >>> print(array_out)
-    [[False  True]
-     [False  True]]
-
+    [[0 1]
+     [0 1]]
     """
     array_out = np.zeros(array_in_1.shape, dtype=np.uint8)
     for i, value in enumerate(array_in_2):
@@ -79,7 +76,7 @@ def greater_along_first_axis(array_in_1, array_in_2):
 
 
 @njit()
-def less_along_first_axis(array_in_1, array_in_2):
+def less_along_first_axis(array_in_1: NDArray, array_in_2: NDArray) -> NDArray[np.uint8]:
     """
     Compare two arrays along the first axis and store the result in a third array.
 
@@ -90,17 +87,14 @@ def less_along_first_axis(array_in_1, array_in_2):
 
     Parameters
     ----------
-    array_in_1 : numpy.ndarray
-        First input array.
-    array_in_2 : numpy.ndarray
-        Second input array. Must have the same shape as `array_in_1`.
-    array_out : numpy.ndarray
-        Output array where the result of the comparison will be stored.
-        Must have the same shape as `array_in_1`.
+    array_in_1 : ndarray
+        The first input array.
+    array_in_2 : ndarray
+        The second input array.
 
     Returns
     -------
-    numpy.ndarray
+    ndarray of uint8
         A boolean array where each element is `True` if the corresponding
         element in `array_in_1` is lesser than the corresponding element
         in `array_in_2`, and `False` otherwise.
@@ -109,10 +103,10 @@ def less_along_first_axis(array_in_1, array_in_2):
     --------
     >>> array_in_1 = np.array([[2, 4], [5, 8]])
     >>> array_in_2 = np.array([3, 6])
-    >>> array_out = less_along_first_axis(array_in_1, array_in_2, )
+    >>> array_out = less_along_first_axis(array_in_1, array_in_2)
     >>> print(array_out)
-    [[ True False]
-     [ True False]]
+    [[1 0]
+     [1 0]]
     """
     array_out = np.zeros(array_in_1.shape, dtype=np.uint8)
     for i, value in enumerate(array_in_2):
@@ -120,7 +114,7 @@ def less_along_first_axis(array_in_1, array_in_2):
     return array_out
 
 
-def translate_dict(old_dict):
+def translate_dict(old_dict: dict) -> Dict:
     """
     Translate a dictionary to a typed dictionary and filter out non-string values.
 
@@ -131,7 +125,7 @@ def translate_dict(old_dict):
 
     Returns
     -------
-    dict
+    numba_dict : Dict
         A typed dictionary containing only the items from `old_dict` where the value is not a string
 
     Examples
@@ -147,7 +141,7 @@ def translate_dict(old_dict):
     return numba_dict
 
 
-def reduce_path_len(pathway, to_start, from_end):
+def reduce_path_len(pathway: str, to_start: int, from_end: int) -> str:
     """
     Reduce the length of a given pathway string by truncating it from both ends.
 
@@ -157,7 +151,7 @@ def reduce_path_len(pathway, to_start, from_end):
 
     Parameters
     ----------
-    pathway : str or int
+    pathway : str
         The pathway string to be reduced. If an integer is provided,
         it will be converted into a string.
     to_start : int
@@ -184,7 +178,7 @@ def reduce_path_len(pathway, to_start, from_end):
     return pathway
 
 
-def find_nearest(array, value):
+def find_nearest(array: NDArray, value):
     """
     Find the element in an array that is closest to a given value.
 
@@ -192,7 +186,7 @@ def find_nearest(array, value):
     ----------
     array : array_like
         Input array. Can be any array-like data structure.
-    value :
+    value : int or float
         The value to find the closest element to.
 
     Returns
@@ -249,42 +243,35 @@ class PercentAndTimeTracker:
     Starting time is recorded for potential performance tracking.
 
     """
-    def __init__(self, total, compute_with_elements_number=False, core_number=1):
-        """
-        Initialize a progress bar object to track and display the progress of an iteration.
+    def __init__(self, total: int, compute_with_elements_number: bool=False, core_number:int =1):
+        """Initialize an instance of the class.
+
+        This constructor sets up the initial attributes including
+        a starting time, total value, current step, and an optional
+        element vector if ``compute_with_elements_number`` is set to True.
+        The core number can be specified, defaulting to 1.
 
         Parameters
         ----------
         total : int
-            The total number of iterations.
+            The total number of elements or steps.
         compute_with_elements_number : bool, optional
-            If True, create an element vector. Default is False.
+            If True, initialize an element vector of zeros. Defaults to False.
         core_number : int, optional
-            The number of cores to use. Default is 1.
+            The number of cores to use. Defaults to 1.
 
         Attributes
         ----------
         starting_time : float
-            The time when the ProgressBar object is initialized.
+            The time of instantiation.
         total : int
-            The total number of iterations.
+            The total number of elements or steps.
         current_step : int
-            The current iteration step (initialized to 0).
-        element_vector : numpy.ndarray, optional
-            A vector of zeros with the same length as `total`, created if
-            `compute_with_elements_number` is True.
+            The current step in the process.
+        element_vector : ndarray of int64, optional
+            A vector initialized with zeros. Exists if ``compute_with_elements_number`` is True.
         core_number : int
-            The number of cores.
-
-        Examples
-        --------
-        >>> p = PercentAndTimeTracker(10)
-        >>> print(p.total)  # prints: 10
-
-        Notes
-        -----
-        Starting time is recorded for potential performance tracking.
-
+            The number of cores to use.
         """
         self.starting_time = default_timer()
         self.total = total
@@ -386,7 +373,7 @@ class PercentAndTimeTracker:
         return output
 
 
-def insensitive_glob(pattern):
+def insensitive_glob(pattern: str):
     """
     Generates a glob pattern that matches both lowercase and uppercase letters.
 
@@ -409,20 +396,20 @@ def insensitive_glob(pattern):
     return glob(''.join(map(either, pattern)))
 
 
-def smallest_memory_array(array_object, array_type='uint'):
+def smallest_memory_array(array_object, array_type='uint') -> NDArray:
     """
     Convert input data to the smallest possible NumPy array type that can hold it.
 
     Parameters
     ----------
-    array_object : numpy.ndarray or list of lists
+    array_object : ndarray or list of lists
         The input data to be converted.
     array_type : str, optional, default is 'uint'
         The type of NumPy data type to use ('uint').
 
     Returns
     -------
-    numpy.ndarray
+    ndarray
         A NumPy array of the smallest data type that can hold all values in `array_object`.
 
     Examples
@@ -445,7 +432,7 @@ def smallest_memory_array(array_object, array_type='uint'):
     """
     if isinstance(array_object, list):
         array_object = np.array(array_object)
-    if isinstance(array_object, np.ndarray):
+    if isinstance(array_object, NDArray):
         value_max = array_object.max()
     else:
 
@@ -466,7 +453,7 @@ def smallest_memory_array(array_object, array_type='uint'):
     return array_object
 
 
-def remove_coordinates(arr1, arr2):
+def remove_coordinates(arr1: NDArray, arr2: NDArray) -> NDArray:
     """
     Remove coordinates from `arr1` that are present in `arr2`.
 
@@ -487,47 +474,115 @@ def remove_coordinates(arr1, arr2):
 
     Examples
     --------
-    >>> arr1 = np.array([[0, 0], [1, 2], [3, 4]])
-    >>> arr2 = np.array([[1, 2], [5, 6]])
+    >>> arr1 = np.arange(200).reshape(100, 2)
+    >>> arr2 = np.array([[196, 197], [198, 199]])
     >>> remove_coordinates(arr1, arr2)
     array([[0, 0],
            [3, 4]])
     """
-    # Convert to set of tuples
-    coords_to_remove = set(map(tuple, arr2))
-    return np.array([coord for coord in arr1 if tuple(coord) not in coords_to_remove])
+    if arr1.shape[1] != 2 or arr2.shape[1] != 2:
+        raise ValueError("Both arrays must have shape (n, 2)")
+    mask = ~np.isin(arr1, arr2).all(axis=1)
+    return arr1[mask]
 
 
-def find_threshold_given_mask(greyscale: np.uint8, mask: np.uint8, min_threshold: np.uint8=0):
-    region_A = greyscale[mask > 0]
-    region_B = greyscale[mask == 0]
-    low = min_threshold
-    high = 255
+def find_threshold_given_mask(greyscale: NDArray[np.uint8], mask: np.uint8, min_threshold: np.uint8=0) -> np.uint8:
+    """
+    Find the optimal threshold value for a greyscale image given a mask.
 
-    best_T = low
+    This function performs a binary search to find the optimal threshold
+    that maximizes the separation between two regions defined by the mask.
+    The search is bounded by a minimum threshold value.
 
-    while low <= high:
-        mid = (low + high) // 2
-        count_A, count_B = get_counts_jit(mid, region_A, region_B)
+    Parameters
+    ----------
+    greyscale : ndarray of uint8
+        The greyscale image array.
+    mask : ndarray of uint8
+        The binary mask array where positive values define region A and zero values define region B.
+    min_threshold : uint8, optional
+        The minimum threshold value for the search. Defaults to 0.
 
-        if count_A > count_B:
-            # Try to find a lower threshold that still satisfies the condition
-            best_T = mid
-            high = mid - 1
-        else:
-            # Need higher threshold
-            low = mid + 1
-    return best_T
+    Returns
+    -------
+    out : uint8
+        The optimal threshold value found.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)
+    >>> mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)
+    >>> find_threshold_given_mask(greyscale, mask)
+    54
+    """
+    region_a = greyscale[mask > 0]
+    if len(region_a) == 0:
+        return np.uint8(255)
+    region_b = greyscale[mask == 0]
+    if len(region_b) == 0:
+        return min_threshold
+    else:
+        low = min_threshold
+        high = 255
+        best_thresh = low
+
+        while 0 <= low <= high:
+            mid = (low + high) // 2
+            count_a, count_b = _get_counts_jit(mid, region_a, region_b)
+
+            if count_a > count_b:
+                # Try to find a lower threshold that still satisfies the condition
+                best_thresh = mid
+                high = mid - 1
+            else:
+                if count_a == 0 and count_b == 0:
+                    best_thresh = greyscale.mean()
+                    break
+                # Need higher threshold
+                low = mid + 1
+    return best_thresh
 
 
 @njit()
-def get_counts_jit(T, region_A, region_B):
-    count_A = 0
-    count_B = 0
-    for val in region_A:
-        if val > T:
-            count_A += 1
-    for val in region_B:
-        if val > T:
-            count_B += 1
-    return count_A, count_B
+def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDArray[np.uint8]) -> Tuple[int, int]:
+    """
+    Get counts of values in two regions above a threshold using Just-In-Time compilation.
+
+    Count the number of elements greater than `thresh` in both `region_a`
+    and `region_b`, returning the counts as a tuple. This function utilizes
+    Numba's JIT compilation for performance optimization.
+
+    Parameters
+    ----------
+    thresh : uint8
+        The threshold value to compare against.
+    region_a : ndarray of uint8
+        First region array containing values to be compared with `thresh`.
+    region_b : ndarray of uint8
+        Second region array containing values to be compared with `thresh`.
+
+    Returns
+    -------
+    out : tuple of int, int
+        A tuple containing the count of elements greater than `thresh` in
+        `region_a` and `region_b`, respectively.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> region_a = np.array([1, 250, 3], dtype=np.uint8)
+    >>> region_b = np.array([4, 250, 6], dtype=np.uint8)
+    >>> thresh = np.uint8(100)
+    >>> get_counts_jit(thresh, region_a, region_b)
+    (1, 1)
+    """
+    count_a = 0
+    count_b = 0
+    for val in region_a:
+        if val > thresh:
+            count_a += 1
+    for val in region_b:
+        if val > thresh:
+            count_b += 1
+    return count_a, count_b
