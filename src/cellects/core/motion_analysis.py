@@ -105,7 +105,7 @@ from cellects.image_analysis.cell_leaving_detection import cell_leaving_detectio
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.image_segmentation import segment_with_lum_value
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
-                                                              make_gravity_field, dynamically_expand_to_fill_holes,
+                                                              inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting,
                                                               keep_one_connected_component, cc)
 from cellects.image_analysis.network_functions import *
@@ -800,7 +800,7 @@ class MotionAnalysis:
         self.mean_distance_per_frame = None
         self.surfarea = np.zeros(self.dims[0], dtype =np.uint64)
         self.surfarea[:self.start] = np.sum(self.binary[:self.start, :, :], (1, 2))
-        self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
+        self.gravity_field = inverted_distance_transform(self.binary[(self.start - 1), :, :],
                                            np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
         if self.vars['correct_errors_around_initial']:
             self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1.25)  # plt.imshow(sun)

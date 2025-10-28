@@ -50,19 +50,19 @@ class TestToUint8(CellectsUnitTest):
         an_array = np.array([1.5, 2.7, 3.9])
         result = to_uint8(an_array)
         expected_result = np.array([2, 3, 4], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
         # Test case 2: Array with negative values
         an_array = np.array([-1.4, -2.7, -3.9])
         result = to_uint8(an_array)
         expected_result = np.array([255, 253, 252], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
         # Test case 3: Array with zeros
         an_array = np.zeros(3)
         result = to_uint8(an_array)
         expected_result = np.zeros(3, dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
 
 class TestBracketToUint8ImageContrast(CellectsUnitTest):
@@ -75,7 +75,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[0,   0,   0],
                                  [0, 255,   0],
                                  [0,   0,   0]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
     def test_zeros_with_twofivefive(self):
         """Test only zeros except one 255."""
@@ -85,7 +85,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[0,   0,   0],
                                  [0, 255,   0],
                                  [0,   0,   0]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
     def test_ones_with_zero(self):
         """Test only ones except one 0."""
@@ -95,7 +95,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[255, 255, 255],
                                  [255,   0, 255],
                                  [255, 255, 255]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
     def test_ones_with_twofivefive(self):
         """Test only ones except one 255."""
@@ -105,7 +105,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[0,   0,   0],
                                  [0, 255,   0],
                                  [0,   0,   0]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
     def test_negative_with_higher(self):
         """Test higher values than 255."""
@@ -116,7 +116,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[0,   0,   0],
                                  [0, 255,   0],
                                  [0, 128,   0]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
     def test_complex(self):
         """Test float, negative and high values."""
@@ -128,7 +128,7 @@ class TestBracketToUint8ImageContrast(CellectsUnitTest):
         expected_result = np.array([[ 42,  42,  42],
                                  [ 42,   0,  42],
                                  [ 42, 255, 128]], dtype=np.uint8)
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
 
 class TestLinearModel(CellectsUnitTest):
@@ -141,7 +141,7 @@ class TestLinearModel(CellectsUnitTest):
         b = 3
         result = linear_model(x, a, b)
         expected_result = np.array([5, 7, 9])
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
         # Test case 2: Negative slope and positive intercept
         x = np.array([4, 5, 6])
@@ -149,7 +149,7 @@ class TestLinearModel(CellectsUnitTest):
         b = 2.5
         result = linear_model(x, a, b)
         expected_result = np.array([-3.5, -5, -6.5])
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
         # Test case 3: Zero slope and intercept
         x = np.array([-1, 0, 1])
@@ -157,7 +157,7 @@ class TestLinearModel(CellectsUnitTest):
         b = 0
         result = linear_model(x, a, b)
         expected_result = np.array([0, 0, 0])
-        np.testing.assert_array_equal(result, expected_result)
+        self.assertTrue(np.array_equal(result, expected_result))
 
 
 class TestGetPowerDists(CellectsUnitTest):
@@ -175,8 +175,8 @@ class TestGetPowerDists(CellectsUnitTest):
         expected_xn = np.array([4, 1, 0, 1, 4])
         expected_yn = np.array([1, 0, 1, 4])
 
-        np.testing.assert_array_equal(xn, expected_xn)
-        np.testing.assert_array_equal(yn, expected_yn)
+        self.assertTrue(np.array_equal(xn, expected_xn))
+        self.assertTrue(np.array_equal(yn, expected_yn))
 
 
 class TestGetStandardDeviations(CellectsUnitTest):

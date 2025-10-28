@@ -4,17 +4,8 @@ This script contains all unit tests of the morphological_operations script
 """
 
 import unittest
-
-import numpy as np
-
 from tests._base import CellectsUnitTest
-from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.one_video_per_blob import OneVideoPerBlob
-from cellects.utils.load_display_save import PickleRick
 from cellects.image_analysis.morphological_operations import *
-from numpy import zeros, uint8, float32, random, array, testing, array_equal, allclose, int32, int64, diff, concatenate
-from cv2 import imread, imwrite, rotate, ROTATE_90_COUNTERCLOCKWISE, ROTATE_90_CLOCKWISE, VideoCapture, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FPS
-from numba import types
 
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):
@@ -31,13 +22,13 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 1, 1, 1],
                                  [0, 1, 1, 1],
                                  [0, 0, 1, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
         comparer.is_equal(2)
         expected_result = np.array([[0, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [1, 0, 1, 0],
                                  [0, 1, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -46,13 +37,13 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 2, 1, 2],
                                  [0, 2, 1, 2],
                                  [0, 1, 1, 1]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
         comparer.is_equal(2)
         expected_result = np.array([[0, 0, 0, 0],
                                  [1, 1, 1, 0],
                                  [1, 0, 1, 0],
                                  [1, 1, 1, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_with_itself_connectivity_4(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
@@ -61,13 +52,13 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 0, 1, 0],
                                  [0, 0, 1, 0],
                                  [0, 0, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
         comparer.is_equal(2, and_itself=True)
         expected_result = np.array([[0, 0, 0, 0],
                                  [0, 0, 0, 0],
                                  [0, 0, 0, 0],
                                  [0, 0, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_with_itself_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -76,13 +67,13 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 0, 1, 0],
                                  [0, 0, 1, 0],
                                  [0, 0, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
         comparer.is_equal(2, and_itself=True)
         expected_result = np.array([[0, 0, 0, 0],
                                  [0, 0, 0, 0],
                                  [0, 0, 0, 0],
                                  [0, 0, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.equal_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_sup_connectivity_4(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
@@ -91,7 +82,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [3, 0, 1, 1],
                                  [2, 2, 1, 0],
                                  [3, 2, 1, 1]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.sup_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -100,7 +91,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [5, 2, 2, 2],
                                  [4, 4, 2, 1],
                                  [5, 5, 1, 2]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.sup_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_with_itself_connectivity_4(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
@@ -109,13 +100,13 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 0, 0, 0],
                                  [2, 0, 0, 0],
                                  [3, 0, 1, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.sup_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
         comparer.is_sup(3, and_itself=True)
         expected_result = np.array([[3, 0, 2, 3],
                                  [4, 1, 0, 0],
                                  [3, 0, 0, 2],
                                  [3, 0, 2, 4]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.sup_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_with_itself_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -124,7 +115,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [0, 2, 0, 0],
                                  [4, 0, 0, 0],
                                  [5, 0, 1, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.sup_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_inf_connectivity_4(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
@@ -133,7 +124,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [1, 4, 3, 3],
                                  [2, 2, 3, 3],
                                  [1, 2, 2, 1]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.inf_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -142,7 +133,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [3, 6, 6, 6],
                                  [4, 4, 5, 5],
                                  [3, 3, 5, 3]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.inf_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_with_itself_connectivity_4(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
@@ -151,7 +142,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [1, 0, 3, 3],
                                  [0, 2, 3, 3],
                                  [0, 2, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.inf_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_with_itself_connectivity_8(self):
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
@@ -160,7 +151,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [3, 0, 6, 6],
                                  [0, 4, 5, 5],
                                  [0, 3, 0, 0]], dtype=np.uint8)
-        np.testing.assert_array_equal(comparer.inf_neighbor_nb, expected_result)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
 
 class TestCC(CellectsUnitTest):
@@ -177,13 +168,13 @@ class TestCC(CellectsUnitTest):
                                 [0, 1, 1, 0, 0]], dtype=np.uint8)
         expected_stats = np.array([[ 0,  0,  5,  5, 12],
                                 [ 1,  2,  5,  5,  8],
-                                [ 0,  0,  4,  2,  5]], dtype=int32)
+                                [ 0,  0,  4,  2,  5]], dtype=np.int32)
         new_order, stats, centers = cc(self.binary_img)
-        np.testing.assert_array_equal(new_order, expected_order)
-        np.testing.assert_array_equal(stats, expected_stats)
+        self.assertTrue(np.array_equal(new_order, expected_order))
+        self.assertTrue(np.array_equal(stats, expected_stats))
 
 
-class TestMakeGravityField(CellectsUnitTest):
+class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
     original_shape = np.array([[0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 1, 0, 0, 0],
@@ -192,7 +183,7 @@ class TestMakeGravityField(CellectsUnitTest):
                             [0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
 
-    def test_make_gravity_field_no_erosion_no_max_distance(self):
+    def test_rounded_inverted_distance_transform_no_erosion_no_max_distance(self):
         expected_field = np.array([[1, 2, 3, 4, 3, 2, 1],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [3, 4, 5, 0, 5, 4, 3],
@@ -200,10 +191,10 @@ class TestMakeGravityField(CellectsUnitTest):
                                 [3, 4, 5, 0, 5, 4, 3],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [1, 2, 3, 4, 3, 2, 1]], dtype=np.uint32)
-        field = make_gravity_field(self.original_shape)
-        np.testing.assert_array_equal(field, expected_field)
+        field = rounded_inverted_distance_transform(self.original_shape)
+        self.assertTrue(np.array_equal(field, expected_field))
 
-    def test_make_gravity_field_with_erosion(self):
+    def test_rounded_inverted_distance_transform_with_erosion(self):
         expected_field = np.array([[1, 2, 3, 4, 3, 2, 1],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [3, 4, 5, 6, 5, 4, 3],
@@ -211,10 +202,10 @@ class TestMakeGravityField(CellectsUnitTest):
                                 [3, 4, 5, 6, 5, 4, 3],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [1, 2, 3, 4, 3, 2, 1]], dtype=np.uint8)
-        field = make_gravity_field(self.original_shape, with_erosion=1)
-        np.testing.assert_array_equal(field, expected_field)
+        field = rounded_inverted_distance_transform(self.original_shape, with_erosion=1)
+        self.assertTrue(np.array_equal(field, expected_field))
 
-    def test_make_gravity_field_with_max_distance(self):
+    def test_rounded_inverted_distance_transform_with_max_distance(self):
         expected_field = np.array([[0, 0, 0, 1, 0, 0, 0],
                                 [0, 0, 1, 2, 1, 0, 0],
                                 [0, 1, 2, 0, 2, 1, 0],
@@ -222,39 +213,85 @@ class TestMakeGravityField(CellectsUnitTest):
                                 [0, 1, 2, 0, 2, 1, 0],
                                 [0, 0, 1, 2, 1, 0, 0],
                                 [0, 0, 0, 1, 0, 0, 0]], dtype=np.uint8)
-        field = make_gravity_field(self.original_shape, max_distance=2)
-        np.testing.assert_array_equal(field, expected_field)
+        field = rounded_inverted_distance_transform(self.original_shape, max_distance=2)
+        self.assertTrue(np.array_equal(field, expected_field))
+
+
+class TestInvertedDistanceTransform(CellectsUnitTest):
+    original_shape = np.array([[0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 1, 0, 0, 0],
+                            [0, 0, 1, 1, 1, 0, 0],
+                            [0, 0, 0, 1, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
+
+    def test_inverted_distance_transform_no_erosion_no_max_distance(self):
+        expected_field = np.array([
+            [1.        , 1.77712415, 2.3694833 , 2.60555128, 2.3694833 , 1.77712415, 1.        ],
+            [1.77712415, 2.3694833 , 3.19133771, 3.60555128, 3.19133771, 2.3694833 , 1.77712415],
+            [2.3694833 , 3.19133771, 3.60555128, 0.        , 3.60555128, 3.19133771, 2.3694833 ],
+            [2.60555128, 3.60555128, 0.        , 0.        , 0.        , 3.60555128, 2.60555128],
+            [2.3694833 , 3.19133771, 3.60555128, 0.        , 3.60555128, 3.19133771, 2.3694833 ],
+            [1.77712415, 2.3694833 , 3.19133771, 3.60555128, 3.19133771, 2.3694833 , 1.77712415],
+            [1.        , 1.77712415, 2.3694833 , 2.60555128, 2.3694833 , 1.77712415, 1.        ]], dtype=np.float64)
+        field = inverted_distance_transform(self.original_shape)
+        self.assertTrue(np.array_equal(np.round(field, 8), expected_field))
+
+    def test_inverted_distance_transform_with_erosion(self):
+        expected_field = np.array([
+            [1.        , 1.63708941, 2.08036303, 2.24264069, 2.08036303, 1.63708941, 1.        ],
+            [1.63708941, 2.41421356, 3.00657271, 3.24264069, 3.00657271, 2.41421356, 1.63708941],
+            [2.08036303, 3.00657271, 3.82842712, 4.24264069, 3.82842712, 3.00657271, 2.08036303],
+            [2.24264069, 3.24264069, 4.24264069, 0.        , 4.24264069, 3.24264069, 2.24264069],
+            [2.08036303, 3.00657271, 3.82842712, 4.24264069, 3.82842712, 3.00657271, 2.08036303],
+            [1.63708941, 2.41421356, 3.00657271, 3.24264069, 3.00657271, 2.41421356, 1.63708941],
+            [1.        , 1.63708941, 2.08036303, 2.24264069, 2.08036303, 1.63708941, 1.        ]], dtype=np.float64)
+        field = inverted_distance_transform(self.original_shape, with_erosion=1)
+        self.assertTrue(np.array_equal(np.round(field, 8), expected_field))
+
+    def test_inverted_distance_transform_with_max_distance(self):
+        expected_field = np.array([
+            [0.        , 0.        , 0.        , 0.        , 0.        , 0.        , 0.        ],
+            [0.        , 0.        , 1.        , 1.41421356, 1.        , 0.        , 0.        ],
+            [0.        , 1.        , 1.41421356, 0.        , 1.41421356, 1.        , 0.        ],
+            [0.        , 1.41421356, 0.        , 0.        , 0.        , 1.41421356, 0.        ],
+            [0.        , 1.        , 1.41421356, 0.        , 1.41421356, 1.        , 0.        ],
+            [0.        , 0.        , 1.        , 1.41421356, 1.        , 0.        , 0.        ],
+            [0.        , 0.        , 0.        , 0.        , 0.        , 0.        , 0.        ]], dtype=np.float64)
+        field = inverted_distance_transform(self.original_shape, max_distance=2)
+        self.assertTrue(np.array_equal(np.round(field, 8), expected_field))
 
 
 class TestGetLinePoints(CellectsUnitTest):
     def test_get_every_coord_between_2_points_vertical(self):
         point_A = (0, 0)
         point_B = (4, 0)
-        expected_segment = np.array([[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], dtype =np.uint64)
+        expected_segment = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dtype=np.uint64)
         segment = get_line_points(point_A, point_B)
-        np.testing.assert_array_equal(segment, expected_segment)
+        self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_horizontal(self):
         point_A = (0, 0)
         point_B = (0, 4)
-        expected_segment = np.array([[0, 0], [1, 0], [2, 0], [3, 0], [4, 0]], dtype =np.uint64)
+        expected_segment = np.array([[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], dtype =np.uint64)
         segment = get_line_points(point_A, point_B)
-        np.testing.assert_array_equal(segment, expected_segment)
+        self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_diagonal(self):
         point_A = (0, 0)
         point_B = (4, 4)
         expected_segment = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]], dtype =np.uint64)
         segment = get_line_points(point_A, point_B)
-        np.testing.assert_array_equal(segment, expected_segment)
+        self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_reversed_diagonal(self):
         point_A = (0, 4)
         point_B = (4, 0)
 
-        expected_segment = np.array([[4, 0], [3, 1], [2, 2], [1, 3], [0, 4]], dtype =np.uint64)
+        expected_segment = np.array([[0, 4], [1, 3], [2, 2], [3, 1], [4, 0]], dtype =np.uint64)
         segment = get_line_points(point_A, point_B)
-        np.testing.assert_array_equal(segment, expected_segment)
+        self.assertTrue(np.array_equal(segment, expected_segment))
 
 
 class TestGetAllLineCoordinates(CellectsUnitTest):
@@ -328,7 +365,7 @@ class TestDrawMeASun(CellectsUnitTest):
            [ 3,  0,  5,  0,  0,  7,  0,  0,  9,  0, 11],
            [ 0,  5,  0,  0,  0,  7,  0,  0,  0,  9,  0]], dtype=np.uint32)
         rays, sun = draw_me_a_sun(self.main_shape)
-        np.testing.assert_array_equal(rays, expected_rays)
+        self.assertTrue(np.array_equal(rays, expected_rays))
         self.assertTrue(np.array_equal(sun, expected_sun))
         self.assertTrue(np.array_equal(rays, expected_rays))
 
@@ -351,7 +388,7 @@ class TestFindMedianShape(CellectsUnitTest):
                                        [0, 1, 1],
                                        [0, 1, 0]], dtype=np.uint8)
         median_shape = find_median_shape(binary_3d_matrix)
-        np.testing.assert_array_equal(median_shape, expected_median_shape)
+        self.assertTrue(np.array_equal(median_shape, expected_median_shape))
 
 
 class TestReduceImageSizeForSpeed(CellectsUnitTest):
@@ -363,8 +400,8 @@ class TestReduceImageSizeForSpeed(CellectsUnitTest):
         expected_shape1_idx = (np.array([0, 0, 0, 2, 2, 2, 3], dtype=np.int64), np.array([0, 2, 3, 0, 2, 3, 0], dtype=np.int64))
         expected_shape2_idx = (np.array([1, 1, 1, 3, 3], dtype=np.int64), np.array([0, 2, 3, 2, 3], dtype=np.int64))
         shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)
-        np.testing.assert_array_equal(shape1_idx, expected_shape1_idx)
-        np.testing.assert_array_equal(shape2_idx, expected_shape2_idx)
+        self.assertTrue(np.array_equal(shape1_idx, expected_shape1_idx))
+        self.assertTrue(np.array_equal(shape2_idx, expected_shape2_idx))
 
 
 class TestMinimalDistance(CellectsUnitTest):
@@ -415,7 +452,8 @@ class TestMinimalDistance(CellectsUnitTest):
 
 class TestFindMajorIncline(CellectsUnitTest):
     def test_find_major_incline_failure(self):
-        vector = np.concatenate((np.repeat(10, 50),array((20, 20)),array((40, 40)), np.repeat(50, 50)))
+        vector = np.concatenate((np.repeat(10, 50), np.array((20, 20)), np.array((40, 40)),
+                                 np.repeat(50, 50)))
         natural_noise = 10
         left, right = find_major_incline(vector, natural_noise)
         self.assertEqual(left, 0)
@@ -454,6 +492,79 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         self.assertTrue(ordered_image[7, 8] == 6)
 
 
+class TestGetLargestConnectedComponent(CellectsUnitTest):
+    """Test suite for get_largest_connected_component function."""
+
+    def test_normal_case_multiple_components(self):
+        """Test normal operation with multiple components of different sizes."""
+        # Setup test data - two rectangles, one larger than the other
+        segmentation = np.zeros((10, 10), dtype=np.uint8)
+        segmentation[2:6, 2:5] = 1  # Larger component (12 pixels)
+        segmentation[6:9, 6:9] = 1  # Small component (9 pixels)
+
+        expected_size = 12
+        expected_mask_shape = segmentation.shape
+
+        size, mask = get_largest_connected_component(segmentation)
+
+        self.assertEqual(size, expected_size)
+        self.assertTrue(mask.shape[0] == segmentation.shape[0])
+        self.assertTrue(mask.shape[1] == segmentation.shape[1])
+        self.assertTrue(np.all(mask[2:6, 2:5]))  # The larger component
+        self.assertFalse(np.any(mask[6:9, 6:9]))  # The smaller component
+
+    def test_single_component(self):
+        """Test with only one connected component."""
+        segmentation = np.zeros((5, 5), dtype=np.uint8)
+        segmentation[1:4, 1:4] = 1  # Single component of size 9
+
+        expected_size = 9
+        expected_mask_shape = segmentation.shape
+
+        size, mask = get_largest_connected_component(segmentation)
+
+        self.assertEqual(mask.sum(), expected_size)
+        self.assertEqual(size, expected_size)
+
+    def test_empty_segmentation(self):
+        """Test with empty segmentation (no connected components)."""
+        segmentation = np.zeros((5, 5), dtype=np.uint8)
+
+        with self.assertRaises(AssertionError):
+            get_largest_connected_component(segmentation)
+
+    def test_single_pixel_component(self):
+        """Test with single pixel as the only component."""
+        segmentation = np.zeros((3, 3), dtype=np.uint8)
+        segmentation[1, 1] = 1
+
+        expected_size = 1
+        size, mask = get_largest_connected_component(segmentation)
+        self.assertEqual(size, expected_size)
+
+    def test_large_uniform_component(self):
+        """Test with a single large component filling most of the image."""
+        segmentation = np.ones((10, 10), dtype=np.uint8)
+        segmentation[0, 0] = 0  # Leave one pixel as background
+
+        size, mask = get_largest_connected_component(segmentation)
+        self.assertTrue(np.array_equal(mask, segmentation >0))
+
+    def test_largest_component_is_edge_case(self):
+        """Test when largest component is at the edge of the array."""
+        segmentation = np.zeros((5, 5), dtype=np.uint8)
+        # Create two components: one at edge (4 pixels) and one in center (3 pixels)
+        segmentation[0, 0:2] = 1  # Edge component
+        segmentation[2:4, 2:4] = 1  # Center component
+
+        expected_size = 4
+
+        size, mask = get_largest_connected_component(segmentation)
+
+        self.assertEqual(size, expected_size)
+        self.assertTrue(mask[2:4, 2:4].sum() == expected_size)
+
+
 class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
     def test_no_expansion(self):
         shape_to_expand = np.zeros((9, 9), dtype=np.uint8)
@@ -463,7 +574,7 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
         without_shape_i[1:4, 5:8] = 1
         without_shape_i[5:8, 1:4] = 1
         shape_original_centroid = [6, 6]
-        ref_centroids = np.array([[2, 2], [6, 2], [2, 6]], dtype=int32)
+        ref_centroids = np.array([[2, 2], [6, 2], [2, 6]], dtype=np.int32)
         kernel = np.ones((3, 3), dtype=np.uint8)
         expanded_shape = expand_until_neighbor_center_gets_nearer_than_own(
             shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, kernel
@@ -489,7 +600,7 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
         without_shape_i[1:4, 2] = 1
         without_shape_i[2, 1:4] = 1
         shape_original_centroid = [6, 6]
-        ref_centroids = np.array([[4, 4], [2, 2]], dtype=int32)
+        ref_centroids = np.array([[4, 4], [2, 2]], dtype=np.int32)
         kernel = np.ones((3, 3), dtype=np.uint8)
         expanded_shape = expand_until_neighbor_center_gets_nearer_than_own(
             shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, kernel
@@ -557,7 +668,7 @@ class TestGetRadiusDistance(CellectsUnitTest):
               [0, 1, 1, 1, 0],
               [0, 0, 1, 0, 0]]], dtype=np.uint8
         )
-        field = make_gravity_field(binary_video[0, ...],  2)
+        field = rounded_inverted_distance_transform(binary_video[0, ...],  2)
         distance_against_time, time_start, time_end = get_radius_distance_against_time(binary_video, field)
         expected_distance = np.array([2., 1.], dtype=np.float32)
         expected_start = 1
@@ -567,7 +678,72 @@ class TestGetRadiusDistance(CellectsUnitTest):
         self.assertEqual(time_end, expected_end)
 
 
-class TestExpandToFillHoles(CellectsUnitTest):
+class TestCloseHoles(CellectsUnitTest):
+    """Test suite for close_holes function."""
+
+    def test_close_holes_with_single_small_hole(self):
+        """Test that close_holes fills a single small hole in the center."""
+        # Setup test data - create a square with a small hole
+        binary_img = np.zeros((10, 10), dtype=np.uint8)
+        binary_img[2:8, 2:8] = 1
+        binary_img[4:6, 4:6] = 0  # Create a small hole
+
+        expected = np.ones((10, 10), dtype=np.uint8)
+        expected[:2, :] = 0
+        expected[8:, :] = 0
+        expected[:, :2] = 0
+        expected[:, 8:] = 0
+
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_close_holes_with_no_holes(self):
+        """Test that close_holes returns same image when no holes exist."""
+        binary_img = np.ones((5, 5), dtype=np.uint8)
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, binary_img))
+
+    def test_close_holes_with_all_zeros(self):
+        """Test that close_holes handles all-zero image."""
+        binary_img = np.zeros((5, 5), dtype=np.uint8)
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, binary_img))
+
+    def test_close_holes_with_single_pixel(self):
+        """Test that close_holes handles single pixel image."""
+        binary_img = np.array([[1]], dtype=np.uint8)
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, binary_img))
+
+    def test_close_holes_with_multiple_holes(self):
+        """Test that close_holes fills multiple small holes."""
+        binary_img = np.zeros((11, 11), dtype=np.uint8)
+        binary_img[2:9, 2:9] = 1
+        binary_img[3:5, 3:5] = 0  # First hole
+        binary_img[6:8, 6:8] = 0  # Second hole
+
+        expected = np.zeros((11, 11), dtype=np.uint8)
+        expected[2:9, 2:9] = 1
+
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_close_holes_with_large_hole(self):
+        """Test that close_holes doesn't fill holes larger than main object."""
+        binary_img = np.zeros((10, 10), dtype=np.uint8)
+        binary_img[2:8, 2:8] = 1
+        binary_img[3:7, 3:7] = 0  # Large hole
+
+        result = close_holes(binary_img)
+        self.assertTrue(np.array_equal(result, binary_img))
+
+    def test_close_holes_with_invalid_input_type(self):
+        """Test that close_holes raises error for invalid input type."""
+        with self.assertRaises(TypeError):
+            close_holes([1, 2, 3])  # List instead of ndarray
+
+
+class TestDynamicallyExpandToFillHoles(CellectsUnitTest):
     def test_dynamically_expand_to_fill_holes(self):
         # Test 1: Verify expansion to fill holes
         binary_video = np.array(
@@ -692,6 +868,462 @@ class TestEllipse(unittest.TestCase):
                                  [False,  True,  True,  True,  True,  True, False],
                                  [False, False, False,  True, False, False, False]])
         self.assertTrue(np.array_equal(ellipse, expected_result))
+
+
+class TestGetContours(CellectsUnitTest):
+    """Test suite for get_contours function."""
+
+    def test_get_contours_with_rectangle(self):
+        """Test that get_contours returns expected contours for a simple rectangle."""
+        # Setup test data - 5x5 image with 3x3 inner rectangle
+        binary_img = np.zeros((5, 5), dtype=np.uint8)
+        binary_img[1:4, 1:4] = 1
+
+        # Expected result - contours should be the edges of the rectangle
+        expected = np.array([[0, 0, 0, 0, 0],
+                             [0, 1, 1, 1, 0],
+                             [0, 1, 0, 1, 0],
+                             [0, 1, 1, 1, 0],
+                             [0, 0, 0, 0, 0]], dtype=np.uint8)
+
+        # Execute function
+        result = get_contours(binary_img)
+
+        # Verify result
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_get_contours_all_ones(self):
+        """Test that get_contours returns all zeros for input with no contours."""
+        # Setup test data
+        binary_img = np.ones((5, 5), dtype=np.uint8)
+
+        # Expected result - all zeros (no contours)
+        expected = np.array([[1, 1, 1, 1, 1],
+                                   [1, 0, 0, 0, 1],
+                                   [1, 0, 0, 0, 1],
+                                   [1, 0, 0, 0, 1],
+                                   [1, 1, 1, 1, 1]], dtype=np.uint8)
+
+        # Execute function
+        result = get_contours(binary_img)
+
+        # Verify result
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_get_contours_single_pixel(self):
+        """Test that get_contours returns no contours for single pixel."""
+        # Setup test data
+        binary_img = np.array([[1]], dtype=np.uint8)
+
+        # Expected result - no contours
+        expected = np.array([[1]], dtype=np.uint8)
+
+        # Execute function
+        result = get_contours(binary_img)
+
+        # Verify result
+        self.assertTrue(np.array_equal(result, expected))
+
+
+class TestPrepareBoxCounting(CellectsUnitTest):
+    """Test suite for prepare_box_counting function."""
+
+    def test_normal_image_default_params(self):
+        """Test with normal image and default parameters."""
+        binary_image = np.zeros((10, 10), dtype=np.uint8)
+        binary_image[2:4, 2:6] = 1
+        binary_image[7:9, 4:7] = 1
+
+        cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+
+        # Check that image is cropped to bounding box
+        expected_cropped = np.array([[0, 0, 0, 0, 0, 0, 0],
+                                           [0, 1, 1, 1, 1, 0, 0],
+                                           [0, 1, 1, 1, 1, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 1, 1, 1, 0],
+                                           [0, 0, 0, 1, 1, 1, 0],
+                                           [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
+        expected_side_lengths = np.array([4, 2])
+        self.assertTrue(np.array_equal(cropped_img, expected_cropped))
+        self.assertTrue(np.array_equal(side_lengths, expected_side_lengths))
+
+    def test_image_with_contours(self):
+        """Test contour extraction when contours=True."""
+        binary_image = np.zeros((5, 5), dtype=np.uint8)
+        binary_image[1:4, 1:4] = 1
+
+        cropped_img, _ = prepare_box_counting(binary_image, contours=True)
+
+        self.assertTrue(np.array_equal(cropped_img, binary_image))
+
+    def test_empty_image(self):
+        """Test with completely empty image."""
+        binary_image = np.zeros((5, 5), dtype=np.uint8)
+
+        cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+
+        # Should return empty array and None for side_lengths
+        self.assertTrue(np.array_equal(cropped_img, binary_image))
+        self.assertIsNone(side_lengths)
+
+    def test_single_pixel(self):
+        """Test with single pixel image."""
+        binary_image = np.zeros((5, 5), dtype=np.uint8)
+        binary_image[2, 2] = 1
+
+        cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+
+        # Should return single pixel and no side lengths (min_side < min_im_side)
+        expected = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=np.uint8)
+        self.assertTrue(np.array_equal(cropped_img, expected))
+        self.assertTrue(np.array_equal(side_lengths, np.array([2])))
+
+    def test_zoom_step_nonzero(self):
+        """Test side lengths computation with non-zero zoom_step."""
+        binary_image = np.zeros((16, 16), dtype=np.uint8)
+        binary_image[4:12, 4:12] = 1
+
+        _, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2, zoom_step=2)
+
+        # Should return [8, 10, 12, 14] with zoom_step=2
+        expected = np.array([2, 4, 6, 8], dtype=np.uint8)
+        self.assertTrue(np.array_equal(side_lengths, expected))
+
+    def test_small_image_not_on_contours(self):
+        """Test when min_side < min_im_side."""
+        binary_image = np.zeros((8, 8), dtype=np.uint8)
+        binary_image[2:6, 2:6] = 1
+
+        cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2, contours=False)
+
+        # Should return cropped image but no side lengths
+        expected = np.array([[0, 0, 0, 0, 0, 0],
+                                   [0, 1, 1, 1, 1, 0],
+                                   [0, 1, 1, 1, 1, 0],
+                                   [0, 1, 1, 1, 1, 0],
+                                   [0, 1, 1, 1, 1, 0],
+                                   [0, 0, 0, 0, 0, 0]], dtype=np.uint8)
+        expected_side_lengths = np.array([4, 2])
+        self.assertTrue(np.array_equal(cropped_img, expected))
+        self.assertTrue(np.array_equal(side_lengths, expected_side_lengths))
+
+
+class TestBoxCountingDimension(CellectsUnitTest):
+    """Test suite for box_counting_dimension function."""
+    binary_image = np.zeros((10, 10), dtype=np.uint8)
+    binary_image[2:4, 2:6] = 1
+    binary_image[7:9, 4:7] = 1
+    binary_image[4:7, 5] = 1
+
+    def test_normal_operation(self):
+        """Test that the function returns expected results with normal input."""
+        # Setup test data
+
+        # Prepare inputs as shown in the example
+        zoomed_binary = self.binary_image  # Assuming this is already prepared
+        side_lengths = np.array([10, 5, 2])  # Example side lengths
+
+        expected_dimension = np.float64(1.1777767776413224)
+        expected_r_value = np.float64(0.9491082009262662)
+        expected_box_nb = 3
+
+        # Execute function
+        dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
+
+        # Verify results
+        self.assertEqual(dimension, expected_dimension)
+        self.assertEqual(r_value, expected_r_value)
+        self.assertEqual(box_nb, expected_box_nb)
+
+    def test_empty_side_lengths(self):
+        """Test that the function handles empty side_lengths array."""
+        side_lengths = np.array([], dtype=np.float64)
+
+        # Should return zeros
+        dimension, r_value, box_nb = box_counting_dimension(self.binary_image, side_lengths)
+
+        self.assertEqual(dimension, 0.0)
+        self.assertEqual(r_value, 0.0)
+        self.assertEqual(box_nb, 0.0)
+
+    def test_side_lengths_none(self):
+        """Test that the function handles side_lengths=None."""
+
+        # Should return zeros
+        dimension, r_value, box_nb = box_counting_dimension(self.binary_image, None)
+
+        self.assertEqual(dimension, 0.0)
+        self.assertEqual(r_value, 0.0)
+        self.assertEqual(box_nb, 0.0)
+
+    def test_all_zero_box_counts(self):
+        """Test that the function handles case where all box counts are zero."""
+        binary_image = np.zeros((10, 10), dtype=np.uint8)
+        side_lengths = np.array([2, 3, 5])
+
+        # All boxes should be empty
+        dimension, r_value, box_nb = box_counting_dimension(binary_image, side_lengths)
+
+        self.assertEqual(dimension, 0.0)
+        self.assertEqual(r_value, 0.0)
+        self.assertEqual(box_nb, 0.0)  # Still should count the boxes
+
+
+    def test_invalid_image_data(self):
+        """Test that function handles non-binary image data."""
+        # Create an image with values other than 0 and 255
+        invalid_image = np.array([[0, 3, 1], [4, 255, 2]], dtype=np.uint8)
+        side_lengths = np.array([2])
+
+        # Should still process (but behavior may be undefined)
+        dimension, r_value, box_nb = box_counting_dimension(invalid_image, side_lengths)
+
+        # Just verify it doesn't crash
+        self.assertEqual(dimension, 0.0)
+        self.assertEqual(r_value, 0.0)
+        self.assertEqual(box_nb, 0.0)
+
+
+class TestKeepShapeConnectedWithRef(CellectsUnitTest):
+    """Test suite for keep_shape_connected_with_ref function."""
+
+    def test_normal_operation(self):
+        """Test that the function returns expected results with normal input."""
+        all_shapes = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape[3, 3] = 1
+
+        # Create some components that don't intersect with reference
+        all_shapes[0:2, 0:2] = 1
+        all_shapes[3:4, 3:4] = 1
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertTrue(np.array_equal(result, reference_shape))
+
+    def test_happy_path_intersecting_shapes(self):
+        """Test that the function returns first intersecting component."""
+        # Create test images
+        all_shapes = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape = np.zeros((5, 5), dtype=np.uint8)
+
+        # Component 1 does not intersect
+        all_shapes[0:2, 0:2] = 1
+
+        # Component 2 intersects
+        all_shapes[2:4, 2:4] = 1
+        reference_shape[3, 3] = 1
+
+        # Component 3 intersects (but should not be returned as it's not first)
+        all_shapes[4:5, 4:5] = 1
+        reference_shape[4, 4] = 1
+
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertTrue(np.array_equal(result, all_shapes))
+
+    def test_no_intersecting_components(self):
+        """Test that function returns None when no components intersect."""
+        all_shapes = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape = np.zeros((5, 5), dtype=np.uint8)
+
+        # Create some components that don't intersect with reference
+        all_shapes[0:2, 0:2] = 1
+        all_shapes[2:3, 3:4] = 1
+
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertTrue(np.array_equal(result, reference_shape))
+
+    def test_single_component_no_intersection(self):
+        """Test single component case that doesn't intersect."""
+        all_shapes = np.ones((3, 3), dtype=np.uint8)
+        reference_shape = np.zeros((3, 3), dtype=np.uint8)
+
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertTrue(np.array_equal(result, reference_shape))
+
+    def test_single_component_with_intersection(self):
+        """Test single component case that intersects."""
+        all_shapes = np.ones((3, 3), dtype=np.uint8)
+        reference_shape = np.ones((3, 3), dtype=np.uint8)
+
+        expected = np.ones((3, 3), dtype=np.uint8)
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_empty_reference_shape(self):
+        """Test with empty reference shape."""
+        all_shapes = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape = np.zeros((5, 5), dtype=np.uint8)
+
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        self.assertIsNone(result)
+
+    def test_multiple_intersecting_components(self):
+        """Test that function returns first intersecting component when multiple exist."""
+        all_shapes = np.zeros((5, 5), dtype=np.uint8)
+        reference_shape = np.zeros((5, 5), dtype=np.uint8)
+
+        # Component 1 intersects
+        all_shapes[0:2, 0:2] = 1
+        reference_shape[1, 1] = 1
+
+        # Component 2 also intersects (but should not be returned)
+        all_shapes[3:4, 3:4] = 1
+        reference_shape[3, 3] = 1
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[0:2, 0:2] = 1
+
+        result = keep_shape_connected_with_ref(all_shapes, reference_shape)
+        np.testing.assert_array_equal(result, expected)
+
+
+class TestKeepLargestShape(CellectsUnitTest):
+    """Test suite for keep_largest_shape function."""
+
+    def test_keep_largest_shape_basic_case(self):
+        """Test basic functionality with clear dominant shape."""
+        indexed_shapes = np.array([0, 2, 2, 3, 1], dtype=np.int32)
+        expected = np.array([0, 1, 1, 0, 0], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_keep_largest_shape_tie_breaks_first(self):
+        """Test that ties break by choosing the first occurring maximum."""
+        indexed_shapes = np.array([0, 2, 3, 2, 3], dtype=np.int32)
+        expected = np.array([0, 1, 0, 1, 0], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_keep_largest_shape_single_dominant(self):
+        """Test with only one non-zero shape present."""
+        indexed_shapes = np.array([0, 2, 2, 2], dtype=np.int32)
+        expected = np.array([0, 1, 1, 1], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_keep_largest_shape_all_same(self):
+        """Test when all elements are the same shape."""
+        indexed_shapes = np.array([0, 2, 2, 2], dtype=np.int32)
+        expected = np.array([0, 1, 1, 1], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_keep_largest_shape_with_zero(self):
+        """Test that zeros are properly ignored in counting."""
+        indexed_shapes = np.array([0, 2, 0, 2, 3], dtype=np.int32)
+        expected = np.array([0, 1, 0, 1, 0], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_keep_largest_shape_single_element(self):
+        """Test with single element array."""
+        indexed_shapes = np.array([2], dtype=np.int32)
+        expected = np.array([1], dtype=np.uint8)
+        result = keep_largest_shape(indexed_shapes)
+        self.assertTrue(np.array_equal(result, expected))
+
+
+class TestKeepOneConnectedComponent(CellectsUnitTest):
+    """Test suite for keep_one_connected_component function."""
+
+    def test_happy_path_multiple_components(self):
+        """Test normal operation with multiple components."""
+        # Create test image with two components of different sizes
+        img = np.zeros((5, 5), dtype=np.uint8)
+        img[0:2, 0:2] = 1  # 4-pixel component
+        img[3:4, 3:4] = 1  # 1-pixel component
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[0:2, 0:2] = 1
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_single_component(self):
+        """Test that single component returns original image."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+        img[1:3, 1:3] = 1
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, img))
+
+    def test_empty_image(self):
+        """Test with completely empty image."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, img))
+
+    def test_non_uint8_input(self):
+        """Test that input is converted to uint8 if needed."""
+        img = np.zeros((5, 5), dtype=np.int32)
+        img[1:3, 1:3] = 1
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[1:3, 1:3] = 1
+
+        result = keep_one_connected_component(img)
+        self.assertEqual(result.dtype, np.uint8)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_large_component_first(self):
+        """Test when largest component is first in image."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+        img[0:2, 0:2] = 1  # larger component
+        img[4:5, 4:5] = 1  # smaller component
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[0:2, 0:2] = 1
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_large_component_last(self):
+        """Test when largest component is last in image."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+        img[4:5, 4:5] = 1  # smaller component
+        img[0:2, 0:2] = 1  # larger component
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[0:2, 0:2] = 1
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_all_pixels_set(self):
+        """Test when all pixels are part of one component."""
+        img = np.ones((5, 5), dtype=np.uint8)
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, img))
+
+    def test_same_size_components(self):
+        """Test when multiple components have same size."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+        img[0:2, 0:2] = 1  # first component
+        img[3:5, 3:5] = 1  # second component of same size
+
+        expected = np.zeros((5, 5), dtype=np.uint8)
+        expected[0:2, 0:2] = 1  # should keep first one based on order
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_all_zero_input(self):
+        """Test with all zeros input."""
+        img = np.zeros((5, 5), dtype=np.uint8)
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, img))
+
+    def test_single_pixel_image(self):
+        """Test with single pixel image."""
+        img = np.array([[1]], dtype=np.uint8)
+
+        result = keep_one_connected_component(img)
+        self.assertTrue(np.array_equal(result, img))
 
 
 if __name__ == '__main__':

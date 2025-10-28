@@ -70,7 +70,7 @@ class OneVideoPerBlob:
             self.top = np.zeros(self.first_image.shape_number, dtype=np.int64)
             self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
             if are_gravity_centers_moving:
-                self.get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_specimens_have_same_direction, display)
+                self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_specimens_have_same_direction, display)
                 # new:
                 new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
                 #
@@ -90,10 +90,10 @@ class OneVideoPerBlob:
                 self.modif_validated_shapes[np.nonzero(self.ordered_first_image)] = 1
                 self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                     self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-                self.get_quick_bb()
+                self._get_quick_bb()
                 # self.print_bounding_boxes()
             else:
-                self.get_quick_bb()
+                self._get_quick_bb()
             self.standardize_video_sizes()
         if counter == 20:
             self.top[self.top < 0] = 1
@@ -102,7 +102,7 @@ class OneVideoPerBlob:
             self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
 
 
-    def get_quick_bb(self):
+    def _get_quick_bb(self):
         """
         Compute euclidean distance between cell(s) to get each arena bounding box
             To earn computation time:
@@ -231,10 +231,10 @@ class OneVideoPerBlob:
             self.right = self.standard[:, 3]
 
 
-    def get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False):
+    def _get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False):
         """
         Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
-        on following images. i.e. it segment evenly spaced images (See self.segment_blob_motion and OneImageAnalysis)
+        on following images. i.e. it segment evenly spaced images (See self._segment_blob_motion and OneImageAnalysis)
         to make a rough tracking of blob motion allowing to be sure that the video will only contain the shapes that
         have a chronological link with the shape as it was on the first image.
 
@@ -266,7 +266,7 @@ class OneVideoPerBlob:
                     image = img_list[sample_numbers[frame_idx] - 1]
                 else:
                     image = img_list[sample_numbers[frame_idx] - 1, ...]
-                self.motion_list.insert(frame_idx, self.segment_blob_motion(image, color_space_combination, color_number))
+                self.motion_list.insert(frame_idx, self._segment_blob_motion(image, color_space_combination, color_number))
 
 
         self.big_kernels = Ellipse((self.k_size, self.k_size)).create().astype(np.uint8)
@@ -387,7 +387,7 @@ class OneVideoPerBlob:
             self.bot[shape_i] = np.max(shape_i_indices[0])
         self.ordered_first_image = previous_ordered_image_i
 
-    def segment_blob_motion(self, image, color_space_combination, color_number):
+    def _segment_blob_motion(self, image, color_space_combination, color_number):
         if isinstance(image, str):
             image = self.read_and_rotate(image, self.first_image.bgr)
             # image = readim(image)
