@@ -353,12 +353,67 @@ def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArr
     return segmentation, l_threshold_over_time
 
 
-def _network_perimeter(threshold, img):
+def _network_perimeter(threshold, img: NDArray):
+    """
+    Calculate the negative perimeter of a binary image created from an input image based on a threshold.
+
+    This function takes an image and a threshold value to create a binary
+    image, then calculates the negative perimeter of that binary image.
+
+    Parameters
+    ----------
+    threshold : float
+        The threshold value to apply to the input image.
+    img : ndarray
+        The input grayscale image as a NumPy array.
+
+    Returns
+    -------
+    out : float
+        The negative perimeter of the binary image created from the input
+        image and threshold.
+
+    Examples
+    --------
+    >>> img = np.array([[1, 2, 1, 1], [1, 3, 4, 1], [2, 4, 3, 1], [2, 1, 2, 1]])
+    >>> _network_perimeter(threshold=2.5, img=img)
+    -4
+    """
     binary_img = img > threshold
     return -perimeter(binary_img)
 
 
-def rolling_window_segmentation(greyscale_image, possibly_filled_pixels, patch_size=(80, 80)):
+def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels: NDArray, patch_size: tuple=(80, 80)) -> NDArray:
+    """
+    Rolling window segmentation.
+
+    Performs rolling window segmentation on a greyscale image to detect network-like structures
+    using Otsu's thresholding method. Optionally applies perimeter minimization if specified.
+
+    Parameters
+    ----------
+    greyscale_image : ndarray of uint8
+        The input greyscale image to be segmented.
+    possibly_filled_pixels : ndarray of uint8
+        A mask of potentially filled pixels in the same shape as `greyscale_image`.
+    patch_size : tuple, optional
+        The size of patches used in the segmentation. Defaults to ``(80, 80)``.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        The segmented image highlighting network-like structures.
+
+    Examples
+    --------
+    >>> greyscale_image = np.array([[1, 2, 1, 1], [1, 3, 4, 1], [2, 4, 3, 1], [2, 1, 2, 1]])
+    >>> possibly_filled_pixels = greyscale_image > 1
+    >>> patch_size = (1, 1)
+    >>> result = rolling_window_segmentation(greyscale_image, possibly_filled_pixels, patch_size)
+    >>> print(result)
+    array([[1, 0, ..., 0],
+           [0, 2, ..., 3], ...])
+    """
     patch_centers = [
         np.floor(np.linspace(
             p // 2, s - p // 2, int(np.ceil(s / (p // 2))) - 1
