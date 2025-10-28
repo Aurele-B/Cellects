@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This script contains all unit tests of the morphological_operations script
+Unit tests for morphological operations.
 """
 
 import unittest
@@ -9,13 +9,16 @@ from cellects.image_analysis.morphological_operations import *
 
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):
-    # Create a sample matrix for testing
+    """Test CompareNeighborsWithValue functionality."""
     matrix = np.array([[9, 0, 4, 6],
                    [4, 9, 1, 3],
                    [7, 2, 1, 4],
                    [9, 0, 8, 5]], dtype=np.int8)
 
     def test_is_equal_connectivity_4(self):
+        """
+        Test checking connectivity of 4 for a matrix with given values.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_equal(1)
         expected_result = np.array([[0, 0, 1, 0],
@@ -31,6 +34,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_connectivity_8(self):
+        """
+        Test that connectivity 8 comparison of neighbors with value works correctly.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_equal(1)
         expected_result = np.array([[0, 1, 1, 1],
@@ -46,6 +52,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_with_itself_connectivity_4(self):
+        """
+        Test is equal with itself connectivity 4.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_equal(1, and_itself=True)
         expected_result = np.array([[0, 0, 0, 0],
@@ -61,6 +70,14 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_equal_with_itself_connectivity_8(self):
+        """
+        Test that the neighbor comparison with connectivity 8 works correctly when comparing a value with itself.
+
+        Parameters
+        ----------
+        self : TestCase
+            The test case instance.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_equal(1, and_itself=True)
         expected_result = np.array([[0, 0, 0, 0],
@@ -76,6 +93,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
 
     def test_is_sup_connectivity_4(self):
+        """
+        Test that the connectivity of 4 is working properly for the matrix.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_sup(5)
         expected_result = np.array([[2, 2, 1, 2],
@@ -85,6 +105,7 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_connectivity_8(self):
+        """Test that the neighboring values connectivity with 8 is correctly checked."""
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_sup(5)
         expected_result = np.array([[4, 3, 3, 3],
@@ -94,6 +115,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_with_itself_connectivity_4(self):
+        """
+        Test that the Connectivity 4 comparison with itself works correctly.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_sup(5, and_itself=True)
         expected_result = np.array([[2, 0, 0, 2],
@@ -109,6 +133,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_sup_with_itself_connectivity_8(self):
+        """
+        Test that compares neighbors with value using 8-connectivity and checks if a specific condition holds.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_sup(5, and_itself=True)
         expected_result = np.array([[4, 0, 0, 3],
@@ -118,6 +145,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
 
     def test_is_inf_connectivity_4(self):
+        """Test that the `CompareNeighborsWithValue` class correctly identifies
+        infinity neighbors with connectivity 4.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_inf(5)
         expected_result = np.array([[2, 2, 3, 2],
@@ -127,6 +157,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_connectivity_8(self):
+        """
+        Test checking infinite connectivity with value 5 in an 8-connected neighborhood.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_inf(5)
         expected_result = np.array([[4, 5, 5, 5],
@@ -136,6 +169,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_with_itself_connectivity_4(self):
+        """
+        Test that connectivity 4 with itself comparison works correctly.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=4)
         comparer.is_inf(5, and_itself=True)
         expected_result = np.array([[0, 2, 3, 0],
@@ -145,6 +181,9 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_inf_with_itself_connectivity_8(self):
+        """
+        Test that the connectivity 8 and is_inf method return correct result.
+        """
         comparer = CompareNeighborsWithValue(self.matrix, connectivity=8)
         comparer.is_inf(5, and_itself=True)
         expected_result = np.array([[0, 5, 5, 0],
@@ -155,12 +194,14 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
 
 
 class TestCC(CellectsUnitTest):
+    """Test the Connected Components algorithm."""
     binary_img = np.array([[1, 1, 1, 1, 0],
                         [1, 0, 0, 0, 0],
                         [0, 0, 1, 0, 1],
                         [0, 1, 1, 1, 1],
                         [0, 1, 1, 0, 0]], dtype=np.uint8)
     def test_cc_ordering(self):
+        """Test that cc ordering is correct."""
         expected_order = np.array([[2, 2, 2, 2, 0],
                                 [2, 0, 0, 0, 0],
                                 [0, 0, 1, 0, 1],
@@ -175,6 +216,11 @@ class TestCC(CellectsUnitTest):
 
 
 class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
+    """
+    Test rounded inverted distance transform.
+    This test class verifies the behavior of the `rounded_inverted_distance_transform`
+    function with various parameters.
+    """
     original_shape = np.array([[0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 1, 0, 0, 0],
@@ -184,6 +230,8 @@ class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
                             [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
 
     def test_rounded_inverted_distance_transform_no_erosion_no_max_distance(self):
+        """Test that the rounded inverted distance transform is correctly computed without erosion and max distance.
+        """
         expected_field = np.array([[1, 2, 3, 4, 3, 2, 1],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [3, 4, 5, 0, 5, 4, 3],
@@ -195,6 +243,7 @@ class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
         self.assertTrue(np.array_equal(field, expected_field))
 
     def test_rounded_inverted_distance_transform_with_erosion(self):
+        """Test that the rounded inverted distance transform with erosion produces the expected output."""
         expected_field = np.array([[1, 2, 3, 4, 3, 2, 1],
                                 [2, 3, 4, 5, 4, 3, 2],
                                 [3, 4, 5, 6, 5, 4, 3],
@@ -206,6 +255,8 @@ class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
         self.assertTrue(np.array_equal(field, expected_field))
 
     def test_rounded_inverted_distance_transform_with_max_distance(self):
+        """
+        Test the rounded inverted distance transform with a maximum distance."""
         expected_field = np.array([[0, 0, 0, 1, 0, 0, 0],
                                 [0, 0, 1, 2, 1, 0, 0],
                                 [0, 1, 2, 0, 2, 1, 0],
@@ -218,6 +269,10 @@ class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
 
 
 class TestInvertedDistanceTransform(CellectsUnitTest):
+    """Test the behavior of the inverted_distance_transform function.
+    This class contains unit tests for verifying different scenarios
+    of the inverted_distance_transform functionality.
+    """
     original_shape = np.array([[0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 0, 0, 0, 0],
                             [0, 0, 0, 1, 0, 0, 0],
@@ -227,6 +282,9 @@ class TestInvertedDistanceTransform(CellectsUnitTest):
                             [0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
 
     def test_inverted_distance_transform_no_erosion_no_max_distance(self):
+        """
+        Test that the distance transform is inverted correctly without erosion and no maximum distance.
+        """
         expected_field = np.array([
             [1.        , 1.77712415, 2.3694833 , 2.60555128, 2.3694833 , 1.77712415, 1.        ],
             [1.77712415, 2.3694833 , 3.19133771, 3.60555128, 3.19133771, 2.3694833 , 1.77712415],
@@ -239,6 +297,8 @@ class TestInvertedDistanceTransform(CellectsUnitTest):
         self.assertTrue(np.array_equal(np.round(field, 8), expected_field))
 
     def test_inverted_distance_transform_with_erosion(self):
+        """
+        Test that checks the result of `inverted_distance_transform` with erosion."""
         expected_field = np.array([
             [1.        , 1.63708941, 2.08036303, 2.24264069, 2.08036303, 1.63708941, 1.        ],
             [1.63708941, 2.41421356, 3.00657271, 3.24264069, 3.00657271, 2.41421356, 1.63708941],
@@ -251,6 +311,8 @@ class TestInvertedDistanceTransform(CellectsUnitTest):
         self.assertTrue(np.array_equal(np.round(field, 8), expected_field))
 
     def test_inverted_distance_transform_with_max_distance(self):
+        """
+        Test inverted distance transform with max_distance."""
         expected_field = np.array([
             [0.        , 0.        , 0.        , 0.        , 0.        , 0.        , 0.        ],
             [0.        , 0.        , 1.        , 1.41421356, 1.        , 0.        , 0.        ],
@@ -264,6 +326,7 @@ class TestInvertedDistanceTransform(CellectsUnitTest):
 
 
 class TestGetLinePoints(CellectsUnitTest):
+    """Test get_line_points functionality."""
     def test_get_every_coord_between_2_points_vertical(self):
         point_A = (0, 0)
         point_B = (4, 0)
@@ -272,6 +335,9 @@ class TestGetLinePoints(CellectsUnitTest):
         self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_horizontal(self):
+        """
+        Test that the function returns every coordinate between two points in a horizontal line.
+        """
         point_A = (0, 0)
         point_B = (0, 4)
         expected_segment = np.array([[0, 0], [0, 1], [0, 2], [0, 3], [0, 4]], dtype =np.uint64)
@@ -279,6 +345,9 @@ class TestGetLinePoints(CellectsUnitTest):
         self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_diagonal(self):
+        """
+        Test the `get_line_points` function to ensure it correctly computes coordinates between two diagonal points.
+        """
         point_A = (0, 0)
         point_B = (4, 4)
         expected_segment = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]], dtype =np.uint64)
@@ -286,6 +355,7 @@ class TestGetLinePoints(CellectsUnitTest):
         self.assertTrue(np.array_equal(segment, expected_segment))
 
     def test_get_every_coord_between_2_points_reversed_diagonal(self):
+        """Test getting coordinates between two points in a reversed diagonal."""
         point_A = (0, 4)
         point_B = (4, 0)
 
@@ -338,6 +408,7 @@ class TestGetAllLineCoordinates(CellectsUnitTest):
 
 
 class TestDrawMeASun(CellectsUnitTest):
+    """Test Draw Me a Sun functionality."""
     main_shape = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -351,6 +422,8 @@ class TestDrawMeASun(CellectsUnitTest):
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
 
     def test_draw_me_a_sun(self):
+        """
+        Test that the draw_me_a_sun function produces expected rays and sun patterns."""
         expected_rays = np.arange(1, 13, dtype=np.uint32)
         expected_sun = np.array([
            [ 0,  4,  0,  0,  0,  6,  0,  0,  0,  8,  0],
@@ -371,7 +444,9 @@ class TestDrawMeASun(CellectsUnitTest):
 
 
 class TestFindMedianShape(CellectsUnitTest):
+    """Test find_median_shape suite."""
     def test_find_median_shape(self):
+        """Test find_median_shape."""
         binary_3d_matrix = np.array([[[1, 1, 0],
                                    [0, 1, 0],
                                    [1, 0, 1]],
@@ -392,7 +467,9 @@ class TestFindMedianShape(CellectsUnitTest):
 
 
 class TestReduceImageSizeForSpeed(CellectsUnitTest):
+    """Test the `reduce_image_size_for_speed` function."""
     def test_reduce_image_size_for_speed(self):
+        """Test reduce_image_size_for_speed functionality."""
         image_of_2_shapes = np.array([[1, 0, 1, 1],
                                    [2, 0, 2, 2],
                                    [1, 0, 1, 1],
@@ -405,7 +482,12 @@ class TestReduceImageSizeForSpeed(CellectsUnitTest):
 
 
 class TestMinimalDistance(CellectsUnitTest):
+    """Test minimal distance calculation between two shapes.
+    This class tests the functionality of computing the minimal distance between
+    two shapes in an image using different speed optimization settings.
+    """
     def test_minimal_distance(self):
+        """Test minimal distance between shapes in different configurations."""
         image_of_2_shapes = np.array([[0, 0, 0, 0, 0],
                                    [0, 1, 0, 0, 0],
                                    [0, 0, 0, 2, 0],
@@ -428,6 +510,7 @@ class TestMinimalDistance(CellectsUnitTest):
         self.assertAlmostEqual(distance, 3.605551, places=3)
 
     def test_minimal_distance_with_speed_increase(self):
+        """Test Minimal Distance Calculation with Speed Increase."""
         image_of_2_shapes = np.array([[0, 0, 0, 0, 0],
                                       [0, 1, 0, 0, 0],
                                       [0, 0, 0, 2, 0],
@@ -451,7 +534,9 @@ class TestMinimalDistance(CellectsUnitTest):
 
 
 class TestFindMajorIncline(CellectsUnitTest):
+    """Test finding major incline in a vector."""
     def test_find_major_incline_failure(self):
+        """Test that find_major_incline handles vector with major incline."""
         vector = np.concatenate((np.repeat(10, 50), np.array((20, 20)), np.array((40, 40)),
                                  np.repeat(50, 50)))
         natural_noise = 10
@@ -461,9 +546,10 @@ class TestFindMajorIncline(CellectsUnitTest):
 
 
 class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
-
+    """Test ranking from top to bottom from left to right."""
     @classmethod
     def setUpClass(cls):
+        """Setup test fixtures, including a binary image and y-axis boundaries."""
         super().setUpClass()
 
         cls.binary_image = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
@@ -480,6 +566,12 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         cls.y_boundaries = np.array([0,  1,  0,  0,  -1,  0,  1,  0,  0,  -1,  0], dtype=np.int8)
 
     def test_rank_from_top_to_bottom_from_left_to_right(self):
+        """
+        Test that the ranking function orders objects from top to bottom and left to right.
+        This test method verifies that the `rank_from_top_to_bottom_from_left_to_right`
+        function correctly orders objects in a binary image based on their positions
+        from top to bottom and left to right.
+        """
         ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.binary_image, self.y_boundaries, get_ordered_image=True)
         self.assertTrue(len(np.unique(ordered_image)) == 7)
         self.assertTrue(ordered_centroids.shape[0] == 6)
@@ -501,10 +593,7 @@ class TestGetLargestConnectedComponent(CellectsUnitTest):
         segmentation = np.zeros((10, 10), dtype=np.uint8)
         segmentation[2:6, 2:5] = 1  # Larger component (12 pixels)
         segmentation[6:9, 6:9] = 1  # Small component (9 pixels)
-
         expected_size = 12
-        expected_mask_shape = segmentation.shape
-
         size, mask = get_largest_connected_component(segmentation)
 
         self.assertEqual(size, expected_size)
@@ -566,7 +655,11 @@ class TestGetLargestConnectedComponent(CellectsUnitTest):
 
 
 class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
+    """Test shape expansion until centers are closer."""
     def test_no_expansion(self):
+        """
+        Test that the function expands a shape until its neighbor centroid gets nearer than its own.
+        """
         shape_to_expand = np.zeros((9, 9), dtype=np.uint8)
         shape_to_expand[5:8, 5:8] = 1
         without_shape_i = np.zeros((9, 9), dtype=np.uint8)
@@ -593,6 +686,12 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
         self.assertTrue(np.array_equal(expanded_shape, expected_result))
 
     def test_expansion(self):
+        """
+        Test expansion of shape until neighbor center gets near.
+        This test method verifies that a given shape expands correctly
+        until the centroid of its neighboring shape gets closer than its own
+        centroid.
+        """
         shape_to_expand = np.zeros((10, 10), dtype=np.uint8)
         shape_to_expand[5:8, 6] = 1
         shape_to_expand[6, 5:8] = 1
@@ -621,7 +720,9 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
 
 
 class TestImageBorders(CellectsUnitTest):
+    """Test image border functionality."""
     def test_image_borders(self):
+        """Test image borders detection."""
         # Test 1: Verify borders for a 3x3 image
         dimensions = (3, 3)
         borders = image_borders(dimensions)
@@ -633,6 +734,10 @@ class TestImageBorders(CellectsUnitTest):
         self.assertTrue(np.array_equal(borders, expected_result))
 
     def test_image_borders_large(self):
+        """
+        def test_image_borders_large(self):
+            Test that borders are correctly computed for larger-sized images.
+        """
         # Test 2: Verify borders for a larger image
         dimensions = (5, 7)
         borders = image_borders(dimensions)
@@ -647,7 +752,11 @@ class TestImageBorders(CellectsUnitTest):
 
 
 class TestGetRadiusDistance(CellectsUnitTest):
+    """Test get_radius_distance."""
     def test_get_radius_distance(self):
+        """
+        Test that verifies radius distance for a large binary video.
+        """
         # Test: Verify radius distance for a large binary video
         binary_video = np.array(
             [[[0, 0, 0, 0, 0],
@@ -744,7 +853,11 @@ class TestCloseHoles(CellectsUnitTest):
 
 
 class TestDynamicallyExpandToFillHoles(CellectsUnitTest):
+    """Test dynamically expanding to fill holes."""
     def test_dynamically_expand_to_fill_holes(self):
+        """
+        Test that binary video dynamically expands to fill holes.
+        """
         # Test 1: Verify expansion to fill holes
         binary_video = np.array(
             [[[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -843,7 +956,11 @@ class TestDynamicallyExpandToFillHoles(CellectsUnitTest):
 
 
 class TestEllipse(unittest.TestCase):
+    """Test that an ellipse is created correctly."""
     def test_create_circle(self):
+        """
+        Verify the correctness of ellipse_fun to create a circle
+        """
         # Test 1: Verify the correctness of ellipse_fun to create a circle
         sizes = [9, 9]
         ellipse = Ellipse(sizes).create()
@@ -858,7 +975,10 @@ class TestEllipse(unittest.TestCase):
                                  [False, False, False, False,  True, False, False, False, False]])
         self.assertTrue(np.array_equal(ellipse, expected_result))
 
-    def test_create_circle(self):
+    def test_create_ellipse(self):
+        """
+        Test that verifies the correctness of ellipse creation.
+        """
         # Test 2: Verify the correctness of ellipse_fun to create an ellipse
         sizes = [5, 7]
         ellipse = Ellipse(sizes).create()
@@ -871,7 +991,7 @@ class TestEllipse(unittest.TestCase):
 
 
 class TestGetContours(CellectsUnitTest):
-    """Test suite for get_contours function."""
+    """Test get_contours functionality."""
 
     def test_get_contours_with_rectangle(self):
         """Test that get_contours returns expected contours for a simple rectangle."""

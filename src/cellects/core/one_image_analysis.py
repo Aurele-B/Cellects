@@ -91,16 +91,6 @@ class OneImageAnalysis:
         I/ Image modification for segmentation through thresholding
         This part contain methods to convert, visualize, filter and threshold one image.
     """
-
-    def generate_color_space_combination(self, c_spaces, first_dict, second_dict, background=None, background2=None):
-
-        # logging.info(f"Generate the color space combination {first_dict}")
-        self.all_c_spaces = get_color_spaces(self.bgr, c_spaces)
-        self.image = combine_color_spaces(first_dict, self.all_c_spaces, background)
-        if len(second_dict) > 0:
-            logging.info(f"Coupled with the color space combination {second_dict}")
-            self.image2 = combine_color_spaces(second_dict, self.all_c_spaces, background2)
-
     def convert_and_segment(self, c_space_dict, color_number=2, biomask=None,
                             backmask=None, subtract_background=None, subtract_background2=None, grid_segmentation=False,
                             lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):

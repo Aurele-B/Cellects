@@ -1,26 +1,31 @@
 #!/usr/bin/env python3
 """
-This script contains methods to compare and modify shapes in binary images
-It contains the following functions:
-    - cc : Sort connected components according to sizes
-    - make_gravity_field : put a gradient of decreasing numbers around a shape
-    - find_median_shape : sum shapes and keem a median image of them
-    - make_numbered_rays
-    - CompareNeighborsWithFocal : get the number of neighbors having an
-                                  equal/sup/inf value than each cell
-    - CompareNeighborsWithValue : get the number of neighbors having an
-                                  equal/sup/inf value than a given value
-    - ShapeDescriptors
-    - get_radius_distance_against_time : 3D, get a vector of radius distances
-                                         with idx as time
-    - expand_until_one
-    - expand_and_rate_until_one
-    - expand_until_overlap
-    - dynamically_expand_to_fill_holes
-    - expand_smalls_toward_biggest
-    - change_thresh_until_one
-    - Ellipse
-    - get_rolling_window_coordinates_list
+This module provides methods to analyze and modify shapes in binary images.
+It includes functions for comparing neighboring pixels, generating shape descriptors,
+and performing morphological operations like expanding shapes and filling holes.
+
+Classes
+---------
+CompareNeighborsWithValue : Class to compare neighboring pixels to a specified value
+
+Functions
+---------------
+cc : Sort connected components according to size
+make_gravity_field : Create a gradient field around shapes
+find_median_shape : Generate median shape from multiple inputs
+make_numbered_rays : Create numbered rays for analysis
+CompareNeighborsWithFocal : Compare neighboring pixels to focal values
+ShapeDescriptors : Generate shape descriptors using provided functions
+get_radius_distance_against_time : Calculate radius distances over time
+expand_until_one : Expand shapes until a single connected component remains
+expand_and_rate_until_one : Expand and rate shapes until one remains
+expand_until_overlap : Expand shapes until overlap occurs
+dynamically_expand_to_fill_holes : Dynamically expand to fill holes in shapes
+expand_smalls_toward_biggest : Expand smaller shapes toward largest component
+change_thresh_until_one : Change threshold until one connected component remains
+Ellipse : Generate ellipse shape descriptors
+get_rolling_window_coordinates_list : Get coordinates for rolling window operations
+
 """
 import logging
 from copy import deepcopy

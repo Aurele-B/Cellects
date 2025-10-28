@@ -24,6 +24,7 @@ from cellects.image_analysis.morphological_operations import cross_33, Ellipse, 
     rank_from_top_to_bottom_from_left_to_right, \
     expand_until_neighbor_center_gets_nearer_than_own, get_line_points
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
+from cellects.core.one_image_analysis import OneImageAnalysis
 
 
 class OneVideoPerBlob:
@@ -257,11 +258,6 @@ class OneVideoPerBlob:
             if frame_idx == 0:
                 self.motion_list.insert(frame_idx, self.first_image.validated_shapes)
             else:
-                # image_obj = OneImageAnalysis(cv2.imread(img_list[sample_numbers[image] - 1]))  # image_name=img_list[10]
-                # image_obj.conversion(rgb_hsv_lab=[[1, 0, 0], [0, 0, 1], [0, 0, 0]])
-                # image_obj.automatically_crop(self.first_image.crop_coord)
-                # image_obj.thresholding()
-                # self.motion_list.insert(image, image_obj.binary_image)
                 if img_list.dtype.type is np.str_:
                     image = img_list[sample_numbers[frame_idx] - 1]
                 else:
@@ -276,8 +272,10 @@ class OneVideoPerBlob:
         ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
         previous_ordered_image_i = deepcopy(self.ordered_first_image)
+        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         if img_list.dtype.type is np.str_:
-            img_to_display = self.read_and_rotate(img_list[sample_numbers[1] - 1], self.first_image.bgr)
+            img_to_display = read_and_rotate(img_list[sample_numbers[1] - 1], self.first_image.bgr, self.raw_images, is_landscape,
+                                  self.first_image.crop_coord)
         else:
             img_to_display = img_list[sample_numbers[1] - 1, ...]
             if self.first_image.cropped:
@@ -293,8 +291,8 @@ class OneVideoPerBlob:
 
             # Display the segmentation result for all shapes at this frame
             if img_list.dtype.type is np.str_:
-                img_to_display = self.read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr)
-                # img_to_display = readim(img_list[sample_numbers[step_i] - 1], self.raw_images)
+                img_to_display = read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr, self.raw_images,
+                                                 is_landscape, self.first_image.crop_coord)
             else:
                 img_to_display = img_list[sample_numbers[step_i] - 1, ...]
                 if self.first_image.cropped:
@@ -389,13 +387,13 @@ class OneVideoPerBlob:
 
     def _segment_blob_motion(self, image, color_space_combination, color_number):
         if isinstance(image, str):
-            image = self.read_and_rotate(image, self.first_image.bgr)
+            is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
+            image = read_and_rotate(image, self.first_image.bgr, self.raw_images,
+                                             is_landscape, self.first_image.crop_coord)
             # image = readim(image)
         In = OneImageAnalysis(image)#, self.raw_images
         In.convert_and_segment(color_space_combination, color_number, None, None, self.first_image.subtract_background,
                                self.first_image.subtract_background2)
-        # In.generate_color_space_combination(color_space_combination)
-        # In.thresholding()
         return In.binary_image
 
 
@@ -442,7 +440,7 @@ class OneVideoPerBlob:
         analysis_status = {"continue": True, "message": ""}
         try:
             if self.use_list_of_vid:
-                video_bunch = [zeros(sizes[i, :], dtype=np.uint8) for i in range(video_nb_per_bunch)]
+                video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in range(video_nb_per_bunch)]
             else:
                 video_bunch = np.zeros(np.append(sizes[0, :], video_nb_per_bunch), dtype=np.uint8)
         except ValueError as v_err:
@@ -465,6 +463,7 @@ class OneVideoPerBlob:
         #min_ram_free = self.vars['min_ram_free']
         #in_colors = not self.vars['already_greyscale']
 
+        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors)
         for bunch in np.arange(bunch_nb):
             print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
@@ -473,24 +472,17 @@ class OneVideoPerBlob:
             else:
                 arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
             if self.use_list_of_vid:
-                video_bunch = [zeros(sizes[i, :], dtype=np.uint8) for i in arena]
+                video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
             else:
                 video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
             prev_img = None
             images_done = bunch * len(img_list)
             for image_i, image_name in enumerate(img_list):
                 # print(str(image_i), end=' ')
-                img = self.read_and_rotate(image_name, prev_img)
+                img = read_and_rotate(image_name, prev_img, self.raw_images, is_landscape, self.first_image.crop_coord)
                 prev_img = deepcopy(img)
                 if not in_colors and reduce_image_dim:
                     img = img[:, :, 0]
-                # if not in_colors:
-                #     csc = OneImageAnalysis(img)
-                #     csc.generate_color_space_combination(convert_for_motion)
-                #     img = csc.image
-                # if self.first_image.crop_coord is not None:
-                #     img = img[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                #               self.first_image.crop_coord[2]:self.first_image.crop_coord[3], ...]
 
                 for arena_i, arena_name in enumerate(arena):
                     # arena_i = 0; arena_name = arena[arena_i]
@@ -511,98 +503,6 @@ class OneVideoPerBlob:
                          np.save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
                     else:
                          np.save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
-
-    def read_and_rotate(self, image_name, prev_img):
-        """ This method read an image from its name and:
-        - Make sure to properly crop it
-        - Rotate the image if ir is not in the same orientation as the reference
-        - Make sure that the rotation is on the good direction (clockwise or counterclockwise)"""
-
-        # Read the image
-        if not os.path.exists(image_name):
-            raise FileNotFoundError(image_name)
-
-        from cellects.utils.load_display_save import readim
-        img = readim(image_name, self.raw_images)
-
-        # Use a reference image to make sure that the read image is landscape or not
-        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
-        if (img.shape[0] > img.shape[1] and is_landscape) or (img.shape[0] < img.shape[1] and not is_landscape):
-            # Try to turn it clockwise and (if necessary crop it)
-            clockwise = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-            if self.first_image.cropped:
-                clockwise = clockwise[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                      self.first_image.crop_coord[2]:self.first_image.crop_coord[3], ...]
-            if prev_img is not None:
-                # Quantify the similarity between the clockwised turned image and the reference
-                prev_img = np.int16(prev_img)
-                clock_diff = sum_of_abs_differences(prev_img, np.int16(clockwise))
-                # Try to turn it counterclockwise and (if necessary crop it)
-                counter_clockwise = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                if self.first_image.cropped:
-                    counter_clockwise = counter_clockwise[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                                self.first_image.crop_coord[2]:self.first_image.crop_coord[3], ...]
-                # Quantify the similarity between the counterclockwised turned image and the reference
-                counter_clock_diff = sum_of_abs_differences(prev_img, np.int16(counter_clockwise))
-                # The image that has the lower difference is kept.
-                if clock_diff > counter_clock_diff:
-                    img = counter_clockwise
-                else:
-                    img = clockwise
-            else:
-                img = clockwise
-        else:
-            if self.first_image.cropped:
-                img = img[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                                    self.first_image.crop_coord[2]:self.first_image.crop_coord[3], ...]
-        return img
-
-    def make_videos(self, img_list, extension, fps=40):
-        is_color = True
-        sizes = np.column_stack((self.right - self.left + 1, self.bot - self.top + 1))
-        if extension == '.mp4':
-            fourcc = 0x7634706d
-        else:
-            fourcc = cv2.VideoWriter_fourcc('F', 'F', 'V', '1')  # lossless
-
-        # 1) Create a list of video names
-        if self.not_analyzed_individuals is not None:
-            number_to_add = len(self.not_analyzed_individuals)
-        else:
-            number_to_add = 0
-        vid_list = list()
-        ind_i = 0
-        counter = 0
-        while ind_i < (self.first_image.shape_number + number_to_add):
-            ind_i += 1
-            while np.any(np.isin(self.not_analyzed_individuals, ind_i)):
-                ind_i += 1
-            vid_name = f"ind_{ind_i}{extension}"
-            vid_list.insert(counter, cv2.VideoWriter(vid_name, fourcc, float(fps), tuple(sizes[counter, :]), is_color))
-            counter += 1
-
-        # 2) loop over images and save videos frame by frame
-        print("Image number: ")
-        prev_img = None
-        for image_i in np.arange(len(img_list)):
-            print(str(image_i), end=' ')
-            image_name = img_list[image_i]
-            if not os.path.exists(image_name):
-                raise FileNotFoundError(image_name)
-            img = self.read_and_rotate(image_name, prev_img)
-            prev_img = deepcopy(img)
-            for blob_i in np.arange(self.first_image.shape_number):
-                blob_img = deepcopy(img)
-                if self.first_image.crop_coord is not None:
-                    blob_img = blob_img[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                               self.first_image.crop_coord[2]:self.first_image.crop_coord[3], :]
-                blob_img = blob_img[self.top[blob_i]: (self.bot[blob_i] + 1),
-                                    self.left[blob_i]: (self.right[blob_i] + 1), :]
-                vid = vid_list[blob_i]
-                vid.write(blob_img)
-
-        for blob_i in np.arange(self.first_image.shape_number):
-            vid_list[blob_i].release()
 
 
 if __name__ == "__main__":

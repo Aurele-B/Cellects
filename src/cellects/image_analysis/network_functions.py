@@ -11,10 +11,10 @@ This script contains the class for detecting networks out of a grayscale image o
 """
 
 from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
-from cellects.utils.utilitarian import remove_coordinates, find_threshold_given_mask
+from cellects.utils.utilitarian import remove_coordinates
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
 from numba.typed import Dict as TDict
 from skimage import morphology
 from skimage.filters import frangi, sato, threshold_otsu
