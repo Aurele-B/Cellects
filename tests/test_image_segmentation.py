@@ -124,5 +124,90 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(l_threshold_over_time, expected_l_threshold_over_time))
 
 
+class TestFindThresholdGivenMask(CellectsUnitTest):
+    """Test suite for find_threshold_given_mask function."""
+
+    def test_normal_operation(self):
+        """Test normal operation with clear separation between regions."""
+        greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)
+        mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)
+        expected = 54
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_empty_region_a(self):
+        """Test when region A has no pixels."""
+        greyscale = np.array([[0, 64, 20]], dtype=np.uint8)
+        mask = np.array([[0, 0, 0]], dtype=np.uint8)  # All zeros
+        expected = 255  # Should return maximum since region A is empty
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_empty_region_b(self):
+        """Test when region B has no pixels."""
+        greyscale = np.array([[255, 128, 54]], dtype=np.uint8)
+        mask = np.array([[1, 1, 1]], dtype=np.uint8)  # All ones
+        expected = 0  # Should return minimum since region B is empty
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_single_value_regions(self):
+        """Test when both regions have the same single value."""
+        greyscale = np.array([[50, 50], [150, 150]], dtype=np.uint8)
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+        expected = 75.0  # Average value
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_single_value_regions(self):
+        """Test when both regions have the same single value."""
+        greyscale = np.array([[50, 50], [100, 100]], dtype=np.uint8)
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+        expected = 75.0  # Average value
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_min_threshold(self):
+        """Test with non-zero minimum threshold."""
+        greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)
+        mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)
+        expected = 54
+        result = find_threshold_given_mask(greyscale, mask, min_threshold=30)
+        self.assertEqual(result, expected)
+
+    def test_all_max_values(self):
+        """Test when all values are maximum."""
+        greyscale = np.full((2, 2), 255, dtype=np.uint8)
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+        expected = 255  # Should return maximum since all values are equal
+        result = find_threshold_given_mask(greyscale, mask)
+        self.assertEqual(result, expected)
+
+    def test_mixed_values_with_min_threshold(self):
+        """Test with mixed values and non-zero minimum threshold."""
+        greyscale = np.array([[10, 20], [30, 40]], dtype=np.uint8)
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+        expected = 25.0
+        result = find_threshold_given_mask(greyscale, mask, min_threshold=15)
+        self.assertEqual(result, expected)
+
+    def test_edge_case_min_threshold_equal_max(self):
+        """Test when min_threshold equals the maximum possible value."""
+        greyscale = np.array([[10, 20], [30, 40]], dtype=np.uint8)
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+        expected = 25.0  # Average
+        result = find_threshold_given_mask(greyscale, mask, min_threshold=255)
+        self.assertEqual(result, expected)
+
+    def test_large_image(self):
+        """Test with larger image to ensure performance."""
+        size = 100
+        greyscale = np.random.randint(0, 256, size=(size, size), dtype=np.uint8)
+        mask = np.random.choice([0, 1], size=(size, size))
+        result = find_threshold_given_mask(greyscale, mask)
+        # Just verify it returns a value in range
+        self.assertTrue(0 <= result <= 255)
+
+
 if __name__ == '__main__':
     unittest.main()

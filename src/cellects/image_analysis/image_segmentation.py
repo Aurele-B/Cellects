@@ -5,8 +5,10 @@ This script contains functions to convert bgr images into grayscale and grayscal
 import numpy as np
 import cv2
 from tqdm import tqdm
-from numba.typed import Dict as TDict
+from numba.typed import Dict
 from numba import njit
+from numpy.typing import NDArray
+from typing import Tuple
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image_analysis.morphological_operations import get_largest_connected_component
@@ -15,16 +17,37 @@ from scipy.optimize import minimize
 from skimage.filters import frangi, sato, threshold_otsu
 
 
-def get_color_spaces(bgr_image, space_names=""):
+def get_color_spaces(bgr_image: NDArray[np.uint8], space_names: list="") -> Dict:
     """
-    Create a typed dictonary containing the bgr image converted into:
-    lab, hsv, luv, hls and yuv
-    :param bgr_image: 3D matrix of a bgr image, the two first dims are coordinates, the last is color.
-    :return: dict[str, float64]
+    Convert a BGR image into various color spaces.
+
+    Converts the input BGR image to specified color spaces and returns them
+    as a dictionary. If no space names are provided, converts to all default
+    color spaces (LAB, HSV, LUV, HLS, YUV). If 'logical' is in the space names,
+    it will be removed before conversion.
+
+    Parameters
+    ----------
+    bgr_image : ndarray of uint8
+        Input image in BGR color space.
+    space_names : list of str, optional
+        List of color spaces to convert the image to. Defaults to none.
+
+    Returns
+    -------
+    out : dict
+        Dictionary with keys as color space names and values as the converted images.
+
+    Examples
+    --------
+    >>> bgr_image = np.zeros((5, 5, 3), dtype=np.uint8)
+    >>> c_spaces = get_color_spaces(bgr_image, ['lab', 'hsv'])
+    >>> print(list(c_spaces.keys()))
+    ['bgr', 'lab', 'hsv']
     """
     if 'logical' in space_names:
         space_names.pop(np.nonzero(np.array(space_names, dtype=str) == 'logical')[0][0])
-    c_spaces = TDict()
+    c_spaces = Dict()
     c_spaces['bgr'] = bgr_image.astype(np.float64)
     if len(space_names) == 0:
         c_spaces['lab'] = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2LAB).astype(np.float64)
@@ -47,17 +70,39 @@ def get_color_spaces(bgr_image, space_names=""):
 
 
 @njit()
-def combine_color_spaces(c_space_dict, all_c_spaces, subtract_background=None):
+def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_background: NDArray=None) -> NDArray:
     """
-    Compute a linear combination of some channels of some color spaces.
-    Subtract background if needed.
-    Standardize values in the image so that they range between 0 and 255
+    Combine color spaces from a dictionary and generate an analyzable image.
 
-    :param c_space_dict: The linear combination of channels to compute
-    :param all_c_spaces: All converted versions of the image
-    :type all_c_spaces: TDict[str: =np.float64]
-    :param subtract_background: array of the background to subtract
-    :return: the grayscale image resulting from the linear combination of the selected channels
+    This function processes multiple color spaces defined in `c_space_dict`, combines
+    them according to given coefficients, and produces a normalized image that can be
+    converted to uint8. Optionally subtracts background from the resultant image.
+
+    Parameters
+    ----------
+    c_space_dict : dict
+        Dictionary containing color spaces and their respective coefficients.
+    all_c_spaces : Dict
+        Dictionary of all available color spaces in the image.
+    subtract_background : NDArray, optional
+        Background image to subtract from the resultant image. Defaults to None.
+
+    Returns
+    -------
+    out : NDArray
+        Processed and normalized image in float64 format, ready for uint8 conversion.
+
+    Examples
+    --------
+    >>> c_space_dict = Dict()
+    >>> c_space_dict['hsv'] = np.array((0, 1, 1))
+    >>> all_c_spaces = Dict()
+    >>> all_c_spaces['bgr'] = np.random.rand(5, 5, 3)
+    >>> all_c_spaces['hsv'] = np.random.rand(5, 5, 3)
+    >>> background = np.zeros((5, 5))
+    >>> result = combine_color_spaces(c_space_dict, all_c_spaces)
+    >>> print(result.shape)
+    (5, 5)
     """
     image = np.zeros((all_c_spaces['bgr'].shape[0], all_c_spaces['bgr'].shape[1]), dtype=np.float64)
     for space, channels in c_space_dict.items():
@@ -84,7 +129,48 @@ def combine_color_spaces(c_space_dict, all_c_spaces, subtract_background=None):
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
 
 
-def generate_color_space_combination(bgr_image, c_spaces, first_dict, second_dict={}, background=None, background2=None, convert_to_uint8=False):
+def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict=Dict, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False) -> NDArray[np.uint8]:
+    """
+    Generate color space combinations for an input image.
+
+    This function generates a grayscale image by combining multiple color spaces
+    from an input BGR image and provided dictionaries. Optionally, it can also generate
+    a second grayscale image using another dictionary.
+
+    Parameters
+    ----------
+    bgr_image : ndarray of uint8
+        The input image in BGR color space.
+    c_spaces : list
+        List of color spaces to consider for combination.
+    first_dict : Dict
+        Dictionary containing color space and transformation details for the first grayscale image.
+    second_dict : Dict, optional
+        Dictionary containing color space and transformation details for the second grayscale image.
+    background : ndarray, optional
+        Background image to be used. Default is None.
+    background2 : ndarray, optional
+        Second background image to be used for the second grayscale image. Default is None.
+    convert_to_uint8 : bool, optional
+        Flag indicating whether to convert the output images to uint8. Default is False.
+
+    Returns
+    -------
+    out : tuple of ndarray of uint8
+        A tuple containing the first and second grayscale images.
+
+    Examples
+    --------
+    >>> bgr_image = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
+    >>> c_spaces = ['bgr', 'hsv']
+    >>> first_dict = Dict()
+    >>> first_dict['bgr'] = np.array((0, 1, 1))
+    >>> second_dict = Dict()
+    >>> second_dict['hsv'] = np.array((0, 0, 1))
+    >>> greyscale_image1, greyscale_image2 = generate_color_space_combination(bgr_image, c_spaces, first_dict, second_dict)
+    >>> print(greyscale_image1.shape)
+    (100, 100)
+    """
     all_c_spaces = get_color_spaces(bgr_image, c_spaces)
     try:
         greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
@@ -120,13 +206,22 @@ def filter_mexican_hat(image):
 
 
 @njit()
-def get_otsu_threshold(image):
+def get_otsu_threshold(image: NDArray):
     """
-    Compute the otso threshold of an image. Function from Anastasia, see:
-    https://github.com/spmallick/learnopencv/blob/master/otsu-method/otsu_implementation.py
+    Calculate the optimal threshold value for an image using Otsu's method.
 
-    :param image:
-    :return:
+    This function computes the Otsu's thresholding which automatically
+    performs histogram shape analysis for threshold selection.
+
+    Parameters
+    ----------
+    image : NDArray
+        The input grayscale image, represented as a NumPy array.
+
+    Returns
+    -------
+    int or float
+        The computed Otsu's threshold value.
     """
     # Set total number of bins in the histogram
     bins_num = 256
@@ -156,20 +251,31 @@ def get_otsu_threshold(image):
 
 
 @njit()
-def otsu_thresholding(image):
+def otsu_thresholding(image: NDArray) -> NDArray[np.uint8]:
     """
-    Segment a grayscale image into a binary image using otsu thresholding
+    Apply Otsu's thresholding to a grayscale image.
 
-    Contrary to cv2.threshold(image, 0, 1, cv2.THRESH_OTSU),
-    This method does not require image to be uint8.
-    Hence, does not require any rounding if image has been =np.float64.
-    Consequently, the binary image obtained contains less noise:
-    :param image: Image of any type and any dimension
-    :return: a uint8 binary image in which 1 are less numerous than 0
-    --> A usual assumption for segmentation, especially for the first image of
-    the time lapse of a growing cell.
-    :param image:
-    :return:
+    This function calculates the optimal threshold using
+    Otsu's method and applies it to binarize the input image.
+    The output is a binary image where pixel values are either
+    0 or 1.
+
+    Parameters
+    ----------
+    image : ndarray
+        Input grayscale image with any kind of value.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        Binarized image with pixel values 0 or 1.
+
+    Examples
+    --------
+    >>> image = np.array([10, 20, 30])
+    >>> result = otsu_thresholding(image)
+    >>> print(result)
+    [1 0 0]
     """
     threshold = get_otsu_threshold(image)
     binary_image = (image > threshold)
@@ -181,15 +287,49 @@ def otsu_thresholding(image):
 
 
 @njit()
-def segment_with_lum_value(converted_video, basic_bckgrnd_values, l_threshold, lighter_background):
+def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArray, l_threshold, lighter_background: bool) -> Tuple[NDArray, NDArray]:
     """
-    Use an uint8 value as a threshold to segment the image: split it into two categories, 0 and 1
-    :param converted_video: a 3D matrix with time, y_coord, x_coord
-    :param basic_bckgrnd_values: a vector of typical background values of each frame (t)
-    :param l_threshold: an average luminosity threshold
-    :param lighter_background: True if the background of the image is lighter than the shape to detect
-    :type lighter_background: bool
-    :return: the resulting video of the segmentation, a vector of the luminosity threshold of each frame (t)
+    Segment video frames based on luminance threshold.
+
+    This function segments the input video frames by comparing against a dynamic
+    luminance threshold. The segmentation can be based on either lighter or darker
+    background.
+
+    Parameters
+    ----------
+    converted_video : ndarray
+        The input video frames in numpy array format.
+
+    basic_bckgrnd_values : ndarray
+        Array containing background values for each frame.
+
+    l_threshold : int or float
+        The luminance threshold value for segmentation.
+
+    lighter_background : bool, optional
+        If True, the segmentation is done assuming a lighter background.
+        Defaults to False.
+
+    Returns
+    -------
+    segmentation : ndarray
+        Array containing the segmented video frames.
+    l_threshold_over_time : ndarray
+        Computed threshold over time for each frame.
+
+    Examples
+    --------
+    >>> converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
+    >>> basic_bckgrnd_values = np.array([100, 120])
+    >>> lighter_background = False
+    >>> l_threshold = 130
+    >>> segmentation, threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values, l_threshold, lighter_background)
+    >>> print(segmentation)
+    [[[0 1]
+      [1 1]]
+     [[1 1]
+      [1 1]]]
+
     """
     # segmentation = None
     if lighter_background:
@@ -270,3 +410,106 @@ def binary_quality_index(binary_img):
     else:
         index = 0.
     return index
+
+
+
+def find_threshold_given_mask(greyscale: NDArray[np.uint8], mask: np.uint8, min_threshold: np.uint8=0) -> np.uint8:
+    """
+    Find the optimal threshold value for a greyscale image given a mask.
+
+    This function performs a binary search to find the optimal threshold
+    that maximizes the separation between two regions defined by the mask.
+    The search is bounded by a minimum threshold value.
+
+    Parameters
+    ----------
+    greyscale : ndarray of uint8
+        The greyscale image array.
+    mask : ndarray of uint8
+        The binary mask array where positive values define region A and zero values define region B.
+    min_threshold : uint8, optional
+        The minimum threshold value for the search. Defaults to 0.
+
+    Returns
+    -------
+    out : uint8
+        The optimal threshold value found.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)
+    >>> mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)
+    >>> find_threshold_given_mask(greyscale, mask)
+    54
+    """
+    region_a = greyscale[mask > 0]
+    if len(region_a) == 0:
+        return np.uint8(255)
+    region_b = greyscale[mask == 0]
+    if len(region_b) == 0:
+        return min_threshold
+    else:
+        low = min_threshold
+        high = 255
+        best_thresh = low
+
+        while 0 <= low <= high:
+            mid = (low + high) // 2
+            count_a, count_b = _get_counts_jit(mid, region_a, region_b)
+
+            if count_a > count_b:
+                # Try to find a lower threshold that still satisfies the condition
+                best_thresh = mid
+                high = mid - 1
+            else:
+                if count_a == 0 and count_b == 0:
+                    best_thresh = greyscale.mean()
+                    break
+                # Need higher threshold
+                low = mid + 1
+    return best_thresh
+
+
+@njit()
+def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDArray[np.uint8]) -> Tuple[int, int]:
+    """
+    Get counts of values in two regions above a threshold using Just-In-Time compilation.
+
+    Count the number of elements greater than `thresh` in both `region_a`
+    and `region_b`, returning the counts as a tuple. This function utilizes
+    Numba's JIT compilation for performance optimization.
+
+    Parameters
+    ----------
+    thresh : uint8
+        The threshold value to compare against.
+    region_a : ndarray of uint8
+        First region array containing values to be compared with `thresh`.
+    region_b : ndarray of uint8
+        Second region array containing values to be compared with `thresh`.
+
+    Returns
+    -------
+    out : tuple of int, int
+        A tuple containing the count of elements greater than `thresh` in
+        `region_a` and `region_b`, respectively.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> region_a = np.array([1, 250, 3], dtype=np.uint8)
+    >>> region_b = np.array([4, 250, 6], dtype=np.uint8)
+    >>> thresh = np.uint8(100)
+    >>> get_counts_jit(thresh, region_a, region_b)
+    (1, 1)
+    """
+    count_a = 0
+    count_b = 0
+    for val in region_a:
+        if val > thresh:
+            count_a += 1
+    for val in region_b:
+        if val > thresh:
+            count_b += 1
+    return count_a, count_b

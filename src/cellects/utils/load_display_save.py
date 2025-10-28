@@ -14,12 +14,11 @@ import h5py
 from timeit import default_timer
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
 import cv2
-from numpy import any, unique, load, zeros, arange, empty, save, int16, isin, vstack, nonzero, concatenate, linspace
-from cv2 import VideoWriter, imshow, waitKey, destroyAllWindows, resize, VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH
+from pathlib import Path
+import exifread
+from exif import Image
 from matplotlib import pyplot as plt
-from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
 from cellects.utils.utilitarian import translate_dict
@@ -473,7 +472,7 @@ def movie(video, keyboard=1, increase_contrast: bool=True):
         if np.any(image):
             if increase_contrast:
                 image = bracket_to_uint8_image_contrast(image)
-            final_img = resize(image, (500, 500))
+            final_img = cv2.resize(image, (500, 500))
             cv2.imshow('Motion analysis', final_img)
             cv2.waitKey(keyboard)
     cv2.destroyAllWindows()
@@ -563,42 +562,60 @@ def readim(image_path, raw_image: bool=False):
         return cv2.imread(image_path)
 
 
-def read_and_rotate(image_name, prev_img: NDArray, raw_images: bool, is_landscape: bool):
+def read_and_rotate(image_name, prev_img: NDArray=None, raw_images: bool=False, is_landscape: bool=True, crop_coord: NDArray=None) -> NDArray:
     """
-    Read and rotate an image based on landscape orientation.
+    Read and rotate an image based on specified parameters.
 
-    This function reads an image, checks its dimensions relative to the
-    landscape orientation flag and rotates it if necessary. If a previous
-    image is provided, it determines the optimal rotation to minimize
-    differences between consecutive images.
+    This function reads an image from the given file name, optionally rotates
+    it by 90 degrees clockwise or counterclockwise based on its dimensions and
+    the `is_landscape` flag, and applies cropping if specified. It also compares
+    rotated images against a previous image to choose the best rotation.
 
     Parameters
     ----------
     image_name : str
-        The name of the image file to read.
-    prev_img : ndarray
-        The previous image in int16 format for comparison. Defaults to None.
-    raw_images : bool
-        Flag indicating if the image should be read in raw format.
-    is_landscape : bool
-        Boolean flag indicating if the image should be considered as landscape.
+        Name of the image file to read.
+    prev_img : ndarray, optional
+        Previous image for comparison. Default is `None`.
+    raw_images : bool, optional
+        Flag to read raw images. Default is `False`.
+    is_landscape : bool, optional
+        Flag to determine if the image should be considered in landscape mode.
+        Default is `True`.
+    crop_coord : ndarray, optional
+        Coordinates for cropping the image. Default is `None`.
 
     Returns
     -------
-    img : ndarray
-        The rotated image if necessary; otherwise, the original image.
+    ndarray
+        Rotated and optionally cropped image.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified image file does not exist.
 
     Examples
-    --------
-    >>> img = read_and_rotate("image1.tif", None, False, True)
+    ------
+    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "experiment"
+    >>> image_name = 'image1.tif'
+    >>> image = read_and_rotate(pathway /image_name)
+    >>> print(image.shape)
+    (245, 300, 3)
     """
+    if not os.path.exists(image_name):
+        raise FileNotFoundError(image_name)
     img = readim(image_name, raw_images)
     if (img.shape[0] > img.shape[1] and is_landscape) or (img.shape[0] < img.shape[1] and not is_landscape):
         clockwise = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
+        if crop_coord is not None:
+            clockwise = clockwise[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
         if prev_img is not None:
             prev_img = np.int16(prev_img)
             clock_diff = sum_of_abs_differences(prev_img, np.int16(clockwise))
             counter_clockwise = cv2.rotate(img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            if crop_coord is not None:
+                counter_clockwise = counter_clockwise[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             counter_clock_diff = sum_of_abs_differences(prev_img, np.int16(counter_clockwise))
             if clock_diff > counter_clock_diff:
                 img = counter_clockwise
@@ -606,6 +623,9 @@ def read_and_rotate(image_name, prev_img: NDArray, raw_images: bool, is_landscap
                 img = clockwise
         else:
             img = clockwise
+    else:
+        if crop_coord is not None:
+            img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
     return img
 
 
@@ -939,3 +959,89 @@ def display_boxes(binary_image: NDArray, box_diameter: int):
         plt.axhline(y=y, color='white', linewidth=1)
     plt.show()
     return line_nb
+
+
+def extract_time(image_list: list, pathway="", raw_images:bool=False):
+    """
+    Extract timestamps from a list of images.
+
+    This function extracts the DateTimeOriginal or datetime values from
+    the EXIF data of a list of image files, and computes the total time in seconds.
+
+    Parameters
+    ----------
+    image_list : list of str
+        List of image file names.
+    pathway : str, optional
+        Path to the directory containing the images. Default is an empty string.
+    raw_images : bool, optional
+        If True, use the exifread library. Otherwise, use the exif library.
+        Default is False.
+
+    Returns
+    -------
+    time : ndarray of int64
+        Array containing the total time in seconds for each image.
+
+    Examples
+    --------
+    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "experiment"
+    >>> image_list = ['image1.tif', 'image2.tif']
+    >>> time = extract_time(image_list, pathway)
+    >>> print(time)
+    array([0, 0])
+
+    Notes
+    --------
+    dir(my_image)
+    ['<unknown EXIF tag 59932>', '<unknown EXIF tag 59933>', '_exif_ifd_pointer', '_gps_ifd_pointer', '_segments', 'aperture
+    _value', 'brightness_value', 'color_space', 'components_configuration', 'compression', 'datetime', 'datetime_digitized',
+    'datetime_original', 'exif_version', 'exposure_bias_value', 'exposure_mode', 'exposure_program', 'exposure_time', 'f_
+    number', 'flash', 'flashpix_version', 'focal_length', 'focal_length_in_35mm_film', 'get', 'get_file', 'get_thumbnail',
+    'gps_altitude', 'gps_altitude_ref', 'gps_datestamp', 'gps_dest_bearing', 'gps_dest_bearing_ref', 'gps_horizontal_
+    positioning_error', 'gps_img_direction', 'gps_img_direction_ref', 'gps_latitude', 'gps_latitude_ref', 'gps_longitude',
+    'gps_longitude_ref', 'gps_speed', 'gps_speed_ref', 'gps_timestamp', 'has_exif', 'jpeg_interchange_format', 'jpeg_
+    interchange_format_length', 'lens_make', 'lens_model', 'lens_specification', 'make', 'maker_note', 'metering_mode',
+    'model', 'orientation', 'photographic_sensitivity', 'pixel_x_dimension', 'pixel_y_dimension', 'resolution_unit',
+    'scene_capture_type', 'scene_type', 'sensing_method', 'shutter_speed_value', 'software', 'subject_area', 'subsec_time_
+    digitized', 'subsec_time_original', 'white_balance', 'x_resolution', 'y_and_c_positioning', 'y_resolution']
+
+    """
+    if isinstance(pathway, str):
+        pathway = Path(pathway)
+    nb = len(image_list)
+    timings = np.zeros((nb, 6), dtype=np.int64)
+    if raw_images:
+        for i in np.arange(nb):
+            with open(pathway / image_list[i], 'rb') as image_file:
+                my_image = exifread.process_file(image_file, details=False, stop_tag='DateTimeOriginal')
+                datetime = my_image["EXIF DateTimeOriginal"]
+            datetime = datetime.values[:10] + ':' + datetime.values[11:]
+            timings[i, :] = datetime.split(':')
+    else:
+        for i in np.arange(nb):
+            with open(pathway / image_list[i], 'rb') as image_file:
+                my_image = Image(image_file)
+                if my_image.has_exif:
+                    datetime = my_image.datetime
+                    datetime = datetime[:10] + ':' + datetime[11:]
+                    timings[i, :] = datetime.split(':')
+
+    if np.all(timings[:, 0] == timings[0, 0]):
+        if np.all(timings[:, 1] == timings[0, 1]):
+            if np.all(timings[:, 2] == timings[0, 2]):
+                time = timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
+            else:
+                time = timings[:, 2] * 86400 + timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
+        else:
+            days_per_month = (31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+            for j in np.arange(nb):
+                month_number = timings[j, 1]#int(timings[j, 1])
+                timings[j, 1] = days_per_month[month_number] * month_number
+            time = (timings[:, 1] + timings[:, 2]) * 86400 + timings[:, 3] * 3600 + timings[:, 4] * 60 + timings[:, 5]
+        #time = int(time)
+    else:
+        time = np.repeat(0, nb)#arange(1, nb * 60, 60)#"Do not experiment the 31th of december!!!"
+    if time.sum() == 0:
+        time = np.repeat(0, nb)#arange(1, nb * 60, 60)
+    return time

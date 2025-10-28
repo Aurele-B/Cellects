@@ -434,6 +434,26 @@ class TestDisplayBoxes(CellectsUnitTest):
         plt.close("all")
 
 
+class TestExtractTime(CellectsUnitTest):
+    """Test suite for extract_time function."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Create a temporary directory structure for testing
+        self.data_dir = Path(__name__).resolve().parents[0] / "data" / "experiment"
+
+    def test_extract_time_with_valid_images_same_timestamp(self):
+        """Test extract_time with valid images having same timestamp."""
+        # Setup test data - would create actual image files in real tests
+        image_list = ["image1.tif", "image2.tif"]
+        expected_time = np.array([0, 0])  # Assuming all timestamps are same
+
+        # Execute function
+        result = extract_time(image_list, str(self.data_dir))
+        # Verify result
+        self.assertTrue(np.array_equal(result, expected_time))
+
+
 if __name__ == '__main__':
     unittest.main()
 

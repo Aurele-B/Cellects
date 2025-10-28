@@ -21,7 +21,7 @@ from psutil import virtual_memory
 from pathlib import Path
 import natsort
 from cellects.image_analysis.image_segmentation import generate_color_space_combination
-from cellects.image_analysis.extract_exif import extract_time  # named exif
+from cellects.utils.load_display_save import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
@@ -1056,8 +1056,9 @@ class ProgramOrganizer:
         prev_img = None
         background = None
         background2 = None
+        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         for image_i, image_name in enumerate(self.data_list):
-            img = self.videos.read_and_rotate(image_name, prev_img)
+            img = read_and_rotate(image_name, prev_img, self.all['raw_images'], is_landscape, self.first_image.crop_coord)
             prev_img = deepcopy(img)
             # if self.videos.first_image.crop_coord is not None:
             #     img = img[self.videos.first_image.crop_coord[0]:self.videos.first_image.crop_coord[1],

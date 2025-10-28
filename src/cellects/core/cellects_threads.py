@@ -1206,6 +1206,7 @@ class RunAllThread(QtCore.QThread):
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                     arena_percentage = 0
+                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1) and remaining > 0:
@@ -1223,7 +1224,7 @@ class RunAllThread(QtCore.QThread):
                             self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
-                            img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
+                            img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape, self.parent().po.first_image.crop_coord)
                             prev_img = deepcopy(img)
                             if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                                 img = img[:, :, 0]
