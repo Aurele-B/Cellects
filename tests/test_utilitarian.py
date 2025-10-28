@@ -239,7 +239,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint8
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[1, 2], [3, 4]], dtype=np.uint8))
+        self.assertTrue(np.array_equal(result, np.array([[1, 2], [3, 4]], dtype=np.uint8)))
 
     def test_smallest_memory_array_2d_list_uint16(self):
         """Test 2D list that fits in uint16."""
@@ -247,7 +247,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint16
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16))
+        self.assertTrue(np.array_equal(result, np.array([[1000, 2000], [3000, 4000]], dtype=np.uint16)))
 
     def test_smallest_memory_array_2d_list_uint32(self):
         """Test 2D list that fits in uint32."""
@@ -255,7 +255,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint32
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[100000, 200000], [300000, 400000]], dtype=np.uint32))
+        self.assertTrue(np.array_equal(result, np.array([[100000, 200000], [300000, 400000]], dtype=np.uint32)))
 
     def test_smallest_memory_array_2d_list_uint64(self):
         """Test 2D list that fits in uint64."""
@@ -263,8 +263,8 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint64
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result,
-                                      np.array([[2**31, 2**32], [2**33, 2**34]], dtype=np.uint64))
+        self.assertTrue(np.array_equal(result,
+                                      np.array([[2**31, 2**32], [2**33, 2**34]], dtype=np.uint64)))
 
     def test_smallest_memory_array_single_element(self):
         """Test single element array."""
@@ -272,7 +272,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint8
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[42]], dtype=np.uint8))
+        self.assertTrue(np.array_equal(result, np.array([[42]], dtype=np.uint8)))
 
     def test_smallest_memory_array_numpy_ndarray_input(self):
         """Test with numpy ndarray input."""
@@ -280,7 +280,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint16
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[100, 200], [300, 400]], dtype=np.uint16))
+        self.assertTrue(np.array_equal(result, np.array([[100, 200], [300, 400]], dtype=np.uint16)))
 
     def test_smallest_memory_array_large_values(self):
         """Test with values at the edge of uint64."""
@@ -288,9 +288,9 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint64
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result,
+        self.assertTrue(np.array_equal(result,
                                       np.array([[np.iinfo(np.uint64).max - 1, np.iinfo(np.uint64).max]],
-                                               dtype=np.uint64))
+                                               dtype=np.uint64)))
 
     def test_smallest_memory_array_zero_values(self):
         """Test with zero values."""
@@ -298,7 +298,7 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         expected_dtype = np.uint8
         result = smallest_memory_array(input_array)
         self.assertEqual(result.dtype, expected_dtype)
-        np.testing.assert_array_equal(result, np.array([[0, 0], [0, 0]], dtype=np.uint8))
+        self.assertTrue(np.array_equal(result, np.array([[0, 0], [0, 0]], dtype=np.uint8)))
 
 
 class TestRemoveCoordinates(CellectsUnitTest):

@@ -35,6 +35,7 @@ from cellects.utils.formulas import moving_average
 from skimage.filters import threshold_otsu
 from skimage.measure import label
 from scipy.stats import linregress
+from scipy.ndimage import distance_transform_edt
 import matplotlib.pyplot as plt
 
 
@@ -353,102 +354,105 @@ def cc(binary_img: NDArray[np.uint8]) -> Tuple[NDArray, NDArray, NDArray]:
     return new_order, stats, centers
 
 
-def get_largest_connected_component(segmentation: NDArray[np.uint8]) -> Tuple[np.int64, NDArray[bool]]:
+def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
     """
-    Find the largest connected component in a segmentation image.
+    Perform rounded inverted distance transform on a binary image.
 
-    This function labels all connected components in a binary
-    segmentation image, determines the size of each component,
-    and returns information about the largest connected component.
-
-    Parameters
-    ----------
-    segmentation : ndarray of uint8
-        Binary segmentation image where different integer values represent
-        different connected components.
-
-    Returns
-    -------
-    Tuple[int, ndarray of bool]
-        A tuple containing:
-        - The size of the largest connected component.
-        - A boolean mask representing the largest connected
-          component in the input segmentation image.
-
-    Examples
-    --------
-    >>> segmentation = np.zeros((10, 10), dtype=np.uint8)
-    >>> segmentation[2:6, 2:5] = 1
-    >>> segmentation[6:9, 6:9] = 1
-    >>> size, mask = get_largest_connected_component(segmentation)
-    >>> print(size)
-    12
-    """
-    labels = label(segmentation)
-    assert(labels.max() != 0) # assume at least 1 CC
-    con_comp_sizes = np.bincount(labels.flat)[1:]
-    largest_idx = np.argmax(con_comp_sizes)
-    largest_connected_component = labels == largest_idx + 1
-    return con_comp_sizes[largest_idx], largest_connected_component
-
-
-def make_gravity_field(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
-    """
-    Generate a gravitation field from an original shape image.
-
-    Calculate the gravitation field for a given binary image (original_shape)
-    with optional erosion and maximum distance. The function returns
-    an array with values indicating the gravitational effect, with higher
-    values representing areas further from the original shape.
+    This function computes the inverse of the Euclidean distance transform,
+    where each pixel value represents its distance to the nearest zero
+    pixel. The operation can include erosion and will stop either at a given
+    max distance or until no further expansion is needed.
 
     Parameters
     ----------
     original_shape : ndarray of uint8
-        The input binary image from which to generate the gravity field.
+        Input binary image to be processed.
     max_distance : int, optional
-        Maximum distance for dilation. If specified and greater than the
-        half of minimum dimension, it will be clamped to ``min(original_shape.shape) // 2``.
-        Default is `None`, meaning no limit on dilation iterations.
+        Maximum distance for the expansion. If None, no limit is applied.
     with_erosion : int, optional
-        Number of erosion iterations applied to the original shape before
-        dilation. Default is `0`.
+        Number of erosion iterations to apply before the transform. Default is 0.
 
     Returns
     -------
-    gravity_field : ndarray of uint32
-        The resulting gravitation field where each pixel contains the number
-        of dilation steps before merging back with the original shape.
+    out : ndarray of uint32
+        Output image containing the rounded inverted distance transform.
 
     Examples
     --------
-    >>> segmentation = np.zeros((7, 7), dtype=np.uint8)
-    >>> segmentation[2:5, 2:5] = 1
-    >>> gravity = make_gravity_field(segmentation, 2)
+    >>> segmentation = np.zeros((4, 4), dtype=np.uint8)
+    >>> segmentation[1:3, 1:3] = 1
+    >>> gravity = rounded_inverted_distance_transform(segmentation, max_distance=2)
     >>> print(gravity)
-    [[0 0 1 1 1 0 0]
-     [0 1 2 2 2 1 0]
-     [1 2 0 0 0 2 1]
-     [1 2 0 0 0 2 1]
-     [1 2 0 0 0 2 1]
-     [0 1 2 2 2 1 0]
-     [0 0 1 1 1 0 0]]
+    [[1 2 2 1]
+     [2 0 0 2]
+     [2 0 0 2]
+     [1 2 2 1]]
     """
-    kernel = cross_33
     if with_erosion > 0:
-        original_shape = cv2.erode(original_shape, kernel, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+        original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
     expand = deepcopy(original_shape)
     if max_distance is not None:
         if max_distance > np.min(original_shape.shape) / 2:
             max_distance = (np.min(original_shape.shape) // 2).astype(np.uint32)
         gravity_field = np.zeros(original_shape.shape , np.uint32)
         for gravi in np.arange(max_distance):
-            expand = cv2.dilate(expand, kernel, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+            expand = cv2.dilate(expand, cross_33, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
             gravity_field[np.logical_xor(expand, original_shape)] += 1
     else:
         gravity_field = np.zeros(original_shape.shape , np.uint32)
         while np.any(np.equal(original_shape + expand, 0)):
-            expand = cv2.dilate(expand, kernel, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+            expand = cv2.dilate(expand, cross_33, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
             gravity_field[np.logical_xor(expand, original_shape)] += 1
+    return gravity_field
+
+
+def inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
+    """
+    Calculate the distance transform around ones in a binary image, with optional erosion.
+
+    This function computes the Euclidean distance transform where zero values
+    represent the background and ones represent the foreground. Optionally,
+    it erodes the input image before computing the distance transform, and
+    limits distances based on a maximum value.
+
+    Parameters
+    ----------
+    original_shape : ndarray of uint8
+        Input binary image where ones represent the foreground.
+    max_distance : int, optional
+        Maximum distance value to threshold. If None (default), no thresholding is applied.
+    with_erosion : int, optional
+        Number of iterations for erosion. If 0 (default), no erosion is applied.
+
+    Returns
+    -------
+    out : ndarray of uint32
+        Distance transform array where each element represents the distance
+        to the nearest zero value in the input image.
+
+    See also
+    --------
+    rounded_distance_transform : less precise (outputs int) and faster for small max_distance values.
+
+    Examples
+    --------
+    >>> segmentation = np.zeros((4, 4), dtype=np.uint8)
+    >>> segmentation[1:3, 1:3] = 1
+    >>> gravity = inverted_distance_transform(segmentation, max_distance=2)
+    >>> print(gravity)
+    [[1.         1.41421356 1.41421356 1.        ]
+     [1.41421356 0.         0.         1.41421356]
+     [1.41421356 0.         0.         1.41421356]
+     [1.         1.41421356 1.41421356 1.        ]]
+    """
+    if with_erosion:
+        original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+    gravity_field = distance_transform_edt(1 - original_shape)
+    if max_distance is not None:
+        if max_distance > np.min(original_shape.shape) / 2:
+            max_distance = (np.min(original_shape.shape) // 2).astype(np.uint32)
+        gravity_field[gravity_field >= max_distance] = 0
+    gravity_field[gravity_field > 0] = 1 + gravity_field.max() - gravity_field[gravity_field > 0]
     return gravity_field
 
 
@@ -935,6 +939,45 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image: NDArray[np.uint8], 
         return ordered_stats, ordered_centroids
 
 
+def get_largest_connected_component(segmentation: NDArray[np.uint8]) -> Tuple[np.int64, NDArray[bool]]:
+    """
+    Find the largest connected component in a segmentation image.
+
+    This function labels all connected components in a binary
+    segmentation image, determines the size of each component,
+    and returns information about the largest connected component.
+
+    Parameters
+    ----------
+    segmentation : ndarray of uint8
+        Binary segmentation image where different integer values represent
+        different connected components.
+
+    Returns
+    -------
+    Tuple[int, ndarray of bool]
+        A tuple containing:
+        - The size of the largest connected component.
+        - A boolean mask representing the largest connected
+          component in the input segmentation image.
+
+    Examples
+    --------
+    >>> segmentation = np.zeros((10, 10), dtype=np.uint8)
+    >>> segmentation[2:6, 2:5] = 1
+    >>> segmentation[6:9, 6:9] = 1
+    >>> size, mask = get_largest_connected_component(segmentation)
+    >>> print(size)
+    12
+    """
+    labels = label(segmentation)
+    assert(labels.max() != 0) # assume at least 1 CC
+    con_comp_sizes = np.bincount(labels.flat)[1:]
+    largest_idx = np.argmax(con_comp_sizes)
+    largest_connected_component = labels == largest_idx + 1
+    return con_comp_sizes[largest_idx], largest_connected_component
+
+
 def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[np.uint8], without_shape_i: NDArray[np.uint8],
                                                       shape_original_centroid: NDArray,
                                                       ref_centroids: NDArray, kernel: NDArray) -> NDArray[np.uint8]:
@@ -1159,7 +1202,9 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
     Examples
     --------
     >>> binary_video = np.zeros((10, 640, 480), dtype=np.uint8)
+    >>> binary_video[:, 300:400, 220:240] = 1
     >>> holes = np.zeros((640, 480), dtype=np.uint8)
+    >>> holes[340:360, 228:232] = 1
     >>> filled_video, end_time, distances = dynamically_expand_to_fill_holes(binary_video, holes)
     >>> print(filled_video.shape)  # Should print (10, 640, 480)
     (10, 640, 480)
@@ -1167,7 +1212,8 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
     #first move should be the time at wich the first pixel hole could have been covered
     #it should ask how much time the shape made to cross a distance long enough to overlap all holes
     holes_contours = cv2.dilate(holes, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
-    field = make_gravity_field(binary_video[0, :, :], (binary_video.shape[0] - 1))
+    field = rounded_inverted_distance_transform(binary_video[0, :, :], (binary_video.shape[0] - 1))
+    field2 = inverted_distance_transform(binary_video[0, :, :], (binary_video.shape[0] - 1))
     holes_contours = holes_contours * field * binary_video[- 1, :, :]
     holes[np.nonzero(holes)] = field[np.nonzero(holes)]
     if np.any(holes_contours):
@@ -1270,56 +1316,47 @@ class Ellipse:
 rhombus_55 = Ellipse((5, 5)).create().astype(np.uint8)
 
 
-def get_rolling_window_coordinates_list(height: int, width: int, side_length: int, window_step: int, allowed_pixels: NDArray=None) -> list:
+def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
     """
-    Generate a list of rolling window coordinates.
+    Find and return the contours of a binary image.
 
-    This function calculates the coordinates for a series of rolling windows
-    over an image or array, given its dimensions and window parameters.
+    This function erodes the input binary image using a 3x3 cross-shaped
+    structuring element and then subtracts the eroded image from the original to obtain the contours.
 
     Parameters
     ----------
-    height : int
-        The height of the image or array.
-    width : int
-        The width of the image or array.
-    side_length : int
-        The side length of each window.
-    window_step : int
-        The step size between consecutive windows along one dimension.
-    allowed_pixels : ndarray, optional
-        An array of pixels to check for validity. Default is None.
+    binary_image : ndarray of uint8
+        Input binary image from which to extract contours.
 
     Returns
     -------
-    List[List[int]]
-        A list of coordinates for each window, where each coordinate is
-        represented by a list [start_y, end_y, start_x, end_x].
+    out : ndarray of uint8
+        Image containing only the contours extracted from `binary_image`.
 
+    Examples
+    --------
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:8, 2:8] = 1
+    >>> result = get_contours(binary_image)
+    >>> print(result)
+    [[0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]]
     """
-    y_remain = height % side_length
-    x_remain = width % side_length
-    y_nb = height // side_length
-    x_nb = width // side_length
-    y_coord = np.arange(y_nb + 1, dtype =np.uint64) * side_length
-    x_coord = np.arange(x_nb + 1, dtype =np.uint64) * side_length
-    y_coord[-1] += y_remain
-    x_coord[-1] += x_remain
-    window_coords = []
-    for y_i in range(len(y_coord) - 1):
-        for x_i in range(len(x_coord) - 1):
-            for add_to_y in np.arange(0, side_length, window_step, dtype =np.uint64):
-                y_max = np.min((height, y_coord[y_i + 1] + add_to_y)).astype(np.uint64)
-                for add_to_x in np.arange(0, side_length, window_step, dtype =np.uint64):
-                    x_max = np.min((width, x_coord[x_i + 1] + add_to_x)).astype(np.uint64)
-                    if allowed_pixels is None or np.any(allowed_pixels[(y_coord[y_i] + add_to_y):y_max, (x_coord[x_i] + add_to_x):x_max]):
-                        window_coords.append([y_coord[y_i] + add_to_y, y_max, x_coord[x_i] + add_to_x, x_max])
-    return window_coords
-
-
-def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
-    eroded_binary = cv2.erode(binary_image, cross_33)
-    contours = binary_image - eroded_binary
+    if np.all(binary_image):
+        contours = 1 - image_borders(binary_image.shape)
+    elif np.any(binary_image):
+        eroded_binary = cv2.erode(binary_image, cross_33)
+        contours = binary_image - eroded_binary
+    else:
+        contours = binary_image
     return contours
 
 
@@ -1350,8 +1387,22 @@ def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, 
 
     Examples
     --------
-    >>> result = prepare_box_counting(binary_image)
-    >>> cropped_img, side_lengths = result
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:4, 2:6] = 1
+    >>> binary_image[7:9, 4:7] = 1
+    >>> binary_image[4:7, 5] = 1
+    >>> cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+    >>> print(cropped_img), print(side_lengths)
+    [[0 0 0 0 0 0 0]
+     [0 1 1 1 1 0 0]
+     [0 1 1 1 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 1 0 1 0]
+     [0 0 0 1 1 1 0]
+     [0 0 0 0 0 0 0]]
+    [4 2]
     """
     side_lengths = None
     zoomed_binary = binary_image
@@ -1409,16 +1460,14 @@ def box_counting_dimension(zoomed_binary: NDArray[np.uint8], side_lengths: NDArr
 
     Examples
     --------
-    >>> zoomed_binary = np.array([[1, 0], [1, 1]])
-    >>> side_lengths = np.array([2])
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:4, 2:6] = 1
+    >>> binary_image[7:9, 4:7] = 1
+    >>> binary_image[4:7, 5] = 1
+    >>> zoomed_binary, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
     >>> dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
     >>> print(dimension, r_value, box_nb)
-    2.0 1.0 1
-
-    >>> side_lengths = np.array([4, 2])
-    >>> dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
-    >>> print(dimension, r_value, box_nb)
-    1.769620478335911 0.9999999642785034 2
+    (np.float64(1.1699250014423126), np.float64(0.9999999999999998), 2)
     """
     dimension:float = 0.
     r_value:float = 0.
@@ -1477,44 +1526,35 @@ def keep_shape_connected_with_ref(all_shapes: NDArray[np.uint8], reference_shape
     out : ndarray of uint8 or None
         The first connected component that intersects with the reference shape,
         or None if no such component is found.
+
+    Examples
+    -------
+    >>> all_shapes = np.zeros((5, 5), dtype=np.uint8)
+    >>> reference_shape = np.zeros((5, 5), dtype=np.uint8)
+    >>> reference_shape[3, 3] = 1
+    >>> all_shapes[0:2, 0:2] = 1
+    >>> all_shapes[3:4, 3:4] = 1
+    >>> res = keep_shape_connected_with_ref(all_shapes, reference_shape)
+    >>> print(res)
+    [[0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 1 0]
+     [0 0 0 0 0]]
     """
     number, order = cv2.connectedComponents(all_shapes, ltype=cv2.CV_16U)
     expanded_shape = None
-    if number > 2:
+    if number > 1:
         for i in np.arange(1, number):
             expanded_shape_test = np.zeros(order.shape, np.uint8)
             expanded_shape_test[order == i] = 1
             if np.any(expanded_shape_test * reference_shape):
                 break
-        expanded_shape = expanded_shape_test
+        if np.any(expanded_shape_test * reference_shape):
+            expanded_shape = expanded_shape_test
+        else:
+            expanded_shape = reference_shape
     return expanded_shape
-
-
-def keep_one_connected_component(binary_image: NDArray[np.uint8])-> NDArray[np.uint8]:
-    """
-    Keep only one connected component in a binary image.
-
-    This function filters out all but the largest connected component in
-    a binary image, effectively isolating it from other noise or objects.
-    The function ensures the input is in uint8 format before processing.
-
-    Parameters
-    ----------
-    binary_image : ndarray of uint8
-        Binary image containing one or more connected components.
-
-    Returns
-    -------
-    ndarray of uint8
-        Image with only the largest connected component retained.
-    """
-    if binary_image.dtype != np.uint8:
-        binary_image = binary_image.astype(np.uint8)
-    num_labels, sh = cv2.connectedComponents(binary_image)
-    if num_labels <= 1:
-        return binary_image.astype(np.uint8)
-    else:
-        return keep_largest_shape(sh)
 
 
 @njit()
@@ -1547,3 +1587,44 @@ def keep_largest_shape(indexed_shapes: NDArray[np.int32]) -> NDArray[np.uint8]:
     label_counts = np.bincount(indexed_shapes.flatten())
     largest_label = 1 + np.argmax(label_counts[1:])
     return (indexed_shapes == largest_label).astype(np.uint8)
+
+
+def keep_one_connected_component(binary_image: NDArray[np.uint8])-> NDArray[np.uint8]:
+    """
+    Keep only one connected component in a binary image.
+
+    This function filters out all but the largest connected component in
+    a binary image, effectively isolating it from other noise or objects.
+    The function ensures the input is in uint8 format before processing.
+
+    Parameters
+    ----------
+    binary_image : ndarray of uint8
+        Binary image containing one or more connected components.
+
+    Returns
+    -------
+    ndarray of uint8
+        Image with only the largest connected component retained.
+
+    Examples
+    -------
+    >>> all_shapes = np.zeros((5, 5), dtype=np.uint8)
+    >>> all_shapes[0:2, 0:2] = 1
+    >>> all_shapes[3:4, 3:4] = 1
+    >>> res = keep_one_connected_component(all_shapes)
+    >>> print(res)
+    [[1 1 0 0 0]
+     [1 1 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]]
+    """
+    if binary_image.dtype != np.uint8:
+        binary_image = binary_image.astype(np.uint8)
+    num_labels, sh = cv2.connectedComponents(binary_image)
+    if num_labels <= 1:
+        return binary_image.astype(np.uint8)
+    else:
+        return keep_largest_shape(sh)
+

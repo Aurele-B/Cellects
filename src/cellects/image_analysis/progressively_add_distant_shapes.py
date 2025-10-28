@@ -340,7 +340,7 @@ class ProgressivelyAddDistantShapes:
                 self.gravity_field = intensity_valley # make sure that the values correspond to the coord
             else:
                 # 1) faire un champ gravitationnel autour de la forme principale
-                self.gravity_field = make_gravity_field(self.main_shape, max_distance=self.max_distance, with_erosion=1)
+                self.gravity_field = rounded_inverted_distance_transform(self.main_shape, max_distance=self.max_distance, with_erosion=1)
 
                 # If there are near enough shapes, run the following
                 # 2) Dilate other shapes toward the main according to the gradient
