@@ -101,9 +101,10 @@ from time import sleep
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
 import pandas as pd
+from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
-from cellects.image_analysis.image_segmentation import segment_with_lum_value
+from cellects.image_analysis.image_segmentation import segment_with_lum_value, apply_filter
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting,
@@ -271,6 +272,11 @@ class MotionAnalysis:
                                                                                      second_dict, self.background,
                                                                                      self.background2,
                                                                                      self.vars['lose_accuracy_to_save_memory'])
+                if self.vars['filter_spec'] is not None and self.vars['filter_spec']['filter1_type'] != "":
+                    greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter1_type'], self.vars['filter_spec']['filter1_param'])
+                    if greyscale_image2 is not None and self.vars['filter_spec']['filter2_type'] != "":
+                        greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter2_type'], self.vars['filter_spec']['filter2_param'])
+
                 self.converted_video[counter, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     self.converted_video2[counter, ...] = greyscale_image2
@@ -541,7 +547,8 @@ class MotionAnalysis:
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
                                grid_segmentation=self.vars['grid_segmentation'],
                                lighter_background=self.vars['lighter_background'],
-                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask)
+                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask,
+                               filter_type=None, filter_param=None) # filtering already done when creating converted_video
 
         return analysisi
 

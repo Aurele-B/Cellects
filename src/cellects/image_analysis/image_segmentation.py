@@ -14,7 +14,59 @@ from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image_analysis.morphological_operations import get_largest_connected_component
 from skimage.measure import perimeter
 from scipy.optimize import minimize
-from skimage.filters import frangi, sato, threshold_otsu
+from skimage.filters import (threshold_otsu, gaussian, butterworth, farid, frangi, hessian, laplace, median, meijering,
+                             prewitt, roberts, sato, scharr, sobel)
+
+
+filter_dict = {"": {'': {}},
+               "Gaussian": {'Param1': {'Name': 'Sigma:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.}},
+               "Median": {'': {}},
+               "Butterworth": {'Param1': {'Name': 'Cutoff fr:', 'Minimum': 0., 'Maximum': .5, 'Default': .005},
+                               'Param2': {'Name': 'Order:', 'Minimum': 0., 'Maximum': 1000., 'Default': 2.}},
+               "Frangi": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': .5},
+                          'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 5.}},
+               "Sato": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': .5},
+                          'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 5.}},
+               "Meijering": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.},
+                          'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
+               "Hessian": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.},
+                          'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
+               "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 0., 'Maximum': 100., 'Default': 3}},
+               "Farid": {'': {}},
+               "Prewitt": {'': {}},
+               "Scharr": {'': {}},
+               "Sobel": {'': {}},
+               }
+
+
+def apply_filter(image, filter_type, param):
+    if filter_type == "Gaussian":
+        image = gaussian(image, sigma=param[0])
+    elif filter_type == "Median":
+        image = median(image)
+    elif filter_type == "Butterworth":
+        image = butterworth(image, cutoff_frequency_ratio=param[0], order=param[1])
+    elif filter_type == "Frangi":
+        image = frangi(image, sigmas=np.linspace(param[0], param[1], num=3))
+    elif filter_type == "Sato":
+        image = sato(image, sigmas=np.linspace(param[0], param[1], num=3))
+    elif filter_type == "Meijering":
+        image = meijering(image, sigmas=np.linspace(param[0], param[1], num=3))
+    elif filter_type == "Hessian":
+        image = hessian(image, sigmas=np.linspace(param[0], param[1], num=3))
+    elif filter_type == "Laplace":
+        image = laplace(image, ksize=int(param[0]))
+    elif filter_type == "Farid":
+        image = farid(image)
+    elif filter_type == "Prewitt":
+        image = prewitt(image)
+    elif filter_type == "Roberts":
+        image = roberts(image)
+    elif filter_type == "Scharr":
+        image = scharr(image)
+    elif filter_type == "Sobel":
+        image = sobel(image)
+    return image
 
 
 def get_color_spaces(bgr_image: NDArray[np.uint8], space_names: list="") -> Dict:
@@ -383,36 +435,39 @@ def _network_perimeter(threshold, img: NDArray):
     return -perimeter(binary_img)
 
 
-def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels: NDArray, patch_size: tuple=(80, 80)) -> NDArray:
+def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels: NDArray, patch_size: tuple=(10, 10)) -> NDArray[np.uint8]:
     """
-    Rolling window segmentation.
+    Perform rolling window segmentation on a greyscale image, using potentially filled pixels and a specified patch size.
 
-    Performs rolling window segmentation on a greyscale image to detect network-like structures
-    using Otsu's thresholding method. Optionally applies perimeter minimization if specified.
+    The function divides the input greyscale image into overlapping patches defined by `patch_size`,
+    and applies Otsu's thresholding method to each patch. The thresholds can be optionally
+    refined using a minimization algorithm.
 
     Parameters
     ----------
     greyscale_image : ndarray of uint8
-        The input greyscale image to be segmented.
+        The input greyscale image to segment.
     possibly_filled_pixels : ndarray of uint8
-        A mask of potentially filled pixels in the same shape as `greyscale_image`.
+        An array indicating which pixels are possibly filled.
     patch_size : tuple, optional
-        The size of patches used in the segmentation. Defaults to ``(80, 80)``.
+        The dimensions of the patches to segment. Default is (10, 10).
 
     Returns
     -------
-    out : ndarray of uint8
-        The segmented image highlighting network-like structures.
+    output : ndarray of uint8
+        The segmented binary image where the network is marked as True.
 
     Examples
     --------
     >>> greyscale_image = np.array([[1, 2, 1, 1], [1, 3, 4, 1], [2, 4, 3, 1], [2, 1, 2, 1]])
     >>> possibly_filled_pixels = greyscale_image > 1
-    >>> patch_size = (1, 1)
+    >>> patch_size = (2, 2)
     >>> result = rolling_window_segmentation(greyscale_image, possibly_filled_pixels, patch_size)
     >>> print(result)
-    array([[1, 0, ..., 0],
-           [0, 2, ..., 3], ...])
+    [[0 1 0 0]
+     [0 1 1 0]
+     [0 1 1 0]
+     [0 0 1 0]]
     """
     patch_centers = [
         np.floor(np.linspace(
@@ -445,17 +500,32 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
             network_patches.append(np.zeros_like(v))
             patch_thresholds.append(0)
 
-    network_img = np.zeros_like(greyscale_image)
+    network_img = np.zeros(greyscale_image.shape, dtype=np.float64)
     count_img = np.zeros_like(greyscale_image)
     for patch, network_patch, t in zip(patch_slices, network_patches, patch_thresholds):
         network_img[patch] += network_patch
         count_img[patch] += np.ones_like(network_patch)
     network_img /= count_img
-    return network_img
+    return (network_img > 0.5).astype(np.uint8)
 
-def binary_quality_index(binary_img):
-    from cellects.image_analysis.shape_descriptors import ShapeDescriptors
+def binary_quality_index(binary_img: NDArray[np.uint8]) -> float:
+    """
+    Calculate the binary quality index for a binary image.
 
+    The binary quality index is computed based on the perimeter of the largest
+    connected component in the binary image, normalized by the total number of
+    pixels.
+
+    Parameters
+    ----------
+    binary_img : ndarray of uint8
+        Input binary image array.
+
+    Returns
+    -------
+    out : float
+        The binary quality index value.
+    """
     if np.any(binary_img):
         # SD = ShapeDescriptors(binary_img, ["euler_number"])
         # index = - SD.descriptors['euler_number']
@@ -465,7 +535,6 @@ def binary_quality_index(binary_img):
     else:
         index = 0.
     return index
-
 
 
 def find_threshold_given_mask(greyscale: NDArray[np.uint8], mask: np.uint8, min_threshold: np.uint8=0) -> np.uint8:
@@ -492,7 +561,6 @@ def find_threshold_given_mask(greyscale: NDArray[np.uint8], mask: np.uint8, min_
 
     Examples
     --------
-    >>> import numpy as np
     >>> greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)
     >>> mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)
     >>> find_threshold_given_mask(greyscale, mask)
@@ -556,7 +624,7 @@ def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDA
     >>> region_a = np.array([1, 250, 3], dtype=np.uint8)
     >>> region_b = np.array([4, 250, 6], dtype=np.uint8)
     >>> thresh = np.uint8(100)
-    >>> get_counts_jit(thresh, region_a, region_b)
+    >>> _get_counts_jit(thresh, region_a, region_b)
     (1, 1)
     """
     count_a = 0

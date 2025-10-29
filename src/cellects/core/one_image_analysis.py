@@ -36,7 +36,7 @@ import multiprocessing.pool as mp
 from numba.typed import List as TList
 from numba.typed import Dict as TDict
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, otsu_thresholding, get_otsu_threshold
+from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
@@ -93,12 +93,14 @@ class OneImageAnalysis:
     """
     def convert_and_segment(self, c_space_dict, color_number=2, biomask=None,
                             backmask=None, subtract_background=None, subtract_background2=None, grid_segmentation=False,
-                            lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):
+                            lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None,
+                            filter_spec=None):
 
         if self.already_greyscale:
             self.segmentation(logical='None', color_number=2, biomask=biomask, backmask=backmask,
                               grid_segmentation=grid_segmentation, lighter_background=lighter_background,
-                              side_length=side_length, step=step, int_variation_thresh=int_variation_thresh, mask=mask)
+                              side_length=side_length, step=step, int_variation_thresh=int_variation_thresh, mask=mask,
+                              filter_spec=filter_spec)
         else:
             if len(self.all_c_spaces) == 0:
                 self.all_c_spaces = get_color_spaces(self.bgr)
@@ -118,17 +120,19 @@ class OneImageAnalysis:
                 self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
                                   backmask=backmask, grid_segmentation=grid_segmentation,
                                   lighter_background=lighter_background, side_length=side_length, step=step,
-                                  int_variation_thresh=int_variation_thresh, mask=mask)
+                                  int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
 
             else:
 
                 self.segmentation(logical='None', color_number=color_number, biomask=biomask,
                                   backmask=backmask, grid_segmentation=grid_segmentation,
                                   lighter_background=lighter_background, side_length=side_length, step=step,
-                                  int_variation_thresh=int_variation_thresh, mask=mask)
+                                  int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
 
 
-    def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None, grid_segmentation=False, lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None):
+    def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None, grid_segmentation=False, lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None, filter_spec=None):
+        if filter_spec is not None and filter_spec["filter1_type"] != "":
+            self.image = apply_filter(self.image, filter_spec["filter1_type"], filter_spec["filter1_param"])
         if (color_number > 2):
             self.kmeans(color_number, biomask, backmask, logical, bio_label, bio_label2)
         elif grid_segmentation:
@@ -149,6 +153,8 @@ class OneImageAnalysis:
 
             if logical != 'None':
                 # logging.info("Segment the image using Otsu thresholding")
+                if filter_spec is not None and filter_spec["filter2_type"] != "":
+                    self.image2 = apply_filter(self.image2, filter_spec["filter2_type"], filter_spec["filter2_param"])
                 self.binary_image2 = otsu_thresholding(self.image2)
                 if self.previous_binary_image is not None:
                     if (self.binary_image2 * (1 - self.previous_binary_image)).sum() > (

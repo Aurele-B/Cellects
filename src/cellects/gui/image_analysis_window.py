@@ -21,6 +21,7 @@ from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
 from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.image_analysis.image_segmentation import filter_dict
 
 
 class ImageAnalysisWindow(MainTabsType):
@@ -618,30 +619,12 @@ class ImageAnalysisWindow(MainTabsType):
     def reinitialize_image_and_masks(self, image):
         if len(image.shape) == 2:
             self.parent().po.current_image = np.stack((image, image, image), axis=2)
-            # self.sample_number.setVisible(True)
-            # self.sample_number_label.setVisible(True)
-            # self.one_blob_per_arena.setVisible(True)
-            # self.one_blob_per_arena_label.setVisible(True)
-            # self.set_spot_shape.setVisible(True)
-            # self.spot_shape_label.setVisible(True)
-            # self.spot_shape.setVisible(True)
-            # self.arena_shape.setVisible(True)
-            # self.arena_shape_label.setVisible(True)
 
             self.generate_analysis_options.setVisible(False)
             self.quickly.setVisible(False)
             self.carefully.setVisible(False)
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
-
-            # self.parent().po.all['expert_mode'] = True
-            # self.advanced_mode_cb.setChecked(False)
-            # self.advanced_mode_cb.setVisible(False)
-            # self.advanced_mode_label.setVisible(False)
-
-            # self.more_than_two_colors.setVisible(True)
-            # self.more_than_two_colors_label.setVisible(True)
-
             self.visualize.setVisible(True)
             self.visualize_label.setVisible(True)
         else:
@@ -685,9 +668,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.first_im_parameters_answered = True
 
         self.space_label.setVisible(color_analysis)
-        self.c1.setVisible(color_analysis)
-        self.c2.setVisible(color_analysis)
-        self.c3.setVisible(color_analysis)
+        # self.c1.setVisible(color_analysis)
+        # self.c2.setVisible(color_analysis)
+        # self.c3.setVisible(color_analysis)
         display_logical = self.logical_operator_between_combination_result.currentText() != 'None'
         self.logical_operator_between_combination_result.setVisible(color_analysis and display_logical)
         self.logical_operator_label.setVisible(color_analysis and display_logical)
@@ -699,6 +682,28 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
         self.distinct_colors_number.setVisible(is_checked and at_least_one_line_drawn and self.parent().po.all["more_than_two_colors"])
+
+        # Check whether filter 1 and its potential parameters should be visible
+        self.filter1.setVisible(is_checked)
+        self.filter1_label.setVisible(is_checked)
+        has_param1 = is_checked and 'Param1' in filter_dict[self.filter1.currentText()]
+        self.filter1_param1.setVisible(has_param1)
+        self.filter1_param1_label.setVisible(has_param1)
+        has_param2 = is_checked and 'Param2' in filter_dict[self.filter1.currentText()]
+        self.filter1_param2.setVisible(has_param2)
+        self.filter1_param2_label.setVisible(has_param2)
+
+        # Check whether filter 2 and its potential parameters should be visible
+        self.filter2.setVisible(is_checked and at_least_one_line_drawn)
+        self.filter2_label.setVisible(is_checked and at_least_one_line_drawn)
+        has_param1 = is_checked and at_least_one_line_drawn and 'Param1' in filter_dict[self.filter2.currentText()]
+        self.filter2_param1.setVisible(has_param1)
+        self.filter2_param1_label.setVisible(has_param1)
+        has_param2 = is_checked and at_least_one_line_drawn and 'Param2' in filter_dict[self.filter2.currentText()]
+        self.filter2_param2.setVisible(has_param2)
+        self.filter2_param2_label.setVisible(has_param2)
+
+        self.filter1_param1.setVisible(is_checked)
         self.grid_segmentation.setVisible(is_checked)
         self.grid_segmentation_label.setVisible(is_checked)
 
@@ -1177,22 +1182,23 @@ class ImageAnalysisWindow(MainTabsType):
         # 2) Titles
         self.edit_labels_widget = QtWidgets.QWidget()
         self.edit_labels_layout = QtWidgets.QHBoxLayout()
-        self.space_label = FixedText('Space', halign='l',
+
+        self.space_label = FixedText('Color space:', halign='l',
                                     tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
                                     night_mode=self.parent().po.all['night_mode'])
-        self.c1 = FixedText('  C1', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        self.c2 = FixedText('  C2', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        self.c3 = FixedText('  C3', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        # self.c1 = FixedText('  C1', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        # self.c2 = FixedText('  C2', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
+        # self.c3 = FixedText('  C3', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
-        self.edit_labels_layout.addWidget(self.c1)
-        self.edit_labels_layout.addWidget(self.c2)
-        self.edit_labels_layout.addWidget(self.c3)
+        # self.edit_labels_layout.addWidget(self.c1)
+        # self.edit_labels_layout.addWidget(self.c2)
+        # self.edit_labels_layout.addWidget(self.c3)
         self.edit_labels_layout.addItem(self.horizontal_space)
         self.space_label.setVisible(False)
-        self.c1.setVisible(False)
-        self.c2.setVisible(False)
-        self.c3.setVisible(False)
+        # self.c1.setVisible(False)
+        # self.c2.setVisible(False)
+        # self.c3.setVisible(False)
         self.edit_labels_widget.setLayout(self.edit_labels_layout)
         # self.edit_layout.addWidget(self.edit_labels_widget)
         self.csc_table_layout.addWidget(self.edit_labels_widget)
@@ -1240,6 +1246,54 @@ class ImageAnalysisWindow(MainTabsType):
         self.csc_table_layout.addWidget(self.first_csc_widget)
         # self.edit_layout.addWidget(self.first_csc_widget)
 
+        # First filters
+
+        self.filter1_label = FixedText('Filter: ', halign='l',
+                                    tip="The filter to apply to the image before segmentation",
+                                    night_mode=self.parent().po.all['night_mode'])
+        self.csc_table_layout.addWidget(self.filter1_label)
+        self.filter1_widget = QtWidgets.QWidget()
+        self.filter1_layout = QtWidgets.QHBoxLayout()
+        self.filter1 = Combobox(list(filter_dict.keys()), night_mode=self.parent().po.all['night_mode'])
+        self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
+        self.filter1.currentTextChanged.connect(self.filter1_changed)
+        self.filter1.setFixedWidth(100)
+        if "Param1" in filter_dict[self.parent().po.vars['filter_spec']['filter1_type']].keys():
+            param1_name = filter_dict[self.parent().po.vars['filter_spec']['filter1_type']]["Param1"]["Name"]
+        else:
+            param1_name = ""
+        self.filter1_param1_label = FixedText(param1_name, halign='l', tip="The parameter to adjust the filter effect",
+                                    night_mode=self.parent().po.all['night_mode'])
+        filter_param_spinbox_width = 60
+        self.filter1_param1 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter1_param'][0], decimals=3, night_mode=self.parent().po.all['night_mode'])
+        self.filter1_param1.setFixedWidth(filter_param_spinbox_width)
+        self.filter1_param1.valueChanged.connect(self.filter1_param1_changed)
+        if "Param2" in filter_dict[self.parent().po.vars['filter_spec']['filter1_type']].keys():
+            param2_name = filter_dict[self.parent().po.vars['filter_spec']['filter1_type']]["Param2"]["Name"]
+        else:
+            param2_name = ""
+        self.filter1_param2_label = FixedText(param2_name, halign='l', tip="The parameter to adjust the filter effect",
+            night_mode=self.parent().po.all['night_mode'])
+        self.filter1_param2 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter1_param'][1], decimals=3, night_mode=self.parent().po.all['night_mode'])
+        self.filter1_param2.setFixedWidth(filter_param_spinbox_width)
+        self.filter1_param2.valueChanged.connect(self.filter1_param2_changed)
+        self.filter1_layout.addWidget(self.filter1)
+        # self.filter1_layout.addWidget(self.filter1_label)
+        self.filter1_layout.addItem(self.horizontal_space)
+        self.filter1_layout.addWidget(self.filter1_param1_label)
+        self.filter1_layout.addWidget(self.filter1_param1)
+        self.filter1_layout.addItem(self.horizontal_space)
+        self.filter1_layout.addWidget(self.filter1_param2_label)
+        self.filter1_layout.addWidget(self.filter1_param2)
+        self.filter1.setVisible(False)
+        self.filter1_label.setVisible(False)
+        self.filter1_param1_label.setVisible(False)
+        self.filter1_param1.setVisible(False)
+        self.filter1_param2_label.setVisible(False)
+        self.filter1_param2.setVisible(False)
+        self.filter1_widget.setLayout(self.filter1_layout)
+        self.csc_table_layout.addWidget(self.filter1_widget)
+
         # 4) logical_operator
         self.logical_op_widget = QtWidgets.QWidget()
         self.logical_op_layout = QtWidgets.QHBoxLayout()
@@ -1273,6 +1327,50 @@ class ImageAnalysisWindow(MainTabsType):
         # self.edit_layout.addWidget(self.second_csc_widget)
         self.edit_layout.addWidget(self.csc_scroll_table)
         self.edit_layout.addItem(self.vertical_space)
+
+        # Second filters
+        self.filter2_label = FixedText('Filter: ', halign='l',
+                                    tip="The filter to apply to the image before segmentation",
+                                    night_mode=self.parent().po.all['night_mode'])
+        self.csc_table_layout.addWidget(self.filter2_label)
+        self.filter2_widget = QtWidgets.QWidget()
+        self.filter2_layout = QtWidgets.QHBoxLayout()
+        self.filter2 = Combobox(list(filter_dict.keys()), night_mode=self.parent().po.all['night_mode'])
+        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+        self.filter2.currentTextChanged.connect(self.filter2_changed)
+        self.filter2.setFixedWidth(100)
+        if "Param1" in filter_dict[self.parent().po.vars['filter_spec']['filter2_type']].keys():
+            param1_name = filter_dict[self.parent().po.vars['filter_spec']['filter2_type']]["Param1"]["Name"]
+        else:
+            param1_name = ""
+        self.filter2_param1_label = FixedText(param1_name, halign='l',
+                                    tip="The parameter to adjust the filter effect",
+                                    night_mode=self.parent().po.all['night_mode'])
+        self.filter2_param1 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter2_param'][0], decimals=3, night_mode=self.parent().po.all['night_mode'])
+        self.filter2_param1.setFixedWidth(filter_param_spinbox_width)
+        self.filter2_param1.valueChanged.connect(self.filter2_param1_changed)
+        if "Param2" in filter_dict[self.parent().po.vars['filter_spec']['filter2_type']].keys():
+            param2_name = filter_dict[self.parent().po.vars['filter_spec']['filter2_type']]["Param2"]["Name"]
+        else:
+            param2_name = ""
+        self.filter2_param2_label = FixedText(param2_name, halign='l', tip="The parameter to adjust the filter effect",
+            night_mode=self.parent().po.all['night_mode'])
+        self.filter2_param2 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter2_param'][1], decimals=3, night_mode=self.parent().po.all['night_mode'])
+        self.filter2_param2.setFixedWidth(filter_param_spinbox_width)
+
+        self.filter1_param2.valueChanged.connect(self.filter2_param2_changed)
+        self.filter2_layout.addWidget(self.filter2)
+        # self.filter2_layout.addWidget(self.filter2_label)
+        self.filter2_layout.addItem(self.horizontal_space)
+        self.filter2_layout.addWidget(self.filter2_param1_label)
+        self.filter2_layout.addWidget(self.filter2_param1)
+        self.filter2_layout.addItem(self.horizontal_space)
+        self.filter2_layout.addWidget(self.filter2_param2_label)
+        self.filter2_layout.addWidget(self.filter2_param2)
+        self.filter2.setVisible(False)
+        self.filter2_label.setVisible(False)
+        self.filter2_widget.setLayout(self.filter2_layout)
+        self.csc_table_layout.addWidget(self.filter2_widget)
 
         # 6) Open the grid_segmentation row layout
         self.grid_segmentation_widget = QtWidgets.QWidget()
@@ -1341,6 +1439,62 @@ class ImageAnalysisWindow(MainTabsType):
 
         return widget_list
 
+    def filter1_changed(self):
+        current_filter = self.filter1.currentText()
+        self.parent().po.vars['filter_spec']['filter1_type'] = current_filter
+        show_param1 = "Param1" in filter_dict[current_filter].keys()
+        self.filter1_param1_label.setVisible(show_param1)
+        self.filter1_param1.setVisible(show_param1)
+        if show_param1:
+            self.filter1_param1_label.setText(filter_dict[current_filter]['Param1']['Name'])
+            self.filter1_param1.setMinimum(filter_dict[current_filter]['Param1']['Minimum'])
+            self.filter1_param1.setMaximum(filter_dict[current_filter]['Param1']['Maximum'])
+            self.filter1_param1.setValue(filter_dict[current_filter]['Param1']['Default'])
+        if 'Param2' in list(filter_dict[current_filter].keys()):
+            self.filter1_param2_label.setText(filter_dict[current_filter]['Param2']['Name'])
+            self.filter1_param2.setMinimum(filter_dict[current_filter]['Param2']['Minimum'])
+            self.filter1_param2.setMaximum(filter_dict[current_filter]['Param2']['Maximum'])
+            self.filter1_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
+            self.filter1_param2_label.setVisible(True)
+            self.filter1_param2.setVisible(True)
+        else:
+            self.filter1_param2_label.setVisible(False)
+            self.filter1_param2.setVisible(False)
+
+    def filter1_param1_changed(self):
+        self.parent().po.vars['filter_spec']['filter1_param'][0] = float(self.filter1_param1.value())
+
+    def filter1_param2_changed(self):
+        self.parent().po.vars['filter_spec']['filter1_param'][1] = float(self.filter1_param2.value())
+
+    def filter2_changed(self):
+        current_filter = self.filter2.currentText()
+        self.parent().po.vars['filter_spec']['filter2_type'] = current_filter
+        show_param1 = "Param1" in filter_dict[current_filter].keys()
+        self.filter2_param1_label.setVisible(show_param1)
+        self.filter2_param1.setVisible(show_param1)
+        if show_param1:
+            self.filter2_param1_label.setText(filter_dict[current_filter]['Param1']['Name'])
+            self.filter2_param1.setMinimum(filter_dict[current_filter]['Param1']['Minimum'])
+            self.filter2_param1.setMaximum(filter_dict[current_filter]['Param1']['Maximum'])
+            self.filter2_param1.setValue(filter_dict[current_filter]['Param2']['Default'])
+        if 'Param2' in list(filter_dict[current_filter].keys()):
+            self.filter2_param2_label.setText(filter_dict[current_filter]['Param2']['Name'])
+            self.filter2_param2.setMinimum(filter_dict[current_filter]['Param2']['Minimum'])
+            self.filter2_param2.setMaximum(filter_dict[current_filter]['Param2']['Maximum'])
+            self.filter2_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
+            self.filter2_param2_label.setVisible(True)
+            self.filter2_param2.setVisible(True)
+        else:
+            self.filter2_param2_label.setVisible(False)
+            self.filter2_param2.setVisible(False)
+
+    def filter2_param1_changed(self):
+        self.parent().po.vars['filter_spec']['filter2_param'][0] = float(self.filter2_param1.value())
+
+    def filter2_param2_changed(self):
+        self.parent().po.vars['filter_spec']['filter2_param'][1] = float(self.filter2_param2.value())
+
     def logical_op_changed(self):
         # show = self.logical_operator_between_combination_result.currentText() != 'None'
         if self.logical_operator_between_combination_result.currentText() == 'None':
@@ -1365,6 +1519,9 @@ class ImageAnalysisWindow(MainTabsType):
                 self.row23[i1].setValue(0)
             self.row23[i1 + 1].setVisible(False)
         else:
+            self.filter2_label.setVisible(self.parent().po.all['expert_mode'])
+            self.filter2.setVisible(self.parent().po.all['expert_mode'])
+            self.filter2_changed()
             self.row21[0].setVisible(self.parent().po.all['expert_mode'])
             for i1 in [1, 2, 3]:
                 self.row21[i1].setVisible(self.parent().po.all['expert_mode'])

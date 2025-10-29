@@ -51,7 +51,8 @@ class OneVideoPerBlob:
         self.shapes_to_remove = None
         self.not_analyzed_individuals = None
 
-    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=True, display=False):
+    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2,
+                           sample_size=5, all_specimens_have_same_direction=True, display=False, filter_spec=None):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         # are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1; img_list=self.data_list; color_space_combination=self.vars['convert_for_origin']; color_number=self.vars["color_number"]; sample_size=5
 
@@ -71,7 +72,8 @@ class OneVideoPerBlob:
             self.top = np.zeros(self.first_image.shape_number, dtype=np.int64)
             self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
             if are_gravity_centers_moving:
-                self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size, all_specimens_have_same_direction, display)
+                self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size,
+                                                 all_specimens_have_same_direction, display, filter_spec=filter_spec)
                 # new:
                 new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
                 #
@@ -232,7 +234,7 @@ class OneVideoPerBlob:
             self.right = self.standard[:, 3]
 
 
-    def _get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False):
+    def _get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False, filter_spec=None):
         """
         Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
         on following images. i.e. it segment evenly spaced images (See self._segment_blob_motion and OneImageAnalysis)
@@ -262,7 +264,8 @@ class OneVideoPerBlob:
                     image = img_list[sample_numbers[frame_idx] - 1]
                 else:
                     image = img_list[sample_numbers[frame_idx] - 1, ...]
-                self.motion_list.insert(frame_idx, self._segment_blob_motion(image, color_space_combination, color_number))
+                self.motion_list.insert(frame_idx, self._segment_blob_motion(image, color_space_combination,
+                                                                             color_number, filter_spec=filter_spec))
 
 
         self.big_kernels = Ellipse((self.k_size, self.k_size)).create().astype(np.uint8)
@@ -385,7 +388,7 @@ class OneVideoPerBlob:
             self.bot[shape_i] = np.max(shape_i_indices[0])
         self.ordered_first_image = previous_ordered_image_i
 
-    def _segment_blob_motion(self, image, color_space_combination, color_number):
+    def _segment_blob_motion(self, image, color_space_combination, color_number, filter_spec):
         if isinstance(image, str):
             is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
             image = read_and_rotate(image, self.first_image.bgr, self.raw_images,
@@ -393,7 +396,7 @@ class OneVideoPerBlob:
             # image = readim(image)
         In = OneImageAnalysis(image)#, self.raw_images
         In.convert_and_segment(color_space_combination, color_number, None, None, self.first_image.subtract_background,
-                               self.first_image.subtract_background2)
+                               self.first_image.subtract_background2, filter_spec=filter_spec)
         return In.binary_image
 
 
