@@ -29,7 +29,7 @@ This module is particularly useful in image analysis tasks where shapes need to 
 from copy import deepcopy
 import numpy as np
 import cv2
-from cellects.image_analysis.morphological_operations import cross_33, make_gravity_field, CompareNeighborsWithValue, get_radius_distance_against_time, cc, rhombus_55, keep_shape_connected_with_ref
+from cellects.image_analysis.morphological_operations import cross_33, rounded_inverted_distance_transform, CompareNeighborsWithValue, get_radius_distance_against_time, cc, rhombus_55, keep_shape_connected_with_ref
 
 
 

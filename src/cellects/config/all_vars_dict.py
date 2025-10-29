@@ -134,6 +134,7 @@ class DefaultDicts:
             'grid_segmentation': False,
             # Data stored during analysis:
             'descriptors': descriptors,
+            'filter_spec': {'filter1_type': "", 'filter1_param': [1., 1.], 'filter2_type': "", 'filter2_param': [1., 1.]},
         }
 
     def save_as_pkl(self, po=None):

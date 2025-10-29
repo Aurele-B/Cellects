@@ -558,7 +558,8 @@ class ProgramOrganizer:
         if is_first_image:
             self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                  self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
-                                                 subtract_background2=None, grid_segmentation=False)
+                                                 subtract_background2=None, grid_segmentation=False,
+                                                 filter_spec=self.vars["filter_spec"])
             if not self.first_image.drift_correction_already_adjusted:
                 self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
                 if self.vars['drift_already_corrected']:
@@ -567,8 +568,9 @@ class ProgramOrganizer:
             if self.vars["grid_segmentation"]:
                 self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                      self.all["bio_mask"], self.all["back_mask"],
-                                                     subtract_background=None,
-                                                     subtract_background2=None, grid_segmentation=True)
+                                                     subtract_background=None, subtract_background2=None,
+                                                     grid_segmentation=True,
+                                                     filter_spec=self.vars["filter_spec"])
 
             self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
             logging.info(self.sample_number)
@@ -604,10 +606,12 @@ class ProgramOrganizer:
             #     drift_correction, drift_correction2 = self.last_image.adjust_to_drift_correction()
             #     self.last_image.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
             self.cropping(is_first_image=False)
+            print(self.vars["filter_spec"])
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
-                                                grid_segmentation=self.vars["grid_segmentation"])
+                                                grid_segmentation=self.vars["grid_segmentation"],
+                                                filter_spec=self.vars["filter_spec"])
             if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
                 self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
             
@@ -773,7 +777,8 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],#self.vars['convert_for_motion']
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'],
+                        filter_spec=self.vars['filter_spec'])
                 else:
                     self.videos.get_bounding_boxes(
                         are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
@@ -781,7 +786,8 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'],
+                        filter_type=self.vars['filter_spec'])
                 if np.any(self.videos.ordered_stats[:, 4] > 100 * np.median(self.videos.ordered_stats[:, 4])):
                     analysis_status['message'] = "A specimen is at least 100 times larger: (re)do the first image analysis."
                     analysis_status['continue'] = False
@@ -1016,7 +1022,8 @@ class ProgramOrganizer:
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                  None, None, subtract_background=None,
                                                  subtract_background2=None,
-                                                 grid_segmentation=self.vars["grid_segmentation"])
+                                                 grid_segmentation=self.vars["grid_segmentation"],
+                                                 filter_spec=self.vars["filter_spec"])
             covered_values = self.first_image.image[np.nonzero(binary_image)]
             if self.vars['lighter_background']:
                 if np.max(covered_values) < 255:
