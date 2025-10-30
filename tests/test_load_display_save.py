@@ -449,7 +449,8 @@ class TestExtractTime(CellectsUnitTest):
         expected_time = np.array([0, 0])  # Assuming all timestamps are same
 
         # Execute function
-        result = extract_time(image_list, str(self.data_dir))
+        result = extract_time(image_list, '/Users/Directory/Scripts/python/Cellects/data/experiment')
+        # result = extract_time(image_list, str(self.data_dir))
         # Verify result
         self.assertTrue(np.array_equal(result, expected_time))
 

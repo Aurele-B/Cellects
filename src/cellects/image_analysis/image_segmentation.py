@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-This script contains functions to convert bgr images into grayscale and grayscale images into binary
+This module contains functions for basic operations of image segmentation.
+It starts from converting bgr images into grayscale, filtering these grayscale images,
+ and various way of splitting these grayscale pixels into two categories (i.e. methods of thresholding)
 """
 import numpy as np
 import cv2
@@ -32,6 +34,8 @@ filter_dict = {"": {'': {}},
                "Hessian": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.},
                           'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
                "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 0., 'Maximum': 100., 'Default': 3}},
+               "Sharpen": {'': {}},
+               "Mexican hat": {'': {}},
                "Farid": {'': {}},
                "Prewitt": {'': {}},
                "Scharr": {'': {}},
@@ -39,7 +43,77 @@ filter_dict = {"": {'': {}},
                }
 
 
-def apply_filter(image, filter_type, param):
+def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False) -> NDArray:
+    """
+    Apply various filters to an image based on the specified filter type.
+
+    This function applies a filter to the input image according to the
+    specified `filter_type` and associated parameters. Supported filters
+    include Gaussian, Median, Butterworth, Frangi, Sato, Meijering,
+    Hessian, Laplace, Mexican hat, Farid, Prewitt, Roberts, Scharr, and Sobel.
+    Except from Sharpen and Mexican hat, these filters are implemented using the skimage.filters module.
+    Additionally, the function can rescale the output image to uint8
+    format if specified.
+
+    Parameters
+    ----------
+    image : NDArray
+        The input image to which the filter will be applied.
+    filter_type : str
+        The type of filter to apply. Supported values include:
+        "Gaussian", "Median", "Butterworth", "Frangi",
+        "Sato", "Meijering", "Hessian", "Laplace", "Mexican hat",
+        "Sharpen", "Farid", "Prewitt", "Roberts", "Scharr", and "Sobel".
+    param : list or tuple
+        Parameters specific to the filter type. The structure of `param`
+        depends on the chosen filter.
+    rescale_to_uint8 : bool, optional
+        Whether to rescale the output image to uint8 format. Default is False.
+
+    Notes
+    -----
+    The Sharpen filter is implemented through:
+    cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+    The Maxican hat filter is implemented through:
+    cv2.filter2D(image, -1, np.array(
+            [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
+    All other filters are skimage filters.
+
+    Returns
+    -------
+    NDArray
+        The filtered image. If `rescale_to_uint8` is True and the output
+        image's dtype is not uint8, it will be rescaled accordingly.
+
+    Examples
+    --------
+    >>> image = np.zeros((3, 3))
+    >>> image[1, 1] = 1
+    >>> filtered_image = apply_filter(image, "Gaussian", [1.0])
+    >>> print(filtered_image)
+    [[0.05855018 0.09653293 0.05855018]
+     [0.09653293 0.15915589 0.09653293]
+     [0.05855018 0.09653293 0.05855018]]
+    Filtered image with Gaussian filter.
+
+    >>> image = np.zeros((3, 3))
+    >>> image[1, 1] = 1
+    >>> filtered_image = apply_filter(image, "Median", [])
+    >>> print(filtered_image)
+    [[0. 0. 0.]
+     [0. 0. 0.]
+     [0. 0. 0.]]
+    Filtered image with Median filter.
+
+    >>> image = np.zeros((3, 3))
+    >>> image[1, 1] = 1
+    >>> filtered_image = apply_filter(image, "Butterworth", [0.005, 2])
+    >>> print(filtered_image)
+    [[-0.1111111  -0.11111111 -0.1111111 ]
+    [-0.11111111  0.88888886 -0.11111111]
+    [-0.1111111  -0.11111111 -0.1111111 ]]
+    Filtered image with Butterworth filter.
+    """
     if filter_type == "Gaussian":
         image = gaussian(image, sigma=param[0])
     elif filter_type == "Median":
@@ -56,6 +130,11 @@ def apply_filter(image, filter_type, param):
         image = hessian(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Laplace":
         image = laplace(image, ksize=int(param[0]))
+    elif filter_type == "Sharpen":
+        image = cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+    elif filter_type == "Mexican hat":
+        image = cv2.filter2D(image, -1, np.array(
+            [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
     elif filter_type == "Farid":
         image = farid(image)
     elif filter_type == "Prewitt":
@@ -66,6 +145,8 @@ def apply_filter(image, filter_type, param):
         image = scharr(image)
     elif filter_type == "Sobel":
         image = sobel(image)
+    if rescale_to_uint8 and image.dtype != np.uint8:
+        image = bracket_to_uint8_image_contrast(image)
     return image
 
 
@@ -181,7 +262,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
 
 
-def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict=Dict, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False) -> NDArray[np.uint8]:
+def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False) -> NDArray[np.uint8]:
     """
     Generate color space combinations for an input image.
 
@@ -237,24 +318,6 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
         if convert_to_uint8:
             greyscale_image2 = bracket_to_uint8_image_contrast(greyscale_image2)
     return greyscale_image, greyscale_image2
-
-
-def filter_mexican_hat(image):
-    """
-    Create a mexican hat filter.
-    Other filters are:
-    - GaussianBlur(image, (size, size), BORDER_DEFAULT)
-    - medianBlur(image, ksize=size)
-    - Sharpen an image = cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
-    - A blurring that conserve edges = bilateralFilter(image, d=size, sigmaColor=sigma, sigmaSpace=sigma)# 5, 75, 75 9, 150, 150
-    - Extract edges = Laplacian(image, ddepth=depth, ksize=(size, size))
-    :param image:
-    :type image: uint8
-    :return: the filtered image
-    :rtype image: uint8
-    """
-    return cv2.filter2D(image, -1, np.array(
-        [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
 
 
 @njit()
@@ -451,6 +514,7 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
         An array indicating which pixels are possibly filled.
     patch_size : tuple, optional
         The dimensions of the patches to segment. Default is (10, 10).
+        Must be superior to (1, 1).
 
     Returns
     -------

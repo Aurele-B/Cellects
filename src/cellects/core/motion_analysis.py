@@ -273,9 +273,13 @@ class MotionAnalysis:
                                                                                      self.background2,
                                                                                      self.vars['lose_accuracy_to_save_memory'])
                 if self.vars['filter_spec'] is not None and self.vars['filter_spec']['filter1_type'] != "":
-                    greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter1_type'], self.vars['filter_spec']['filter1_param'])
+                    greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter1_type'],
+                                                   self.vars['filter_spec']['filter1_param'],
+                                                   self.vars['lose_accuracy_to_save_memory'])
                     if greyscale_image2 is not None and self.vars['filter_spec']['filter2_type'] != "":
-                        greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter2_type'], self.vars['filter_spec']['filter2_param'])
+                        greyscale_image2 = apply_filter(greyscale_image2, self.vars['filter_spec']['filter2_type'],
+                                                        self.vars['filter_spec']['filter2_param'],
+                                                        self.vars['lose_accuracy_to_save_memory'])
 
                 self.converted_video[counter, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
@@ -548,7 +552,7 @@ class MotionAnalysis:
                                grid_segmentation=self.vars['grid_segmentation'],
                                lighter_background=self.vars['lighter_background'],
                                side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask,
-                               filter_type=None, filter_param=None) # filtering already done when creating converted_video
+                               filter_spec=None) # filtering already done when creating converted_video
 
         return analysisi
 
@@ -1267,6 +1271,7 @@ class MotionAnalysis:
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
             smooth_segmentation_over_time = True
+            pseudopod_min_size = 50
             self.check_converted_video_type()
             pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
             potential_network = np.zeros_like(self.binary, dtype=bool)
@@ -1284,7 +1289,7 @@ class MotionAnalysis:
                 NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
-                NetDet_fast.detect_pseudopods(lighter_background)
+                NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
                 NetDet_fast.merge_network_with_pseudopods()
                 potential_network[t, ...] = NetDet_fast.complete_network
                 pseudopod_vid[t, ...] = NetDet_fast.pseudopods
@@ -1308,12 +1313,33 @@ class MotionAnalysis:
                     origin_contours = get_contours(self.origin)
                     complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
                 complete_network = keep_one_connected_component(complete_network)
+
                 # Make sure that removing pseudopods do not cut the network:
                 without_pseudopods = complete_network * (1 - pseudopod_vid[t])
                 only_connected_network = keep_one_connected_component(without_pseudopods)
+                # # Option A: To add these cutting regions to the pseudopods do:
                 pseudopods = (1 - only_connected_network) * complete_network
                 pseudopod_vid[t] = pseudopods
                 self.network_dynamics[t] = complete_network
+
+                # # Option B: To add these cutting regions to the network:
+                # # Differentiate pseudopods that cut the network from the 'true ones'
+                # # Dilate pseudopods and restrein them to the
+                # pseudopods = cv2.dilate(pseudopod_vid[t], kernel=Ellipse((15, 15)).create().astype(np.uint8),
+                #                         iterations=1) * self.binary[t, :, :]
+                # nb, numbered_pseudopods = cv2.connectedComponents(pseudopods)
+                # pseudopods = np.zeros_like(pseudopod_vid[t])
+                # for p_i in range(1, nb + 1):
+                #     pseudo_i = numbered_pseudopods == p_i
+                #     nb_i, remainings, stats, centro = cv2.connectedComponentsWithStats(
+                #         complete_network * (1 - pseudo_i.astype(np.uint8)))
+                #     if (stats[:, 4] > pseudopod_min_size).sum() == 2:
+                #         pseudopods[pseudo_i] = 1
+                #         fragmented = np.nonzero(stats[:, 4] <= pseudopod_min_size)[0]
+                #         pseudopods[np.isin(remainings, fragmented)] = 1
+                # pseudopod_vid[t] = pseudopods
+                # complete_network[pseudopods > 0] = 1
+                # self.network_dynamics[t] = complete_network
 
 
                 imtoshow = self.visu[t, ...]
@@ -1321,12 +1347,13 @@ class MotionAnalysis:
                 net_coord = np.nonzero(self.network_dynamics[t, ...] - eroded_binary)
                 imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
                 if show_seg:
-                    cv2.imshow("", resize(imtoshow, (1000, 1000)))
+                    cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
                     cv2.waitKey(1)
                 else:
                     self.visu[t, ...] = imtoshow
                 if show_seg:
                     cv2.destroyAllWindows()
+
             self.network_dynamics = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
             pseudopod_vid = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
             if self.vars['save_coord_network']:
