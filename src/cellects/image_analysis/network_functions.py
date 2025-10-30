@@ -42,8 +42,20 @@ class  NetworkDetection:
         self.frangi_gamma = 1.
         self.black_ridges = True
 
-    def apply_frangi_variations(self):
-        """Apply 12 variations of Frangi filter"""
+    def apply_frangi_variations(self) -> list:
+        """
+        Applies various Frangi filter variations with different sigma values and thresholding methods.
+
+        This method applies the Frangi vesselness filter with multiple sets of sigma values
+        to detect vessels at different scales. It applies both Otsu thresholding and rolling window
+        segmentation to the filtered results and calculates binary quality indices.
+
+        Returns
+        -------
+        results : list of dict
+            A list containing dictionaries with the method name, binary result, quality index,
+            filtered image, filter type, rolling window flag, and sigma values used.
+        """
         results = []
 
         # Parameter variations for Frangi filter
@@ -98,16 +110,25 @@ class  NetworkDetection:
         return results
 
 
-    def apply_sato_variations(self):
-        """Apply 12 variations of sato filter"""
+    def apply_sato_variations(self) -> list:
+        """
+        Apply various Sato filter variations to an image and store the results.
+
+        This function applies different parameter sets for the Sato vesselness
+        filter to an image, applies two thresholding methods (Otsu and rolling window),
+        and stores the results. The function supports optional rolling window
+        segmentation based on a configuration flag.
+
+        Returns
+        -------
+        list of dict
+            A list containing dictionaries with the results for each filter variation.
+            Each dictionary includes method name, binary image, quality index,
+            filtered result, filter type, rolling window flag, and sigma values.
+        """
         results = []
 
         # Parameter variations for Frangi filter
-        sigmas_list = [
-            [1], [2], [3], [1, 2], [2, 3], [1, 3],
-            [1, 2, 3], [0.5, 1], [1, 4], [0.5, 2],
-            [2, 4], [1, 2, 4]
-        ]
         sato_sigmas = {
             'super_small_tubes': [0.01, 0.05, 0.1, 0.15],  #
             'small_tubes': [0.1, 0.2, 0.4, 0.8],  #
@@ -164,6 +185,25 @@ class  NetworkDetection:
 
 
     def get_best_network_detection_method(self):
+        """
+        Get the best network detection method based on quality metrics.
+
+        This function applies Frangi and Sato variations, combines their results,
+        calculates quality metrics for each result, and selects the best method.
+
+        Attributes
+        ----------
+        all_results : list of dicts
+            Combined results from Frangi and Sato variations.
+        quality_metrics : ndarray of float64
+            Quality metrics for each detection result.
+        best_idx : int
+            Index of the best detection method based on quality metrics.
+        best_result : dict
+            The best detection result from all possible methods.
+        incomplete_network : ndarray of bool
+            Binary representation of the best detection result.
+        """
         frangi_res = self.apply_frangi_variations()
         sato_res = self.apply_sato_variations()
         self.all_results = frangi_res + sato_res
@@ -174,6 +214,13 @@ class  NetworkDetection:
 
 
     def detect_network(self):
+        """
+        Process and detect network features in the greyscale image.
+
+        This method applies a frangi or sato filter based on the best result and
+        performs segmentation using either rolling window or Otsu's thresholding.
+        The final network detection result is stored in `self.incomplete_network`.
+        """
         if self.best_result['filter'] == 'frangi':
             filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'], beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
         else:
@@ -186,33 +233,48 @@ class  NetworkDetection:
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
-    def change_greyscale(self, img, c_space_dict):
-        self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
-
-    def detect_pseudopods(self, lighter_background, pseudopod_min_width=5, pseudopod_min_size=50):
+    def change_greyscale(self, img: NDArray[np.uint8], c_space_dict: dict):
         """
-        Ideas:
-        - Add a floodfill as a function of width
-        a =np.array([
-        [0, 1, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 2, 0, 0, 0, 0],
-        [0, 0, 0, 2, 2, 0, 0, 0],
-        [0, 0, 0, 0, 3, 3, 0, 0],
-        [0, 0, 0, 0, 3, 4, 0, 0],
-        [0, 0, 0, 0, 4, 0, 0, 0],
-        [0, 0, 0, 0, 0, 5, 5, 0],], dtype=np.uint8)
-        b = cv2.dilate(a, cross_33, iterations=1) ---> USe dilate
-        - Increase pseudopod detection when they are detected after and before the current frame
+        Change the image to greyscale using color space combinations.
+
+        This function converts an input image to greyscale by generating
+        and applying a combination of color spaces specified in the dictionary.
+        The resulting greyscale image is stored as an attribute of the instance.
+
         Parameters
         ----------
-        pseudopod_min_size
-
-        Returns
-        -------
+        img : ndarray of uint8
+            The input image to be converted to greyscale.
+        c_space_dict : dict
+            A dictionary where keys are color space names and values
+            are parameters for those color spaces.
 
         """
-        # from timeit import default_timer
-        # tic = default_timer()
+        self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
+
+    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
+        """
+        Detect and extract pseudopods from the image based on given parameters.
+
+        This method performs a series of morphological operations and distance
+        transformations to identify pseudopods in the image. It uses binary
+        dilation, connected components analysis, and thresholding to isolate
+        pseudopod structures.
+
+        Parameters
+        ----------
+        lighter_background : bool
+            Flag indicating whether the background is lighter than the foreground.
+        pseudopod_min_width : int, optional
+            Minimum width of pseudopods to be detected. Default is 5.
+        pseudopod_min_size : int, optional
+            Minimum size of pseudopods to be detected. Default is 50.
+
+        Attributes (modified)
+        ----------------------
+        self.pseudopods : ndarray
+            Updated to reflect the detected pseudopod regions.
+        """
         closed_im = close_holes(self.possibly_filled_pixels)
         dist_trans = distance_transform_edt(closed_im)
         dist_trans = dist_trans.max() - dist_trans
@@ -226,35 +288,15 @@ class  NetworkDetection:
             scored_im = dist_trans * dist_trans_ori * grey
         else:
             scored_im = (dist_trans**2) * grey
-        ## new:
         scored_im = bracket_to_uint8_image_contrast(scored_im)
         thresh = threshold_otsu(scored_im)
         thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=thresh)
         high_int_in_periphery = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
-        ## old
-        # scored_im *= self.possibly_filled_pixels
-        # scored_im = bracket_to_uint8_image_contrast(scored_im)
-        # thresh = threshold_otsu(scored_im[scored_im > 0])
-        # high_int_in_periphery = (scored_im > thresh).astype(np.uint8)
 
         _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
-        # pseudopod_widths = bracket_to_uint8_image_contrast(pseudopod_widths)
-        # while np.any((pseudopod_widths == 0) * bin_im):
-        #     pseudopod_widths = cv2.dilate(bracket_to_uint8_image_contrast(pseudopod_widths), kernel=cross_33, iterations=1)
         bin_im = pseudopod_widths >= pseudopod_min_width
         dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
         bin_im = high_int_in_periphery * dil_bin_im
-
-        # tic = default_timer()
-        # print( tic-tac)
-        # nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
-        # pseud_idx = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-        # potential_pseudopods = np.zeros_like(self.possibly_filled_pixels)
-        # potential_pseudopods[np.isin(shapes, pseud_idx)] = 1
-        #
-        # potential_pseudopods = cv2.dilate(potential_pseudopods, Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
-        # potential_pseudopods *= high_int_in_periphery
-
         nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
         true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
         true_pseudopods = np.isin(shapes, true_pseudopods)
@@ -265,181 +307,83 @@ class  NetworkDetection:
         without_pseudopods = complete_network.copy()
         without_pseudopods[true_pseudopods] = 0
         only_connected_network = keep_one_connected_component(without_pseudopods)
-        self.pseudopods = (1 - only_connected_network) * complete_network
-
-        # tac = default_timer()
-        # print( tac-tic)
-        # show((1 - only_connected_network) * complete_network)
-        # self.pseudopods = np.zeros_like(self.possibly_filled_pixels)
-        # self.pseudopods[true_pseudopods] = 1
-
-        #
-        # new_bin_im = np.zeros_like(self.possibly_filled_pixels)
-        # for sh_i in range(1, nb):
-        #     sh_bin = shapes == sh_i
-        #     if sh_bin.sum() > pseudopod_min_size:
-        #
-        #         sh_im = np.zeros_like(self.possibly_filled_pixels)
-        #         sh_im[sh_bin] = scored_im[sh_bin]
-        #         for th_i in range(thresh + 1, 255):
-        #             bin_sh_im = sh_im > th_i
-        #             SD = ShapeDescriptors(bin_sh_im.astype(np.uint8), ["solidity"])
-        #             if SD.descriptors["solidity"] > 0.5:
-        #                 new_bin_im[bin_sh_im] = 1
-        #                 break
-        # show(self.greyscale_image)
-        # show(new_bin_im)
-        # show(bin_im)
-        # np.ptp(scored_im[scored_im > thresh])
-        # show(scored_im > thresh)
-        # # apply edt, add flood_fill and keep only large
-        # potential_network = np.zeros_like(self.incomplete_network)
-        # y_coord, x_coord = np.nonzero(self.incomplete_network * (dist_trans))
-        # sample_size = np.min([len(y_coord), 500])
-        # samples = np.random.choice(len(y_coord), size=sample_size, replace=False)
-        # y_coord, x_coord = y_coord[samples], x_coord[samples]
-        # for y, x in zip(y_coord, x_coord):
-        #     filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=20)
-        #     filled_pix = filled == 255
-        #     SD = ShapeDescriptors(filled_pix, ["circularity"])
-        #     if SD.circularity > 0.2:
-        #         print(SD.circularity)
-        #         potential_network[filled_pix] = 1
-        # show(potential_network)
-        # potential_network.sum()
-        #
-        #
-        # # This adds a lot of noise in the network instead of only detecting pseudopods
-        # pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
-        # pad_skeleton = pad_skeleton.astype(np.uint8)
-        #
-        # unique_distances = np.unique(pad_distances)
-        # counter = 1
-        # while pad_skeleton.sum() > 1000:
-        #     counter += 1
-        #     width_threshold = unique_distances[counter]
-        #     pad_skeleton[pad_distances < width_threshold] = 0
-        # self.best_result['width_threshold'] = width_threshold
-        # potential_tips = np.nonzero(pad_skeleton)
-        # if lighter_background:
-        #     max_tip_int = self.greyscale_image[potential_tips].max()
-        #     low_pixels = self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
-        # else:
-        #     min_tip_int = self.greyscale_image[potential_tips].min()
-        #     high_pixels = self.greyscale_image >= min_tip_int  # mean_tip_int
-        #
-        # not_in_cell = 1 - self.possibly_filled_pixels
-        # error_threshold = not_in_cell.sum() * 0.01
-        # tolerances = np.arange(150, 0, - 1)
-        # for t_i, tolerance in enumerate(tolerances):
-        #     potential_network = self.incomplete_network.copy()
-        #     for y, x in zip(potential_tips[0],
-        #                     potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
-        #         filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=tolerance)
-        #         filled = filled == 255
-        #         if (filled * not_in_cell).sum() > error_threshold:
-        #             break
-        #         if lighter_background:
-        #             filled *= low_pixels
-        #         else:
-        #             filled *= high_pixels
-        #         potential_network[filled] = 1
-        #     # show(potential_network)
-        #     if not np.array_equal(potential_network, self.incomplete_network):
-        #         break
-        # self.best_result['tolerance'] = tolerance
-        #
-        # complete_network = potential_network * self.possibly_filled_pixels
-        # complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
-        # self.complete_network, stats, centers = cc(complete_network)
-        # self.complete_network[self.complete_network > 1] = 0
+        self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
 
     def merge_network_with_pseudopods(self):
+        """
+        Merge the incomplete network with pseudopods.
+
+        This method combines the incomplete network and pseudopods to form
+        the complete network. The incomplete network is updated by subtracting
+        areas where pseudopods are present.
+        """
         self.complete_network = np.logical_or(self.incomplete_network, self.pseudopods).astype(np.uint8)
         self.incomplete_network *= (1 - self.pseudopods)
 
-    # def detect_pseudopods(self):
-    #     pad_skeleton, pad_distances = morphology.medial_axis(self.incomplete_network, return_distance=True, rng=0)
-    #     pad_skeleton = pad_skeleton.astype(np.uint8)
-    #     pad_skeleton[pad_distances < self.best_result['width_threshold']] = 0
-    #     potential_tips = np.nonzero(pad_skeleton)
-    #     if lighter_background:
-    #         max_tip_int = self.greyscale_image[potential_tips].max()
-    #     else:
-    #         min_tip_int = self.greyscale_image[potential_tips].min()
-    #
-    #     complete_network = self.incomplete_network.copy()
-    #     for y, x in zip(potential_tips[0],
-    #                     potential_tips[1]):  # y, x =potential_tips[0][0], potential_tips[1][0]
-    #         filled = flood_fill(image=self.greyscale_image, seed_point=(y, x), new_value=255, tolerance=self.best_result['tolerance'])
-    #         filled = filled == 255
-    #         if lighter_background:
-    #             filled *= self.greyscale_image <= max_tip_int  # mean_tip_int# max_tip_int
-    #         else:
-    #             filled *= self.greyscale_image >= min_tip_int  # mean_tip_int
-    #         complete_network[filled] = 1
-    #
-    #     # Check that the current parameters do not produce images full of ones
-    #     # If so, update the width_threshold and tolerance parameters
-    #     not_in_cell = 1 - self.possibly_filled_pixels
-    #     error_threshold = not_in_cell.sum() * 0.1
-    #     if (complete_network * not_in_cell).sum() > error_threshold:
-    #         self.get_best_network_detection_method()
-    #     else:
-    #         complete_network = complete_network * self.possibly_filled_pixels
-    #         complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
-    #         self.complete_network, stats, centers = cc(complete_network)
-    #         self.complete_network[self.complete_network > 1] = 0
 
+def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray=None) -> Tuple[NDArray[np.uint8], NDArray[np.uint8], NDArray[np.uint8]]:
+    """
+    Get skeleton and widths from a network.
 
-def get_skeleton_and_widths(pad_network, pad_origin=None, pad_origin_centroid=None):
+    This function computes the morphological skeleton of a network and calculates
+    the distances to the closest zero pixel for each non-zero pixel using medial_axis.
+    If pad_origin is provided, it adds a central contour. Finally, the function
+    removes small loops and keeps only one connected component.
+
+    Parameters
+    ----------
+    pad_network : ndarray of uint8
+        The binary pad network image.
+    pad_origin : ndarray of uint8, optional
+        An array indicating the origin for adding central contour.
+    pad_origin_centroid : ndarray, optional
+        The centroid of the pad origin. Defaults to None.
+
+    Returns
+    -------
+    out : tuple(ndarray of uint8, ndarray of uint8, ndarray of uint8)
+        A tuple containing:
+        - pad_skeleton: The skeletonized image.
+        - pad_distances: The distances to the closest zero pixel.
+        - pad_origin_contours: The contours of the central origin, or None if not
+          used.
+
+    Examples
+    --------
+    >>> pad_network = np.array([[0, 1], [1, 0]])
+    >>> skeleton, distances, contours = get_skeleton_and_widths(pad_network)
+    >>> print(skeleton)
+    """
     pad_skeleton, pad_distances = morphology.medial_axis(pad_network, return_distance=True, rng=0)
     pad_skeleton = pad_skeleton.astype(np.uint8)
     if pad_origin is not None:
         pad_skeleton, pad_distances, pad_origin_contours = add_central_contour(pad_skeleton, pad_distances, pad_origin, pad_network, pad_origin_centroid)
     else:
         pad_origin_contours = None
-        # a = pad_skeleton[821:828, 643:649]
-        # new_skeleton2[821:828, 643:649]
     pad_skeleton, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
-
-    # width = 10
-    # pad_skeleton[pad_distances > width] = 0
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_distances *= pad_skeleton
-    # print(pad_skeleton.sum())
     return pad_skeleton, pad_distances, pad_origin_contours
-    # width = 10
-    # skel_size  = skeleton.sum()
-    # while width > 0 and skel_size > skeleton.sum() * 0.75:
-    #     width -= 1
-    #     skeleton = skeleton.copy()
-    #     skeleton[distances > width] = 0
-    #     # Only keep the largest connected component
-    #     skeleton, stats, _ = cc(skeleton)
-    #     skeleton[skeleton > 1] = 0
-    #     skel_size = skeleton.sum()
-    # skeleton = pad_skeleton.copy()
-    # Remove the origin
 
-def remove_small_loops(pad_skeleton, pad_distances=None):
+
+def remove_small_loops(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64]=None):
     """
-    New version:
-    New rule to add: when there is the pattern
-    [[x, 1, x],
-    [1, 0, 1],
-    [x, 1, x]]
-    Add 1 at the center when all other 1 are 3 connected
-    Otherwise, just remove the 1 that are 2 connected
+    Remove small loops from a skeletonized image.
 
-    Previous version:
-    When zeros are surrounded by 4-connected ones and only contain 0 on their diagonal, replace 1 by 0
-    and put 1 in the center
+    This function identifies and removes small loops in a skeletonized image, returning the modified skeleton. If distance information is provided, it updates that as well.
 
+    Parameters
+    ----------
+    pad_skeleton : ndarray of uint8
+        The skeletonized image with potential small loops.
+    pad_distances : ndarray of float64, optional
+        The distance map corresponding to the skeleton image. Default is `None`.
 
-
-    :param pad_skeleton:
-    :return:
+    Returns
+    -------
+    out : ndarray of uint8 or tuple(ndarray of uint8, ndarray of float64)
+        If `pad_distances` is None, returns the modified skeleton. Otherwise,
+        returns a tuple of the modified skeleton and updated distances.
     """
     cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
     # potential_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
@@ -476,7 +420,28 @@ def remove_small_loops(pad_skeleton, pad_distances=None):
         return pad_skeleton, pad_distances
 
 
-def get_neighbor_comparisons(pad_skeleton):
+def get_neighbor_comparisons(pad_skeleton: NDArray[np.uint8]) -> Tuple[object, object]:
+    """
+    Get neighbor comparisons for a padded skeleton.
+
+    This function creates two `CompareNeighborsWithValue` objects with different
+    neighborhood sizes (4 and 8) and checks if the neighbors are equal to 1. It
+    returns both comparison objects.
+
+    Parameters
+    ----------
+    pad_skeleton : ndarray of uint8
+        The input padded skeleton array.
+
+    Returns
+    -------
+    out : tuple of CompareNeighborsWithValue, CompareNeighborsWithValue
+        Two comparison objects for 4 and 8 neighbors.
+
+    Examples
+    --------
+    >>> cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
+    """
     cnv4 = CompareNeighborsWithValue(pad_skeleton, 4)
     cnv4.is_equal(1, and_itself=True)
     cnv8 = CompareNeighborsWithValue(pad_skeleton, 8)
@@ -484,12 +449,22 @@ def get_neighbor_comparisons(pad_skeleton):
     return cnv4, cnv8
 
 
-def get_vertices_and_tips_from_skeleton(pad_skeleton):
+def get_vertices_and_tips_from_skeleton(pad_skeleton: NDArray[np.uint8]) -> Tuple[NDArray[np.uint8], NDArray[np.uint8]]:
     """
-    Find the vertices from a skeleton according to the following rules:
-    - Network terminations at the border are nodes
-    - The 4-connected nodes have priority over 8-connected nodes
-    :return:
+    Get vertices and tips from a padded skeleton.
+
+    This function identifies the vertices and tips of a skeletonized image.
+    Tips are endpoints of the skeleton while vertices include tips and points where three or more edges meet.
+
+    Parameters
+    ----------
+    pad_skeleton : ndarray of uint8
+        Input skeleton image that has been padded.
+
+    Returns
+    -------
+    out : tuple (ndarray of uint8, ndarray of uint8)
+        Tuple containing arrays of vertex points and tip points.
     """
     cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
     potential_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
@@ -497,7 +472,32 @@ def get_vertices_and_tips_from_skeleton(pad_skeleton):
     return pad_vertices, pad_tips
 
 
-def get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8):
+def get_terminations_and_their_connected_nodes(pad_skeleton: NDArray[np.uint8], cnv4: object, cnv8: object) -> NDArray[np.uint8]:
+    """
+    Get terminations in a skeleton and their connected nodes.
+
+    This function identifies termination points in a padded skeleton array
+    based on pixel connectivity, marking them and their connected nodes.
+
+    Parameters
+    ----------
+    pad_skeleton : ndarray of uint8
+        The padded skeleton array where terminations are to be identified.
+    cnv4 : object
+        Convolution object with 4-connectivity for neighbor comparison.
+    cnv8 : object
+        Convolution object with 8-connectivity for neighbor comparison.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        Array containing marked terminations and their connected nodes.
+
+    Examples
+    --------
+    >>> result = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
+    >>> print(result)
+    """
     # All pixels having only one neighbor, and containing the value 1, are terminations for sure
     potential_tips = np.zeros(pad_skeleton.shape, dtype=np.uint8)
     potential_tips[cnv8.equal_neighbor_nb == 1] = 1

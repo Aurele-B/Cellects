@@ -432,7 +432,7 @@ def smallest_memory_array(array_object, array_type='uint') -> NDArray:
     """
     if isinstance(array_object, list):
         array_object = np.array(array_object)
-    if isinstance(array_object, NDArray):
+    if isinstance(array_object, np.ndarray):
         value_max = array_object.max()
     else:
 

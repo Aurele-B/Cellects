@@ -25,6 +25,7 @@ from cellects.image_analysis.morphological_operations import cross_33, Ellipse, 
     expand_until_neighbor_center_gets_nearer_than_own, get_line_points
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.utils.load_display_save import read_and_rotate
 
 
 class OneVideoPerBlob:

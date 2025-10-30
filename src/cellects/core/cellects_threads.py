@@ -21,8 +21,9 @@ import numpy as np
 import pandas as pd
 from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
 from cellects.utils.load_display_save import read_and_rotate
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.utils.load_display_save import write_video
@@ -578,7 +579,7 @@ class OneArenaThread(QtCore.QThread):
         self._isRunning = True
         self.message_from_thread_starting.emit("Video loading, wait...")
 
-        self.set_current_folder() #DOIT être fait à chaque écriture
+        self.set_current_folder()
         print(self.parent().po.vars['convert_for_motion'])
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
@@ -609,10 +610,7 @@ class OneArenaThread(QtCore.QThread):
         self._isRunning = False
 
     def set_current_folder(self):
-        # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
-        #     self.parent().po.all['folder_number'] = 1
-        # self.parent().po.look_for_data()
-        if self.parent().po.all['folder_number'] > 1: # len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
+        if self.parent().po.all['folder_number'] > 1:
             logging.info(f"Use {self.parent().po.all['folder_list'][0]} folder")
             self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
                                               self.parent().po.all['folder_list'][0])
@@ -620,31 +618,10 @@ class OneArenaThread(QtCore.QThread):
             curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
             logging.info(f"Use {curr_path} folder")
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
-        # logging.info("Look for images/videos data")
-        # self.parent().po.look_for_data()
-        # if len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
-        #     logging.info("Update sub-folder")
-        #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
-        #                                       self.parent().po.all['folder_list'][0])
-        # else:
-        #     self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
 
     def pre_processing(self):
         logging.info("Pre-processing has started")
         analysis_status = {"continue": True, "message": ""}
-        # Thinds to save and load here:
-        # situations : 1° on a tout fait et osed de succeed to load
-        # if not self.parent().po.first_exp_ready_to_run réglé
-        # 2° on a rien fait et succeed
-        # 3° on a rien fait et non succeed
-        # 4° Ce dosser n'est pas le premier'
-        # if self.parent().po.succeed_to_data_to_run_cellects_quickly:
-        #     self.message_from_thread_starting.emit(f"Do image analysis first, by clicking Next on the first window")
-        # if not self.parent().po.all['overwrite_cellects_data'] and os.path.isfile(f'Data to run Cellects quickly.pkl'):
-        #     success = self.parent().po.load_data_to_run_cellects_quickly()
-        #     if not success:
-        #         self.message_from_thread_starting.emit(f"Do image analysis first, by clicking Next on the first window")
-        # else:
 
         self.parent().po.get_first_image()
         self.parent().po.fast_image_segmentation(is_first_image=True)
@@ -662,7 +639,6 @@ class OneArenaThread(QtCore.QThread):
                 self.parent().po.data_to_save['exif'] = True
                 self.parent().po.save_data_to_run_cellects_quickly()
                 self.parent().po.data_to_save['exif'] = False
-                # self.parent().po.extract_exif()
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
@@ -671,7 +647,6 @@ class OneArenaThread(QtCore.QThread):
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_image_segmentation(False)
-                    # self.parent().po.type_csc_dict()
                     self.parent().po.find_if_lighter_backgnp.round()
                     logging.info("The current (or the first) folder is ready to run")
                     self.parent().po.first_exp_ready_to_run = True
@@ -749,6 +724,17 @@ class OneArenaThread(QtCore.QThread):
                                                                                          second_dict,background,background2,
                                                                                          self.parent().po.vars[
                                                                                              'lose_accuracy_to_save_memory'])
+
+                    if self.parent().po.vars['filter_spec'] is not None and self.parent().po.vars['filter_spec']['filter1_type'] != "":
+                        greyscale_image = apply_filter(greyscale_image,
+                                                       self.parent().po.vars['filter_spec']['filter1_type'],
+                                                       self.parent().po.vars['filter_spec']['filter1_param'],
+                                                       self.parent().po.vars['lose_accuracy_to_save_memory'])
+                        if greyscale_image2 is not None and self.parent().po.vars['filter_spec']['filter2_type'] != "":
+                            greyscale_image2 = apply_filter(greyscale_image2,
+                                                            self.parent().po.vars['filter_spec']['filter2_type'],
+                                                            self.parent().po.vars['filter_spec']['filter2_param'],
+                                                            self.parent().po.vars['lose_accuracy_to_save_memory'])
                     self.parent().po.converted_video[image_i, ...] = greyscale_image
                     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                         self.parent().po.converted_video2[image_i, ...] = greyscale_image2
