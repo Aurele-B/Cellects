@@ -319,7 +319,30 @@ class  NetworkDetection:
         ----------------------
         self.pseudopods : ndarray
             Updated to reflect the detected pseudopod regions.
+
+        Examples
+        --------
+        >>> possibly_filled_pixels = np.random.randint(0, 2, dims, dtype=np.uint8)
+        >>> possibly_filled_pixels = keep_one_connected_component(possibly_filled_pixels)
+        >>> origin_to_add = np.zeros(dims, dtype=np.uint8)
+        >>> mid = dims[0] // 2
+        >>> ite = 2
+        >>> while not origin_to_add.any():
+        >>>     ite += 1
+        >>>     origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
+        >>> greyscale_image = possibly_filled_pixels.copy()
+        >>> greyscale_image[greyscale_image > 0] = np.random.randint(200, 255, possibly_filled_pixels.sum())
+        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 50, possibly_filled_pixels.size - possibly_filled_pixels.sum())
+        >>> add_rolling_window = False
+        >>> NetDet = NetworkDetection(greyscale_image, possibly_filled_pixels, add_rolling_window, origin_to_add)
+        >>> NetDet.get_best_network_detection_method()
+        >>> lighter_background = True
+        >>> pseudopod_min_width = 1
+        >>> pseudopod_min_size = 3
+        >>> NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
+        >>> print(NetDet.pseudopods)
         """
+
         closed_im = close_holes(self.possibly_filled_pixels)
         dist_trans = distance_transform_edt(closed_im)
         dist_trans = dist_trans.max() - dist_trans
@@ -724,38 +747,78 @@ def get_branches_and_tips_coord(pad_vertices: NDArray[np.uint8], pad_tips: NDArr
 
 
 class EdgeIdentification:
-    def __init__(self, pad_skeleton):
+    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64]):
         self.pad_skeleton = pad_skeleton
+        self.pad_distances = pad_distances
         self.remaining_vertices = None
         self.vertices = None
         self.growing_vertices = None
         self.im_shape = pad_skeleton.shape
 
+    def run_edge_identification(self):
+        self.get_vertices_and_tips_coord()
+        self.get_tipped_edges()
+        self.remove_tipped_edge_smaller_than_branch_width()
+        self.label_tipped_edges_and_their_vertices()
+        self.identify_all_other_edges()
+        self.remove_edge_duplicates()
+        self.remove_vertices_connecting_2_edges()
+
     def get_vertices_and_tips_coord(self):
+        """Process skeleton data to extract non-tip vertices and tip coordinates.
+
+        This method processes the skeleton stored in `self.pad_skeleton` by first
+        extracting all vertices and tips. It then separates these into branch points
+        (non-tip vertices) and specific tip coordinates using internal processing.
+
+        Attributes
+        ----------
+        self.non_tip_vertices : array-like
+            Coordinates of non-tip (branch) vertices.
+        self.tips_coord : array-like
+            Coordinates of identified tips in the skeleton.
+        """
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(self.pad_skeleton)
         self.non_tip_vertices, self.tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
 
     def get_tipped_edges(self):
+        """
+        get_tipped_edges : method to extract skeleton edges connecting branching points and tips.
+
+        Makes sure that there is only one connected component constituting the skeleton of the network and
+        identifies all edges that are connected to a tip.
+
+        Attributes
+        ----------
+        pad_skeleton : ndarray of bool, modified
+            Boolean mask representing the pruned skeleton after isolating the largest connected component.
+        vertices_branching_tips : ndarray of int, shape (N, 2)
+            Coordinates of branching points that connect to tips in the skeleton structure.
+        edge_lengths : ndarray of float, shape (M,)
+            Lengths of edges connecting non-tip vertices to identified tip locations.
+        edge_pix_coord : list of array of int
+            Pixel coordinates for each edge path between connected skeleton elements.
+
+        """
         self.pad_skeleton = keep_one_connected_component(self.pad_skeleton)
         self.vertices_branching_tips, self.edge_lengths, self.edge_pix_coord = find_closest_vertices(self.pad_skeleton,
                                                                                         self.non_tip_vertices,
                                                                                         self.tips_coord[:, :2])
 
-    def remove_tipped_edge_smaller_than_branch_width(self, pad_distances):
-        """
-        Problem: when an edge is removed and its branching vertex is not anymore a vertex,
-        if another tipped edge was connected to this vertex, its length, pixel coord, and branching v are wrong.
-        Solution, re-run self.get_tipped_edges() after that
+    def remove_tipped_edge_smaller_than_branch_width(self):
+        """Remove very short edges from the skeleton.
 
-        a=pad_skeleton.copy()
-        a[self.tips_coord[:, 0],self.tips_coord[:, 1]] = 2
-        aa=a[632:645, 638:651]
-        Yt,Xt=632+10,638+1
-        np.nonzero(np.all(self.tips_coord[:, :2] == [t1Y, t1X], axis=1))
-        np.nonzero(np.all(self.tips_coord[:, :2] == [t2Y, t2X], axis=1))
-        i = 3153
+        This method focuses on edges connecting tips. When too short, they are considered are noise and
+        removed from the skeleton and distances matrices. These edges are considered too short when their length is
+        smaller than the width of the nearest network branch (an information included in pad_distances).
+        This method also updates internal data structures (skeleton, edge coordinates, vertex/tip positions)
+        accordingly through pixel-wise analysis and connectivity checks.
+
+        Parameters
+        ----------
+        pad_distances : ndarray of float64
+            2D array containing the network width (in pixels) at each position occupyed by the skeleton
         """
-        self.pad_distances = pad_distances
         # Identify edges that are smaller than the width of the branch it is attached to
         tipped_edges_to_remove = np.zeros(self.edge_lengths.shape[0], dtype=bool)
         # connecting_vertices_to_remove = np.zeros(self.vertices_branching_tips.shape[0], dtype=bool)
@@ -766,7 +829,7 @@ class EdgeIdentification:
             Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
             edge_bool = self.edge_pix_coord[:, 2] == i + 1
             eY, eX = self.edge_pix_coord[edge_bool, 0], self.edge_pix_coord[edge_bool, 1]
-            if np.nanmax(pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
+            if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
                 tipped_edges_to_remove[i] = True
                 # Remove the edge
                 self.pad_skeleton[eY, eX] = 0
@@ -837,6 +900,32 @@ class EdgeIdentification:
         self.get_tipped_edges()
 
     def label_tipped_edges_and_their_vertices(self):
+        """Label edges connecting tip vertices to branching vertices and assign unique labels to all relevant vertices.
+
+        Processes vertex coordinates by stacking tips, vertices branching from tips, and remaining non-tip vertices.
+        Assigns unique sequential identifiers to these vertices in a new array. Constructs an array of edge-label information,
+        where each row contains the edge label (starting at 1), corresponding tip label, and connected vertex label.
+
+        Attributes
+        ----------
+        tip_number : int
+            The number of tip coordinates available in `tips_coord`.
+
+        ordered_v_coord : ndarray of float
+            Stack of unique vertex coordinates ordered by: tips first, vertices branching tips second, non-tip vertices third.
+
+        numbered_vertices : ndarray of uint32
+            2D array where each coordinate position is labeled with a sequential integer (starting at 1) based on the order in `ordered_v_coord`.
+
+        edges_labels : ndarray of uint32
+            Array of shape (n_edges, 3). Each row contains:
+            - Edge label (sequential from 1 to n_edges)
+            - Label of the tip vertex for that edge.
+            - Label of the vertex branching the tip.
+
+        vertices_branching_tips : ndarray of float
+            Unique coordinates of vertices directly connected to tips after removing duplicates.
+        """
         self.tip_number = self.tips_coord.shape[0]
 
         # Stack vertex coordinates in that order: 1. Tips, 2. Vertices branching tips, 3. All remaining vertices

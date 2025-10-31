@@ -19,17 +19,19 @@ class TestNetworkDetectionApplyFrangiVariations(CellectsUnitTest):
     def setUpClass(cls):
         """Setup test fixtures."""
         super().setUpClass()
-        cls.possibly_filled_pixels = np.zeros((9, 9), dtype=np.uint8)
-        cls.possibly_filled_pixels[3:6, 3:6] = 1
-        cls.possibly_filled_pixels[1:6, 3] = 1
-        cls.possibly_filled_pixels[6:-1, 5] = 1
-        cls.possibly_filled_pixels[4, 1:-1] = 1
+        cls.dims = (100, 100)
+        cls.possibly_filled_pixels = np.random.randint(0, 2, cls.dims, dtype=np.uint8)
+        cls.possibly_filled_pixels = keep_one_connected_component(cls.possibly_filled_pixels)
+        cls.origin_to_add = np.zeros(cls.dims, dtype=np.uint8)
+        mid = cls.dims[0] // 2
+        ite = 2
+        while not cls.origin_to_add.any():
+            ite += 1
+            cls.origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = cls.possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
         cls.greyscale_image = cls.possibly_filled_pixels.copy()
         cls.greyscale_image[cls.greyscale_image > 0] = np.random.randint(170, 255, cls.possibly_filled_pixels.sum())
         cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum())
         cls.add_rolling_window=False
-        cls.origin_to_add = np.zeros((9, 9), dtype=np.uint8)
-        cls.origin_to_add[3:6, 3:6] = 1
         cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
                                       cls.origin_to_add)
         cls.NetDet.get_best_network_detection_method()
@@ -63,6 +65,116 @@ class TestNetworkDetectionApplyFrangiVariations(CellectsUnitTest):
         and less than the maximum"""
         self.assertTrue(self.origin_to_add.sum() <= self.NetDet.best_result['binary'].sum() < self.possibly_filled_pixels.size)
 
+    def test_detect_network_basic_result(self):
+        """Check that detect network finds an identical result using the best_result argument"""
+        NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
+                                       add_rolling_window=self.add_rolling_window,
+                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
+        NetDet_fast.detect_network()
+        self.assertTrue(np.array_equal(NetDet_fast.incomplete_network, self.NetDet.incomplete_network))
+
+    def test_change_greyscale(self):
+        """Check that change greyscale function works"""
+        img = np.random.randint(255, size=(self.dims[0], self.dims[1], 3), dtype=np.uint8)
+        c_space_dict = {"hsv": np.array([0, 1, 0])}
+        previous_greyscale = self.greyscale_image.copy()
+        self.NetDet.change_greyscale(img, c_space_dict)
+        self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))
+
+    def test_detect_pseudopods(self):
+        """Check that change greyscale function works"""
+        lighter_background = True
+        pseudopod_min_width = 1
+        pseudopod_min_size = 3
+        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
+        self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
+
+    def test_merge_network_with_pseudopods(self):
+        """Check that change greyscale function works"""
+        self.NetDet.merge_network_with_pseudopods()
+        expected_complete_network = np.logical_or(self.NetDet.incomplete_network, self.NetDet.pseudopods).astype(np.uint8)
+        expected_incomplete_network = self.NetDet.incomplete_network * (1 - self.NetDet.pseudopods)
+        self.assertTrue(np.array_equal(self.NetDet.complete_network, expected_complete_network))
+        self.assertTrue(np.array_equal(self.NetDet.incomplete_network, expected_incomplete_network))
+
+
+class TestGetSkeletonAndWidths(CellectsUnitTest):
+    """Test suite for get_skeleton_and_widths() skeletonization functionality"""
+
+    def test_get_skeleton_valid_input(self):
+        """Test basic skeletonization with valid input array"""
+        # Setup: Create a simple 3x3 binary network pattern
+        pad_network = np.array([[0, 1, 0],
+                                [1, 1, 1],
+                                [0, 1, 0]], dtype=np.uint8)
+
+        # Execute function with default parameters
+        skeleton, distances, contours = get_skeleton_and_widths(pad_network)
+
+        # Verify output structure and types
+        self.assertIsInstance(skeleton, np.ndarray)
+        self.assertEqual(skeleton.dtype, np.uint8)
+        self.assertIsInstance(distances, np.ndarray)
+        self.assertIsNone(contours)
+
+        # Basic shape validation (should maintain original dimensions)
+        self.assertEqual(skeleton.shape, pad_network.shape)
+
+    def test_skeleton_with_pad_origin(self):
+        """Test skeletonization with optional origin parameter"""
+        # Test pattern where we can verify origin contour handling
+        network = np.ones((5, 5), dtype=np.uint8)
+        pad_network = _pad(network)
+        pad_origin = np.zeros_like(pad_network)
+        pad_origin_centroid = np.array((2, 2))
+        pad_origin[pad_origin_centroid[0], pad_origin_centroid[1]] = 1
+
+        skeleton, distances, contours = get_skeleton_and_widths(
+            pad_network, pad_origin, pad_origin_centroid)
+
+        self.assertIsNotNone(contours)
+        # Expect the origin contour to be a subset of the original network
+        self.assertTrue(np.all(contours <= pad_origin))
+
+    def test_empty_network(self):
+        """Test skeletonization with empty input array"""
+        empty_array = np.zeros((10, 10), dtype=np.uint8)
+
+        # Should return all-zero arrays without errors
+        skeleton, distances, contours = get_skeleton_and_widths(empty_array)
+
+        self.assertTrue(np.all(skeleton == 0))
+        self.assertTrue(np.all(distances == 0))
+        self.assertIsNone(contours)
+
+    def test_single_pixel_network(self):
+        """Test edge case with single pixel network"""
+        single_pixel = np.zeros((3, 3), dtype=np.uint8)
+        single_pixel[1, 1] = 1
+
+        skeleton, distances, contours = get_skeleton_and_widths(single_pixel)
+
+        self.assertEqual(np.sum(skeleton), 1)  # Should preserve the single pixel
+        self.assertTrue(np.all(distances[skeleton == 0] == 0))
+
+    def test_skeleton_connectivity(self):
+        """Test that only one connected component is preserved"""
+        # Create a pattern with two separate components
+        pad_network = np.zeros((6, 6), dtype=np.uint8)
+        pad_network[1:3, 1:3] = 1  # Top-left quadrant
+        pad_network[2:4, 2:4] = 1  # Center quadrant
+        pad_network[3:5, 3:5] = 1    # Bottom-right quadrant
+
+        skeleton, _, _ = get_skeleton_and_widths(pad_network)
+
+        expected = np.array([[0, 0, 0, 0, 0, 0],
+                                   [0, 1, 0, 0, 0, 0],
+                                   [0, 0, 1, 0, 0, 0],
+                                   [0, 0, 0, 1, 0, 0],
+                                   [0, 0, 0, 0, 1, 0],
+                                   [0, 0, 0, 0, 0, 0]], dtype=np.uint8)
+
+        self.assertTrue(np.array_equal(skeleton, expected))  # background + single component
 
 
 class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
@@ -851,6 +963,11 @@ class TestGetBranchesAndTipsCoord(unittest.TestCase):
         ], dtype=np.uint8)
 
         self.assertTrue(np.array_equal(vt_map, target))
+
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
