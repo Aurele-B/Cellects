@@ -1,20 +1,7 @@
-# tests/test_network_functions_converted.py
-import unittest
-import numpy as np
-import cv2
 
-from cellects.image_analysis.network_functions import (
-    cross_33,
-    get_neighbor_comparisons,
-    get_terminations_and_their_connected_nodes,
-    get_inner_vertices,
-    get_vertices_and_tips_from_skeleton,
-    get_branches_and_tips_coord,
-    remove_small_loops,
-    remove_padding,
-    find_closest_vertices,
-    keep_one_connected_component,
-)
+import unittest
+from cellects.image_analysis.network_functions import *
+from tests._base import CellectsUnitTest
 
 # --- Small helpers -----------------------------------------------------------
 
@@ -25,6 +12,58 @@ def _unpad(arr):
     return arr[1:-1, 1:-1]
 
 # --- Tests -------------------------------------------------------------------
+
+class TestNetworkDetectionApplyFrangiVariations(CellectsUnitTest):
+    """Test suite for apply_frangi_variations() method"""
+    @classmethod
+    def setUpClass(cls):
+        """Setup test fixtures."""
+        super().setUpClass()
+        cls.possibly_filled_pixels = np.zeros((9, 9), dtype=np.uint8)
+        cls.possibly_filled_pixels[3:6, 3:6] = 1
+        cls.possibly_filled_pixels[1:6, 3] = 1
+        cls.possibly_filled_pixels[6:-1, 5] = 1
+        cls.possibly_filled_pixels[4, 1:-1] = 1
+        cls.greyscale_image = cls.possibly_filled_pixels.copy()
+        cls.greyscale_image[cls.greyscale_image > 0] = np.random.randint(170, 255, cls.possibly_filled_pixels.sum())
+        cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum())
+        cls.add_rolling_window=False
+        cls.origin_to_add = np.zeros((9, 9), dtype=np.uint8)
+        cls.origin_to_add[3:6, 3:6] = 1
+        cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
+                                      cls.origin_to_add)
+        cls.NetDet.get_best_network_detection_method()
+
+    def test_get_best_network_detection_method_outputs_proper_method(self):
+        """Check that best network detection method outputs proper method"""
+        self.assertTrue(isinstance(self.NetDet.best_result['method'], str))
+
+    def test_get_best_network_detection_method_outputs_proper_binary_image(self):
+        """Check that best network detection method outputs proper binary image"""
+        self.assertTrue(isinstance(self.NetDet.best_result['binary'], np.ndarray))
+
+    def test_get_best_network_detection_method_outputs_proper_quality(self):
+        """Check that best network detection method outputs proper quality"""
+        self.assertTrue(isinstance(self.NetDet.best_result['quality'], np.float64))
+
+    def test_get_best_network_detection_method_outputs_proper_filtered_image(self):
+        """Check that best network detection method outputs proper filtered image"""
+        self.assertTrue(isinstance(self.NetDet.best_result['filtered'], np.ndarray))
+
+    def test_get_best_network_detection_method_outputs_proper_rolling_window_option(self):
+        """Check that best network detection method outputs proper rolling window option"""
+        self.assertTrue(isinstance(self.NetDet.best_result['rolling_window'], bool))
+
+    def test_get_best_network_detection_method_outputs_proper_sigmas(self):
+        """Check that best network detection method outputs proper sigmas"""
+        self.assertTrue(isinstance(self.NetDet.best_result['sigmas'], list))
+
+    def test_get_best_network_detection_method_finds_consistent_result(self):
+        """Check that best network detection method finds a result that contains more ones than the origin image
+        and less than the maximum"""
+        self.assertTrue(self.origin_to_add.sum() <= self.NetDet.best_result['binary'].sum() < self.possibly_filled_pixels.size)
+
+
 
 class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
     def test_various_patterns(self):

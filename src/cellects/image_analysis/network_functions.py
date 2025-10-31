@@ -32,7 +32,29 @@ neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
 
 class  NetworkDetection:
-    def __init__(self, greyscale_image, possibly_filled_pixels, add_rolling_window=False, origin_to_add=None, best_result=None):
+    """
+    NetworkDetection
+
+    Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
+    It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
+    """
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8], add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
+        """
+        Initialize the object with given parameters.
+
+        Parameters
+        ----------
+        greyscale_image : NDArray[np.uint8]
+            The input greyscale image.
+        possibly_filled_pixels : NDArray[np.uint8]
+            Image containing possibly filled pixels.
+        add_rolling_window : bool, optional
+            Flag to add rolling window. Defaults to False.
+        origin_to_add : NDArray[np.uint8], optional
+            Origin to add. Defaults to None.
+        best_result : dict, optional
+            Best result dictionary. Defaults to None.
+        """
         self.greyscale_image = greyscale_image
         self.possibly_filled_pixels = possibly_filled_pixels
         self.best_result = best_result
@@ -183,7 +205,6 @@ class  NetworkDetection:
 
         return results
 
-
     def get_best_network_detection_method(self):
         """
         Get the best network detection method based on quality metrics.
@@ -203,6 +224,30 @@ class  NetworkDetection:
             The best detection result from all possible methods.
         incomplete_network : ndarray of bool
             Binary representation of the best detection result.
+
+        Examples
+        ----------
+        >>> possibly_filled_pixels = np.zeros((9, 9), dtype=np.uint8)
+        >>> possibly_filled_pixels[3:6, 3:6] = 1
+        >>> possibly_filled_pixels[1:6, 3] = 1
+        >>> possibly_filled_pixels[6:-1, 5] = 1
+        >>> possibly_filled_pixels[4, 1:-1] = 1
+        >>> greyscale_image = possibly_filled_pixels.copy()
+        >>> greyscale_image[greyscale_image > 0] = np.random.randint(170, 255, possibly_filled_pixels.sum())
+        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 120, possibly_filled_pixels.size - possibly_filled_pixels.sum())
+        >>> add_rolling_window=False
+        >>> origin_to_add = np.zeros((9, 9), dtype=np.uint8)
+        >>> origin_to_add[3:6, 3:6] = 1
+        >>> NetDet = NetworkDetection(greyscale_image, possibly_filled_pixels, add_rolling_window, origin_to_add)
+        >>> NetDet.get_best_network_detection_method()
+        >>> print(NetDet.best_result['method'])
+        >>> print(NetDet.best_result['binary'])
+        >>> print(NetDet.best_result['quality'])
+        >>> print(NetDet.best_result['filtered'])
+        >>> print(NetDet.best_result['filter'])
+        >>> print(NetDet.best_result['rolling_window'])
+        >>> print(NetDet.best_result['sigmas'])
+        bgr_image = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
         """
         frangi_res = self.apply_frangi_variations()
         sato_res = self.apply_sato_variations()
@@ -370,7 +415,8 @@ def remove_small_loops(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[n
     """
     Remove small loops from a skeletonized image.
 
-    This function identifies and removes small loops in a skeletonized image, returning the modified skeleton. If distance information is provided, it updates that as well.
+    This function identifies and removes small loops in a skeletonized image, returning the modified skeleton.
+    If distance information is provided, it updates that as well.
 
     Parameters
     ----------
@@ -531,12 +577,34 @@ def get_terminations_and_their_connected_nodes(pad_skeleton: NDArray[np.uint8], 
     return potential_tips
 
 
-def get_inner_vertices(pad_skeleton, potential_tips, cnv4, cnv8): # potential_tips=pad_tips
+def get_inner_vertices(pad_skeleton: NDArray[np.uint8], potential_tips: NDArray[np.uint8], cnv4: object, cnv8: object) -> Tuple[NDArray[np.uint8], NDArray[np.uint8]]: # potential_tips=pad_tips
     """
-    1. Find connected vertices using the number of 8-connected neighbors
-    2. The ones having 3 neighbors:
-        - are connected when in the neighborhood of the 3, there is at least a 2 (in 8) that is 0 (in 4), and not a termination
-        but this, only when it does not create an empty cross.... To do
+    Get inner vertices from skeleton image.
+
+    This function identifies and returns the inner vertices of a skeletonized image.
+    It processes potential tips to determine which pixels should be considered as
+    vertices based on their neighbor count and connectivity.
+
+    Parameters
+    ----------
+    pad_skeleton : ndarray of uint8
+        The padded skeleton image.
+    potential_tips : ndarray of uint8, optional
+        Potential tip points in the skeleton. Defaults to pad_tips.
+    cnv4 : object
+        Object for handling 4-connections.
+    cnv8 : object
+        Object for handling 8-connections.
+
+    Returns
+    -------
+    out : tuple of ndarray of uint8, ndarray of uint8
+        A tuple containing the final vertices matrix and the updated potential tips.
+
+    Examples
+    --------
+    >>> pad_vertices, potential_tips = get_inner_vertices(pad_skeleton, potential_tips)
+    >>> print(pad_vertices)
     """
 
     # Initiate the vertices final matrix as a copy of the potential_tips
@@ -622,7 +690,33 @@ def get_inner_vertices(pad_skeleton, potential_tips, cnv4, cnv8): # potential_ti
     return pad_vertices, potential_tips
 
 
-def get_branches_and_tips_coord(pad_vertices, pad_tips):
+def get_branches_and_tips_coord(pad_vertices: NDArray[np.uint8], pad_tips: NDArray[np.uint8]) -> Tuple[NDArray, NDArray]:
+    """
+    Extracts the coordinates of branches and tips from vertices and tips binary images.
+
+    This function calculates branch coordinates by subtracting
+    tips from vertices. Then it finds and outputs the non-zero indices of branches and tips separatly.
+
+    Parameters
+    ----------
+    pad_vertices : ndarray
+        Array containing the vertices to be padded.
+    pad_tips : ndarray
+        Array containing the tips of the padding.
+
+    Returns
+    -------
+    branch_v_coord : ndarray
+        Coordinates of branches derived from subtracting tips from vertices.
+    tips_coord : ndarray
+        Coordinates of the tips.
+
+    Examples
+    --------
+    >>> branch_v, tip_c = get_branches_and_tips_coord(pad_vertices, pad_tips)
+    >>> branch_v
+    >>> tip_c
+    """
     pad_branches = pad_vertices - pad_tips
     branch_v_coord = np.transpose(np.array(np.nonzero(pad_branches)))
     tips_coord = np.transpose(np.array(np.nonzero(pad_tips)))
