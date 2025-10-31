@@ -1384,14 +1384,15 @@ class MotionAnalysis:
             pad_origin_centroid = origin_centroid + 1
             pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
                                                                                        pad_origin_centroid)
-            edge_id = EdgeIdentification(pad_skeleton)
-            edge_id.get_vertices_and_tips_coord()
-            edge_id.get_tipped_edges()
-            edge_id.remove_tipped_edge_smaller_than_branch_width(pad_distances)
-            edge_id.label_tipped_edges_and_their_vertices()
-            edge_id.identify_all_other_edges()
-            edge_id.remove_edge_duplicates()
-            edge_id.remove_vertices_connecting_2_edges()
+            edge_id = EdgeIdentification(pad_skeleton, pad_distances)
+            edge_id.run_edge_identification()
+            # edge_id.get_vertices_and_tips_coord()
+            # edge_id.get_tipped_edges()
+            # edge_id.remove_tipped_edge_smaller_than_branch_width()
+            # edge_id.label_tipped_edges_and_their_vertices()
+            # edge_id.identify_all_other_edges()
+            # edge_id.remove_edge_duplicates()
+            # edge_id.remove_vertices_connecting_2_edges()
             if pad_origin_contours is not None:
                 origin_contours = remove_padding([pad_origin_contours])[0]
             edge_id.make_vertex_table(origin_contours)
