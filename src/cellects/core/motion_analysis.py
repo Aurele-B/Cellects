@@ -1009,9 +1009,9 @@ class MotionAnalysis:
                     im_to_display[contours[0], contours[1]] = 255
             else:
                 im_to_display = self.binary[self.t, :, :] * 255
-            imtoshow = resize(im_to_display, (540, 540))
+            imtoshow = cv2.resize(im_to_display, (540, 540))
             cv2.imshow("shape_motion", imtoshow)
-            waitKey(1)
+            cv2.waitKey(1)
         self.t += 1
 
     def save_coord_specimen_and_contour(self):
@@ -1539,7 +1539,7 @@ class MotionAnalysis:
                     oscillations_video[t, :, :] = oscillations_image
                     self.converted_video[t, ...] = deepcopy(imtoshow)
                     if show_seg:
-                        im_to_show = resize(imtoshow, (540, 540))
+                        im_to_show = cv2.resize(imtoshow, (540, 540))
                         cv2.imshow("shape_motion", im_to_show)
                         cv2.waitKey(1)
                 if show_seg:
