@@ -10,10 +10,32 @@ from cellects.image_analysis.morphological_operations import *
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):
     """Test CompareNeighborsWithValue functionality."""
+    vector = np.array([9, 0, 4, 6], dtype=np.int8)
     matrix = np.array([[9, 0, 4, 6],
                    [4, 9, 1, 3],
                    [7, 2, 1, 4],
                    [9, 0, 8, 5]], dtype=np.int8)
+
+    def test_vector_is_equal(self):
+        """Test is equal on a simple vector."""
+        comparer = CompareNeighborsWithValue(self.vector, connectivity=4)
+        comparer.is_equal(1)
+        expected_result = np.array([0, 0, 0, 0], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
+
+    def test_vector_is_sup(self):
+        """Test is sup on a simple vector."""
+        comparer = CompareNeighborsWithValue(self.vector, connectivity=4)
+        comparer.is_sup(1)
+        expected_result = np.array([1, 2, 1, 2], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
+
+    def test_vector_is_inf(self):
+        """Test is inf on a simple vector."""
+        comparer = CompareNeighborsWithValue(self.vector, connectivity=4)
+        comparer.is_inf(1)
+        expected_result = np.array([1, 0, 1, 0], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
 
     def test_is_equal_connectivity_4(self):
         """
