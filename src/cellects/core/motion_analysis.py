@@ -1271,9 +1271,11 @@ class MotionAnalysis:
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
             smooth_segmentation_over_time = True
+            detect_pseudopods = True
             pseudopod_min_size = 50
             self.check_converted_video_type()
-            pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
+            if detect_pseudopods:
+                pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
             potential_network = np.zeros_like(self.binary, dtype=bool)
             self.network_dynamics = np.zeros_like(self.binary, dtype=np.uint8)
             greyscale = self.visu[-1, ...].mean(axis=-1)
@@ -1289,10 +1291,11 @@ class MotionAnalysis:
                 NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
-                NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
-                NetDet_fast.merge_network_with_pseudopods()
+                if detect_pseudopods:
+                    NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
+                    NetDet_fast.merge_network_with_pseudopods()
+                    pseudopod_vid[t, ...] = NetDet_fast.pseudopods
                 potential_network[t, ...] = NetDet_fast.complete_network
-                pseudopod_vid[t, ...] = NetDet_fast.pseudopods
             for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
                 if smooth_segmentation_over_time:
                     if 2 <= t <= (self.dims[0] - 2):
@@ -1302,7 +1305,7 @@ class MotionAnalysis:
                     else:
                         if t < 2:
                             computed_network = potential_network[:2, :, :].sum(axis=0)
-                        elif t > (self.dims[0] - 2):
+                        else:
                             computed_network = potential_network[-2:, :, :].sum(axis=0)
                         computed_network[computed_network > 0] = 1
                 else:
@@ -1314,12 +1317,13 @@ class MotionAnalysis:
                     complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
                 complete_network = keep_one_connected_component(complete_network)
 
-                # Make sure that removing pseudopods do not cut the network:
-                without_pseudopods = complete_network * (1 - pseudopod_vid[t])
-                only_connected_network = keep_one_connected_component(without_pseudopods)
-                # # Option A: To add these cutting regions to the pseudopods do:
-                pseudopods = (1 - only_connected_network) * complete_network
-                pseudopod_vid[t] = pseudopods
+                if detect_pseudopods:
+                    # Make sure that removing pseudopods do not cut the network:
+                    without_pseudopods = complete_network * (1 - pseudopod_vid[t])
+                    only_connected_network = keep_one_connected_component(without_pseudopods)
+                    # # Option A: To add these cutting regions to the pseudopods do:
+                    pseudopods = (1 - only_connected_network) * complete_network
+                    pseudopod_vid[t] = pseudopods
                 self.network_dynamics[t] = complete_network
 
                 # # Option B: To add these cutting regions to the network:
@@ -1354,15 +1358,20 @@ class MotionAnalysis:
                 if show_seg:
                     cv2.destroyAllWindows()
 
-            self.network_dynamics = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
-            pseudopod_vid = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
+            network_coord = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
+
+            if detect_pseudopods:
+                self.network_dynamics[pseudopod_vid > 0] = 2
+                pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
             if self.vars['save_coord_network']:
                  np.save(
                     f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                    self.network_dynamics)
-                 np.save(
-                    f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                    pseudopod_vid)
+                    network_coord)
+
+                 if detect_pseudopods:
+                     np.save(
+                        f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                        pseudopod_coord)
 
     def graph_extraction(self):
         if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:
@@ -1386,16 +1395,9 @@ class MotionAnalysis:
                                                                                        pad_origin_centroid)
             edge_id = EdgeIdentification(pad_skeleton, pad_distances)
             edge_id.run_edge_identification()
-            # edge_id.get_vertices_and_tips_coord()
-            # edge_id.get_tipped_edges()
-            # edge_id.remove_tipped_edge_smaller_than_branch_width()
-            # edge_id.label_tipped_edges_and_their_vertices()
-            # edge_id.identify_all_other_edges()
-            # edge_id.remove_edge_duplicates()
-            # edge_id.remove_vertices_connecting_2_edges()
             if pad_origin_contours is not None:
                 origin_contours = remove_padding([pad_origin_contours])[0]
-            edge_id.make_vertex_table(origin_contours)
+            edge_id.make_vertex_table(origin_contours, self.network_dynamics[t, ...] == 2)
             edge_id.make_edge_table(self.converted_video[:, t])
 
 

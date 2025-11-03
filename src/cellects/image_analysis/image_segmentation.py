@@ -549,7 +549,8 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
 
     network_patches = []
     patch_thresholds = []
-    for patch in tqdm(patch_slices):
+    # for patch in tqdm(patch_slices):
+    for patch in patch_slices:
         v = greyscale_image[patch] * possibly_filled_pixels[patch]
         if v.max() > 0 and np.ptp(v) > 0.5:
             t = threshold_otsu(v)

@@ -166,7 +166,7 @@ class CompareNeighborsWithValue:
         """
 
         if len(self.array.shape) == 1:
-            self.equal_neighbor_nb = self.on_the_right + self.on_the_left
+            self.equal_neighbor_nb = np.sum((np.equal(self.on_the_right, value), np.equal(self.on_the_left, value)), axis=0)
         else:
             if self.connectivity == 4:
                 self.equal_neighbor_nb =  np.dstack((np.equal(self.on_the_right, value), np.equal(self.on_the_left, value),
