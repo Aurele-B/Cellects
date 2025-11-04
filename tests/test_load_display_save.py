@@ -47,7 +47,7 @@ class TestPickleRick(CellectsUnitTest):
 
         # Define test data
         file_content = "This is some test content"
-        file_name = self.path_output / "test_file.pkl"
+        file_name = self.path_input / "test_file.pkl"
 
         # Write the test file
         with open(file_name, 'wb') as file_to_write:
@@ -143,7 +143,7 @@ class TestVideo2Numpy(CellectsUnitTest):
     def test_video2numpy_with_npy_extension(self):
         """Test with npy extension."""
         # Create a temporary npy file
-        with open(self.path_output / 'test_write_video.npy', 'wb') as temp_file:
+        with open(self.path_input / 'test_write_video.npy', 'wb') as temp_file:
             # Generate a sample numpy array
             np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
             np.save(temp_file.name, np_array)
@@ -157,7 +157,7 @@ class TestVideo2Numpy(CellectsUnitTest):
     def test_video2numpy_with_video_file(self):
         """Test with mp4 extension."""
         # Create a temporary mp4 file
-        with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
+        with open(self.path_input / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
             np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
 
@@ -173,7 +173,7 @@ class TestVideo2Numpy(CellectsUnitTest):
     def test_video2numpy_with_true_frame_width(self):
         """Test with specified frame width."""
         # Create a temporary mp4 file with double width
-        with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
+        with open(self.path_input / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array with double width
             np_array = np.random.randint(0, 255, size=(10, 480, 1280, 3), dtype=np.uint8)
 
@@ -308,7 +308,7 @@ class TestReadH5Array(CellectsUnitTest):
 
     def test_read_h5_file(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
         table = np.array([[1, 2], [3, 4]])
 
         # Execute function
@@ -316,18 +316,13 @@ class TestReadH5Array(CellectsUnitTest):
         read_file = read_h5_array(file_name)
         self.assertTrue(np.array_equal(table, read_file))
 
-    def tearDown(self):
-        """Remove all written files."""
-        if os.path.isfile(self.path_output / f"test_vstack_{self.id()}.h5"):
-            os.remove(self.path_output / f"test_vstack_{self.id()}.h5")
-
 
 class TestGetH5Keys(CellectsUnitTest):
     """Test suite for get_h5_keys function."""
 
     def test_get_h5_keys(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
         table = np.array([[1, 2], [3, 4]])
         original_key = "the_key"
         # Execute function
@@ -335,18 +330,12 @@ class TestGetH5Keys(CellectsUnitTest):
         read_key = get_h5_keys(file_name)
         self.assertTrue(original_key == read_key[0])
 
-    def tearDown(self):
-        """Remove all written files."""
-        if os.path.isfile(self.path_output / f"test_vstack_{self.id()}.h5"):
-            os.remove(self.path_output / f"test_vstack_{self.id()}.h5")
-
-
 class TestRemoveH5Keys(CellectsUnitTest):
     """Test suite for remove_h5_key function."""
 
     def test_remove_h5_key(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
         table1 = np.array([[1, 2], [3, 4]])
         key1 = "the_key1"
         table2 = np.array([[5, 6], [4, 4]])
@@ -357,11 +346,6 @@ class TestRemoveH5Keys(CellectsUnitTest):
         remove_h5_key(file_name, key=key1)
         read_keys = get_h5_keys(file_name)
         self.assertTrue(read_keys[0] == key2)
-
-    def tearDown(self):
-        """Remove all written files."""
-        if os.path.isfile(self.path_output / f"test_vstack_{self.id()}.h5"):
-            os.remove(self.path_output / f"test_vstack_{self.id()}.h5")
 
 
 class TestGetMplColormap(CellectsUnitTest):
