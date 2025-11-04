@@ -919,7 +919,8 @@ def save_fig(img: NDArray, full_path, cmap=None):
     else:
         ax.imshow(img, cmap=cmap, interpolation="none")
     plt.axis('off')
-    fig.tight_layout()
+    if np.min(img.shape) > 50:
+        fig.tight_layout()
 
     fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
     plt.close(fig)
