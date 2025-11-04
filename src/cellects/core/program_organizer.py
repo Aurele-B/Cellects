@@ -19,12 +19,13 @@ import pandas as pd
 import numpy as np
 from psutil import virtual_memory
 from pathlib import Path
+import natsort
 from cellects.image_analysis.image_segmentation import generate_color_space_combination
-from cellects.image_analysis.extract_exif import extract_time  # named exif
+from cellects.utils.load_display_save import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
-from cellects.utils.utilitarian import insensitive_glob
+from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.image_analysis.morphological_operations import Ellipse, cross_33
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
@@ -107,6 +108,7 @@ class ProgramOrganizer:
                 with open(ALL_VARS_PKL_FILE, 'rb') as fileopen:  # NEW
                     self.all = pickle.load(fileopen)  # NEW
                 self.vars = self.all['vars']
+                self.update_data()
                 logging.info("Success to load the parameters dictionaries from the Cellects folder")
                 logging.info(os.getcwd())
             except Exception as exc:  # NEW
@@ -114,42 +116,13 @@ class ProgramOrganizer:
                 default_dicts = DefaultDicts()  # NEW
                 self.all = default_dicts.all  # NEW
                 self.vars = default_dicts.vars  # NEW
-
-            # pickle_rick = PickleRick(0)
-            # self.all = pickle_rick.read_file(ALL_VARS_PKL_FILE)
-            # self.vars = self.all['vars']
-            # logging.info("Success to load the parameters dictionaries from the Cellects folder")
-            # logging.info(os.getcwd())
         else:
             logging.info("Initialize default parameters")
             default_dicts = DefaultDicts()
             self.all = default_dicts.all
             self.vars = default_dicts.vars
-
-            # self.initialize_all_dict()
-            # self.initialize_vars_dict()
-
-        # if os.path.isfile(ALL_VARS_PKL_FILE):
-        #     try:
-        #         with open(ALL_VARS_PKL_FILE, 'rb') as fileopen:
-        #             self.all = pickle.load(fileopen)
-        #             self.vars = self.all['vars']
-        #             logging.info("Success to load the parameters dictionaries from the Cellects folder")
-        #     except EOFError:
-        #         logging.error("Pickle error, reinitialize the parameters dictionaries")
-        #         self.initialize_all_dict()
-        #         self.initialize_vars_dict()
-        #     # self.all = np.load(
-        #     #     soft_path + "\\all_vars.npy", allow_pickle='TRUE').item()
-        # else:
-        #     self.initialize_all_dict()
-        #     self.initialize_vars_dict()
-
         if self.all['cores'] == 1:
             self.all['cores'] = os.cpu_count() - 1
-        # if self.vars['min_ram_free'] == 0.87:
-        #     self.vars['min_ram_free'] = (
-        #         20709376) * 0.10
 
     def analyze_without_gui(self):
         # Eventually load "all" dir before calling this function
@@ -251,10 +224,15 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
-        self.data_list = np.sort(self.data_list)
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
-        if len(self.data_list) == 0:
+        if len(self.data_list) > 0:
+            lengths = vectorized_len(self.data_list)
+            if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+                logging.error(f"File names present strong variations and cannot be correctly sorted.")
+            self.data_list = natsort.natsorted(self.data_list)
+            self.sample_number = self.all['first_folder_sample_number']
+        else:
             content = os.listdir()
             for obj in content:
                 if not os.path.isfile(obj):
@@ -267,23 +245,16 @@ class ProgramOrganizer:
             if isinstance(self.all['sample_number_per_folder'], int) or len(self.all['sample_number_per_folder']) == 1:
                 self.all['sample_number_per_folder'] = np.repeat(self.all['sample_number_per_folder'],
                                                               self.all['folder_number'])
-        else:
-            # if isinstance(self.all['sample_number_per_folder'], int):
-            #     self.sample_number = self.all['sample_number_per_folder']
-            # else:
-            self.sample_number = self.all['first_folder_sample_number']
-            # if len(self.all['folder_list']) > 0:
-            #     self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
-            # else:
-            #     self.all['folder_list'] = []
-            #     self.sample_number = self.all['sample_number_per_folder']
 
     def update_folder_id(self, sample_number, folder_name=""):
         os.chdir(Path(self.all['global_pathway']) / folder_name)
         self.data_list = insensitive_glob(
             self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
-        self.data_list = np.sort(self.data_list)
+        lengths = vectorized_len(self.data_list)
+        if np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+            logging.error(f"File names present strong variations and cannot be correctly sorted.")
+        self.data_list = natsort.natsorted(self.data_list)
         if self.all['im_or_vid'] == 1:
             self.sample_number = len(self.data_list)
         else:
@@ -318,7 +289,7 @@ class ProgramOrganizer:
                 # then put a breakpoint here and run the following + self.save_data_to_run_cellects_quickly() :
                 # self.all['vars']['lose_accuracy_to_save_memory'] = False
                 self.vars = self.all['vars']
-                self.is_data_up_to_date()
+                self.update_data()
                 print(self.vars['convert_for_motion'])
                 folder_changed = False
                 if current_global_pathway != self.all['global_pathway']:
@@ -371,7 +342,7 @@ class ProgramOrganizer:
         else:
             logging.info("The current (or the first) folder is not ready to run")
 
-    def is_data_up_to_date(self):
+    def update_data(self):
         dd = DefaultDicts()
         all = len(dd.all) != len(self.all)
         vars = len(dd.vars) != len(self.vars)
@@ -587,7 +558,8 @@ class ProgramOrganizer:
         if is_first_image:
             self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                  self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
-                                                 subtract_background2=None, grid_segmentation=False)
+                                                 subtract_background2=None, grid_segmentation=False,
+                                                 filter_spec=self.vars["filter_spec"])
             if not self.first_image.drift_correction_already_adjusted:
                 self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
                 if self.vars['drift_already_corrected']:
@@ -596,8 +568,9 @@ class ProgramOrganizer:
             if self.vars["grid_segmentation"]:
                 self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                      self.all["bio_mask"], self.all["back_mask"],
-                                                     subtract_background=None,
-                                                     subtract_background2=None, grid_segmentation=True)
+                                                     subtract_background=None, subtract_background2=None,
+                                                     grid_segmentation=True,
+                                                     filter_spec=self.vars["filter_spec"])
 
             self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
             logging.info(self.sample_number)
@@ -633,10 +606,12 @@ class ProgramOrganizer:
             #     drift_correction, drift_correction2 = self.last_image.adjust_to_drift_correction()
             #     self.last_image.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
             self.cropping(is_first_image=False)
+            print(self.vars["filter_spec"])
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
-                                                grid_segmentation=self.vars["grid_segmentation"])
+                                                grid_segmentation=self.vars["grid_segmentation"],
+                                                filter_spec=self.vars["filter_spec"])
             if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
                 self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
             
@@ -802,7 +777,8 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],#self.vars['convert_for_motion']
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'],
+                        filter_spec=self.vars['filter_spec'])
                 else:
                     self.videos.get_bounding_boxes(
                         are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
@@ -810,15 +786,14 @@ class ProgramOrganizer:
                         color_space_combination=self.vars['convert_for_origin'],
                         color_number=self.vars["color_number"],
                         sample_size=5,
-                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
+                        all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'],
+                        filter_type=self.vars['filter_spec'])
                 if np.any(self.videos.ordered_stats[:, 4] > 100 * np.median(self.videos.ordered_stats[:, 4])):
                     analysis_status['message'] = "A specimen is at least 100 times larger: (re)do the first image analysis."
                     analysis_status['continue'] = False
                 if np.any(self.videos.ordered_stats[:, 4] < 0.01 * np.median(self.videos.ordered_stats[:, 4])):
                     analysis_status['message'] = "A specimen is at least 100 times smaller: (re)do the first image analysis."
                     analysis_status['continue'] = False
-                # self.all['overwrite_unaltered_videos'] = True
-                # self.videos.print_bounding_boxes(0)
                 logging.info(
                     str(self.videos.not_analyzed_individuals) + " individuals are out of picture scope and cannot be analyzed")
             self.left, self.right, self.top, self.bot = self.videos.left, self.videos.right, self.videos.top, self.videos.bot
@@ -1047,7 +1022,8 @@ class ProgramOrganizer:
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                  None, None, subtract_background=None,
                                                  subtract_background2=None,
-                                                 grid_segmentation=self.vars["grid_segmentation"])
+                                                 grid_segmentation=self.vars["grid_segmentation"],
+                                                 filter_spec=self.vars["filter_spec"])
             covered_values = self.first_image.image[np.nonzero(binary_image)]
             if self.vars['lighter_background']:
                 if np.max(covered_values) < 255:
@@ -1087,8 +1063,9 @@ class ProgramOrganizer:
         prev_img = None
         background = None
         background2 = None
+        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         for image_i, image_name in enumerate(self.data_list):
-            img = self.videos.read_and_rotate(image_name, prev_img)
+            img = read_and_rotate(image_name, prev_img, self.all['raw_images'], is_landscape, self.first_image.crop_coord)
             prev_img = deepcopy(img)
             # if self.videos.first_image.crop_coord is not None:
             #     img = img[self.videos.first_image.crop_coord[0]:self.videos.first_image.crop_coord[1],

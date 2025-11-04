@@ -100,13 +100,15 @@ from gc import collect
 from time import sleep
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
-
+import pandas as pd
+from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
-from cellects.image_analysis.fractal_analysis import box_counting, prepare_box_counting
-from cellects.image_analysis.image_segmentation import segment_with_lum_value
+from cellects.image_analysis.image_segmentation import segment_with_lum_value, apply_filter
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
-                                                              make_gravity_field, expand_to_fill_holes)
+                                                              inverted_distance_transform, dynamically_expand_to_fill_holes,
+                                                              box_counting_dimension, prepare_box_counting,
+                                                              keep_one_connected_component, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
@@ -146,12 +148,14 @@ class MotionAnalysis:
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
         self.mean_intensity_per_frame = np.mean(self.converted_video, (1, 2))
-        if self.vars['arena_shape'] == "circle":
-            self.borders = Ellipse(self.dims[1:]).create()
-            img_contours = image_borders(self.dims[1:])
-            self.borders = self.borders * img_contours
-        else:
-            self.borders = image_borders(self.dims[1:])
+
+        self.borders = image_borders(self.dims[1:], shape=self.vars['arena_shape'])
+        # if self.vars['arena_shape'] == "circle":
+        #     self.borders = Ellipse(self.dims[1:]).create()
+        #     img_contours = image_borders(self.dims[1:])
+        #     self.borders = self.borders * img_contours
+        # else:
+        #     self.borders = image_borders(self.dims[1:])
         self.pixel_ring_depth = 9
         self.step = 10
         self.lost_frames = 10
@@ -200,21 +204,6 @@ class MotionAnalysis:
 
     def load_images_and_videos(self, videos_already_in_ram, i):
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        # pickle_rick = PickleRick()
-        # data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
-        # try:
-        #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #         data_to_run_cellects_quickly = pickle.load(fileopen)
-        # except pickle.UnpicklingError:
-        #     try:
-        #         with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #             data_to_run_cellects_quickly = pickle.load(fileopen)
-        #     except pickle.UnpicklingError:
-        #         logging.info(f"Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
-
-        # if data_to_run_cellects_quickly is None or not 'background_and_origin_list' in data_to_run_cellects_quickly:
-        #     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Data to run Cellects quickly.pkl has not been saved properly in {os.getcwd()}")
-        # self.origin = data_to_run_cellects_quickly['background_and_origin_list'][0][i]# self.vars['origins_list'][i]
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
         if videos_already_in_ram is None:
             true_frame_width = self.origin.shape[1]
@@ -227,13 +216,7 @@ class MotionAnalysis:
                 self.background2 = None
             else:
                 self.background2 = self.vars['background_list2'][i]
-            # self.background2 = None
-            # if len(data_to_run_cellects_quickly['background_and_origin_list'][1]) == 0: # len(self.vars['background_list']) == 0:
-            #     self.background = None
-            # else:
-            #     self.background = data_to_run_cellects_quickly['background_and_origin_list'][1][i]# self.vars['background_list'][i]
-            #     if self.vars['convert_for_motion']['logical'] != 'None':
-            #         self.background2 = data_to_run_cellects_quickly['background_and_origin_list'][2][i]# self.vars['background_list2'][i]
+
             if self.vars['already_greyscale']:
                 self.converted_video = video2numpy(
                     vid_name, None, self.background, true_frame_width)
@@ -289,6 +272,15 @@ class MotionAnalysis:
                                                                                      second_dict, self.background,
                                                                                      self.background2,
                                                                                      self.vars['lose_accuracy_to_save_memory'])
+                if self.vars['filter_spec'] is not None and self.vars['filter_spec']['filter1_type'] != "":
+                    greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter1_type'],
+                                                   self.vars['filter_spec']['filter1_param'],
+                                                   self.vars['lose_accuracy_to_save_memory'])
+                    if greyscale_image2 is not None and self.vars['filter_spec']['filter2_type'] != "":
+                        greyscale_image2 = apply_filter(greyscale_image2, self.vars['filter_spec']['filter2_type'],
+                                                        self.vars['filter_spec']['filter2_param'],
+                                                        self.vars['lose_accuracy_to_save_memory'])
+
                 self.converted_video[counter, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     self.converted_video2[counter, ...] = greyscale_image2
@@ -559,7 +551,8 @@ class MotionAnalysis:
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
                                grid_segmentation=self.vars['grid_segmentation'],
                                lighter_background=self.vars['lighter_background'],
-                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask)
+                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask,
+                               filter_spec=None) # filtering already done when creating converted_video
 
         return analysisi
 
@@ -601,7 +594,7 @@ class MotionAnalysis:
                                                                self.vars['lighter_background'])
 
                 changing_pixel_number = np.sum(np.absolute(np.diff(starting_segmentation.astype(np.int8), 1, 0)), (1, 2))
-                validation = np.max(sum(starting_segmentation, (1, 2))) < max_motion_per_frame and (
+                validation = np.max(np.sum(starting_segmentation, (1, 2))) < max_motion_per_frame and (
                         np.max(changing_pixel_number) < max_motion_per_frame)
                 validated_thresholds[counter] = validation
                 if np.any(validated_thresholds):
@@ -744,7 +737,7 @@ class MotionAnalysis:
                     gradient_threshold = (1 - ease_slope_segmentation) * np.min(covering_slopes)
                     sample = np.greater(derive[:self.substantial_time], gradient_threshold)
                 changing_pixel_number = np.sum(np.absolute(np.diff(sample.astype(np.int8), 1, 0)), (1, 2))
-                validation = np.max(sum(sample, (1, 2))) < max_motion_per_frame and (
+                validation = np.max(np.sum(sample, (1, 2))) < max_motion_per_frame and (
                         np.max(changing_pixel_number) < max_motion_per_frame)
                 validated_thresholds[counter] = validation
                 if np.any(validated_thresholds):
@@ -818,10 +811,10 @@ class MotionAnalysis:
         self.mean_distance_per_frame = None
         self.surfarea = np.zeros(self.dims[0], dtype =np.uint64)
         self.surfarea[:self.start] = np.sum(self.binary[:self.start, :, :], (1, 2))
-        self.gravity_field = make_gravity_field(self.binary[(self.start - 1), :, :],
-                                           np.sqrt(sum(self.binary[(self.start - 1), :, :])))
+        self.gravity_field = inverted_distance_transform(self.binary[(self.start - 1), :, :],
+                                           np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
         if self.vars['correct_errors_around_initial']:
-            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], cross_33, ray_length_coef=1.25)  # plt.imshow(sun)
+            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1.25)  # plt.imshow(sun)
             self.holes = np.zeros(self.dims[1:], dtype=np.uint8)
             self.pixel_ring_depth += 2
             self.update_ring_width()
@@ -868,8 +861,8 @@ class MotionAnalysis:
         maximal_size = 0.5 * new_potentials.size
         if (self.vars["do_threshold_segmentation"] or self.vars["frame_by_frame_segmentation"]) and self.t > np.max((self.start + self.step, 6)):
            maximal_size = np.min((np.max(self.binary[:self.t].sum((1, 2))) * (1 + self.vars['maximal_growth_factor']), self.borders.sum()))
-        while np.logical_and(sum(new_potentials) > maximal_size,
-                             frame_counter <= 5):  # np.logical_and(sum(new_potentials > 0) > 5 * np.sum(dila_ring), frame_counter <= 5):
+        while np.logical_and(np.sum(new_potentials) > maximal_size,
+                             frame_counter <= 5):  # np.logical_and(np.sum(new_potentials > 0) > 5 * np.sum(dila_ring), frame_counter <= 5):
             frame_counter += 1
             if frame_counter > self.t:
                 break
@@ -972,7 +965,7 @@ class MotionAnalysis:
                     # If some holes are not covered by now
                     if np.any(self.holes * (1 - self.binary[self.t, :, :])):
                         self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
-                            expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
+                            dynamically_expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
                         if holes_time_end is not None:
                             self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
                             self.binary[holes_time_end:(self.t + 1), :, :][
@@ -1016,9 +1009,9 @@ class MotionAnalysis:
                     im_to_display[contours[0], contours[1]] = 255
             else:
                 im_to_display = self.binary[self.t, :, :] * 255
-            imtoshow = resize(im_to_display, (540, 540))
+            imtoshow = cv2.resize(im_to_display, (540, 540))
             cv2.imshow("shape_motion", imtoshow)
-            waitKey(1)
+            cv2.waitKey(1)
         self.t += 1
 
     def save_coord_specimen_and_contour(self):
@@ -1277,37 +1270,108 @@ class MotionAnalysis:
     def networks_detection(self, show_seg=False):
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
+            smooth_segmentation_over_time = True
+            detect_pseudopods = True
+            pseudopod_min_size = 50
             self.check_converted_video_type()
-            self.network_dynamics = np.zeros_like(self.binary, dtype=bool)
+            if detect_pseudopods:
+                pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
+            potential_network = np.zeros_like(self.binary, dtype=bool)
+            self.network_dynamics = np.zeros_like(self.binary, dtype=np.uint8)
             greyscale = self.visu[-1, ...].mean(axis=-1)
             NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[-1, ...],
-                                      lighter_background=self.vars['lighter_background'],
                                       origin_to_add=self.origin)
             NetDet.get_best_network_detection_method()
+            NetDet.change_greyscale(self.visu[-1, ...], c_space_dict=self.vars['convert_for_motion'])
+            lighter_background = NetDet.greyscale_image[self.binary[-1, ...] > 0].mean() < NetDet.greyscale_image[self.binary[-1, ...] == 0].mean()
+
+
             for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
                 greyscale = self.visu[t, ...].mean(axis=-1)
                 NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
-                                          lighter_background=self.vars['lighter_background'],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
-                self.network_dynamics[t, ...] = NetDet_fast.complete_network
+                if detect_pseudopods:
+                    NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
+                    NetDet_fast.merge_network_with_pseudopods()
+                    pseudopod_vid[t, ...] = NetDet_fast.pseudopods
+                potential_network[t, ...] = NetDet_fast.complete_network
+            for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
+                if smooth_segmentation_over_time:
+                    if 2 <= t <= (self.dims[0] - 2):
+                        computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
+                        computed_network[computed_network == 1] = 0
+                        computed_network[computed_network > 1] = 1
+                    else:
+                        if t < 2:
+                            computed_network = potential_network[:2, :, :].sum(axis=0)
+                        else:
+                            computed_network = potential_network[-2:, :, :].sum(axis=0)
+                        computed_network[computed_network > 0] = 1
+                else:
+                    computed_network = computed_network[t, :, :].copy()
+
+                if self.origin is not None:
+                    computed_network = computed_network * (1 - self.origin)
+                    origin_contours = get_contours(self.origin)
+                    complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+                complete_network = keep_one_connected_component(complete_network)
+
+                if detect_pseudopods:
+                    # Make sure that removing pseudopods do not cut the network:
+                    without_pseudopods = complete_network * (1 - pseudopod_vid[t])
+                    only_connected_network = keep_one_connected_component(without_pseudopods)
+                    # # Option A: To add these cutting regions to the pseudopods do:
+                    pseudopods = (1 - only_connected_network) * complete_network
+                    pseudopod_vid[t] = pseudopods
+                self.network_dynamics[t] = complete_network
+
+                # # Option B: To add these cutting regions to the network:
+                # # Differentiate pseudopods that cut the network from the 'true ones'
+                # # Dilate pseudopods and restrein them to the
+                # pseudopods = cv2.dilate(pseudopod_vid[t], kernel=Ellipse((15, 15)).create().astype(np.uint8),
+                #                         iterations=1) * self.binary[t, :, :]
+                # nb, numbered_pseudopods = cv2.connectedComponents(pseudopods)
+                # pseudopods = np.zeros_like(pseudopod_vid[t])
+                # for p_i in range(1, nb + 1):
+                #     pseudo_i = numbered_pseudopods == p_i
+                #     nb_i, remainings, stats, centro = cv2.connectedComponentsWithStats(
+                #         complete_network * (1 - pseudo_i.astype(np.uint8)))
+                #     if (stats[:, 4] > pseudopod_min_size).sum() == 2:
+                #         pseudopods[pseudo_i] = 1
+                #         fragmented = np.nonzero(stats[:, 4] <= pseudopod_min_size)[0]
+                #         pseudopods[np.isin(remainings, fragmented)] = 1
+                # pseudopod_vid[t] = pseudopods
+                # complete_network[pseudopods > 0] = 1
+                # self.network_dynamics[t] = complete_network
+
 
                 imtoshow = self.visu[t, ...]
                 eroded_binary = cv2.erode(self.network_dynamics[t, ...], cross_33)
                 net_coord = np.nonzero(self.network_dynamics[t, ...] - eroded_binary)
                 imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
                 if show_seg:
-                    cv2.imshow("", resize(imtoshow, (1000, 1000)))
+                    cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
                     cv2.waitKey(1)
                 else:
                     self.visu[t, ...] = imtoshow
                 if show_seg:
                     cv2.destroyAllWindows()
-            self.network_dynamics = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
+
+            network_coord = smallest_memory_array(np.nonzero(self.network_dynamics), "uint")
+
+            if detect_pseudopods:
+                self.network_dynamics[pseudopod_vid > 0] = 2
+                pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
             if self.vars['save_coord_network']:
                  np.save(
                     f"coord_tubular_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                    self.network_dynamics)
+                    network_coord)
+
+                 if detect_pseudopods:
+                     np.save(
+                        f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+                        pseudopod_coord)
 
     def graph_extraction(self):
         if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:
@@ -1329,17 +1393,11 @@ class MotionAnalysis:
             pad_origin_centroid = origin_centroid + 1
             pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
                                                                                        pad_origin_centroid)
-            edge_id = EdgeIdentification(pad_skeleton)
-            edge_id.get_vertices_and_tips_coord()
-            edge_id.get_tipped_edges()
-            edge_id.remove_tipped_edge_smaller_than_branch_width(pad_distances)
-            edge_id.label_tipped_edges_and_their_vertices()
-            edge_id.identify_all_other_edges()
-            edge_id.remove_edge_duplicates()
-            edge_id.remove_vertices_connecting_2_edges()
+            edge_id = EdgeIdentification(pad_skeleton, pad_distances)
+            edge_id.run_edge_identification()
             if pad_origin_contours is not None:
                 origin_contours = remove_padding([pad_origin_contours])[0]
-            edge_id.make_vertex_table(origin_contours)
+            edge_id.make_vertex_table(origin_contours, self.network_dynamics[t, ...] == 2)
             edge_id.make_edge_table(self.converted_video[:, t])
 
 
@@ -1484,7 +1542,7 @@ class MotionAnalysis:
                     oscillations_video[t, :, :] = oscillations_image
                     self.converted_video[t, ...] = deepcopy(imtoshow)
                     if show_seg:
-                        im_to_show = resize(imtoshow, (540, 540))
+                        im_to_show = cv2.resize(imtoshow, (540, 540))
                         cv2.imshow("shape_motion", im_to_show)
                         cv2.waitKey(1)
                 if show_seg:
@@ -1588,7 +1646,7 @@ class MotionAnalysis:
                                                                                        zoom_step=self.vars[
                                                                                            'fractal_zoom_step'],
                                                                                        contours=True)
-                                    box_count_dim, r_value, box_nb = box_counting(zoomed_binary, side_lengths)
+                                    box_count_dim, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
 
                                     if np.any(inner_network):
                                         zoomed_binary, side_lengths = prepare_box_counting(inner_network,
@@ -1597,7 +1655,7 @@ class MotionAnalysis:
                                                                                            zoom_step=self.vars[
                                                                                                'fractal_zoom_step'],
                                                                                            contours=False)
-                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting(
+                                        inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = box_counting_dimension(
                                             zoomed_binary, side_lengths)
                                     else:
                                         inner_network_box_count_dim, inner_net_r_value, inner_net_box_nb = 0, 0, 0
@@ -1658,19 +1716,19 @@ class MotionAnalysis:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars[
                         'fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
-                        t, 3] = box_counting(zoomed_binary, side_lengths)
+                        t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
                     zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...],
                                                                        side_threshold=self.vars[
                                                                            'fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'],
                                                                        contours=False)
                     box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[
-                        t, 6] = box_counting(zoomed_binary, side_lengths)
+                        t, 6] = box_counting_dimension(zoomed_binary, side_lengths)
                 else:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
                                                                        side_threshold=self.vars['fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
-                    box_counting_dimensions[t, :] = box_counting(zoomed_binary, side_lengths)
+                    box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
 
             if self.vars['network_analysis']:
                 self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]

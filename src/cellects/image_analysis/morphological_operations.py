@@ -1,36 +1,47 @@
 #!/usr/bin/env python3
 """
-This script contains methods to compare and modify shapes in binary images
-It contains the following functions:
-    - cc : Sort connected components according to sizes
-    - make_gravity_field : put a gradient of decreasing numbers around a shape
-    - find_median_shape : sum shapes and keem a median image of them
-    - make_numbered_rays
-    - CompareNeighborsWithFocal : get the number of neighbors having an
-                                  equal/sup/inf value than each cell
-    - CompareNeighborsWithValue : get the number of neighbors having an
-                                  equal/sup/inf value than a given value
-    - ShapeDescriptors
-    - get_radius_distance_against_time : 3D, get a vector of radius distances
-                                         with idx as time
-    - expand_until_one
-    - expand_and_rate_until_one
-    - expand_until_overlap
-    - expand_to_fill_holes
-    - expand_smalls_toward_biggest
-    - change_thresh_until_one
-    - Ellipse
-    - get_rolling_window_coordinates_list
+This module provides methods to analyze and modify shapes in binary images.
+It includes functions for comparing neighboring pixels, generating shape descriptors,
+and performing morphological operations like expanding shapes and filling holes.
+
+Classes
+---------
+CompareNeighborsWithValue : Class to compare neighboring pixels to a specified value
+
+Functions
+---------------
+cc : Sort connected components according to size
+make_gravity_field : Create a gradient field around shapes
+find_median_shape : Generate median shape from multiple inputs
+make_numbered_rays : Create numbered rays for analysis
+CompareNeighborsWithFocal : Compare neighboring pixels to focal values
+ShapeDescriptors : Generate shape descriptors using provided functions
+get_radius_distance_against_time : Calculate radius distances over time
+expand_until_one : Expand shapes until a single connected component remains
+expand_and_rate_until_one : Expand and rate shapes until one remains
+expand_until_overlap : Expand shapes until overlap occurs
+dynamically_expand_to_fill_holes : Dynamically expand to fill holes in shapes
+expand_smalls_toward_biggest : Expand smaller shapes toward largest component
+change_thresh_until_one : Change threshold until one connected component remains
+Ellipse : Generate ellipse shape descriptors
+get_rolling_window_coordinates_list : Get coordinates for rolling window operations
+
 """
 import logging
 from copy import deepcopy
 import cv2
 import numpy as np
+from numpy.typing import NDArray
+from typing import Tuple
 from scipy.spatial import KDTree
-from numba import njit
+from cellects.utils.decorators import njit
+from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average
 from skimage.filters import threshold_otsu
 from skimage.measure import label
+from scipy.stats import linregress
+from scipy.ndimage import distance_transform_edt
+import matplotlib.pyplot as plt
 
 
 cross_33 = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
@@ -38,17 +49,53 @@ square_33 = np.ones((3, 3), np.uint8)
 
 
 class CompareNeighborsWithValue:
-    def __init__(self, array, connectivity=None, data_type=np.int8):
+    """
+    CompareNeighborsWithValue class to summarize each pixel by comparing its neighbors to a value.
+
+    This class analyzes pixels in a 2D array, comparing each pixel's neighbors
+    to a specified value. The comparison can be equality, superiority,
+    or inferiority, and neighbors can be the 4 or 8 nearest pixels based on
+    the connectivity parameter.
+    """
+    def __init__(self, array: np.ndarray, connectivity: int=None, data_type: np.dtype=np.int8):
         """
-        Summarize each pixel (cell) of a 2D array by comparing its neighbors to a value.
-        This comparison can be equal, inferior or superior.
-        Neighbors can be the 4 or the 8 nearest pixels based on the value of connectivity.
-        :param array: a 1 or 2D array
-        :type array: must be less permissive than data_type
-        :param connectivity: 4 or 8, if different, only compute diagonal
-        :type connectivity: uint8
-        :param data_type: the data type used for computation
-        :type data_type: type
+        Initialize a class for array connectivity processing.
+
+        This class processes arrays based on given connectivities, creating
+        windows around the original data for both 1D and 2D arrays. Depending on
+        the connectivity value (4 or 8), it creates different windows with borders.
+
+        Parameters
+        ----------
+        array : ndarray
+            Input array to process, can be 1D or 2D.
+        connectivity : int, optional
+            Connectivity type for processing (4 or 8), by default None.
+        data_type : dtype, optional
+            Data type for the array elements, by default np.int8.
+
+        Attributes
+        ----------
+        array : ndarray
+            The processed array based on the given data type.
+        connectivity : int
+            Connectivity value used for processing.
+        on_the_right : ndarray
+            Array with shifted elements to the right.
+        on_the_left : ndarray
+            Array with shifted elements to the left.
+        on_the_bot : ndarray, optional
+            Array with shifted elements to the bottom (for 2D arrays).
+        on_the_top : ndarray, optional
+            Array with shifted elements to the top (for 2D arrays).
+        on_the_topleft : ndarray, optional
+            Array with shifted elements to the top left (for 2D arrays).
+        on_the_topright : ndarray, optional
+            Array with shifted elements to the top right (for 2D arrays).
+        on_the_botleft : ndarray, optional
+            Array with shifted elements to the bottom left (for 2D arrays).
+        on_the_botright : ndarray, optional
+            Array with shifted elements to the bottom right (for 2D arrays).
         """
         array = array.astype(data_type)
         self.array = array
@@ -59,7 +106,6 @@ class CompareNeighborsWithValue:
         else:
             # Build 4 window of the original array, each missing one of the four borders
             # Grow each window with a copy of the last border at the opposite of the side a border have been deleted
-
             if self.connectivity == 4 or self.connectivity == 8:
                 self.on_the_right = np.column_stack((array[:, 1:], array[:, -1]))
                 self.on_the_left = np.column_stack((array[:, 0], array[:, :-1]))
@@ -83,22 +129,44 @@ class CompareNeighborsWithValue:
                 self.on_the_botright = np.vstack((self.on_the_botright, self.on_the_botright[-1, :]))
                 self.on_the_botright = np.column_stack((self.on_the_botright, self.on_the_botright[:, -1]))
 
-    def is_equal(self, value, and_itself=False):
+    def is_equal(self, value, and_itself: bool=False):
         """
-        Give, for each pixel, the number neighboring pixels having the value "value"
-        :param value: any number. The equal_neighbor_nb matrix will contain, for each pixel,
-        the number of neighboring pixels having that value.
-        :param and_itself: When False, the resulting number of neighbors fitting the condition is displayed normally.
-        When True, when the focal pixel does not fit the condition, it receives the value 0.
-        In other words, the resulting number of neighbors fitting the condition is displayed
-        if and only if the focal pixel ALSO fit the condition, otherwise, it will have the value 0.
-        :type and_itself: bool
-        :return: each cell of equal_neighbor_nb is the number of neighboring pixels having the value "value"
-        :rtype: uint8
+        Check equality of neighboring values in an array.
+
+        This method compares the neighbors of each element in `self.array` to a given value.
+        Depending on the dimensionality and connectivity settings, it checks different neighboring
+        elements.
+
+        Parameters
+        ----------
+        value : int or float
+            The value to check equality with neighboring elements.
+        and_itself : bool, optional
+            If True, also check equality with the element itself. Defaults to False.
+
+        Returns
+        -------
+        None
+
+        Attributes (not standard Qt properties)
+        --------------------------------------
+        equal_neighbor_nb : ndarray of uint8
+            Array that holds the number of equal neighbors for each element.
+
+        Examples
+        --------
+        >>> matrix = np.array([[9, 0, 4, 6], [4, 9, 1, 3], [7, 2, 1, 4], [9, 0, 8, 5]], dtype=np.int8)
+        >>> compare = CompareNeighborsWithValue(matrix, connectivity=4)
+        >>> compare.is_equal(1)
+        >>> print(compare.equal_neighbor_nb)
+        [[0 0 1 0]
+        [0 1 1 1]
+        [0 1 1 1]
+        [0 0 1 0]]
         """
 
         if len(self.array.shape) == 1:
-            self.equal_neighbor_nb = self.on_the_right + self.on_the_left
+            self.equal_neighbor_nb = np.sum((np.equal(self.on_the_right, value), np.equal(self.on_the_left, value)), axis=0)
         else:
             if self.connectivity == 4:
                 self.equal_neighbor_nb =  np.dstack((np.equal(self.on_the_right, value), np.equal(self.on_the_left, value),
@@ -120,16 +188,30 @@ class CompareNeighborsWithValue:
 
     def is_sup(self, value, and_itself=False):
         """
-        Give, for each pixel, the number neighboring pixels having a higher value than "value"
-        :param value: any number. The sup_neighbor_nb matrix will contain, for each pixel,
-        the number of number neighboring pixels having a higher value than "value".
-        :param and_itself: When False, the resulting number of neighbors fitting the condition is displayed normally.
-        When True, when the focal pixel does not fit the condition, it receives the value 0.
-        In other words, the resulting number of neighbors fitting the condition is displayed
-        if and only if the focal pixel ALSO fit the condition, otherwise, it will have the value 0.
-        :type and_itself: bool
-        :return: each cell of sup_neighbor_nb is the number of neighboring pixels having a value higher than "value"
-        :rtype: uint8
+        Determine if pixels have more neighbors with higher values than a given threshold.
+
+        This method computes the number of neighboring pixels that have values greater
+        than a specified `value` for each pixel in the array. Optionally, it can exclude
+        the pixel itself if its value is less than or equal to `value`.
+
+        Parameters
+        ----------
+        value : int
+            The threshold value used to determine if a neighboring pixel's value is greater.
+        and_itself : bool, optional
+            If True, exclude the pixel itself if its value is less than or equal to `value`.
+            Defaults to False.
+
+        Examples
+        --------
+        >>> matrix = np.array([[9, 0, 4, 6], [4, 9, 1, 3], [7, 2, 1, 4], [9, 0, 8, 5]], dtype=np.int8)
+        >>> compare = CompareNeighborsWithValue(matrix, connectivity=4)
+        >>> compare.is_sup(1)
+        >>> print(compare.sup_neighbor_nb)
+        [[3 3 2 4]
+         [4 2 3 3]
+         [4 2 3 3]
+         [3 3 2 4]]
         """
         if len(self.array.shape) == 1:
             self.sup_neighbor_nb = (self.on_the_right > value).astype(self.array.dtype) + (self.on_the_left > value).astype(self.array.dtype)
@@ -152,16 +234,28 @@ class CompareNeighborsWithValue:
 
     def is_inf(self, value, and_itself=False):
         """
-        Give, for each pixel, the number neighboring pixels having a lower value than "value"
-        :param value: any number. The inf_neighbor_nb matrix will contain, for each pixel,
-        the number of number neighboring pixels having a lower value than "value".
-        :param and_itself: When False, the resulting number of neighbors fitting the condition is displayed normally.
-        When True, when the focal pixel does not fit the condition, it receives the value 0.
-        In other words, the resulting number of neighbors fitting the condition is displayed
-        if and only if the focal pixel ALSO fit the condition, otherwise it receives the value 0.
-        :type and_itself: bool
-        :return: each cell of sup_neighbor_nb is the number of neighboring pixels having a value lower than "value"
-        :rtype: uint8
+        is_inf(value and_itself=False)
+
+        Determine the number of neighbors that are infinitely small relative to a given value,
+        considering optional connectivity and exclusion of the element itself.
+
+        Parameters
+        ----------
+        value : numeric
+            The value to compare neighbor elements against.
+        and_itself : bool, optional
+            If True, excludes the element itself from being counted. Default is False.
+
+        Examples
+        --------
+        >>> matrix = np.array([[9, 0, 4, 6], [4, 9, 1, 3], [7, 2, 1, 4], [9, 0, 8, 5]], dtype=np.int8)
+        >>> compare = CompareNeighborsWithValue(matrix, connectivity=4)
+        >>> compare.is_inf(1)
+        >>> print(compare.inf_neighbor_nb)
+        [[1 1 1 0]
+         [0 1 0 0]
+         [0 1 0 0]
+         [1 1 1 0]]
         """
         if len(self.array.shape) == 1:
             self.inf_neighbor_nb = (self.on_the_right < value).astype(self.array.dtype) + (self.on_the_left < value).astype(self.array.dtype)
@@ -183,13 +277,35 @@ class CompareNeighborsWithValue:
             self.inf_neighbor_nb[np.greater_equal(self.array, value)] = 0
 
 
-def cc(binary_img):
+def cc(binary_img: NDArray[np.uint8]) -> Tuple[NDArray, NDArray, NDArray]:
     """
-    This method find and order the numbering of connected components according to their sizes
-    stats columns order: left, top, right, bot
-    Sort connected components according to sizes
-    The shape touching more than 2 borders is considered as the background.
-    If another shape touches more than 2 borders, the second larger shape is considered as background
+    Processes a binary image to reorder and label connected components.
+
+    This function takes a binary image, analyses the connected components,
+    reorders them by size, ensures background is correctly labeled as 0,
+    and returns the new ordered labels along with their statistics and centers.
+
+    Parameters
+    ----------
+    binary_img : ndarray of uint8
+        Input binary image with connected components.
+
+    Returns
+    -------
+    new_order : ndarray of uint8, uint16 or uint32
+        Image with reordered labels for connected components.
+    stats : ndarray of ints
+        Statistics for each component (x, y, width, height, area).
+    centers : ndarray of floats
+        Centers for each component (x, y).
+
+    Examples
+    --------
+    >>> binary_img = np.array([[0, 1, 0], [0, 1, 0]], dtype=np.uint8)
+    >>> new_order, stats, centers = cc(binary_img)
+    >>> print(stats)
+    array([[0, 0, 3, 2, 4],
+       [1, 0, 2, 2, 2]], dtype=int32)
     """
     number, img, stats, centers = cv2.connectedComponentsWithStats(binary_img, ltype=cv2.CV_16U)
     if number > 255:
@@ -211,6 +327,8 @@ def cc(binary_img):
     # background = ((size_ranked_stats[:, 0] == 0) & (size_ranked_stats[:, 1] == 0) & (size_ranked_stats[:, 2] == img.shape[1]) & (size_ranked_stats[:, 3] == img.shape[0]))
 
     touch_borders = np.nonzero(background > 2)[0]
+    # if not isinstance(touch_borders, np.int64):
+    #     touch_borders = touch_borders[0]
     # Most of the time, the background should be the largest shape and therefore has the index 0,
     # Then, if there is at least one shape touching more than 2 borders and having not the index 0, solve:
     if np.any(touch_borders != 0):
@@ -218,8 +336,8 @@ def cc(binary_img):
         if len(touch_borders) == 1:
             # Then exchange that shape position with background position
             shape = sorted_idx[0]  # Store shape position in the first place
-            back = sorted_idx[touch_borders]  # Store back position in the first place
-            sorted_idx[touch_borders] = shape  # Put shape position at the previous place of back and conversely
+            back = sorted_idx[touch_borders[0]]  # Store back position in the first place
+            sorted_idx[touch_borders[0]] = shape  # Put shape position at the previous place of back and conversely
             sorted_idx[0] = back
         # If there are two shapes, it means that the main shape grew sufficiently to reach at least 3 borders
         # We assume that it grew larger than background
@@ -241,61 +359,142 @@ def cc(binary_img):
     return new_order, stats, centers
 
 
-def get_largest_connected_component(segmentation):
-    labels = label(segmentation)
-    assert(labels.max() != 0) # assume at least 1 CC
-    con_comp = np.bincount(labels.flat)[1:]
-    largest_connected_component = labels == np.argmax(con_comp) + 1
-    return len(con_comp), largest_connected_component
-
-
-def make_gravity_field(original_shape, max_distance=None, with_erosion=0):
+def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
     """
-    gravity_field = scipy.ndimage.distance_transform_edt(1 - original_shape)
-    Create a field containing a gradient around a shape
-    :param original_shape: a binary matrix containing one connected component
-    :type original_shape: uint8
-    :param max_distance: maximal distance from the original shape the field can reach. 
-    :type max_distance: uint64
-    :param with_erosion: Tells how the original shape should be eroded before creating the field
-    :type with_erosion: uint8
-    
-    :return: a matrix of the gravity field
+    Perform rounded inverted distance transform on a binary image.
+
+    This function computes the inverse of the Euclidean distance transform,
+    where each pixel value represents its distance to the nearest zero
+    pixel. The operation can include erosion and will stop either at a given
+    max distance or until no further expansion is needed.
+
+    Parameters
+    ----------
+    original_shape : ndarray of uint8
+        Input binary image to be processed.
+    max_distance : int, optional
+        Maximum distance for the expansion. If None, no limit is applied.
+    with_erosion : int, optional
+        Number of erosion iterations to apply before the transform. Default is 0.
+
+    Returns
+    -------
+    out : ndarray of uint32
+        Output image containing the rounded inverted distance transform.
+
+    Examples
+    --------
+    >>> segmentation = np.zeros((4, 4), dtype=np.uint8)
+    >>> segmentation[1:3, 1:3] = 1
+    >>> gravity = rounded_inverted_distance_transform(segmentation, max_distance=2)
+    >>> print(gravity)
+    [[1 2 2 1]
+     [2 0 0 2]
+     [2 0 0 2]
+     [1 2 2 1]]
     """
-    kernel = cross_33
     if with_erosion > 0:
-        original_shape = cv2.erode(original_shape, kernel, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+        original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
     expand = deepcopy(original_shape)
     if max_distance is not None:
-        if max_distance > np.min(original_shape.shape) / 2:
-            max_distance = (np.min(original_shape.shape) // 2).astype(np.uint32)
+        if max_distance > np.max(original_shape.shape):
+            max_distance = np.max(original_shape.shape).astype(np.uint32)
         gravity_field = np.zeros(original_shape.shape , np.uint32)
         for gravi in np.arange(max_distance):
-            expand = cv2.dilate(expand, kernel, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+            expand = cv2.dilate(expand, cross_33, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
             gravity_field[np.logical_xor(expand, original_shape)] += 1
     else:
         gravity_field = np.zeros(original_shape.shape , np.uint32)
         while np.any(np.equal(original_shape + expand, 0)):
-            expand = cv2.dilate(expand, kernel, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+            expand = cv2.dilate(expand, cross_33, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
             gravity_field[np.logical_xor(expand, original_shape)] += 1
     return gravity_field
 
 
-@njit()
-def get_line_points(start, end):
+def inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
     """
-    Get all integer coordinates along a line from start to end.
-    Uses a simple line drawing algorithm similar to Bresenham's.
-    start, end = start_point, end_point
-    Args:
-        start: tuple (x, y) - starting point
-        end: tuple (x, y) - ending point
+    Calculate the distance transform around ones in a binary image, with optional erosion.
 
-    Returns:
-        numpy array of shape (n, 2) with all integer coordinates
+    This function computes the Euclidean distance transform where zero values
+    represent the background and ones represent the foreground. Optionally,
+    it erodes the input image before computing the distance transform, and
+    limits distances based on a maximum value.
+
+    Parameters
+    ----------
+    original_shape : ndarray of uint8
+        Input binary image where ones represent the foreground.
+    max_distance : int, optional
+        Maximum distance value to threshold. If None (default), no thresholding is applied.
+    with_erosion : int, optional
+        Number of iterations for erosion. If 0 (default), no erosion is applied.
+
+    Returns
+    -------
+    out : ndarray of uint32
+        Distance transform array where each element represents the distance
+        to the nearest zero value in the input image.
+
+    See also
+    --------
+    rounded_distance_transform : less precise (outputs int) and faster for small max_distance values.
+
+    Examples
+    --------
+    >>> segmentation = np.zeros((4, 4), dtype=np.uint8)
+    >>> segmentation[1:3, 1:3] = 1
+    >>> gravity = inverted_distance_transform(segmentation, max_distance=2)
+    >>> print(gravity)
+    [[1.         1.41421356 1.41421356 1.        ]
+     [1.41421356 0.         0.         1.41421356]
+     [1.41421356 0.         0.         1.41421356]
+     [1.         1.41421356 1.41421356 1.        ]]
     """
-    x0, y0 = start
-    x1, y1 = end
+    if with_erosion:
+        original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+    gravity_field = distance_transform_edt(1 - original_shape)
+    if max_distance is not None:
+        if max_distance > np.min(original_shape.shape) / 2:
+            max_distance = (np.min(original_shape.shape) // 2).astype(np.uint32)
+        gravity_field[gravity_field >= max_distance] = 0
+    gravity_field[gravity_field > 0] = 1 + gravity_field.max() - gravity_field[gravity_field > 0]
+    return gravity_field
+
+
+@njit()
+def get_line_points(start, end) -> NDArray[int]:
+    """
+    Get line points between two endpoints using Bresenham's line algorithm.
+
+    This function calculates all the integer coordinate points that form a
+    line between two endpoints using Bresenham's line algorithm. It is
+    optimized for performance using Numba's just-in-time compilation.
+
+    Parameters
+    ----------
+    start : tuple of int
+        The starting point coordinates (x0, y0).
+    end : tuple of int
+        The ending point coordinates (x1, y1).
+
+    Returns
+    -------
+    out : ndarray of int
+        Array of points representing the line, with shape (N, 2), where N is
+        the number of points on the line.
+
+    Examples
+    --------
+    >>> start = (0, 0)
+    >>> end = (1, 2)
+    >>> points = get_line_points(start, end)
+    >>> print(points)
+    [[0 0]
+    [0 1]
+    [1 2]]
+    """
+    y0, x0 = start
+    y1, x1 = end
 
     # Calculate differences
     dx = np.abs(x1 - x0)
@@ -311,7 +510,7 @@ def get_line_points(start, end):
     x, y = x0, y0
 
     while True:
-        points.append([x, y])
+        points.append([y, x])
 
         # Check if we've reached the end
         if x == x1 and y == y1:
@@ -331,125 +530,128 @@ def get_line_points(start, end):
     return np.array(points)
 
 
-def get_all_line_coordinates(start_point, end_points):
+def get_all_line_coordinates(start_point: NDArray[int], end_points: NDArray[int]) -> NDArray[int]:
     """
-    Get coordinates for lines from one point to many points.
-    Automatically determines the right number of points for continuous lines.
-    start_point, end_points = origin_centroid, skel_coord
-    Args:
-        start_point: tuple (x, y) - starting point
-        end_points: list of tuples - ending points
+    Get all line coordinates between start point and end points.
 
-    Returns:
-        list of numpy arrays, each containing coordinates for one line
+    This function computes the coordinates of lines connecting a
+    start point to multiple end points, converting input arrays to float
+    if necessary before processing.
+
+    Parameters
+    ----------
+    start_point : NDArray[float]
+        Starting coordinate point for the lines. Can be of any numeric type,
+        will be converted to float if needed.
+    end_points : NDArray[float]
+        Array of end coordinate points for the lines. Can be of any
+        numeric type, will be converted to float if needed.
+
+    Returns
+    -------
+    out : List[NDArray[int]]
+        A list of numpy arrays containing the coordinates of each line
+        as integer values.
+
+    Examples
+    --------
+    >>> start_point = np.array([0, 0])
+    >>> end_points = np.array([[1, 2], [3, 4]])
+    >>> get_all_line_coordinates(start_point, end_points)
+    [array([[0, 0],
+       [0, 1],
+       [1, 2]], dtype=uint64), array([[0, 0],
+       [1, 1],
+       [1, 2],
+       [2, 3],
+       [3, 4]], dtype=uint64)]
     """
-    if not isinstance(start_point.dtype, float):
-        start_point = start_point.astype(float)
-    if not isinstance(end_points.dtype, float):
-        end_points = end_points.astype(float)
-
     lines = []
     for end_point in end_points:
         line_coords = get_line_points(start_point, end_point)
-        lines.append(np.array(line_coords, dtype =np.uint64))
+        lines.append(np.array(line_coords, dtype=np.uint64))
     return lines
 
 
-def get_every_coord_between_2_points(point_A, point_B):
+def draw_me_a_sun(main_shape: NDArray, ray_length_coef=4) -> Tuple[NDArray, NDArray]:
     """
-    Only work in a 2D space
-    First check if the segment is vertical (first if) or horizontal (elif), in this case computation takes 3 rows
-    Else, determine an approximation of what would be that continuous line in this discrete space.
-    :param point_A: y and x coordinates of the first point in a 2D space
-    :param point_B: y and x coordinates of the second point in a 2D space
-    :return: a matrix of the y and x coordinates of all points forming the segment between point_A and point_B
+    Draw a sun-shaped pattern on an image based on the main shape and ray length coefficient.
+
+    This function takes an input binary image (main_shape) and draws sun rays
+    from the perimeter of that shape. The length of the rays is controlled by a coefficient.
+    The function ensures that rays do not extend beyond the image borders.
+
+    Parameters
+    ----------
+    main_shape : ndarray of bool or int
+        Binary input image where the main shape is defined.
+    ray_length_coef : float, optional
+        Coefficient to control the length of sun rays. Defaults to 2.
+
+    Returns
+    -------
+    rays : ndarray
+        Indices of the rays drawn.
+    sun : ndarray
+        Image with sun rays drawn on it.
+
+    Examples
+    --------
+    >>> main_shape = np.zeros((10, 10), dtype=np.uint8)
+    >>> main_shape[4:7, 3:6] = 1
+    >>> rays, sun = draw_me_a_sun(main_shape)
+    >>> print(sun)
+
     """
-    xa = point_A[1]
-    ya = point_A[0]
-    xb = point_B[1]
-    yb = point_B[0]
-
-    if np.equal(xa, xb):
-        sorted_y = np.sort((ya, yb))
-        y_values = np.arange(sorted_y[0], sorted_y[1] + 1).astype(np.uint64)
-        segment = np.vstack((y_values, np.repeat(xa, len(y_values)).astype(np.uint64)))
-    elif np.equal(ya, yb):
-        sorted_x = np.sort((xa, xb))
-        x_values = np.arange(sorted_x[0], sorted_x[1] + 1).astype(np.uint64)
-        segment = np.vstack((np.repeat(ya, len(x_values)).astype(np.uint64), x_values))
-    else:
-        # First, create vectors of integers linking the coordinates of two points
-        X = np.arange(np.min((xa, xb)), np.max((xa, xb)) + 1).astype(np.uint64)
-        Y = np.arange(np.min((ya, yb)), np.max((ya, yb)) + 1).astype(np.uint64)
-        # If X is longer than Y, we make Y grow
-        new_X = X
-        new_Y = Y
-        if len(X) > len(Y):
-            new_Y = np.repeat(Y, np.round((len(X) / len(Y))))
-        if len(X) < len(Y):
-            new_X = np.repeat(X, np.round((len(Y) / len(X))))
-
-        # Duplicate the last Y value until Y length reaches X length
-        count = 0
-        while len(new_X) > len(new_Y):
-            new_Y = np.append(new_Y, new_Y[-1])
-            count = count + 1
-        while len(new_X) < len(new_Y):
-            new_X = np.append(new_X, new_X[-1])
-            count = count + 1
-
-        if np.logical_or(np.logical_and(xb < xa, yb > ya), np.logical_and(xb > xa, yb < ya)):
-            segment = np.vstack((new_Y, np.sort(new_X)[::-1]))
-        else:
-            segment = np.vstack((new_Y, new_X))
-    return segment
-
-
-def draw_me_a_sun(main_shape, cross_33, ray_length_coef=2):
-    """
-    Draw numbered rays around one shape. These rays are perpendicular to the tangent of the contour of the shape 
-    :param main_shape: a binary matrix containing one connected component
-    :param cross_33: A 3*3 matrix containing a binary cross
-    :param ray_length_coef: coefficient telling the distance of the rays of the sun
-    :return: a vector of the number of each ray, the shape with the numbered rays
-    """
-    img, stats, center = cc(main_shape)
-    main_center = center[1, :]
-    dilated_main_shape = cv2.dilate(main_shape, cross_33)
-    dilated_main_shape -= main_shape
-    first_ring_idx = np.nonzero(dilated_main_shape)
-    second_ring_y = main_center[1] + ((first_ring_idx[0] - main_center[1]) * ray_length_coef)
-    second_ring_x = main_center[0] + ((first_ring_idx[1] - main_center[0]) * ray_length_coef)
-    # Make sure that no negative value try to make rays go beyond the image border
-    while np.logical_and(np.logical_or(np.min(second_ring_y, 0) < 0, np.min(second_ring_x, 0) < 0),
-                         ray_length_coef > 1):
-        ray_length_coef -= 0.1
-        second_ring_y = main_center[1] + ((first_ring_idx[0] - main_center[1]) * ray_length_coef)
-        second_ring_x = main_center[0] + ((first_ring_idx[1] - main_center[0]) * ray_length_coef)
-
-    second_ring_idx = ((np.round(second_ring_y).astype(np.uint64), np.round(second_ring_x).astype(np.uint64)))
+    nb, shapes, stats, center = cv2.connectedComponentsWithStats(main_shape)
     sun = np.zeros(main_shape.shape, np.uint32)
-    # sun[second_ring_idx[0], second_ring_idx[1]]=1
-    rays = np.arange(len(first_ring_idx[0])) + 2
-    for ray in rays:
-        segment = get_every_coord_between_2_points((first_ring_idx[0][ray - 2], first_ring_idx[1][ray - 2]),
-                                    (second_ring_idx[0][ray - 2], second_ring_idx[1][ray - 2]))
-        try:
-            sun[segment[0], segment[1]] = ray
-        except IndexError:
-            logging.error("The algorithm allowing to correct errors around initial shape partially failed. The initial shape may be too close from the borders of the current arena")
+    rays = []
+    r = 0
+    for i in range(1, nb):
+        shape_i = cv2.dilate((shapes == i).astype(np.uint8), kernel=cross_33)
+        contours = get_contours(shape_i)
+        first_ring_idx = np.nonzero(contours)
+        centroid = np.round((center[i, 1], center[i, 0])).astype(np.int64)
+        second_ring_y = centroid[0] + ((first_ring_idx[0] - centroid[0]) * ray_length_coef)
+        second_ring_x = centroid[1] + ((first_ring_idx[1] - centroid[1]) * ray_length_coef)
 
-    return rays, sun
+        second_ring_y[second_ring_y < 0] = 0
+        second_ring_x[second_ring_x < 0] = 0
+
+        second_ring_y[second_ring_y > main_shape.shape[0] - 1] = main_shape.shape[0] - 1
+        second_ring_x[second_ring_x > main_shape.shape[1] - 1] = main_shape.shape[1] - 1
+        for j in range(len(second_ring_y)):
+            r += 1
+            fy, fx, sy, sx = first_ring_idx[0][j], first_ring_idx[1][j], second_ring_y[j], second_ring_x[j]
+            line = get_line_points((fy, fx), (sy, sx))
+            sun[line[:, 1], line[:, 0]] = r
+            rays.append(r)
+    return np.array(rays), sun
 
 
-def find_median_shape(binary_3d_matrix):
+def find_median_shape(binary_3d_matrix: NDArray[np.uint8]) -> NDArray[np.uint8]:
     """
-    Sum along the first axis of a 3D matrix binary and create a binary matrix 
-    of the pixels that are true half of the time.
-    :param binary_3d_matrix:
-    :type binary_3d_matrix: uint8
-    :return: a 2D binary matrix
-    :rtype: uint8
+    Find the median shape from a binary 3D matrix.
+
+    This function computes the median 2D slice of a binary (0/1) 3D matrix
+    by finding which voxels appear in at least half of the slices.
+
+    Parameters
+    ----------
+    binary_3d_matrix : ndarray of uint8
+        Input 3D binary matrix where each slice is a 2D array.
+
+    Returns
+    -------
+    ndarray of uint8
+        Median shape as a 2D binary matrix where the same voxels
+        that appear in at least half of the input slices are set to 1.
+
+    Examples
+    --------
+    >>> binary_3d_matrix = np.random.randint(0, 2, (10, 5, 5), dtype=np.uint8)
+    >>> median_shape = find_median_shape(binary_3d_matrix)
+    >>> print(median_shape)
     """
     binary_2d_matrix = np.apply_along_axis(np.sum, 0, binary_3d_matrix)
     median_shape = np.zeros(binary_2d_matrix.shape, dtype=np.uint8)
@@ -458,14 +660,31 @@ def find_median_shape(binary_3d_matrix):
 
 
 @njit()
-def reduce_image_size_for_speed(image_of_2_shapes):
+def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[Tuple, Tuple]:
     """
-    Divide the image into 4 rectangles.
-    If the two shapes can be found in one of these, divide this rectangle into 4
-    Repeat the above algorithm until image slicing separate the image
+    Reduces the size of an image containing two shapes for faster processing.
 
-    :param image_of_2_shapes: a uint8 numpy array with 0 as background, 1 for one shape and 2 for the other
-    :return: Return the smallest rectangle containing 1 and 2 simultaneously
+    The function iteratively divides the image into quadrants and keeps only
+    those that contain both shapes until a minimal size is reached.
+
+    Parameters
+    ----------
+    image_of_2_shapes : ndarray of uint8
+        The input image containing two shapes.
+
+    Returns
+    -------
+    out : tuple of tuples
+        The indices of the first and second shape in the reduced image.
+
+    Examples
+    --------
+    >>> main_shape = np.zeros((10, 10), dtype=np.uint8)
+    >>> main_shape[1:3, 1:3] = 1
+    >>> main_shape[1:3, 4:6] = 2
+    >>> shape1_idx, shape2_idx = reduce_image_size_for_speed(main_shape)
+    >>> print(shape1_idx)
+    (array([1, 1, 2, 2]), array([1, 2, 1, 2]))
     """
     sub_image = image_of_2_shapes.copy()
     y_size, x_size = sub_image.shape
@@ -503,14 +722,33 @@ def reduce_image_size_for_speed(image_of_2_shapes):
     return shape1_idx, shape2_idx
 
 
-def get_minimal_distance_between_2_shapes(image_of_2_shapes, increase_speed=True):
+def get_minimal_distance_between_2_shapes(image_of_2_shapes: NDArray[np.uint8], increase_speed: bool=True) -> float:
     """
-    Fast function to get the minimal distance between two shapes
-    :param image_of_2_shapes: binary image
-    :type image_of_2_shapes: uint8
-    :param increase_speed: 
-    :type increase_speed: bool
-    :return: 
+    Get the minimal distance between two shapes in an image.
+
+    This function calculates the minimal Euclidean distance between
+    two different shapes represented by binary values 1 and 2 in a given image.
+    It can optionally reduce the image size for faster processing.
+
+    Parameters
+    ----------
+    image_of_2_shapes : ndarray of int8
+        Binary image containing two shapes to measure distance between.
+    increase_speed : bool, optional
+        Flag to reduce image size for faster computation. Default is True.
+
+    Returns
+    -------
+    min_distance : float64
+        The minimal Euclidean distance between the two shapes.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> image = np.array([[1, 0], [0, 2]])
+    >>> distance = get_minimal_distance_between_2_shapes(image)
+    >>> print(distance)
+    expected output
     """
     if increase_speed:
         shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)
@@ -521,14 +759,35 @@ def get_minimal_distance_between_2_shapes(image_of_2_shapes, increase_speed=True
     return np.min(dists)
 
 
-def find_major_incline(vector, natural_noise):
+def find_major_incline(vector: NDArray, natural_noise: float) -> Tuple[int, int]:
     """
-    Find the major incline of a curve given a certain level of noise
-    :param vector: Values drawing a curve containing one major incline
-    :param natural_noise: The extent of a curve containing no major incline in the same conditions
-    :type natural_noise: uint64
-    :return:
-    vector = self.converted_video[self.start:self.substantial_time, subst_idx[0][index], subst_idx[1][index]]
+    Find the major incline section in a vector.
+
+    This function identifies the segment of a vector that exhibits
+    the most significant change in values, considering a specified
+    natural noise level. It returns the left and right indices that
+    define this segment.
+
+    Parameters
+    ----------
+    vector : ndarray of float64
+        Input data vector where the incline needs to be detected.
+    natural_noise : float
+        The acceptable noise level for determining the incline.
+
+    Returns
+    -------
+    Tuple[int, int]
+        A tuple containing two integers: the left and right indices
+        of the major incline section in the vector.
+
+    Examples
+    --------
+    >>> vector = np.array([3, 5, 7, 9, 10])
+    >>> natural_noise = 2.5
+    >>> left, right = find_major_incline(vector, natural_noise)
+    >>> (left, right)
+    (0, 1)
     """
     left = 0
     right = 1
@@ -560,12 +819,41 @@ def find_major_incline(vector, natural_noise):
     return left, right
 
 
-def rank_from_top_to_bottom_from_left_to_right(binary_image, y_boundaries, get_ordered_image=False):
-    """binary_image=self.first_image.validated_shapes; y_boundaries=self.first_image.y_boundaries; get_ordered_image=True
-    :param binary_image: Zeros 2D array with ones where shapes have been detected and validated
-    :param y_boundaries: Zeros 1D array of the vertical size of the image with 1 and -1 where rows start and end
-    :param get_ordered_image: Boolean telling if output should contain a zeros 2D image with shapes drew with integer
-    from 1 to the number of shape according to their position
+def rank_from_top_to_bottom_from_left_to_right(binary_image: NDArray[np.uint8], y_boundaries: NDArray[int], get_ordered_image: bool=False) -> Tuple:
+    """
+    Rank components in a binary image from top to bottom and from left to right.
+
+    This function processes a binary image to rank its components based on
+    their centroids. It first sorts the components row by row and then orders them
+    within each row from left to right. If the ordering fails, it attempts an alternative
+    algorithm and returns the ordered statistics and centroids.
+
+    Parameters
+    ----------
+    binary_image : ndarray of uint8
+        The input binary image to process.
+    y_boundaries : ndarray of int
+        Boundary information for the y-coordinates.
+    get_ordered_image : bool, optional
+        If True, returns an ordered image in addition to the statistics and centroids.
+        Default is False.
+
+    Returns
+    -------
+    tuple
+        If `get_ordered_image` is True, returns a tuple containing:
+        - ordered_stats : ndarray of int
+            Statistics for the ordered components.
+        - ordered_centroids : ndarray of float64
+            Centroids for the ordered components.
+        - ordered_image : ndarray of uint8
+            The binary image with ordered component labels.
+
+        If `get_ordered_image` is False, returns a tuple containing:
+        - ordered_stats : ndarray of int
+            Statistics for the ordered components.
+        - ordered_centroids : ndarray of float64
+            Centroids for the ordered components.
     """
     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(binary_image.astype(np.uint8),
                                                                                connectivity=8)
@@ -656,16 +944,73 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image, y_boundaries, get_o
         return ordered_stats, ordered_centroids
 
 
-def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_shape_i, shape_original_centroid,
-                                                      ref_centroids, kernel):
+def get_largest_connected_component(segmentation: NDArray[np.uint8]) -> Tuple[np.int64, NDArray[bool]]:
     """
-    Expand one shape until its border becomes nearer to the center of neighboring cells than to its own center
-    :param shape_to_expand: Binary image containing the focal shape only
-    :param shape_original_centroid: The centroid coordinates of the focal shape at the true beginning
-    :param without_shape_i: Binary image all shapes except the focal one
-    :param kernel: Binary matrix containing a circle of 1, copying roughly a slime mold growth
-    :return: Binary image containing the focal shape only, but expanded until it reach a border
-    or got too close from a neighbor
+    Find the largest connected component in a segmentation image.
+
+    This function labels all connected components in a binary
+    segmentation image, determines the size of each component,
+    and returns information about the largest connected component.
+
+    Parameters
+    ----------
+    segmentation : ndarray of uint8
+        Binary segmentation image where different integer values represent
+        different connected components.
+
+    Returns
+    -------
+    Tuple[int, ndarray of bool]
+        A tuple containing:
+        - The size of the largest connected component.
+        - A boolean mask representing the largest connected
+          component in the input segmentation image.
+
+    Examples
+    --------
+    >>> segmentation = np.zeros((10, 10), dtype=np.uint8)
+    >>> segmentation[2:6, 2:5] = 1
+    >>> segmentation[6:9, 6:9] = 1
+    >>> size, mask = get_largest_connected_component(segmentation)
+    >>> print(size)
+    12
+    """
+    labels = label(segmentation)
+    assert(labels.max() != 0) # assume at least 1 CC
+    con_comp_sizes = np.bincount(labels.flat)[1:]
+    largest_idx = np.argmax(con_comp_sizes)
+    largest_connected_component = labels == largest_idx + 1
+    return con_comp_sizes[largest_idx], largest_connected_component
+
+
+def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[np.uint8], without_shape_i: NDArray[np.uint8],
+                                                      shape_original_centroid: NDArray,
+                                                      ref_centroids: NDArray, kernel: NDArray) -> NDArray[np.uint8]:
+    """
+    Expand a shape until its neighbor's centroid is closer than its own.
+
+    This function takes in several numpy arrays representing shapes and their
+    centroids, and expands the input shape until the distance to the nearest
+    neighboring centroid is less than or equal to the distance between the shape's
+    contour and its own centroid.
+
+    Parameters
+    ----------
+    shape_to_expand : ndarray of uint8
+        The binary shape to be expanded.
+    without_shape_i : ndarray of uint8
+        A binary array representing the area without the shape.
+    shape_original_centroid : ndarray
+        The centroid of the original shape.
+    ref_centroids : ndarray
+        Reference centroids to compare distances with.
+    kernel : ndarray
+        The kernel for dilation operation.
+
+    Returns
+    -------
+    ndarray of uint8
+        The expanded shape.
     """
 
     without_shape = deepcopy(without_shape_i)
@@ -713,28 +1058,73 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_s
     return previous_shape_to_expand
 
 
-def image_borders(dimensions):
+def image_borders(dimensions: tuple, shape: str="rectangular") -> NDArray[np.uint8]:
     """
-    Create a matrix of dimensions "dimensions" containing ones everywhere except at borders (0)
-    :param dimensions:
-    :return:
-    :rtype: uint8
+    Create an image with borders, either rectangular or circular.
+
+    Parameters
+    ----------
+    dimensions : tuple
+        The dimensions of the image (height, width).
+    shape : str, optional
+        The shape of the borders. Options are "rectangular" or "circular".
+        Defaults to "rectangular".
+
+    Returns
+    -------
+    out : ndarray of uint8
+        The image with borders. If the shape is "circular", an ellipse border;
+        if "rectangular", a rectangular border.
+
+    Examples
+    --------
+    >>> borders = image_borders((3, 3), "rectangular")
+    >>> print(borders)
+    [[0 0 0]
+     [0 1 0]
+     [0 0 0]]
     """
-    borders = np.ones(dimensions, dtype=np.uint8)
-    borders[0, :] = 0
-    borders[:, 0] = 0
-    borders[- 1, :] = 0
-    borders[:, - 1] = 0
+    if shape == "circular":
+        borders = Ellipse(dimensions).create()
+        img_contours = image_borders(dimensions)
+        borders = borders * img_contours
+    else:
+        borders = np.ones(dimensions, dtype=np.uint8)
+        borders[0, :] = 0
+        borders[:, 0] = 0
+        borders[- 1, :] = 0
+        borders[:, - 1] = 0
     return borders
 
 
-def get_radius_distance_against_time(binary_video, field):
+def get_radius_distance_against_time(binary_video: NDArray[np.uint8], field) -> Tuple[NDArray[np.float32], int, int]:
     """
-    Find the relationship between distance in a gravity field and growth speed of a binary shape in a video
-    :param binary_video: a binary video having a growing/moving shape
-    :type binary_video: uint8
-    :param field: a gravity field around an initial shape
-    :return:
+    Calculate the radius distance against time from a binary video and field.
+
+    This function computes the change in radius distances over time
+    by analyzing a binary video and mapping it to corresponding field values.
+
+    Parameters
+    ----------
+    binary_video : ndarray of uint8
+        Binary video data.
+    field : ndarray
+        Field values to analyze the radius distances against.
+
+    Returns
+    -------
+    distance_against_time : ndarray of float32
+        Radius distances over time.
+    time_start : int
+        Starting time index where the radius distance measurement begins.
+    time_end : int
+        Ending time index where the radius distance measurement ends.
+
+    Examples
+    --------
+    >>> binary_video = np.ones((10, 5, 5), dtype=np.uint8)
+
+    >>> distance_against_time, time_start, time_end = get_radius_distance_against_time(binary_video, field)
     """
     pixel_start = np.max(field[field > 0])
     pixel_end = np.min(field[field > 0])
@@ -755,11 +1145,80 @@ def get_radius_distance_against_time(binary_video, field):
     return distance_against_time, time_start, time_end
 
 
-def expand_to_fill_holes(binary_video, holes):
+def close_holes(binary_img: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    """
+    Close holes in a binary image using connected components analysis.
+
+    This function identifies and closes small holes within the foreground objects of a binary image. It uses connected component analysis to find and fill holes that are smaller than the main object.
+
+    Parameters
+    ----------
+    binary_img : ndarray of uint8
+        Binary input image where holes need to be closed.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        Binary image with closed holes.
+
+    Examples
+    --------
+    >>> binary_img = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_img[2:8, 2:8] = 1
+    >>> binary_img[4:6, 4:6] = 0  # Creating a hole
+    >>> result = close_holes(binary_img)
+    >>> print(result)
+    [[0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]]
+    """
+    #### Third version ####
+    nb, new_order = cv2.connectedComponents(1 - binary_img)
+    if nb > 2:
+        binary_img[new_order > 1] = 1
+    return binary_img
+
+
+def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDArray[np.uint8]) -> Tuple[NDArray[np.uint8], int, NDArray[np.float32]]:
+    """
+    Fill the holes in a binary video by progressively expanding the shape made of ones.
+
+    Parameters
+    ----------
+    binary_video : ndarray of uint8
+        The binary video where holes need to be filled.
+    holes : ndarray of uint8
+        Array representing the holes in the binary video.
+
+    Returns
+    -------
+    out : tuple of ndarray of uint8, int, and ndarray of float32
+        The modified binary video with filled holes,
+        the end time when all holes are filled, and
+        an array of distances against time used to fill the holes.
+
+    Examples
+    --------
+    >>> binary_video = np.zeros((10, 640, 480), dtype=np.uint8)
+    >>> binary_video[:, 300:400, 220:240] = 1
+    >>> holes = np.zeros((640, 480), dtype=np.uint8)
+    >>> holes[340:360, 228:232] = 1
+    >>> filled_video, end_time, distances = dynamically_expand_to_fill_holes(binary_video, holes)
+    >>> print(filled_video.shape)  # Should print (10, 640, 480)
+    (10, 640, 480)
+    """
     #first move should be the time at wich the first pixel hole could have been covered
     #it should ask how much time the shape made to cross a distance long enough to overlap all holes
     holes_contours = cv2.dilate(holes, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
-    field = make_gravity_field(binary_video[0, :, :], (binary_video.shape[0] - 1))
+    field = rounded_inverted_distance_transform(binary_video[0, :, :], (binary_video.shape[0] - 1))
+    field2 = inverted_distance_transform(binary_video[0, :, :], (binary_video.shape[0] - 1))
     holes_contours = holes_contours * field * binary_video[- 1, :, :]
     holes[np.nonzero(holes)] = field[np.nonzero(holes)]
     if np.any(holes_contours):
@@ -782,39 +1241,38 @@ def expand_to_fill_holes(binary_video, holes):
             binary_video[t, :, :] = past_image
     else:
         holes_time_end = None
-        distance_against_time = [1, 2]
+        distance_against_time = np.array([1, 2], dtype=np.float32)
 
     return binary_video, holes_time_end, distance_against_time
 
 
-def change_thresh_until_one(grayscale_image, binary_image, lighter_background):
-    coord = np.nonzero(binary_image)
-    min_cx = np.min(coord[0])
-    max_cx = np.max(coord[0])
-    min_cy = np.min(coord[1])
-    max_cy = np.max(coord[1])
-    gray_img = grayscale_image[min_cy:max_cy, min_cx:max_cx]
-    # threshold = get_otsu_threshold(gray_img)
-    threshold = threshold_otsu(gray_img)
-    bin_img = (gray_img < threshold).astype(np.uint8)
-    detected_shape_number, bin_img = cv2.connectedComponents(bin_img, ltype=cv2.CV_16U)
-    while (detected_shape_number > 2) and (0 < threshold < 255):
-        if lighter_background:
-            threshold += 1
-            bin_img = (gray_img < threshold).astype(np.uint8)
-        else:
-            threshold -= 1
-            bin_img = (gray_img < threshold).astype(np.uint8)
-        detected_shape_number, bin_img = cv2.connectedComponents(bin_img, ltype=cv2.CV_16U)
-    binary_image = np.zeros_like(binary_image, np.uint8)
-    binary_image[min_cy:max_cy, min_cx:max_cx] = bin_img
-    return binary_image
-
-
 class Ellipse:
+    """
+    Create an ellipse with given vertical and horizontal sizes.
+
+    This class represents an ellipse defined by its vertical and horizontal
+    dimensions. It provides methods to check if a point lies within the ellipse
+    and to generate a 2D array representing the ellipse shape.
+    """
     def __init__(self, sizes):
         """
-        Usage: Ellipse
+        Initialize the object with given vertical and horizontal sizes.
+
+        Parameters
+        ----------
+        sizes : list or tuple of int, length 2
+            List containing two integers representing vertical and horizontal sizes.
+
+        Attributes
+        ----------
+        vsize : int
+            Vertical size of the object.
+        hsize : int
+            Horizontal size of the object.
+        vr : int
+            Half of the horizontal size.
+        hr : int
+            Half of the vertical size.
         """
         self.vsize = sizes[0]
         self.hsize = sizes[1]
@@ -823,43 +1281,355 @@ class Ellipse:
 
     def ellipse_fun(self, x, y):
         """
-        Create an ellipse of size x and y in a 2D array of size vsize and hsize
-        :param x: ellipse size on x axis
-        :param y: ellipse size on y axis
-        :return: a binary image containing the ellipse
+        Check if a point (x,y) lies within or on the ellipse.
+
+        This function checks if a given point lies inside or on the boundary
+        of an ellipse defined by its horizontal radius (`self.hr`) and vertical
+        radius (`self.vr`). The center of the ellipse is at (0, 0).
+
+        Parameters
+        ----------
+        x : float
+            The x-coordinate of the point to be checked.
+        y : float
+            The y-coordinate of the point to be checked.
+
+        Returns
+        -------
+        bool
+            True if the point (x, y) lies within or on the ellipse; False otherwise.
+
         """
         return (((x - self.hr) ** 2) / (self.hr ** 2)) + (((y - self.vr) ** 2) / (self.vr ** 2)) <= 1
 
-    def create(self):
-        # if self.hsize % 2 == 0:
-        #     self.hsize += 1
-        # if self.vsize % 2 == 0:
-        #     self.vsize += 1
+    def create(self) -> NDArray:
+        """
+        Create a 2D array representing an ellipse.
+
+        This method generates a NumPy array where each element is determined by
+        the `ellipse_fun` function, which computes values based on the horizontal
+        and vertical sizes of the ellipse.
+
+        Returns
+        -------
+        ndarray
+            A 2D NumPy array representing the ellipse shape.
+        """
         return np.fromfunction(self.ellipse_fun, (self.vsize, self.hsize))
 
 
-def get_rolling_window_coordinates_list(height, width, side_length, window_step, allowed_pixels=None):
-    y_remain = height % side_length
-    x_remain = width % side_length
-    y_nb = height // side_length
-    x_nb = width // side_length
-    y_coord = np.arange(y_nb + 1, dtype =np.uint64) * side_length
-    x_coord = np.arange(x_nb + 1, dtype =np.uint64) * side_length
-    y_coord[-1] += y_remain
-    x_coord[-1] += x_remain
-    window_coords = []
-    for y_i in range(len(y_coord) - 1):
-        for x_i in range(len(x_coord) - 1):
-            for add_to_y in np.arange(0, side_length, window_step, dtype =np.uint64):
-                y_max = np.min((height, y_coord[y_i + 1] + add_to_y)).astype(np.uint64)
-                for add_to_x in np.arange(0, side_length, window_step, dtype =np.uint64):
-                    x_max = np.min((width, x_coord[x_i + 1] + add_to_x)).astype(np.uint64)
-                    if allowed_pixels is None or np.any(allowed_pixels[(y_coord[y_i] + add_to_y):y_max, (x_coord[x_i] + add_to_x):x_max]):
-                        window_coords.append([y_coord[y_i] + add_to_y, y_max, x_coord[x_i] + add_to_x, x_max])
-    return window_coords
+rhombus_55 = Ellipse((5, 5)).create().astype(np.uint8)
 
 
-def get_contours(binary_image):
-    eroded_binary = cv2.erode(binary_image, cross_33)
-    contours = binary_image - eroded_binary
+def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    """
+    Find and return the contours of a binary image.
+
+    This function erodes the input binary image using a 3x3 cross-shaped
+    structuring element and then subtracts the eroded image from the original to obtain the contours.
+
+    Parameters
+    ----------
+    binary_image : ndarray of uint8
+        Input binary image from which to extract contours.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        Image containing only the contours extracted from `binary_image`.
+
+    Examples
+    --------
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:8, 2:8] = 1
+    >>> result = get_contours(binary_image)
+    >>> print(result)
+    [[0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 0 0 0 0 1 0 0]
+     [0 0 1 1 1 1 1 1 0 0]
+     [0 0 0 0 0 0 0 0 0 0]
+     [0 0 0 0 0 0 0 0 0 0]]
+    """
+    if np.all(binary_image):
+        contours = 1 - image_borders(binary_image.shape)
+    elif np.any(binary_image):
+        eroded_binary = cv2.erode(binary_image, cross_33)
+        contours = binary_image - eroded_binary
+    else:
+        contours = binary_image
     return contours
+
+
+def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, min_mesh_side: int=8, zoom_step: int=0, contours: bool=True)-> Tuple[NDArray[np.uint8], NDArray[np.uint8]]:
+    """Prepare box counting parameters for image analysis.
+
+    Prepares parameters for box counting method based on binary
+    image input. Adjusts image size, computes side lengths, and applies
+    contour extraction if specified.
+
+    Parameters
+    ----------
+    binary_image : ndarray of uint8
+        Binary image for analysis.
+    min_im_side : int, optional
+        Minimum side length threshold. Default is 128.
+    min_mesh_side : int, optional
+        Minimum mesh side length. Default is 8.
+    zoom_step : int, optional
+        Zoom step for side lengths computation. Default is 0.
+    contours : bool, optional
+        Whether to apply contour extraction. Default is True.
+
+    Returns
+    -------
+    out : tuple of ndarray of uint8, ndarray (or None)
+        Cropped binary image and computed side lengths.
+
+    Examples
+    --------
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:4, 2:6] = 1
+    >>> binary_image[7:9, 4:7] = 1
+    >>> binary_image[4:7, 5] = 1
+    >>> cropped_img, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+    >>> print(cropped_img), print(side_lengths)
+    [[0 0 0 0 0 0 0]
+     [0 1 1 1 1 0 0]
+     [0 1 1 1 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 0 1 0 0]
+     [0 0 0 1 0 1 0]
+     [0 0 0 1 1 1 0]
+     [0 0 0 0 0 0 0]]
+    [4 2]
+    """
+    side_lengths = None
+    zoomed_binary = binary_image
+    binary_idx = np.nonzero(binary_image)
+    if binary_idx[0].size:
+        min_y = np.min(binary_idx[0])
+        min_y = np.max((min_y - 1, 0))
+
+        min_x = np.min(binary_idx[1])
+        min_x = np.max((min_x - 1, 0))
+
+        max_y = np.max(binary_idx[0])
+        max_y = np.min((max_y + 1, binary_image.shape[0] - 1))
+
+        max_x = np.max(binary_idx[1])
+        max_x = np.min((max_x + 1, binary_image.shape[1] - 1))
+
+        zoomed_binary = deepcopy(binary_image[min_y:(max_y + 1), min_x: (max_x + 1)])
+        min_side = np.min(zoomed_binary.shape)
+        if min_side >= min_im_side:
+            if contours:
+                eroded_zoomed_binary = cv2.erode(zoomed_binary, cross_33)
+                zoomed_binary = zoomed_binary - eroded_zoomed_binary
+            if zoom_step == 0:
+                max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2
+                side_lengths = 2 ** np.arange(max_power, int(np.log2(min_mesh_side // 2)), -1)
+            else:
+                side_lengths = np.arange(min_mesh_side, min_side, zoom_step)
+    return zoomed_binary, side_lengths
+
+
+def box_counting_dimension(zoomed_binary: NDArray[np.uint8], side_lengths: NDArray, display: bool=False) -> Tuple[float, float, float]:
+    """
+    Box counting dimension calculation.
+
+    This function calculates the box-counting dimension of a binary image by analyzing the number
+    of boxes (of varying sizes) that contain at least one pixel of the image. The function also
+    provides the R-squared value from linear regression and the number of boxes used.
+
+    Parameters
+    ----------
+    zoomed_binary : NDArray[np.uint8]
+        Binary image (0 or 255 values) for which the box-counting dimension is calculated.
+    side_lengths : NDArray
+        Array of side lengths for the boxes used in the box-counting calculation.
+    display : bool, optional
+        If True, displays a scatter plot of the log-transformed box counts and diameters,
+        along with the linear regression fit. Default is False.
+
+    Returns
+    -------
+    out : Tuple[float, float, float]
+        A tuple containing the calculated box-counting dimension (`d`), R-squared value (`r_value`),
+        and the number of boxes used (`box_nb`).
+
+    Examples
+    --------
+    >>> binary_image = np.zeros((10, 10), dtype=np.uint8)
+    >>> binary_image[2:4, 2:6] = 1
+    >>> binary_image[7:9, 4:7] = 1
+    >>> binary_image[4:7, 5] = 1
+    >>> zoomed_binary, side_lengths = prepare_box_counting(binary_image, min_im_side=2, min_mesh_side=2)
+    >>> dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
+    >>> print(dimension, r_value, box_nb)
+    (np.float64(1.1699250014423126), np.float64(0.9999999999999998), 2)
+    """
+    dimension:float = 0.
+    r_value:float = 0.
+    box_nb:float = 0.
+    if side_lengths is not None:
+        box_counts = np.zeros(len(side_lengths), dtype=np.uint64)
+        # Loop through side_lengths and compute block counts
+        for idx, side_length in enumerate(side_lengths):
+            S = np.add.reduceat(
+                np.add.reduceat(zoomed_binary, np.arange(0, zoomed_binary.shape[0], side_length), axis=0),
+                np.arange(0, zoomed_binary.shape[1], side_length),
+                axis=1
+            )
+            box_counts[idx] = len(np.where(S > 0)[0])
+
+        valid_indices = box_counts > 0
+        if valid_indices.sum() >= 2:
+            log_box_counts = np.log(box_counts)
+            log_reciprocal_lengths = np.log(1 / side_lengths)
+            slope, intercept, r_value, p_value, stderr = linregress(log_reciprocal_lengths, log_box_counts)
+            # coefficients = np.polyfit(log_reciprocal_lengths, log_box_counts, 1)
+            dimension = slope
+            box_nb = len(side_lengths)
+            if display:
+                plt.scatter(log_reciprocal_lengths, log_box_counts, label="Box counting")
+                plt.plot([0, log_reciprocal_lengths.min()], [intercept, intercept + slope * log_reciprocal_lengths.min()], label="Linear regression")
+                plt.plot([], [], ' ', label=f"D = {slope:.2f}")
+                plt.plot([], [], ' ', label=f"R2 = {r_value:.6f}")
+                plt.plot([], [], ' ', label=f"p-value = {p_value:.2e}")
+                plt.legend(loc='best')
+                plt.xlabel(f"log(1/Diameter) | Diameter ⊆ [{side_lengths[0]}:{side_lengths[-1]}] (n={box_nb})")
+                plt.ylabel(f"log(Box number) | Box number ⊆ [{box_counts[0]}:{box_counts[-1]}]")
+                plt.show()
+                # plt.close()
+
+    return dimension, r_value, box_nb
+
+
+def keep_shape_connected_with_ref(all_shapes: NDArray[np.uint8], reference_shape: NDArray[np.uint8]) -> NDArray[np.uint8]:
+    """
+    Keep shape connected with reference.
+
+    This function analyzes the connected components of a binary image represented by `all_shapes`
+    and returns the first component that intersects with the `reference_shape`.
+    If no such component is found, it returns None.
+
+    Parameters
+    ----------
+    all_shapes : ndarray of uint8
+        Binary image containing all shapes to analyze.
+    reference_shape : ndarray of uint8
+        Binary reference shape used for intersection check.
+
+    Returns
+    -------
+    out : ndarray of uint8 or None
+        The first connected component that intersects with the reference shape,
+        or None if no such component is found.
+
+    Examples
+    -------
+    >>> all_shapes = np.zeros((5, 5), dtype=np.uint8)
+    >>> reference_shape = np.zeros((5, 5), dtype=np.uint8)
+    >>> reference_shape[3, 3] = 1
+    >>> all_shapes[0:2, 0:2] = 1
+    >>> all_shapes[3:4, 3:4] = 1
+    >>> res = keep_shape_connected_with_ref(all_shapes, reference_shape)
+    >>> print(res)
+    [[0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 1 0]
+     [0 0 0 0 0]]
+    """
+    number, order = cv2.connectedComponents(all_shapes, ltype=cv2.CV_16U)
+    expanded_shape = None
+    if number > 1:
+        for i in np.arange(1, number):
+            expanded_shape_test = np.zeros(order.shape, np.uint8)
+            expanded_shape_test[order == i] = 1
+            if np.any(expanded_shape_test * reference_shape):
+                break
+        if np.any(expanded_shape_test * reference_shape):
+            expanded_shape = expanded_shape_test
+        else:
+            expanded_shape = reference_shape
+    return expanded_shape
+
+
+@njit()
+def keep_largest_shape(indexed_shapes: NDArray[np.int32]) -> NDArray[np.uint8]:
+    """
+    Keep the largest shape from an array of indexed shapes.
+
+    This function identifies the most frequent non-zero shape in the input
+    array and returns a binary mask where elements matching this shape are set to 1,
+    and others are set to 0. The function uses NumPy's bincount to count occurrences
+    of each shape and assumes that the first element (index 0) is not part of any
+    shape classification.
+
+    Parameters
+    ----------
+    indexed_shapes : ndarray of int32
+        Input array containing indexed shapes.
+
+    Returns
+    -------
+    out : ndarray of uint8
+        Binary mask where the largest shape is marked as 1.
+
+    Examples
+    --------
+    >>> indexed_shapes = np.array([0, 2, 2, 3, 1], dtype=np.int32)
+    >>> keep_largest_shape(indexed_shapes)
+    array([0, 1, 1, 0, 0], dtype=uint8)
+    """
+    label_counts = np.bincount(indexed_shapes.flatten())
+    largest_label = 1 + np.argmax(label_counts[1:])
+    return (indexed_shapes == largest_label).astype(np.uint8)
+
+
+def keep_one_connected_component(binary_image: NDArray[np.uint8])-> NDArray[np.uint8]:
+    """
+    Keep only one connected component in a binary image.
+
+    This function filters out all but the largest connected component in
+    a binary image, effectively isolating it from other noise or objects.
+    The function ensures the input is in uint8 format before processing.
+
+    Parameters
+    ----------
+    binary_image : ndarray of uint8
+        Binary image containing one or more connected components.
+
+    Returns
+    -------
+    ndarray of uint8
+        Image with only the largest connected component retained.
+
+    Examples
+    -------
+    >>> all_shapes = np.zeros((5, 5), dtype=np.uint8)
+    >>> all_shapes[0:2, 0:2] = 1
+    >>> all_shapes[3:4, 3:4] = 1
+    >>> res = keep_one_connected_component(all_shapes)
+    >>> print(res)
+    [[1 1 0 0 0]
+     [1 1 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]
+     [0 0 0 0 0]]
+    """
+    if binary_image.dtype != np.uint8:
+        binary_image = binary_image.astype(np.uint8)
+    num_labels, sh = cv2.connectedComponents(binary_image)
+    if num_labels <= 1:
+        return binary_image.astype(np.uint8)
+    else:
+        return keep_largest_shape(sh)
+

@@ -1,47 +1,79 @@
+[build-system]
+requires = ["setuptools==76.1.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "Cellects"
-
-[tool.poetry]
-name = "Cellects"
-version = "1.0.0"
+name = "cellects"
+version = "0.1.0"
 description = "Cell Expansion Computer Tracking Software."
-authors = ["Aurèle Boussard"]
-license = "GNU General Public License v3.0"
 readme = "README.md"
-include = ["cellects/icons/cellects_icon"]
+license = { file = "LICENSE" }
+requires-python = ">=3.11,<3.13"
+authors = [{ name = "Aurèle Boussard" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+]
 
-[tool.poetry.scripts]
+dependencies = [
+  "coloredlogs",
+  "exif",
+  "ExifRead",
+  "numba",
+  "opencv-python",
+  "pandas",
+  "psutil",
+  "PySide6>=6.5",
+  "scipy",
+  "screeninfo",
+  "numpy>=1.26",
+  "scikit-image",
+  "tqdm",
+  "h5py",
+  "matplotlib",
+  "natsort",
+]
+
+[project.scripts]
 Cellects = "cellects.__main__:run_cellects"
 
-#[tool.poetry.files]
-#Cellects = "cellects.config.all_vars:run_cellects"
-#devtest = {reference = "cellects.test:test.run_cellects_tests", extras = ["test"], type = "console" }
-
-[tool.poetry.dependencies]
-python = ">3.10,<3.13"
-coloredlogs = "^15.0.1"
-exif = "^1.6.0"
-ExifRead = "^3.0.0"
-numba = "^0.61.2"
-opencv-python = "^4.8.1.78"
-pandas = "*"
-psutil = "^5.9.6"
-PySide6 = "^6.5.2"
-scipy = "^1.11.3"
-screeninfo = "^0.8.1"
-numpy = "^1.26.1"
-scikit-image = "^0.24.0"
-
-
-[tool.poetry.group.dev.dependencies]
-h5py = "^3.10.0"
-typing-extensions = "^4.8.0"
-wheel = "^0.41.3"
-setuptools = "^68.2.2"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-env",
+  "pytest-cov",
+]
+doc = [
+  "mkdocs",
+  "mkdocs-material",
+  "pymdown-extensions",
+]
 
 [project.urls]
-"Homepage" = "https://github.com/Aurele-B/Cellects"
+Homepage = "https://github.com/Aurele-B/Cellects"
+Issues = "https://github.com/Aurele-B/Cellects/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+cellects = ["icons/**"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=src/cellects --cov-report=term-missing --cov-report=html"
+
+[tool.pytest_env]
+USE_NUMBA = "0"
+
+[tool.coverage.run]
+omit = [
+    "src/cellects/gui/*",
+    "src/cellects/utils/load_display_save.py"
+]

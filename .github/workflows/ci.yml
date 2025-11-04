@@ -2,18 +2,64 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    branches: ["main"]     # auto on main
+  pull_request:
+  workflow_dispatch:        # manual run from any branch
 
 jobs:
   test:
-    name: Dummy CI job
+    name: tests (py${{ matrix.python }})
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
 
-      - name: Simulate build & test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up micromamba
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: conda/env.yaml
+          cache-environment: true
+          create-args: >-
+            python=${{ matrix.python }}
+          init-shell: bash
+
+      - name: Install build
+        shell: bash -l {0}
         run: |
-          echo "✅ CI workflow placeholder running on branch: ${{ github.ref }}"
-          echo "This is a fake workflow to activate the Run workflow button."
+          python -m pip install -U pip build
+
+      - name: Install package with test dependencies
+        shell: bash -l {0}
+        run: |
+          pip install -e ".[test]"
+
+      - name: Run tests with coverage
+        shell: bash -l {0}
+        run: |
+          pytest --cov-report=xml
+
+      - name: Upload coverage.xml
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python }}
+          path: coverage.xml
+
+      # Build & publish the artifacts only once (python 3.12)
+      # OPTIONAL : this will be done automatically by release.yml
+      #- name: Build sdist and wheel
+      #  if: matrix.python == '3.12'
+      #  shell: bash -l {0}
+      #  run: |
+      #    python -m build
+      #    ls -lh dist
+      #
+      #- name: Upload dist artifacts
+      #  if: matrix.python == '3.12'
+      #  uses: actions/upload-artifact@v4
+      #  with:
+      #    name: python-package-distributions
+      #    path: dist/*

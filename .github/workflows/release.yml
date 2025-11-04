@@ -2,18 +2,28 @@ name: Publish to PyPI
 
 on:
   push:
-    tags: [ '*' ]
-
+    tags: ['*']
 
 jobs:
-  test:
-    name: Dummy Release job
+  publish:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    permissions:
+      contents: read
+      id-token: write
 
-      - name: Simulate release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist & wheel
         run: |
-          echo "✅ Release workflow placeholder running on branch: ${{ github.ref }}"
-          echo "This is a fake workflow to activate the Run workflow button."
+          python -m pip install -U pip build twine
+          pip install -U packaging
+          python -m build
+          twine check dist/*
+
+      - name: Publish to PyPI (OIDC)
+        uses: pypa/gh-action-pypi-publish@v1.12.2
+        with:
+          packages-dir: dist
+          verify-metadata: false
+          verbose: true
