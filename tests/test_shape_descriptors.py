@@ -75,7 +75,7 @@ class TestShapeDescriptors(CellectsUnitTest):
         self.sd.get_circularity()
         self.assertTrue(self.sd.circularity > 1)
 
-    def test_get_circularity(self):
+    def test_get_circularity_type(self):
         """Test get_circularity."""
         self.sd.get_circularity()
         self.assertTrue(isinstance(self.sd.circularity, float))
