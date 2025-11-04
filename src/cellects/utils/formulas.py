@@ -476,7 +476,7 @@ def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     if (c20 - c02) != 0:
         axes_orientation = (0.5 * np.arctan((2 * c11) / (c20 - c02))) + ((c20 < c02) * (np.pi /2))
     else:
-        axes_orientation = 0
+        axes_orientation = 0.
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
 
 
