@@ -32,7 +32,7 @@ requirements.txt
 cellects.egg-info/
 
 # output data
-data/output/
+data/output/*
 
 # coverage
 .coverage
