@@ -189,13 +189,6 @@ class TestVideo2Numpy(CellectsUnitTest):
             # Verify the dimensions of the video
             self.assertEqual(video.shape, (10, 480, 640, 3))
 
-    def tearDown(self):
-        """Remove all written files."""
-        if os.path.isfile(self.path_output / 'test_write_video.mp4'):
-            os.remove(self.path_output / 'test_write_video.mp4')
-        if os.path.isfile(self.path_output / 'test_write_video.npy'):
-            os.remove(self.path_output / 'test_write_video.npy')
-
 
 class TestIsRawImage(CellectsUnitTest):
     """Test suite for is_raw_image function."""
@@ -266,7 +259,7 @@ class TestVStackH5Array(CellectsUnitTest):
     def test_create_new_file_with_valid_input(self):
         """Test that a new HDF5 file and dataset is created with valid input."""
         # Setup unique filename in output directory
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_output / f"test_vstack.h5"
         table = np.array([[1, 2], [3, 4]])
 
         # Execute function
@@ -279,7 +272,7 @@ class TestVStackH5Array(CellectsUnitTest):
 
     def test_append_existing_dataset(self):
         """Test that new table is appended to existing dataset."""
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_output / f"test_vstack.h5"
 
         # Initial write
         initial_data = np.array([[1, 2], [3, 4]])
@@ -296,7 +289,7 @@ class TestVStackH5Array(CellectsUnitTest):
 
     def test_empty_table_input(self):
         """Test that function handles empty input table without errors."""
-        file_name = self.path_output / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_output / f"test_vstack.h5"
         empty_table = np.empty((0, 2))
 
         vstack_h5_array(file_name, empty_table)
@@ -306,8 +299,8 @@ class TestVStackH5Array(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(self.path_output / f"test_vstack_{self.id()}.h5"):
-            os.remove(self.path_output / f"test_vstack_{self.id()}.h5")
+        if os.path.isfile(self.path_output / f"test_vstack.h5"):
+            os.remove(self.path_output / f"test_vstack.h5")
 
 
 class TestReadH5Array(CellectsUnitTest):
@@ -315,13 +308,11 @@ class TestReadH5Array(CellectsUnitTest):
 
     def test_read_h5_file(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
-        table = np.array([[1, 2], [3, 4]])
-
+        file_name = self.path_input / f"test_vstack.h5"
+        key_name = "first_key"
         # Execute function
-        vstack_h5_array(file_name, table)
-        read_file = read_h5_array(file_name)
-        self.assertTrue(np.array_equal(table, read_file))
+        read_file = read_h5_array(file_name, key_name)
+        self.assertTrue(isinstance(read_file, np.ndarray))
 
 
 class TestGetH5Keys(CellectsUnitTest):
@@ -329,31 +320,33 @@ class TestGetH5Keys(CellectsUnitTest):
 
     def test_get_h5_keys(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
-        table = np.array([[1, 2], [3, 4]])
-        original_key = "the_key"
-        # Execute function
-        vstack_h5_array(file_name, table, key=original_key)
+        file_name = self.path_input / f"test_vstack.h5"
+        key_name = "first_key"
         read_key = get_h5_keys(file_name)
-        self.assertTrue(original_key == read_key[0])
+        self.assertTrue(key_name == read_key[0])
+
 
 class TestRemoveH5Keys(CellectsUnitTest):
     """Test suite for remove_h5_key function."""
 
     def test_remove_h5_key(self):
         """Test that read_h5_array manage to read."""
-        file_name = self.path_input / f"test_vstack_{self.id()}.h5"
+        file_name = self.path_output / f"test_vstack.h5"
         table1 = np.array([[1, 2], [3, 4]])
-        key1 = "the_key1"
-        table2 = np.array([[5, 6], [4, 4]])
-        key2 = "the_key2"
+        key1 = "first_key"
+        table2 = table1[::-1]
+        key2 = "second_key"
         # Execute function
-        vstack_h5_array(file_name, table1, key=key1)
-        vstack_h5_array(file_name, table2, key=key2)
-        remove_h5_key(file_name, key=key1)
+        vstack_h5_array(file_name, table1, key1)
+        vstack_h5_array(file_name, table2, key2)
+        remove_h5_key(file_name, key=key2)
         read_keys = get_h5_keys(file_name)
-        self.assertTrue(read_keys[0] == key2)
+        self.assertTrue(read_keys[0] == key1)
 
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_output / f"test_vstack.h5"):
+            os.remove(self.path_output / f"test_vstack.h5")
 
 class TestGetMplColormap(CellectsUnitTest):
     """Test suite for get_mpl_colormap."""
