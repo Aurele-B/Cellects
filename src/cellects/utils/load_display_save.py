@@ -797,7 +797,7 @@ def get_mpl_colormap(cmap_name: str):
 
 
 
-def show(img, interactive: bool=True, cmap=None):
+def show(img, interactive: bool=True, cmap=None, show: bool=True):
     """
     Display an image using Matplotlib with optional interactivity and colormap.
 
@@ -862,8 +862,11 @@ def show(img, interactive: bool=True, cmap=None):
         ax.imshow(img, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
     else:
         ax.imshow(img, cmap=cmap, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
-    fig.tight_layout()
-    fig.show()
+
+    if show:
+        fig.tight_layout()
+        fig.show()
+
     return fig, ax
 
 
@@ -922,7 +925,7 @@ def save_fig(img: NDArray, full_path, cmap=None):
     plt.close(fig)
 
 
-def display_boxes(binary_image: NDArray, box_diameter: int):
+def display_boxes(binary_image: NDArray, box_diameter: int, show: bool = True):
     """
     Display grid lines on a binary image at specified box diameter intervals.
 
@@ -957,7 +960,10 @@ def display_boxes(binary_image: NDArray, box_diameter: int):
     for y in range(0, height + 1, box_diameter):
         line_nb += 1
         plt.axhline(y=y, color='white', linewidth=1)
-    plt.show()
+
+    if show:
+        plt.show()
+
     return line_nb
 
 

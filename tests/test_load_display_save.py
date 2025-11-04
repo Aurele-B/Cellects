@@ -396,7 +396,7 @@ class TestShow(CellectsUnitTest):
     def test_show_with_interactive_mode_on(self):
         """Test if returns valid object."""
         img = np.random.rand(100, 100)
-        fig, ax = show(img, interactive=False)
+        fig, ax = show(img, interactive=False, show=False)
         self.assertTrue(isinstance(fig, Figure))
 
     def tearDown(self):
@@ -426,7 +426,7 @@ class TestDisplayBoxes(CellectsUnitTest):
     def test_display_boxes(self):
         """Test if returns valid object."""
         binary_image = np.random.rand(10, 10)
-        line_nb = display_boxes(binary_image, box_diameter=2)
+        line_nb = display_boxes(binary_image, box_diameter=2, show=False)
         self.assertTrue(line_nb == 12)
 
     def tearDown(self):
