@@ -27,7 +27,7 @@ class TestCellects(CellectsUnitTest):
 
     def test_save_data_to_run_cellects_quickly(self):
         if not os.path.isfile(self.path_experiment / "Data to run Cellects quickly.pkl"):
-            coordinates = PickleRick().read_file(self.path_output / "coordinates.pkl")
+            coordinates = PickleRick().read_file(self.path_input / "coordinates.pkl")
             dd = DefaultDicts()
             self.po.all = dd.all
             self.po.vars = dd.vars
@@ -69,7 +69,7 @@ class TestCellects(CellectsUnitTest):
 
     def test_load_data_to_run_cellects_quickly(self):
         self.test_save_data_to_run_cellects_quickly()
-        coordinates = PickleRick().read_file(self.path_output / "coordinates.pkl")
+        coordinates = PickleRick().read_file(self.path_input / "coordinates.pkl")
         self.assertTrue(np.array_equal(self.po.first_image.crop_coord, coordinates[0]))
         self.assertTrue(np.array_equal(self.po.left, coordinates[1]))
         self.assertTrue(np.array_equal(self.po.right, coordinates[2]))
