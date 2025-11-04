@@ -28,6 +28,12 @@ requirements.txt
 __pycache__/
 *.py[cod]
 
+# eggs
+cellects.egg-info/
+
+# output data
+data/output/
+
 # coverage
 .coverage
 htmlcov/
