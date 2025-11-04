@@ -5,14 +5,14 @@ docs/
 dist/
 src/cellects/build/
 src/cellects/dist/
-src/data/experiment/ind*
-src/data/experiment/Data to run Cellects quickly.pkl
-src/data/experiment/Analysis efficiency, last image.JPG
-src/data/experiment/Analysis efficiency, 3th image.JPG
-src/data/experiment/one_row_per_arena.csv
-src/data/experiment/one_row_per_frame.csv
-src/data/experiment/one_row_per_oscillating_cluster.csv
-src/data/experiment/software_settings.csv
+data/experiment/ind*
+data/experiment/Data to run Cellects quickly.pkl
+data/experiment/Analysis efficiency, last image.JPG
+data/experiment/Analysis efficiency, 3th image.JPG
+data/experiment/one_row_per_arena.csv
+data/experiment/one_row_per_frame.csv
+data/experiment/one_row_per_oscillating_cluster.csv
+data/experiment/software_settings.csv
 src/cellects/config/all_vars.pkl
 src/cellects/paper_illustrations/
 create_dmg.sh
