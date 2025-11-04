@@ -41,6 +41,7 @@ Cellects = "cellects.__main__:run_cellects"
 [project.optional-dependencies]
 test = [
   "pytest",
+  "pytest-env",
   "pytest-cov",
 ]
 doc = [
@@ -67,3 +68,6 @@ include-package-data = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--cov=src/cellects --cov-report=term-missing --cov-report=html"
+
+[tool.pytest_env]
+USE_NUMBA = "0"

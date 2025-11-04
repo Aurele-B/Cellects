@@ -34,7 +34,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple
 from scipy.spatial import KDTree
-from numba import njit
+from cellects.utils.decorators import njit
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average
 from skimage.filters import threshold_otsu
