@@ -40,7 +40,7 @@ class DefaultDicts:
             'all_specimens_have_same_direction': True,
             'extract_time_interval': True,
             'do_multiprocessing': False,
-            'extension': '.jpg',
+            'extension': '.tif',
             'first_detection_frame': 1,
             'folder_number': 1,
             'first_folder_sample_number': 1,
@@ -57,10 +57,10 @@ class DefaultDicts:
 
             # 'overwrite_cellects_data': True,
             'overwrite_unaltered_videos': False,
-            'radical': 'IMG_',
+            'radical': 'im',
             'raw_images': False,
             'sample_number_per_folder': [1],
-            'scale_with_image_or_cells': 0,
+            'scale_with_image_or_cells': 1,
             'set_spot_shape': True,
             'set_spot_size': True,
             'starting_blob_hsize_in_mm': 15,
@@ -69,7 +69,7 @@ class DefaultDicts:
 
         self.vars = {
             'analyzed_individuals': np.empty(0, dtype=np.uint16),
-            'arena_shape': 'circle',
+            'arena_shape': 'rectangle', # 'circle',
             'bio_label': 1,
             'bio_label2': 1,
             'color_number': 2,
@@ -134,6 +134,7 @@ class DefaultDicts:
             'grid_segmentation': False,
             # Data stored during analysis:
             'descriptors': descriptors,
+            'filter_spec': {'filter1_type': "", 'filter1_param': [1., 1.], 'filter2_type': "", 'filter2_param': [1., 1.]},
         }
 
     def save_as_pkl(self, po=None):

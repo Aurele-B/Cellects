@@ -21,8 +21,9 @@ import numpy as np
 import pandas as pd
 from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
 from cellects.utils.load_display_save import read_and_rotate
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.utils.load_display_save import write_video
@@ -151,10 +152,10 @@ class UpdateImageThread(QtCore.QThread):
             logging.info('Add the segmentation mask to the image')
             if self.parent().imageanalysiswindow.is_first_image_flag:
                 im_combinations = self.parent().po.first_image.im_combinations
-                im_mean = self.parent().po.first_image.image.np.mean()
+                im_mean = self.parent().po.first_image.image.mean()
             else:
                 im_combinations = self.parent().po.last_image.im_combinations
-                im_mean = self.parent().po.last_image.bgr.np.mean()
+                im_mean = self.parent().po.last_image.bgr.mean()
             # If there are image combinations, get the current corresponding binary image
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
@@ -419,7 +420,7 @@ class LastImageAnalysisThread(QtCore.QThread):
                     out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
                     self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
             ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_backgnp.round(self.parent().po.vars['convert_for_motion'])
+            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'])
             kmeans_clust_nb = None
             self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
                                                          ref_image, self.parent().po.first_image.subtract_background,
@@ -522,7 +523,7 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
             self.parent().po.fast_image_segmentation(False)
-        self.parent().po.find_if_lighter_backgnp.round()
+        self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
         self.parent().po.data_to_save['coordinates'] = True
@@ -578,7 +579,7 @@ class OneArenaThread(QtCore.QThread):
         self._isRunning = True
         self.message_from_thread_starting.emit("Video loading, wait...")
 
-        self.set_current_folder() #DOIT être fait à chaque écriture
+        self.set_current_folder()
         print(self.parent().po.vars['convert_for_motion'])
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
@@ -609,10 +610,7 @@ class OneArenaThread(QtCore.QThread):
         self._isRunning = False
 
     def set_current_folder(self):
-        # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
-        #     self.parent().po.all['folder_number'] = 1
-        # self.parent().po.look_for_data()
-        if self.parent().po.all['folder_number'] > 1: # len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
+        if self.parent().po.all['folder_number'] > 1:
             logging.info(f"Use {self.parent().po.all['folder_list'][0]} folder")
             self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
                                               self.parent().po.all['folder_list'][0])
@@ -620,31 +618,10 @@ class OneArenaThread(QtCore.QThread):
             curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
             logging.info(f"Use {curr_path} folder")
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
-        # logging.info("Look for images/videos data")
-        # self.parent().po.look_for_data()
-        # if len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
-        #     logging.info("Update sub-folder")
-        #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
-        #                                       self.parent().po.all['folder_list'][0])
-        # else:
-        #     self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
 
     def pre_processing(self):
         logging.info("Pre-processing has started")
         analysis_status = {"continue": True, "message": ""}
-        # Thinds to save and load here:
-        # situations : 1° on a tout fait et osed de succeed to load
-        # if not self.parent().po.first_exp_ready_to_run réglé
-        # 2° on a rien fait et succeed
-        # 3° on a rien fait et non succeed
-        # 4° Ce dosser n'est pas le premier'
-        # if self.parent().po.succeed_to_data_to_run_cellects_quickly:
-        #     self.message_from_thread_starting.emit(f"Do image analysis first, by clicking Next on the first window")
-        # if not self.parent().po.all['overwrite_cellects_data'] and os.path.isfile(f'Data to run Cellects quickly.pkl'):
-        #     success = self.parent().po.load_data_to_run_cellects_quickly()
-        #     if not success:
-        #         self.message_from_thread_starting.emit(f"Do image analysis first, by clicking Next on the first window")
-        # else:
 
         self.parent().po.get_first_image()
         self.parent().po.fast_image_segmentation(is_first_image=True)
@@ -662,7 +639,6 @@ class OneArenaThread(QtCore.QThread):
                 self.parent().po.data_to_save['exif'] = True
                 self.parent().po.save_data_to_run_cellects_quickly()
                 self.parent().po.data_to_save['exif'] = False
-                # self.parent().po.extract_exif()
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
@@ -671,7 +647,6 @@ class OneArenaThread(QtCore.QThread):
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_image_segmentation(False)
-                    # self.parent().po.type_csc_dict()
                     self.parent().po.find_if_lighter_backgnp.round()
                     logging.info("The current (or the first) folder is ready to run")
                     self.parent().po.first_exp_ready_to_run = True
@@ -749,6 +724,17 @@ class OneArenaThread(QtCore.QThread):
                                                                                          second_dict,background,background2,
                                                                                          self.parent().po.vars[
                                                                                              'lose_accuracy_to_save_memory'])
+
+                    if self.parent().po.vars['filter_spec'] is not None and self.parent().po.vars['filter_spec']['filter1_type'] != "":
+                        greyscale_image = apply_filter(greyscale_image,
+                                                       self.parent().po.vars['filter_spec']['filter1_type'],
+                                                       self.parent().po.vars['filter_spec']['filter1_param'],
+                                                       self.parent().po.vars['lose_accuracy_to_save_memory'])
+                        if greyscale_image2 is not None and self.parent().po.vars['filter_spec']['filter2_type'] != "":
+                            greyscale_image2 = apply_filter(greyscale_image2,
+                                                            self.parent().po.vars['filter_spec']['filter2_type'],
+                                                            self.parent().po.vars['filter_spec']['filter2_param'],
+                                                            self.parent().po.vars['lose_accuracy_to_save_memory'])
                     self.parent().po.converted_video[image_i, ...] = greyscale_image
                     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                         self.parent().po.converted_video2[image_i, ...] = greyscale_image2
@@ -1206,6 +1192,7 @@ class RunAllThread(QtCore.QThread):
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                     arena_percentage = 0
+                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1) and remaining > 0:
@@ -1223,7 +1210,7 @@ class RunAllThread(QtCore.QThread):
                             self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
-                            img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
+                            img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape, self.parent().po.first_image.crop_coord)
                             prev_img = deepcopy(img)
                             if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                                 img = img[:, :, 0]
@@ -1326,7 +1313,7 @@ class RunAllThread(QtCore.QThread):
                             self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
                             
                             # Save cytosol_oscillations
-                        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
+                        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
                             if self.parent().po.vars['oscilacyto_analysis']:
                                 oscil_i = pd.DataFrame(
                                     np.c_[np.repeat(arena,
@@ -1393,7 +1380,7 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
                                                                               results_i['arena'] * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
-                                if not isna(results_i['first_move']):
+                                if not pd.isna(results_i['first_move']):
                                     # Save cytosol_oscillations
                                     if self.parent().po.vars['oscilacyto_analysis']:
                                         if self.parent().po.one_row_per_oscillating_cluster is None:
@@ -1446,7 +1433,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             # Save cytosol_oscillations
 
         results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
-        if not isna(analysis_i.one_descriptor_per_arena["first_move"]):
+        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
             if vars['oscilacyto_analysis']:
                 results_i['clusters_final_data'] = analysis_i.clusters_final_data
                 results_i['one_row_per_oscillating_cluster'] = pd.DataFrame(
