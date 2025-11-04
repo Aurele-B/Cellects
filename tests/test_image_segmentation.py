@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This script contains all unit tests of the image_analysis directory
+This script contains all unit tests of the image segmentation script
 """
 
 import unittest
