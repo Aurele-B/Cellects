@@ -917,9 +917,9 @@ def save_fig(img: NDArray, full_path, cmap=None):
         ax.imshow(img, cmap=cmap, interpolation="none")
     plt.axis('off')
     fig.tight_layout()
-    fig.show()
+
     fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
-    plt.close()
+    plt.close(fig)
 
 
 def display_boxes(binary_image: NDArray, box_diameter: int):
