@@ -397,8 +397,8 @@ def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_d
         original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
     expand = deepcopy(original_shape)
     if max_distance is not None:
-        if max_distance > np.min(original_shape.shape) / 2:
-            max_distance = (np.min(original_shape.shape) // 2).astype(np.uint32)
+        if max_distance > np.max(original_shape.shape):
+            max_distance = np.max(original_shape.shape).astype(np.uint32)
         gravity_field = np.zeros(original_shape.shape , np.uint32)
         for gravi in np.arange(max_distance):
             expand = cv2.dilate(expand, cross_33, iterations=1, borderType=cv2.BORDER_CONSTANT, borderValue=0)
