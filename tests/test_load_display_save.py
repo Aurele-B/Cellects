@@ -252,6 +252,13 @@ class TestReadAndRotate(CellectsUnitTest):
         self.assertTrue(np.allclose(im2, im2a, atol=15))
         self.assertTrue(np.allclose(im2, im2b, atol=15))
 
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_output / f"im2a.jpg"):
+            os.remove(self.path_output / f"im2a.jpg")
+        if os.path.isfile(self.path_output / f"im2b.jpg"):
+            os.remove(self.path_output / f"im2b.jpg")
+
 
 class TestVStackH5Array(CellectsUnitTest):
     """Test suite for vstack_h5_array function."""
