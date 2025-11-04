@@ -20,10 +20,11 @@ IMAGE_ANALYSIS_DIR = CELLECTS_DIR / "image_analysis"
 UTILS_DIR = CELLECTS_DIR / "utils"
 
 # Repo root (src/..)
-REPO_ROOT = CELLECTS_DIR.parent
+REPO_ROOT = CELLECTS_DIR.parent.parent
 
 # Repo-level dirs
 DATA_DIR = REPO_ROOT / "data"
+EXPERIMENTS_DIR = DATA_DIR / "experiment"
 TEST_DIR = REPO_ROOT / "tests"
 
 # Example packaged file
