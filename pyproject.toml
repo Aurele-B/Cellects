@@ -71,3 +71,9 @@ addopts = "--cov=src/cellects --cov-report=term-missing --cov-report=html"
 
 [tool.pytest_env]
 USE_NUMBA = "0"
+
+[tool.coverage.run]
+omit = [
+    "src/cellects/gui/*",
+    "src/cellects/utils.load_display_save.py"
+]
