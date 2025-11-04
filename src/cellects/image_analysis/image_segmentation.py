@@ -570,7 +570,10 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
     for patch, network_patch, t in zip(patch_slices, network_patches, patch_thresholds):
         network_img[patch] += network_patch
         count_img[patch] += np.ones_like(network_patch)
-    network_img /= count_img
+
+    # Safe in-place division: zeros remain where count_img == 0
+    np.divide(network_img, count_img, out=network_img, where=count_img != 0)
+
     return (network_img > 0.5).astype(np.uint8)
 
 def binary_quality_index(binary_img: NDArray[np.uint8]) -> float:
