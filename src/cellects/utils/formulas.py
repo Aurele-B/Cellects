@@ -28,7 +28,7 @@ Notes:
 - Image processing functions expect binary (boolean/int8) input matrices
 """
 from copy import deepcopy
-from numba import njit
+from cellects.utils.decorators import njit
 import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple

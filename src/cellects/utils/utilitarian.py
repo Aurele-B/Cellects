@@ -32,7 +32,7 @@ from typing import Tuple
 from timeit import default_timer
 import time
 from numba.typed import Dict
-from numba import njit
+from cellects.utils.decorators import njit
 from glob import glob
 vectorized_len = np.vectorize(len)
 

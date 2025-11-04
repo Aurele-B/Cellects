@@ -8,7 +8,7 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 from numba.typed import Dict
-from numba import njit
+from cellects.utils.decorators import njit
 from numpy.typing import NDArray
 from typing import Tuple
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict
