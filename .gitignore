@@ -39,3 +39,6 @@ build/
 src/cellects/build/
 src/cellects/dist/
 dist/
+
+# pip env
+cellects_env/
