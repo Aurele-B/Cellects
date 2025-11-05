@@ -1,10 +1,6 @@
 # Ignore the .idea directory
 .tool-versions
 .idea/
-docs/
-dist/
-src/cellects/build/
-src/cellects/dist/
 data/experiment/ind*
 data/experiment/Data to run Cellects quickly.pkl
 data/experiment/Analysis efficiency, last image.JPG
@@ -37,3 +33,9 @@ data/output/*
 # coverage
 .coverage
 htmlcov/
+
+# build
+build/
+src/cellects/build/
+src/cellects/dist/
+dist/
