@@ -13,6 +13,9 @@ All test classes inherit from CellectsUnitTest, providing shared setup/teardown 
 Test files are automatically cleaned up in tearDown methods.
 """
 import unittest
+
+import cv2
+
 from tests._base import CellectsUnitTest
 from cellects.utils.load_display_save import *
 from matplotlib.figure import Figure
@@ -72,7 +75,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
+            np_array = np.random.randint(0, 255, size=(5, 10, 10, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -85,7 +88,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary file without a recognized extension
         with open(self.path_output / 'test_write_video.xyz', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
+            np_array = np.random.randint(0, 255, size=(5, 10, 10, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -94,13 +97,12 @@ class TestWriteVideo(CellectsUnitTest):
             # Verify that the file exists
             self.assertTrue(os.path.exists(new_name))
 
-
     def test_write_video_with_npy_extension(self):
         """Test with .npy extension."""
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.npy', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
+            np_array = np.random.randint(0, 255, size=(5, 10, 10, 3), dtype=np.uint8)
 
             # Write the video
             write_video(np_array, temp_file.name)
@@ -114,7 +116,7 @@ class TestWriteVideo(CellectsUnitTest):
         # Create a temporary mp4 file
         with open(self.path_output / 'test_write_video.mp4', 'wb') as temp_file:
             # Generate a sample numpy array
-            np_array = np.random.randint(0, 255, size=(10, 480, 640, 3), dtype=np.uint8)
+            np_array = np.random.randint(0, 255, size=(5, 10, 10, 3), dtype=np.uint8)
             fps = 30
 
             # Write the video
@@ -174,14 +176,19 @@ class TestIsRawImage(CellectsUnitTest):
 
     def test_is_raw_image_with_non_raw_format(self):
         """Test with non-raw file."""
-        # Mock the image_path with a non-raw format extension
-        image_path = self.path_input / "last_original_img.jpg"
+        img = np.random.randint(0, 255, size=(10, 10, 3), dtype=np.uint8)
+        image_path = self.path_output / "img.jpg"
+        cv2.imwrite(image_path, img)
 
         is_raw = is_raw_image(str(image_path))
 
         # Verify the expected result
         self.assertFalse(is_raw)
 
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_output / 'img.jpg'):
+            os.remove(self.path_output / 'img.jpg')
 
 class TestReadImage(CellectsUnitTest):
     """Test suite for readim function."""
