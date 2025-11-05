@@ -220,10 +220,6 @@ class PickleRick:
         Examples
         --------
         >>> PickleRick().read_file("example.pkl")
-        Some content
-
-        >>> read_file("non_existent_file.pkl")
-        None
         """
         self.counter += 1
         if self.counter < 1000:

@@ -1408,7 +1408,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         y_ori, x_ori = 1, 2
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool)
+        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool_)
         y_grow, x_grow = 3, 4
         growing_areas[y_grow, x_grow] = True
         edge_id.make_vertex_table(origin_contours, growing_areas)
@@ -1433,7 +1433,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         y_ori, x_ori = 1, 2
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool)
+        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool_)
         y_grow, x_grow = 3, 4
         growing_areas[y_grow, x_grow] = True
         edge_id.make_vertex_table(origin_contours, growing_areas)
