@@ -8,7 +8,7 @@ version = "0.1.2"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.11,<=3.13"
+requires-python = ">=3.11,<3.14"
 authors = [{ name = "Aurèle Boussard" }]
 classifiers = [
   "Programming Language :: Python :: 3",
