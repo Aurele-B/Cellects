@@ -190,7 +190,14 @@ class VideoAnalysisWindow(MainTabsType):
                                                    tip='Uncheck to do a Post processing on only one option and earn computation time\nSelecting one of the remaining options will display the result from a Detection',
                                                    night_mode=self.parent().po.all['night_mode'])
         self.compute_all_options_cb = Checkbox(self.parent().po.all['compute_all_options'])
-        self.compute_all_options_cb.setStyleSheet("margin-left:0%; margin-right:0%;")
+        self.compute_all_options_cb.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {0%}")
         self.compute_all_options_cb.stateChanged.connect(self.compute_all_options_check)
         self.all_options_row_widget = QtWidgets.QWidget()
         self.all_options_row_layout = QtWidgets.QHBoxLayout()
@@ -234,7 +241,14 @@ class VideoAnalysisWindow(MainTabsType):
         self.fading_widget = QtWidgets.QWidget()
         self.fading_layout = QtWidgets.QHBoxLayout()
         self.do_fading = Checkbox(self.parent().po.vars['do_fading'])
-        self.do_fading.setStyleSheet("margin-left:0%; margin-right:0%;")
+        self.do_fading.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {0%}")
         self.do_fading.stateChanged.connect(self.do_fading_check)
         self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
                                night_mode=self.parent().po.all['night_mode'])
@@ -273,24 +287,6 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_options_widget = QtWidgets.QWidget()
         self.last_options_layout = QtWidgets.QHBoxLayout()
         self.last_options_layout.addItem(self.horizontal_space)
-
-        # #  advanced mode widget
-        # self.advanced_mode_widget = QtWidgets.QWidget()
-        # self.advanced_mode_layout = QtWidgets.QHBoxLayout()
-        # advanced_mode = self.parent().po.all['expert_mode']
-        # self.advanced_mode_cb = Checkbox(self.parent().po.all['expert_mode'])
-        # self.advanced_mode_cb.setStyleSheet("margin-left:0%; margin-right:0%;")
-        # self.advanced_mode_cb.stateChanged.connect(self.advanced_mode_check)
-        # self.advanced_mode_label = FixedText('Go to step 2 directly', align='l',
-        #                                      tip="Allow the user to try Post processing before having tuned the parameters related to Detection.",
-        #                                      night_mode=self.parent().po.all['night_mode'])
-        # # self.advanced_mode_label.setAlignment(QtCore.Qt.AlignTop)
-        # self.advanced_mode_layout.addWidget(self.advanced_mode_cb)
-        # self.advanced_mode_layout.addWidget(self.advanced_mode_label)
-        # self.advanced_mode_layout.addItem(self.horizontal_space)
-        # self.advanced_mode_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        # self.advanced_mode_widget.setLayout(self.advanced_mode_layout)
-        # self.last_options_layout.addWidget(self.advanced_mode_widget)
 
         self.advanced_parameters = PButton('Advanced Parameters', night_mode=self.parent().po.all['night_mode'])
         self.advanced_parameters.clicked.connect(self.advanced_parameters_is_clicked)

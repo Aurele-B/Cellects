@@ -214,9 +214,23 @@ class AdvancedParameters(WindowType):
         # self.min_size_for_connection.setVisible(do_use_min_size)
         # self.min_size_for_connection_label.setVisible(do_use_min_size)
 
-        self.use_min_size.setStyleSheet("margin-left:100%; margin-right:0%;")
+        self.use_min_size.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {100%}"
+                            "QCheckBox:margin-right {0%}")
         self.min_size_for_connection_label.setAlignment(QtCore.Qt.AlignRight)
-        self.use_max_size.setStyleSheet("margin-left:100%; margin-right:0%;")
+        self.use_max_size.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {100%}"
+                            "QCheckBox:margin-right {0%}")
         self.max_size_for_connection_label.setAlignment(QtCore.Qt.AlignRight)
 
         # II/D/ Arrange widgets in the box
@@ -838,7 +852,14 @@ class AdvancedParameters(WindowType):
         self.more_than_2_colors_widget = QtWidgets.QWidget()
         self.more_than_2_colors_layout = QtWidgets.QHBoxLayout()
         self.more_than_two_colors = Checkbox(self.parent().po.all["more_than_two_colors"])
-        self.more_than_two_colors.setStyleSheet("margin-left:0%; margin-right:-10%;")
+        self.more_than_two_colors.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {-10%}")
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
         self.more_than_two_colors_label = FixedText("Heterogeneous back",

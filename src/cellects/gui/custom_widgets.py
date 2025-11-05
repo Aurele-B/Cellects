@@ -65,30 +65,12 @@ class WindowType(QtWidgets.QWidget):
         self.frame = QtWidgets.QFrame(self)
         self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().screen_width, self.parent().screen_height))
         self.display_image = None
-        # self.setFont(QFont(textfont, textsize, QFont.Medium))
-        # self.setStyleSheet("background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (backgroundcolor, textColor, f"{textsize}pt {textfont};", bordercolor, selectioncolor, selectionbackgroundcolor))
-        # self.setStyleSheet("background-color: %s; color: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (backgroundcolor, textColor, bordercolor, selectioncolor, selectionbackgroundcolor))
-
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode_switch(night_mode)
-        # self.setStyleSheet("background-color: rgb(50,50,65);"
-        #                    "color: rgb(255, 255, 255);\n" # 213, 251, 255
-        #                    "font: 15pt \"Calibri\";\n"
-        #                    "border-color: rgb(50,50,65);\n"
-        #                    # "border-color: rgb(0, 150, 75);\n"
-        #                    "selection-color: rgb(1, 152, 117);\n" # 0, 150, 75  0, 132, 66  0, 120, 215
-        #                    "selection-background-color:rgb(50,50,65);\n"  # jsp
-        #                    )
-                           # "selection-background-color:rgb(60, 60, 60);\n"  # jsp
-                           # "alternate-background-color: rgb(54, 54, 54);\n"  # jsp
-                           # "QToolTip { color:  rgb(1, 152, 117); background-color: rgb(64,64,64); border: 0px; };\n"
-                           # "")
-        # self.titles_font = "font: 24pt"
         self.horizontal_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
                                               QtWidgets.QSizePolicy.Maximum)
         self.vertical_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
                                               QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.resized.connect(self.center_window)
 
     def resizeEvent(self, event):
         '''
@@ -116,13 +98,13 @@ class WindowType(QtWidgets.QWidget):
     def night_mode_switch(self, night_mode):
         if night_mode:
             self.setStyleSheet(
-                "background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (
-                night_background_color, night_text_Color, f"{textsize}pt {textfont};", night_border_color,
+                "background-color: %s; color: %s; font: %s; selection-color: %s; selection-background-color: %s" % (
+                night_background_color, night_text_Color, f"{textsize}pt {textfont};",
                 night_selection_color, night_selection_background_color))
         else:
             self.setStyleSheet(
-                "background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; selection-background-color: %s" % (
-                backgroundcolor, textColor, f"{textsize}pt {textfont};", bordercolor, selectioncolor,
+                "background-color: %s; color: %s; font: %s; selection-color: %s; selection-background-color: %s" % (
+                backgroundcolor, textColor, f"{textsize}pt {textfont};", selectioncolor,
                 selectionbackgroundcolor))
 
 
@@ -487,12 +469,6 @@ class Spinbox(QtWidgets.QWidget):
                 "background-color: %s; color: %s; border-color: %s; border: %s; border-radius: %s" % (
                     backgroundcolor, textColor, bordercolor, rollingborder, rollingangles))
 
-        # self.setStyleSheet("background-color: rgb(50,50,65);\n"
-        #                    "font: 16pt \"Calibri\";\n"
-        #                    "border-color: rgb(50,50,65);\n"
-        #                    # "border-color: rgb(255, 255, 255);\n"
-        #                    "color: rgb(213, 251, 255);\n")
-
 
 class Combobox(QtWidgets.QComboBox):
     def __init__(self, items_list, current_idx=None, night_mode=False):
@@ -530,8 +506,14 @@ class Checkbox(QtWidgets.QCheckBox):
         self.setChecked(set_checked)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setMinimumWidth(75)
-        # self.setStyleSheet("padding:5px")
-        self.setStyleSheet("margin-left:50%; margin-right:50%;")
+        self.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {50%}"
+                            "QCheckBox:margin-right {50%}")
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
 
