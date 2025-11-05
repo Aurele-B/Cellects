@@ -27,7 +27,8 @@ class TestCellects(CellectsUnitTest):
 
     def test_save_data_to_run_cellects_quickly(self):
         if not os.path.isfile(self.path_experiment / "Data to run Cellects quickly.pkl"):
-            coordinates = PickleRick().read_file(self.path_input / "coordinates.pkl")
+            crop_coord = np.array((0, 244, 0, 299))
+            coordinates = np.array((1, 297, 1, 242))
             dd = DefaultDicts()
             self.po.all = dd.all
             self.po.vars = dd.vars
@@ -47,15 +48,15 @@ class TestCellects(CellectsUnitTest):
             self.po.fast_image_segmentation(True, backmask=backmask)
             self.po.all['automatically_crop'] = True
             self.po.cropping(is_first_image=True)
-            self.assertTrue(np.array_equal(self.po.first_image.crop_coord, coordinates[0]))
+            self.assertTrue(np.array_equal(self.po.first_image.crop_coord, crop_coord))
             self.po.all['scale_with_image_or_cells'] = 1
             self.po.all['starting_blob_hsize_in_mm'] = 15
             self.po.get_average_pixel_size()
             self.po.delineate_each_arena()
-            self.assertTrue(np.array_equal(self.po.left, coordinates[1]))
-            self.assertTrue(np.array_equal(self.po.right, coordinates[2]))
-            self.assertTrue(np.array_equal(self.po.top, coordinates[3]))
-            self.assertTrue(np.array_equal(self.po.bot, coordinates[4]))
+            self.assertTrue(np.array_equal(self.po.left[0], coordinates[0]))
+            self.assertTrue(np.array_equal(self.po.right[0], coordinates[1]))
+            self.assertTrue(np.array_equal(self.po.top[0], coordinates[2]))
+            self.assertTrue(np.array_equal(self.po.bot[0], coordinates[3]))
             self.po.get_background_to_subtract()
             self.po.get_origins_and_backgrounds_lists()
             self.po.get_last_image()
@@ -69,12 +70,13 @@ class TestCellects(CellectsUnitTest):
 
     def test_load_data_to_run_cellects_quickly(self):
         self.test_save_data_to_run_cellects_quickly()
-        coordinates = PickleRick().read_file(self.path_input / "coordinates.pkl")
-        self.assertTrue(np.array_equal(self.po.first_image.crop_coord, coordinates[0]))
-        self.assertTrue(np.array_equal(self.po.left, coordinates[1]))
-        self.assertTrue(np.array_equal(self.po.right, coordinates[2]))
-        self.assertTrue(np.array_equal(self.po.top, coordinates[3]))
-        self.assertTrue(np.array_equal(self.po.bot, coordinates[4]))
+        crop_coord = np.array((0, 244, 0, 299))
+        coordinates = np.array((1, 297, 1, 242))
+        self.assertTrue(np.array_equal(self.po.first_image.crop_coord, crop_coord))
+        self.assertTrue(np.array_equal(self.po.left[0], coordinates[0]))
+        self.assertTrue(np.array_equal(self.po.right[0], coordinates[1]))
+        self.assertTrue(np.array_equal(self.po.top[0], coordinates[2]))
+        self.assertTrue(np.array_equal(self.po.bot[0], coordinates[3]))
 
     def test_run_image_analysis(self):
         self.assertTrue(self.po.first_image.binary_image.sum() < self.po.last_image.binary_image.sum())
