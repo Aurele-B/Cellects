@@ -49,15 +49,15 @@ Note: The repository will be cloned to that folder; if updating an existing proj
 git clone https://github.com/Aurele-B/Cellects.git
 cd ./Cellects
 pip install --upgrade pip
-python -m venv ./python_virtual_env
+python -m venv ./cellects_env
 ```
 On Windows, run:
 ```bash
-python_virtual_env\Scripts\activate
+cellects_env\Scripts\activate
 ```
 On Unix or MacOS, run:
 ```bash
-source python_virtual_env/bin/activate
+source cellects_env/bin/activate
 ```
 Install Cellects dependencies in editable mode:
 ```bash
