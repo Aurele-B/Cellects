@@ -11,6 +11,7 @@ data/experiment/one_row_per_oscillating_cluster.csv
 data/experiment/software_settings.csv
 src/cellects/config/all_vars.pkl
 src/cellects/paper_illustrations/
+src/cellects/__main__.spec
 create_dmg.sh
 poetry.lock
 README_DEV_CHEATSHEET.md
