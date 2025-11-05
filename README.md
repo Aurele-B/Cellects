@@ -24,19 +24,15 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 - Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
 Use a terminal to write:
 ```bash
-pip install Cellects
+pip install cellects
 ```
 Run Cellects:
 ```bash
 Cellects
 ```
-To upgrade, use:
-```bash
-pip install --upgrade Cellects
-```
 To uninstall, use:
 ```bash
-pip uninstall Cellects
+pip uninstall cellects
 ```
 
 ### 3. To access the source code and clone this repository  (Mac, Windows or Linux)
@@ -52,7 +48,7 @@ Note: The repository will be cloned to that folder; if updating an existing proj
 ```bash
 git clone https://github.com/Aurele-B/Cellects.git
 cd ./Cellects
-python.exe -m pip install --upgrade pip
+pip install --upgrade pip
 python -m venv ./python_virtual_env
 ```
 On Windows, run:
@@ -63,9 +59,9 @@ On Unix or MacOS, run:
 ```bash
 source python_virtual_env/bin/activate
 ```
-Install Cellects dependencies:
+Install Cellects dependencies in editable mode:
 ```bash
-pip install .
+pip install -e .
 ```
 Run Cellects:
 ```bash
