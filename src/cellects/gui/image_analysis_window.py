@@ -1156,7 +1156,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.advanced_mode_widget = QtWidgets.QWidget()
         self.advanced_mode_layout = QtWidgets.QHBoxLayout()
         self.advanced_mode_cb = Checkbox(self.parent().po.all['expert_mode'])
-        self.advanced_mode_cb.setStyleSheet("margin-left:0%; margin-right:0%;")
+        self.advanced_mode_cb.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {0%}")
         self.advanced_mode_cb.stateChanged.connect(self.advanced_mode_check)
         self.advanced_mode_label = FixedText('Advanced mode', halign='l',
                                              tip="Display the color space combination corresponding to the selected option",
@@ -1380,7 +1387,14 @@ class ImageAnalysisWindow(MainTabsType):
         except KeyError:
             self.parent().po.vars["grid_segmentation"] = False
         self.grid_segmentation = Checkbox(self.parent().po.vars["grid_segmentation"])
-        self.grid_segmentation.setStyleSheet("margin-left:0%; margin-right:-10%;")
+        self.grid_segmentation.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {-10%}")
         self.grid_segmentation.stateChanged.connect(self.grid_segmentation_option)
 
         self.grid_segmentation_label = FixedText("Grid segmentation",
@@ -1399,7 +1413,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_2_colors_widget = QtWidgets.QWidget()
         self.more_than_2_colors_layout = QtWidgets.QHBoxLayout()
         self.more_than_two_colors = Checkbox(self.parent().po.all["more_than_two_colors"])
-        self.more_than_two_colors.setStyleSheet("margin-left:0%; margin-right:-10%;")
+        self.more_than_two_colors.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+                            "border-radius: 5px;border-style: solid;border-width: 1px;"
+                            "border-color: rgb(100,100,100);}"
+                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
+                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
+                            "QCheckBox:checked {background-color: transparent;}"
+                            "QCheckBox:margin-left {0%}"
+                            "QCheckBox:margin-right {-10%}")
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
         self.more_than_two_colors_label = FixedText("More than two colors",
