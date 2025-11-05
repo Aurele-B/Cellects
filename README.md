@@ -30,12 +30,16 @@ Run Cellects:
 ```bash
 Cellects
 ```
+To upgrade, use:
+```bash
+pip install --upgrade Cellects
+```
 To uninstall, use:
 ```bash
 pip uninstall Cellects
 ```
 
-### 3. To access the source code and close this repository  (Mac, Windows or Linux)
+### 3. To access the source code and clone this repository  (Mac, Windows or Linux)
 - Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
 - Install [git](https://git-scm.com/downloads)
 - On Mac: also install [brew](https://brew.sh/)
@@ -48,7 +52,7 @@ Note: The repository will be cloned to that folder; if updating an existing proj
 ```bash
 git clone https://github.com/Aurele-B/Cellects.git
 cd ./Cellects
-pip install --upgrade pip
+python.exe -m pip install --upgrade pip
 python -m venv ./python_virtual_env
 ```
 On Windows, run:
