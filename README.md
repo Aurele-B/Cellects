@@ -22,20 +22,40 @@ Note 2: For the same reason, some antivirus software can prevent installation.
 
 ### 2. Using pip (Mac, Windows or Linux)
 - Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
-Use a terminal to write:
+
+- Best practice(optional): create and activate a python environment
+Use a terminal to create the environment:
+```bash
+cd path/toward/an/existing/folder/
+python -m venv ./cellects_env
+```
+Activation on Windows:
+```bash
+cellects_env\Scripts\activate
+```
+Activation on Unix or MacOS:
+```bash
+source cellects_env/bin/activate
+```
+
+- Installation:
 ```bash
 pip install cellects
 ```
-Run Cellects:
+
+- Run Cellects:
 ```bash
 Cellects
 ```
+
 To uninstall, use:
 ```bash
 pip uninstall cellects
 ```
+Note: creating a python environment avoids compatibilities issues with other python scripts.
+However, the user have to activate this environment every time before running Cellects.
 
-### 3. To access the source code and clone this repository  (Mac, Windows or Linux)
+### 3. To access the source code (Mac, Windows or Linux)
 - Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
 - Install [git](https://git-scm.com/downloads)
 - On Mac: also install [brew](https://brew.sh/)
