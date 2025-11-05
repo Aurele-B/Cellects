@@ -134,6 +134,9 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 ### Create windows executable
 When installing Cellects dependencies, do not use editable mode:
 ```bash
+python -m venv ./cellects_env
+deactivate
+cellects_env\Scripts\activate
 pip install .
 pip install pyinstaller
 cd cellects_env/Lib/site-packages/cellects
