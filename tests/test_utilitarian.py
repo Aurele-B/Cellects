@@ -218,15 +218,15 @@ class TestInsensitiveGlob(CellectsUnitTest):
     def test_insensitive_glob_prefix(self):
         """Test basic functionality."""
         os.chdir(self.path_input)
-        result = insensitive_glob("Coo" + "*")
-        expected_result = ['coordinates.pkl']
+        result = insensitive_glob("Test_v" + "*")
+        expected_result = ['test_vstack.h5']
         self.assertCountEqual(result, expected_result)
 
     def test_insensitive_glob_suffix(self):
         """Test with caps extension."""
         os.chdir(self.path_input)
-        result = insensitive_glob("*.pKl")
-        expected_result = ['coordinates.pkl']
+        result = insensitive_glob("*.mP4")
+        expected_result = ['test_read_video.mp4']
         self.assertCountEqual(result, expected_result)
 
 
