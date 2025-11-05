@@ -4,12 +4,12 @@ This module contains the widget allowing the user to set which variables Cellect
 A first kind of variable is raw data: presence/absence coordinates of the specimens, network, oscillating pixels
 A second kind of variable describe the specimen at each time frame and for each arena of the image stack or video
 """
-
+import numpy as np
 from PySide6 import QtWidgets, QtCore
 import logging
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Checkbox, FixedText)
-from cellects.image_analysis.shape_descriptors import descriptors_names_to_display
+from cellects.image_analysis.shape_descriptors import descriptors_names_to_display, descriptors_categories
 
 
 class RequiredOutput(WindowType):
@@ -136,6 +136,9 @@ class RequiredOutput(WindowType):
             showing the presence/absence of the cell/colony at one time frame.
             This function
         """
+        if not np.array_equal(self.parent().po.all['descriptors'], list(descriptors_categories.keys())):
+            self.parent().po.all['descriptors'] = descriptors_categories
+
         descriptor_names = self.parent().po.all['descriptors']
 
         for i, name in enumerate(descriptor_names):
