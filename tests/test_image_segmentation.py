@@ -204,17 +204,19 @@ class TestGenerateColorSpaceCombination(CellectsUnitTest):
 
     def test_generate_color_space_combination(self):
         # Create a BGR image for testing
-        c_space_dict = Dict()
-        c_space_dict['bgr'] = np.array((1, 0, 1), np.uint8)
-        c_space_dict['hsv'] = np.array((0.5, 5, 0.5), np.uint8)
+        first_dict = Dict()
+        first_dict['bgr'] = np.array((1, 0, 1), np.uint8)
+        first_dict['hsv'] = np.array((0.5, 5, 0.5), np.uint8)
         second_dict = Dict()
         second_dict['luv'] = np.array((1, 0, 1), np.uint8)
         c_spaces = List(['bgr', 'hsv', 'luv'])
 
-        subtract_background = np.zeros((10, 10), dtype=np.float64)
+        background = np.zeros((10, 10), dtype=np.float64)
+        background2 = np.zeros((10, 10), dtype=np.float64)
         expected_result = np.zeros((10, 10), dtype=np.float64)
+        expected_result[5, 5] = 255
 
-        result, result2 = generate_color_space_combination(self.bgr_image, c_spaces, c_space_dict, second_dict,  background=subtract_background, convert_to_uint8=True)
+        result, result2 = generate_color_space_combination(self.bgr_image, c_spaces, first_dict, second_dict,  background=background, convert_to_uint8=True, background2=background2)
         self.assertEqual(result.shape, (10, 10))
         self.assertEqual(result2.shape, (10, 10))
         self.assertTrue(np.allclose(result, expected_result))

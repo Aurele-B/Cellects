@@ -5,6 +5,39 @@ Especially, each thread calls one or several methods of the class named "program
 which regroup all available computation of the software.
 These threads are started from a children of WindowType, run methods from program_organizer and send messages and
 results to the corresponding children of WindowType, allowing, for instance, to display a result in the interface.
+
+
+
+An image can be coded in different color spaces, such as RGB, HSV, etc. These color spaces code the color of each pixel as three numbers, ranging from 0 to 255. Our aim is to find a combination of these three numbers that provides a single intensity value for each pixel, and which maximizes the contrast between the organism and the background. To increase the flexibility of our algorithm, we use more than one color space to look for these combinations. In particular, we use the RGB, LAB, HSV, LUV, HLS and YUV color spaces. What we call a color space combination is a transformation combining several channels of one or more color spaces.
+To find the optimal color space combination, Cellects uses one image (which we will call “seed image”). The software selects by default the first image of the sequence as seed image, but the user can select a different image where the cells are more visible.
+Cellects has a fully automatic algorithm to select a good color space combination, which proceeds in four steps:
+
+First, it screens every channel of every color space. For instance, it converts the image into grayscale using the second channel of the color space HSV, and segments that grayscale image using Otsu thresholding. Once a binary image is computed from every channel, Cellects only keep the channels for which the number of connected components is lower than 10000, and the total area detected is higher than 100 pixels but lower than 0.75 times the total size of the image. By doing so, we eliminate the channels that produce the most noise.
+
+In the second step, Cellects uses all the channels that pass the first filter and tests all possible pairwise combinations. Cellects combines channels by summing their intensities and re-scaling the result between 0 and 255. It then performs the segmentation on these combinations, and filters them with the same criteria as in the first step.
+
+The third step uses the previously selected channels and combinations that produce the highest and lowest detected surface to make logical operations between them. It applies the AND operator between the two results having the highest surface, and the OR operator between the two results having the lowest surface. It thus generates another two candidate segmentations, which are added to the ones obtained in the previous steps.
+
+In the fourth step, Cellects works under the assumption that the image contains multiple similar arenas containing a collection of objects with similar size and shape, and keeps the segmentations whose standard error of the area is smaller than ten times the smallest area standard error across all segmentations. To account for cases in which the experimental setup induces segmentation errors in one particular direction, Cellects also keeps the segmentation with minimal width standard error across all segmentations, and the one with minimal height standard error across all segmentations. All retained segmentations are shown to the user, who can then select the best one.
+
+As an optional step, Cellects can refine the choice of color space combination, using the last image of the sequence instead of the seed image. In order to increase the diversity of combinations explored, this optional analysis is performed in a different way than for the seed image. Also, this refining can use information from the segmentation of the seed frame and from the geometry of the arenas to rank the quality of the segmentation emerging from each color space combination. To generate these combinations, Cellects follows four steps.
+The first step is identical to the first step of the previously described automatic algorithm (in section 1) and starts by screening every possible channel and color space.
+
+The second step aims to find combinations that consider many channels, rather than those with only one or two. To do that, it creates combinations that consist of the sum of all channels except one. It then filters these combinations in the same way as for the previous step. Then, all surviving combinations are retained, and also undergo the same process in which one more channel is excluded, and the process continues until reaching single-channel combinations. This process thus creates new combinations that include any number of channels.
+
+The third step filters these segmentations, keeping those that fulfill the following criteria: (1) The number of connected components is higher than the number of arenas and lower than 10000. (2) The detected area covers less than 99% of the image. (2) Less than 1% of the detected area falls outside the arenas. (4) Each connected component of the detected area covers less than 75% of the image.
+
+Finally, the fourth step ranks the remaining segmentations using the following criteria: If the user labeled any areas as “cell”, the ranking will reflect the amount of cell pixels in common between the segmentation and the user labels. If the user did not label any areas as cells but labeled areas as background, the ranking will reflect the number of background pixels in common. Otherwise, the ranking will reflect the number of pixels in common with the segmentation of the first image.
+
+
+Arenas can be delimited automatically or manually. Cellects includes two automatic algorithms: A fast one to be used when arenas are symmetric around the initial position of the specimens or sufficiently far from each other, and a slower one to be used otherwise. These automatic algorithms work even if the arenas are not detectable in the images, but only work when there is a single individual in each arena. In the case of manual delimitation, the user draws each arena by holding down the mouse button. The following paragraphs describe the two automatic algorithms.
+The fast algorithm computes each arena coordinate using the distances between the components detected in the seed image after step 1. For each component, Cellects finds its nearest neighbor and uses its distance as the side of the square, centered on the component, giving the x and y limits of the arena.
+If the initial position of the cells do not provide good estimates of the center of each arena, Cellects can use the slower algorithm to find them. Because Cellects is intended to be very general, it cannot use specific characteristics of a particular arena to find its edges. Instead, it uses the motion and/or growth of the cell to infer the position of each arena. To do so, Cellects segments a sample of 5 images (equally spaced in time) using the same algorithm as for the seed image. Even if this segmentation is not accurate, the following algorithm finds the arenas robustly. First, it finds a rough estimate of the expected position of the cell. To do this, it dilates the cell in the first frame, until the edge of the dilated image is closer to the nearest centroid of other cells than to its own centroid. Then, it moves to the second image, and also dilates it in order to link together different disconnected components that may result from an inaccurate segmentation. Then, it performs an AND operation between these two dilated images and dilates the result so that it remains one component per arena. By doing this to all cells, we get an estimate of their shape in the second frame, and we can compute their centroids. We then repeat this procedure, for each pair of consecutive frames. Finally, Cellects computes the bounding boxes that contain the cells detected in the 5 frames for each arena, and uses them to estimate each arena coordinate.
+In some experiments, all cells are located at one edge of the arena and move roughly in the same direction. Cellects includes an option to take advantage of this regularity and improve the accuracy of arena detection: Once the centroids of a frame have been estimated (as described above), Cellects finds the centroid with highest displacement with respect to the previous frame, and applies the same displacement to all centroids.
+
+It also contains methods to write videos (as np arrays .npy files) corresponding to the pixels delimited by these arenas.
+
+
 """
 
 import logging
@@ -1011,7 +1044,6 @@ class ChangeOneRepResultThread(QtCore.QThread):
         self.parent().po.motion.networks_detection(False)
         self.parent().po.motion.study_cytoscillations(False)
         self.parent().po.motion.fractal_descriptions()
-        self.parent().po.motion.get_descriptors_summary()
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
         # self.parent().po.motion = None

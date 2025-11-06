@@ -115,10 +115,22 @@ def bracket_to_uint8_image_contrast(image: NDArray):
     -------
     ndarray of uint8
         Output image converted to uint8 type after normalization.
-    """
-    image -= np.min(image)
-    return to_uint8(255 * (image / np.max(image)))
 
+    Examples
+    --------
+    >>> image = np.random.randint(0, 255, (10, 10), dtype=np.uint8)
+    >>> res = bracket_to_uint8_image_contrast(image)
+    >>> print(res)
+
+    >>> image = np.zeros((10, 10), dtype=np.uint8)
+    >>> res = bracket_to_uint8_image_contrast(image)
+    >>> print(res)
+    """
+    image -= image.min()
+    if image.max() == 0:
+        return np.zeros_like(image, dtype=np.uint8)
+    else:
+        return to_uint8(255 * (image / np.max(image)))
 
 @njit()
 def linear_model(x: NDArray, a: float, b: float) -> float:

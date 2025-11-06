@@ -1,4 +1,73 @@
 #!/usr/bin/env python3
+"""MotionAnalysis class for processing video data and extracting motion/shape descriptors from biological specimens.
+
+This module provides comprehensive tools to analyze videos of biological samples (e.g., cell colonies) by:
+1. Loading and converting RGB videos to grayscale using configurable color space combinations
+2. Performing multi-strategy segmentation (frame-by-frame, intensity thresholding, derivative-based detection)
+3. Applying post-processing steps including error correction algorithms for shape continuity
+4. Computing morphological descriptors over time (area, perimeter, fractal dimension, etc.)
+5. Detecting network structures and oscillatory behavior in dynamic biological systems
+
+Classes
+-------
+MotionAnalysis : Processes video data to analyze specimen motion, growth patterns, and structural properties.
+    Provides methods for loading videos, performing segmentation using multiple algorithms,
+    post-processing results with error correction, extracting morphological descriptors,
+    detecting network structures, analyzing oscillations, and saving processed outputs.
+
+Functions
+---------
+load_images_and_videos : Loads and converts video files to appropriate format for analysis
+get_converted_video : Converts RGB video to grayscale based on specified color space parameters
+detection : Performs multi-strategy segmentation of the specimen across all frames
+update_shape : Applies post-processing filters and error correction algorithms to refine shape detection
+save_results : Saves processed videos, binary segmentations, and computed descriptors
+
+Notes
+-----
+- Processes large video datasets with memory optimization strategies including typed arrays (NumPy)
+  and progressive processing techniques.
+- Supports both single-specimen and multi-specimen analysis with configurable parameters for:
+   - Segmentation sensitivity thresholds
+   - Error correction algorithms
+   - Network detection methods
+   - Fractal dimension calculation
+
+"""
+
+
+"""Module for analyzing motion, growth patterns, and structural properties of biological specimens in video data.
+
+This module provides comprehensive tools to analyze videos of biological samples (e.g., cell colonies) by:
+1. Loading and converting RGB videos to grayscale using configurable color space combinations.
+2. Performing multi-strategy segmentation (frame-by-frame, intensity thresholding, derivative-based detection).
+3. Applying post-processing steps including error correction algorithms for shape continuity.
+4. Computing morphological descriptors over time (area, perimeter, fractal dimension, etc.).
+5. Detecting network structures and oscillatory behavior in dynamic biological systems.
+
+Classes
+-------
+MotionAnalysis : Processes video data to analyze specimen motion, growth patterns, and structural properties.
+    Provides methods for loading videos, performing segmentation using multiple algorithms,
+    post-processing results with error correction, extracting morphological descriptors,
+    detecting network structures, analyzing oscillations, and saving processed outputs.
+
+Functions
+---------
+load_images_and_videos : Loads and converts video files to appropriate format for analysis.
+get_converted_video : Converts RGB video to grayscale based on specified color space parameters.
+detection : Performs multi-strategy segmentation of the specimen across all frames.
+update_shape : Updates segmented shape with post-processing steps like noise filtering and hole filling.
+save_results : Saves processed data, efficiency tests, and annotated videos.
+
+Notes
+-----
+- The module supports both single-specimen and multi-specimen analysis through configurable parameters.
+- Segmentation strategies include intensity-based thresholding, gradient detection, and combinations thereof.
+- Post-processing includes morphological operations to refine segmented regions and error correction for specific use cases (e.g., Physarum polycephalum).
+- Graph extraction is available to represent network structures as vertex-edge tables.
+
+"""
 """
 This script contains the MotionAnalysis class. This class, called by program_organizer,
  calls all methods used to read, process videos and save results.
@@ -117,12 +186,63 @@ from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_ar
 
 class MotionAnalysis:
 
-    def __init__(self, l):
+    def __init__(self, l: list):
 
         """
-        :param video_name: The name of the video to read
-        :param convert_for_motion: The dict specifying the linear combination
-                                   of color channels (rgb_hsv_lab) to use
+        Analyzes motion in a given arena using video data.
+
+        This class processes video frames to analyze motion within a specified area,
+        detecting shapes, covering durations, and generating descriptors for further
+        analysis.
+
+        Args:
+            l (list): A list containing various parameters and flags necessary for the motion
+                analysis.
+
+        Args:
+            l[0] (int): Arena index.
+            l[1] (str): Arena identifier or name, stored in one_descriptor_per_arena['arena'].
+            l[2] (dict): Variables required for the analysis, stored in vars.
+            l[3] (bool): Flag to detect shape.
+            l[4] (bool): Flag to analyze shape.
+            l[5] (bool): Flag to show segmentation.
+            l[6] (None or list): Videos already in RAM.
+
+        Attributes:
+            vars (dict): Variables required for the analysis.
+            visu (None): Placeholder for visualization data.
+            binary (None): Placeholder for binary segmentation data.
+            origin_idx (None): Placeholder for the index of the first frame.
+            smoothing_flag (bool): Flag to indicate if smoothing should be applied.
+            dims (tuple): Dimensions of the converted video.
+            segmentation (ndarray): Array to store segmentation data.
+            covering_intensity (ndarray): Intensity values for covering analysis.
+            mean_intensity_per_frame (ndarray): Mean intensity per frame.
+            borders (object): Borders of the arena.
+            pixel_ring_depth (int): Depth of the pixel ring for analysis, default is 9.
+            step (int): Step size for processing, default is 10.
+            lost_frames (int): Number of lost frames to account for, default is 10.
+            start (None or int): Starting frame index for the analysis.
+
+        Methods:
+            load_images_and_videos(videos_already_in_ram, arena_idx): Loads images and videos
+                for the specified arena index.
+            update_ring_width(): Updates the width of the pixel ring for analysis.
+            get_origin_shape(): Detects the origin shape in the video frames.
+            get_covering_duration(step): Calculates the covering duration based on a step size.
+            detection(): Performs motion detection within the arena.
+            initialize_post_processing(): Initializes post-processing steps.
+            update_shape(show_seg): Updates the shape based on segmentation and visualization flags.
+            get_descriptors_from_binary(): Extracts descriptors from binary data.
+            detect_growth_transitions(): Detects growth transitions in the data.
+            networks_detection(show_seg): Detected networks within the arena based on segmentation
+                visualization.
+            study_cytoscillations(show_seg): Studies cytoscillations within the arena with
+                segmentation visualization.
+            fractal_descriptions(): Generates fractal descriptions of the analyzed data.
+            get_descriptors_summary(): Summarizes the descriptors obtained from the analysis.
+            save_results(): Saves the results of the analysis.
+
         """
         self.one_descriptor_per_arena = {}
         self.one_descriptor_per_arena['arena'] = l[1]
@@ -138,9 +258,6 @@ class MotionAnalysis:
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
-        # self.origin = self.vars['first_image'][self.vars['top'][l[0]]:(
-        #    self.vars['bot'][l[0]] + 1),
-        #               self.vars['left'][l[0]]:(self.vars['right'][l[0]] + 1)]
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
         self.dims = self.converted_video.shape
@@ -150,12 +267,6 @@ class MotionAnalysis:
         self.mean_intensity_per_frame = np.mean(self.converted_video, (1, 2))
 
         self.borders = image_borders(self.dims[1:], shape=self.vars['arena_shape'])
-        # if self.vars['arena_shape'] == "circle":
-        #     self.borders = Ellipse(self.dims[1:]).create()
-        #     img_contours = image_borders(self.dims[1:])
-        #     self.borders = self.borders * img_contours
-        # else:
-        #     self.borders = image_borders(self.dims[1:])
         self.pixel_ring_depth = 9
         self.step = 10
         self.lost_frames = 10
@@ -163,8 +274,6 @@ class MotionAnalysis:
 
         self.start = None
         if detect_shape:
-            #self=self.motion
-            #self.drift_correction()
             self.start = None
             # Here to conditional layers allow to detect if an expansion/exploration occured
             self.get_origin_shape()
@@ -179,10 +288,6 @@ class MotionAnalysis:
             else:
                 self.get_covering_duration(step)
                 if self.start is not None:
-                    # self.vars['fading'] = -0.5
-                    # self.vars['do_threshold_segmentation']: bool = False
-                    # self.vars['do_slope_segmentation'] = True
-                    # self.vars['true_if_use_light_AND_slope_else_OR']: bool = False
                     self.detection()
                     self.initialize_post_processing()
                     self.t = self.start
@@ -202,7 +307,21 @@ class MotionAnalysis:
                 if videos_already_in_ram is None:
                     self.save_results()
 
-    def load_images_and_videos(self, videos_already_in_ram, i):
+    def load_images_and_videos(self, videos_already_in_ram, i: int):
+        """
+
+        Load images and videos from a video file or preloaded data.
+
+        This method is responsible for loading image and video data for processing.
+        It can either load data from a video file specified by `vid_name` or use preloaded
+        data passed as `videos_already_in_ram`. The data is loaded into appropriate attributes
+        based on whether the video is already in greyscale format or needs to be converted.
+
+        Args:
+            videos_already_in_ram (numpy.ndarray | None): Preloaded video data. If `None`,
+                the method will load data from a video file.
+            i (int): Index used to access various lists in the `vars` attribute.
+        """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
         if videos_already_in_ram is None:
@@ -238,6 +357,28 @@ class MotionAnalysis:
                         self.converted_video2) = videos_already_in_ram
 
     def get_converted_video(self):
+        """
+        Convert an RGB video into a greyscale video.
+
+        This method converts the current video stored in `self.visu` into a
+        greyscale format using specified color space combinations. It supports
+        background subtraction and filtering of the resulting greyscale images.
+
+        Important Attributes Used:
+        --------------------------
+            - `self.vars` (dict): Contains various configuration variables.
+            - `self.visu` (np.ndarray): The video to be converted.
+            - `self.converted_video` and `self.converted_video2`
+              (np.ndarray): Storage for the resultant greyscale video frames.
+            - `self.background` and `self.background2`
+              (optional np.ndarray): Background images for subtraction.
+            - `self.one_descriptor_per_arena` (dict): Keeps track of arena tracking descriptors.
+
+        Notes
+        -----
+            - The method supports both float64 and uint8 data types
+              for the greyscale video frames, depending on the configuration.
+        """
         if not self.vars['already_greyscale']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
             first_dict = TDict()
@@ -286,6 +427,26 @@ class MotionAnalysis:
                     self.converted_video2[counter, ...] = greyscale_image2
 
     def get_origin_shape(self):
+        """
+        Determine the origin shape and initialize variables based on the state of the current analysis.
+
+        This method analyzes the initial frame or frames to determine the origin shape
+        of an object in a video, initializing necessary variables and matrices for
+        further processing.
+
+
+        Attributes Modified:
+            start: (int) Indicates the starting frame index.
+            origin_idx: (np.ndarray) The indices of non-zero values in the origin matrix.
+            covering_intensity: (np.ndarray) Matrix used for pixel fading intensity.
+            substantial_growth: (int) Represents a significant growth measure based on the origin.
+
+        Notes:
+            - The method behavior varies if 'origin_state' is set to "constant" or not.
+            - If the background is lighter, 'covering_intensity' matrix is initialized.
+            - Uses connected components to determine which shape is closest to the center
+              or largest, based on 'appearance_detection_method'.
+        """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Make sure of origin shape")
         if self.vars['origin_state'] == "constant":
             self.start = 1
@@ -310,11 +471,6 @@ class MotionAnalysis:
                 analysisi = self.frame_by_frame_segmentation(self.start, mask_coord)
                 self.start += 1
 
-                # frame_i = OneImageAnalysis(self.converted_video[self.start, :, :])
-                # frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
-                # frame_i.thresholding(self.vars['luminosity_threshold'], self.vars['lighter_background'])
-                # self.start += 1
-
             # Use connected components to find which shape is the nearest from the image center.
             if self.vars['several_blob_per_arena']:
                 self.origin = analysisi.binary_image
@@ -334,9 +490,14 @@ class MotionAnalysis:
                     self.origin[output == np.argmax(stats[1:, 4])] = 1
             self.origin_idx = np.nonzero(self.origin)
             self.substantial_growth = self.origin.sum() + 250
-        ##
 
-    def get_covering_duration(self, step):
+    def get_covering_duration(self, step: int):
+        """
+        Find a frame with significant growth/motion and determine the number of frames necessary for a pixel to get covered.
+
+        Args:
+            step (int): The step size used in the analysis.
+        """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Find a frame with a significant growth/motion and determine the number of frames necessary for a pixel to get covered")
         ## Find the time at which growth reached a substantial growth.
         self.substantial_time = self.start
@@ -354,15 +515,6 @@ class MotionAnalysis:
             self.substantial_time += step
             growth_vision = self.frame_by_frame_segmentation(self.substantial_time, mask_coord)
 
-            # growth_vision = OneImageAnalysis(self.converted_video[self.substantial_time, :, :])
-            # # growth_vision.thresholding()
-            # if self.vars['convert_for_motion']['logical'] != 'None':
-            #     growth_vision.image2 = self.converted_video2[self.substantial_time, ...]
-            #
-            # growth_vision.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
-            #                            bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
-            #                            grid_segmentation=self.vars['grid_segmentation'],
-            #                            lighter_background=self.vars['lighter_background'])
 
             surfarea = np.sum(growth_vision.binary_image * self.borders)
             if surfarea > self.substantial_growth:
@@ -384,7 +536,7 @@ class MotionAnalysis:
         growth = bracket_to_uint8_image_contrast(growth)
         growth *= self.borders
         growth_vision = OneImageAnalysis(growth)
-        growth_vision.thresholding()
+        growth_vision.segmentation()
         self.substantial_image = cv2.erode(growth_vision.binary_image, cross_33, iterations=2)
 
         if np.any(self.substantial_image):
@@ -417,10 +569,41 @@ class MotionAnalysis:
         # In that case, the substantial_image is empty and there is no reason to proceed further
         else:
             self.start = None
-        ##
 
-    def detection(self, compute_all_possibilities=False):
-        # self.lost_frames = (self.step - 1) * self.vars['repeat_video_smoothing'] # relevant when smoothing did not use padding.
+    def detection(self, compute_all_possibilities: bool=False):
+        """
+        Perform cell motion and growth detection using various segmentation algorithms.
+
+        This method is responsible for detecting cell motion and growth within a video
+        based on different segmentation strategies. It supports frame-by-frame segmentation,
+        luminosity threshold segmentation, and luminosity slope segmentation.
+
+        Args:
+            compute_all_possibilities (bool): If True, compute all possible combinations
+                of segmentation algorithms and store the results. Default is False.
+
+        Attributes:
+            lost_frames (int): Number of frames not analyzed during processing.
+            segmentation (numpy.ndarray): Binary video representing the segmentation
+                results. Shape is defined by the video dimensions and data type is uint8.
+            converted_video (numpy.ndarray): Video frames after conversion, with shape
+                defined by the video dimensions.
+            converted_video2 (numpy.ndarray): Additional converted video frames, with
+                shape defined by the video dimensions.
+            lum_slope_segmentation (numpy.ndarray): Gradient segmentation results based
+                on luminosity slopes.
+            luminosity_segmentation (numpy.ndarray): ndarray containing the segmentation resulting from the method
+            using luminosity values.
+            gradient_segmentation (numpy.ndarray): ndarray containing the segmentation resulting from the method
+            using luminosity slopes.
+            logical_and (numpy.ndarray): ndarray containing the segmentation resulting from the method
+            using luminosity slopes AND values.
+            logical_or (numpy.ndarray): ndarray containing the segmentation resulting from the method
+            using luminosity slopes AND values.
+
+        Note:
+            This method involves several internal steps, including image adjustments,
+            mask creation, and logical operations between segmentation results."""
         self.lost_frames = self.step
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
@@ -504,8 +687,23 @@ class MotionAnalysis:
         self.converted_video2 = None
 
 
-    def frame_by_frame_segmentation(self, t, mask_coord=None):
+    def frame_by_frame_segmentation(self, t: int, mask_coord=None):
+        """
 
+        Perform frame-by-frame segmentation on a video.
+
+        This method processes a single frame of the video at time `t` to perform segmentation.
+        It uses various parameters stored in a dictionary and may optionally use additional frames a
+        round the current frame to handle drift correction.
+
+        Args:
+            t (int): The time index of the frame in the video to perform segmentation on.
+            mask_coord (array-like, optional): The coordinates of a mask used to handle drift correction.
+
+        Returns:
+            OneImageAnalysis: An object containing the analysis and segmentation results of the frame.
+
+        """
         contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
         if self.vars['convert_for_motion']['logical'] != 'None':
             contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
@@ -556,10 +754,23 @@ class MotionAnalysis:
 
         return analysisi
 
-        # 1. Get the mask valid for a number of images around it (step).
+    def lum_value_segmentation(self, converted_video: NDArray, do_threshold_segmentation: bool) -> Tuple[NDArray, NDArray]:
+        """
+        Compute the segmentation of a video based on luminosity values.
 
+        Args:
+            converted_video (np.ndarray): The input video data in numpy array format.
+            do_threshold_segmentation (bool): Flag indicating whether to perform
+                threshold segmentation.
 
-    def lum_value_segmentation(self, converted_video, do_threshold_segmentation):
+        Returns:
+            tuple: A tuple containing two elements:
+                - luminosity_segmentation (np.ndarray or None): The computed
+                  segmentation based on luminosity values.
+                - l_threshold_over_time (np.ndarray): The luminosity threshold
+                  over time.
+
+        """
         shape_motion_failed: bool = False
         if self.vars['lighter_background']:
             covering_l_values = np.min(converted_video[:self.substantial_time, :, :],
@@ -633,10 +844,16 @@ class MotionAnalysis:
 
         return luminosity_segmentation, l_threshold_over_time
 
-    def smooth_pixel_slopes(self, converted_video):
-        # smoothed_video = np.zeros(
-        #     (self.dims[0] - self.lost_frames, self.dims[1], self.dims[2]),
-        #     dtype=np.float64)
+    def smooth_pixel_slopes(self, converted_video: NDArray) -> NDArray:
+        """
+        Smooth the pixel slopes of a greyscale video using convolution.
+
+        Args:
+            converted_video (numpy.ndarray): The video data to be smoothed.
+
+        Returns:
+            numpy.ndarray: The smoothed video data.
+        """
         try:
             if self.vars['lose_accuracy_to_save_memory']:
                 smoothed_video = np.zeros(self.dims, dtype=np.float16)
@@ -673,7 +890,22 @@ class MotionAnalysis:
             smoothed_video = converted_video
             return smoothed_video
 
-    def lum_slope_segmentation(self, converted_video):
+    def lum_slope_segmentation(self, converted_video: NDArray) -> NDArray:
+        """
+        Segment the video based on luminance slope.
+
+        Args:
+            converted_video (NDArray): The input video data in a numpy array format.
+
+        Returns:
+            NDArray: A binary segmentation mask indicating the segmented regions.
+
+        Args/Parameters:
+            converted_video (NDArray): The input video data in a numpy array format.
+
+        Returns:
+            NDArray: A binary segmentation mask indicating the segmented regions.
+        """
         shape_motion_failed : bool = False
         gradient_segmentation = np.zeros(self.dims, np.uint8)
         # 2) Contrast increase
@@ -767,6 +999,15 @@ class MotionAnalysis:
         return gradient_segmentation
 
     def update_ring_width(self):
+        """
+        A method to update the ring width for an ellipse by ensuring that the pixel
+        ring depth is odd and greater than 3.
+
+        Attributes:
+            self.pixel_ring_depth (int): The depth of the pixel ring.
+            self.vars (dict): Dictionary containing variables like detection_range_factor.
+
+        """
         # Make sure that self.pixels_depths are odd and greater than 3
         if self.pixel_ring_depth <= 3:
             self.pixel_ring_depth = 3
@@ -776,6 +1017,29 @@ class MotionAnalysis:
         self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
+        """
+
+        Initialize post-processing for arena data.
+
+        This method initializes several internal states and prepares the environment
+        for subsequent processing steps. It involves setting up binary masks,
+        handling different origin states, computing surface areas, and optionally
+        correcting errors around initial shapes or preventing fast growth near the periphery.
+
+        Attributes:
+            binary (numpy.ndarray): A 3D array representing the binary state of the arena.
+            covering_intensity (numpy.ndarray): A 2D array to store intensity values for
+                covering pixels.
+            segmentation (numpy.ndarray): A 3D array to store segmentation masks for each frame.
+            mean_distance_per_frame (None): Placeholder for mean distance per frame computation.
+            surfarea (numpy.ndarray): A 1D array to store surface area values for each frame.
+            gravity_field (numpy.ndarray): A 2D array representing the gravity field based
+                on inverted distance transform.
+            rays (numpy.ndarray): A 2D array representing rays for error correction around initial shape.
+            sun (numpy.ndarray): A 2D array representing the central point for rays in error correction.
+            holes (numpy.ndarray): A 2D array to store hole data for error correction.
+            near_periphery (numpy.ndarray): A 2D array to mark pixels near the periphery of the arena.
+        """
         ## Initialization
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
 
@@ -836,11 +1100,20 @@ class MotionAnalysis:
                 self.near_periphery[:, :self.vars['periphery_width']] = 1
                 self.near_periphery[:, -self.vars['periphery_width']:] = 1
             self.near_periphery = np.nonzero(self.near_periphery)
-            # near_periphery = np.zeros(self.dims[1:])
-            # near_periphery[self.near_periphery] = 1
 
-    def update_shape(self, show_seg):
+    def update_shape(self, show_seg: bool):
+        """
+        Update the shape of detected objects in a video frame by analyzing segmentation data and applying morphological operations.
 
+        This method processes the segmentation data to update the shape of detected objects in the current video frame.
+        It involves several steps such as filtering potential pixels, handling noisy images, dilating and eroding shapes,
+        and adding distant shapes.
+        Additionally, it calculates the mean distance covered per frame, corrects for wrong disconnections,
+        and corrects for errors around the initial shape.
+
+        Args:
+            show_seg (bool): A flag to indicate whether segmentation should be displayed.
+        """
         # Get from gradients, a 2D matrix of potentially covered pixels
         # I/ dilate the shape made with covered pixels to assess for covering
 
@@ -1026,7 +1299,50 @@ class MotionAnalysis:
                 np.save(f"coord_contour{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
                  smallest_memory_array(np.nonzero(contours), "uint"))
 
-    def get_descriptors_from_binary(self, release_memory=True):
+    def get_descriptors_from_binary(self, release_memory: bool=True):
+        """
+
+        Methods: get_descriptors_from_binary
+
+        Summary
+        -------
+        Generates shape descriptors for binary images, computes these descriptors for each frame and handles colony
+        tracking. This method can optionally release memory to reduce usage, apply scaling factors to descriptors
+        in millimeters and computes solidity separately if requested.
+
+        Parameters
+        ----------
+        release_memory : bool, optional
+            Flag to determine whether memory should be released after computation. Default is True.
+
+        Other Parameters
+        ----------------
+        **self.one_row_per_frame**
+            DataFrame to store one row of descriptors per frame.
+            - **'arena'**: Arena identifier, repeated for each frame.
+            - **'time'**: Array of time values corresponding to frames.
+
+        **self.binary**
+            3D array representing binary images over time.
+            - **t,x,y**: Time index, x-coordinate, and y-coordinate.
+
+        **self.dims**
+            Tuple containing image dimensions.
+            - **0**: Number of time frames.
+            - **1,2**: Image width and height respectively.
+
+        **self.surfarea**
+            Array containing surface areas for each frame.
+
+        **self.time_interval**
+            Time interval between frames, calculated only if provided timings are non-zero.
+
+        Notes
+        -----
+        This method uses various helper methods and classes like `ShapeDescriptors` for computing shape descriptors,
+        `PercentAndTimeTracker` for progress tracking, and other image processing techniques such as connected components analysis.
+
+        """
         ##
         if release_memory:
             self.substantial_image = None
@@ -1078,19 +1394,13 @@ class MotionAnalysis:
 
             for t in np.arange(self.dims[0]):
                 SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
-
-
-                # NEW
                 for descriptor in to_compute_from_sd:
                     self.one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
-                # Old
-                # self.one_row_per_frame.iloc[t, 2: 2 + len(descriptors)] = SD.descriptors.values()
 
 
                 if self.compute_solidity_separately:
                     solidity = ShapeDescriptors(self.binary[t, :, :], ["solidity"])
                     self.solidity[t] = solidity.descriptors["solidity"]
-                    # self.solidity[t] = list(solidity.descriptors.values())[0]
                 # I) Find a first pseudopod [aim: time]
                 if pd.isna(self.one_descriptor_per_arena["first_move"]):
                     if self.surfarea[t] >= (origin.sum() + self.vars['first_move_threshold']):
@@ -1125,9 +1435,7 @@ class MotionAnalysis:
             centroids = []
 
             pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
-            for t in np.arange(self.dims[0]):  #21):#
-                # t=0
-                # t+=1
+            for t in np.arange(self.dims[0]):
                 # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
                 # keeps the previous colony name.
                 shapes, stats, centers = cc(self.binary[t, :, :])
@@ -1141,8 +1449,6 @@ class MotionAnalysis:
 
                 updated_colony_names = np.zeros(1, dtype=np.uint32)
                 for colony in (np.arange(nb - 1) + 1):  # 120)):# #92
-                    # colony = 1
-                    # colony+=1
                     # logging.info(f'Colony number {colony}')
                     current_colony_img = (shapes == colony).astype(np.uint8)
 
@@ -1222,13 +1528,26 @@ class MotionAnalysis:
             self.one_row_per_frame = pd.concat([self.one_row_per_frame, time_descriptor_colony], axis=1)
 
 
+        self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
+        if self.vars['output_in_mm']:
+            self.one_descriptor_per_arena["final_area"] *= self.vars['average_pixel_size']
         if self.vars['do_fading']:
             self.one_row_per_frame['newly_explored_area'] = self.newly_explored_area
             if self.vars['output_in_mm']:
                 self.one_row_per_frame['newly_explored_area'] *= self.vars['average_pixel_size']
 
     def detect_growth_transitions(self):
-        ##
+        """
+        Detect growth transitions in a biological image processing context.
+
+        Analyzes the growth transitions of a shape within an arena, determining
+        whether growth is isotropic and identifying any breaking points.
+
+        Notes:
+            This method modifies the `one_descriptor_per_arena` dictionary in place
+            to include growth transition information.
+
+        """
         if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena']:
             self.one_descriptor_per_arena["iso_digi_transi"] = pd.NA
             if not pd.isna(self.one_descriptor_per_arena["first_move"]):
@@ -1262,12 +1581,28 @@ class MotionAnalysis:
                 
 
     def check_converted_video_type(self):
+        """
+
+        Check if the converted video type is uint8 and normalize it if necessary.
+        """
         if self.converted_video.dtype != "uint8":
             self.converted_video -= np.min(self.converted_video)
             self.converted_video = np.round((255 * (self.converted_video / np.max(self.converted_video)))).astype(np.uint8)
 
 
-    def networks_detection(self, show_seg=False):
+    def networks_detection(self, show_seg: bool=False):
+        """
+        Perform network detection within a given arena.
+
+        This function carries out the task of detecting networks in an arena
+        based on several parameters and variables. It involves checking video
+        type, performing network detection over time, potentially detecting
+        pseudopods, and smoothing segmentation. The results can be visualized or saved.
+
+        Args:
+            show_seg: bool = False
+                A flag that determines whether to display the segmentation visually.
+        """
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
             smooth_segmentation_over_time = True
@@ -1326,26 +1661,6 @@ class MotionAnalysis:
                     pseudopod_vid[t] = pseudopods
                 self.network_dynamics[t] = complete_network
 
-                # # Option B: To add these cutting regions to the network:
-                # # Differentiate pseudopods that cut the network from the 'true ones'
-                # # Dilate pseudopods and restrein them to the
-                # pseudopods = cv2.dilate(pseudopod_vid[t], kernel=Ellipse((15, 15)).create().astype(np.uint8),
-                #                         iterations=1) * self.binary[t, :, :]
-                # nb, numbered_pseudopods = cv2.connectedComponents(pseudopods)
-                # pseudopods = np.zeros_like(pseudopod_vid[t])
-                # for p_i in range(1, nb + 1):
-                #     pseudo_i = numbered_pseudopods == p_i
-                #     nb_i, remainings, stats, centro = cv2.connectedComponentsWithStats(
-                #         complete_network * (1 - pseudo_i.astype(np.uint8)))
-                #     if (stats[:, 4] > pseudopod_min_size).sum() == 2:
-                #         pseudopods[pseudo_i] = 1
-                #         fragmented = np.nonzero(stats[:, 4] <= pseudopod_min_size)[0]
-                #         pseudopods[np.isin(remainings, fragmented)] = 1
-                # pseudopod_vid[t] = pseudopods
-                # complete_network[pseudopods > 0] = 1
-                # self.network_dynamics[t] = complete_network
-
-
                 imtoshow = self.visu[t, ...]
                 eroded_binary = cv2.erode(self.network_dynamics[t, ...], cross_33)
                 net_coord = np.nonzero(self.network_dynamics[t, ...] - eroded_binary)
@@ -1374,6 +1689,43 @@ class MotionAnalysis:
                         pseudopod_coord)
 
     def graph_extraction(self):
+        """
+        Extract and analyze graphs from a binary representation of network dynamics, producing vertex
+        and edge tables that represent the graph structure over time.
+
+        Args:
+            None
+
+        Attributes:
+            vars (dict): Dictionary of variables that control the graph extraction process.
+                - 'graph_extraction': Boolean indicating if graph extraction should be performed.
+                - 'network_analysis': Boolean indicating if network analysis should be performed.
+                - 'save_coord_network': Boolean indicating if the coordinate network should be saved.
+
+            one_descriptor_per_arena (dict): Dictionary containing descriptors for each arena.
+                - 'first_move': Integer representing the first move in the sequence.
+
+            dims (tuple): Tuple containing dimension information.
+                - [0]: Integer representing the number of time steps.
+                - [1]: Integer representing the y-dimension size.
+                - [2]: Integer representing the x-dimension size.
+
+            origin (np.ndarray): Binary image representing the origin of the network.
+
+            binary (np.ndarray): Binary representation of network dynamics over time.
+                Shape: (time_steps, y_dimension, x_dimension).
+
+            converted_video (np.ndarray): Converted video data.
+                Shape: (y_dimension, x_dimension, time_steps).
+
+            network_dynamics (np.ndarray): Network dynamics representation.
+                Shape: (time_steps, y_dimension, x_dimension).
+
+        Notes:
+            - This method performs graph extraction and saves the vertex and edge tables to CSV files.
+            - The CSV files are named according to the arena, time steps, and dimensions.
+
+        """
         if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:
             self.network_dynamics = self.binary
         _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
@@ -1420,7 +1772,24 @@ class MotionAnalysis:
             f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
 
 
-    def memory_allocation_for_cytoscillations(self):
+    def memory_allocation_for_cytoscillations(self) -> NDArray:
+        """
+
+        Calculate and return the oscillations video based on the converted video shape and available memory.
+
+        This method calculates the necessary memory for storing the oscillations
+        video, checks if the available memory is sufficient, and adjusts the video
+        to save memory if needed. It then calculates the gradient of the converted
+        video with respect to the average intensities and returns the oscillations
+        video.
+        Returns:
+            oscillations_video (ndarray): The calculated oscillations video. If
+                memory allocation fails, returns None.
+
+        Notes:
+            This method attempts to allocate memory for 10 minutes before
+                crashing if an exception occurs.
+        """
         try:
             period_in_frame_nb = int(self.vars['expected_oscillation_period'] / self.time_interval)
             if period_in_frame_nb < 2:
@@ -1450,7 +1819,19 @@ class MotionAnalysis:
             return None
 
 
-    def study_cytoscillations(self, show_seg):
+    def study_cytoscillations(self, show_seg: bool):
+        """
+
+            Study the cytoskeletal oscillations within a video frame by frame.
+
+            This method performs an analysis of cytoskeletal oscillations in the video,
+            identifying regions of influx and efflux based on pixel connectivity.
+            It also handles memory allocation for the oscillations video, computes
+            connected components, and optionally displays the segmented regions.
+
+            Args:
+                show_seg (bool): If True, display the segmentation results.
+        """
         if pd.isna(self.one_descriptor_per_arena["first_move"]):
             if not self.vars['lose_accuracy_to_save_memory']:
                 self.check_converted_video_type()
@@ -1475,14 +1856,9 @@ class MotionAnalysis:
                 del within_range
                 oscillations_video += 1
                 oscillations_video = oscillations_video.astype(np.uint8)
-
                 dotted_image = np.ones(self.converted_video.shape[1:3], np.uint8)
-                for cy in np.arange(dotted_image.shape[0]):
-                    if cy % 2 != 0:
-                        dotted_image[cy, :] = 0
-                for cx in np.arange(dotted_image.shape[1]):
-                    if cx % 2 != 0:
-                        dotted_image[:, cx] = 0
+                dotted_image[1::2, :] = 0
+                dotted_image[:, 1::2] = 0
 
                 if self.start is None:
                     self.start = 0
@@ -1702,6 +2078,19 @@ class MotionAnalysis:
 
 
     def fractal_descriptions(self):
+        """
+
+        Method for analyzing fractal patterns in binary data.
+
+        Fractal analysis is performed on the binary representation of the data,
+        optionally considering network dynamics if specified. The results
+        include fractal dimensions, R-values, and box counts for the data.
+
+        If network analysis is enabled, additional fractal dimensions,
+        R-values, and box counts are calculated for the inner network.
+        If 'output_in_mm' is True, then values in mm can be obtained.
+
+        """
         if not pd.isna(self.one_descriptor_per_arena["first_move"]) and self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
 
@@ -1748,15 +2137,16 @@ class MotionAnalysis:
             if self.vars['network_analysis'] or self.vars['save_coord_network']:
                 del self.network_dynamics
 
-    def get_descriptors_summary(self):
-        potential_descriptors = ["area", "perimeter", "circularity", "rectangularity", "total_hole_area", "solidity",
-                                 "convexity", "eccentricity", "euler_number", "standard_deviation_y",
-                                 "standard_deviation_x", "skewness_y", "skewness_x", "kurtosis_y", "kurtosis_x",
-                                 "major_axis_len", "minor_axis_len", "axes_orientation"]
-
-        self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
-
     def save_efficiency_tests(self):
+        """
+        Provide images allowing to assess the analysis efficiency
+
+        This method generates two test images used for assessing
+        the efficiency of the analysis. It performs various operations on
+        video frames to create these images, including copying and manipulating
+        frames from the video, detecting contours on binary images,
+        and drawing the arena label on the left of the frames.
+        """
         # Provide images allowing to assess the analysis efficiency
         if self.dims[0] > 1:
             after_one_tenth_of_time = np.ceil(self.dims[0] / 10).astype(np.uint64)
@@ -1796,7 +2186,20 @@ class MotionAnalysis:
                                           self.vars["contour_color"], 255), 3)
 
     def save_video(self):
+        """
+        Save processed video with contours and other annotations.
 
+        This method processes the binary image to extract contours, overlay them
+        on a video, and save the resulting video file.
+
+        Notes:
+            - This method uses OpenCV for image processing and contour extraction.
+            - The processed video includes contours colored according to the
+              `contour_color` specified in the variables.
+            - Additional annotations such as time in minutes are added to each
+              frame if applicable.
+
+        """
         if self.vars['save_processed_videos']:
             self.check_converted_video_type()
             if len(self.converted_video.shape) == 3:
@@ -1830,7 +2233,6 @@ class MotionAnalysis:
                 if len(self.visu.shape) == 3:
                     self.visu = np.stack((self.visu, self.visu, self.visu), axis=3)
             self.converted_video = np.concatenate((self.visu, self.converted_video), axis=2)
-            # self.visu = None
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
@@ -1847,9 +2249,15 @@ class MotionAnalysis:
                     self.converted_video[t, ...] = image
             vid_name = f"ind_{self.one_descriptor_per_arena['arena']}{self.vars['videos_extension']}"
             write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
-            # self.converted_video = None
 
     def save_results(self):
+        """
+        Save the results of testing and video processing.
+
+        This method handles the saving of efficiency tests, video files,
+        and CSV data related to test results. It checks for existing files before writing new data.
+        Additionally, it cleans up temporary files if configured to do so.
+        """
         self.save_efficiency_tests()
         self.save_video()
         if self.vars['several_blob_per_arena']:
@@ -1871,11 +2279,6 @@ class MotionAnalysis:
                     try:
                         with open(f"one_row_per_arena.csv", 'w') as file:
                             stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), 1:] = self.one_descriptor_per_arena.values()
-                            # if len(self.vars['analyzed_individuals']) == 1:
-                            #     stats = pd.DataFrame(self.one_descriptor_per_arena, index=[0])
-                            # else:
-                            #     stats = pd.DataFrame.from_dict(self.one_descriptor_per_arena)
-                        # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
                             stats.to_csv(file, sep=';', index=False, lineterminator='\n')
                     except PermissionError:
                         logging.error("Never let one_row_per_arena.csv open when Cellects runs")
@@ -1893,6 +2296,14 @@ class MotionAnalysis:
             os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")
 
     def change_results_of_one_arena(self):
+        """
+        Manages the saving and updating of CSV files based on data extracted from analyzed
+        one arena. Specifically handles three CSV files: "one_row_per_arena.csv",
+        "one_row_per_frame.csv", and "one_row_per_oscillating_cluster.csv".
+        Each file is updated or created based on the presence of existing data.
+        The method ensures that each CSV file contains the relevant information for
+        the given arena, frame, and oscillator cluster data.
+        """
         self.save_video()
         # I/ Update/Create one_row_per_arena.csv
         create_new_csv: bool = False
@@ -1910,16 +2321,6 @@ class MotionAnalysis:
             except Exception as e:
                 logging.error(f"{e}")
                 create_new_csv = True
-            # if len(self.one_descriptor_per_arena) == len(stats.columns):
-            #     try:
-            #         with open(f"one_row_per_arena.csv", 'w') as file:
-            #             stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
-            #             # stats.to_csv("stats.csv", sep=';', index=False, lineterminator='\n')
-            #             stats.to_csv(file, sep=';', index=False, lineterminator='\n')
-            #     except PermissionError:
-            #         logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-            # else:
-            #     create_new_csv = True
         else:
             create_new_csv = True
         if create_new_csv:
@@ -1944,25 +2345,6 @@ class MotionAnalysis:
                         descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0] - 1), stat_name] = self.one_row_per_frame.loc[:, stat_name].values[:]
                 with open(f"one_row_per_frame.csv", 'w') as file:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
-                # with open(f"one_row_per_frame.csv", 'w') as file:
-                #     for descriptor in descriptors.keys():
-                #         descriptors.loc[
-                #         ((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]),
-                #         descriptor] = self.one_row_per_frame[descriptor]
-                #     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
-
-
-
-                # if len(self.one_row_per_frame.columns) == len(descriptors.columns):
-                #     with open(f"one_row_per_frame.csv", 'w') as file:
-                #         # NEW
-                #         for descriptor in descriptors.keys():
-                #             descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]), descriptor] = self.one_row_per_frame[descriptor]
-                #         # Old
-                #         # descriptors.iloc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0]), :] = self.one_row_per_frame
-                #         descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
-                # else:
-                #     create_new_csv = True
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
             except Exception as e:
@@ -1995,10 +2377,6 @@ class MotionAnalysis:
                         one_row_per_oscillating_cluster_after = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] > self.one_descriptor_per_arena['arena']]
                         one_row_per_oscillating_cluster = pd.concat((one_row_per_oscillating_cluster_before, oscil_i, one_row_per_oscillating_cluster_after))
                         one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
-
-                        # one_row_per_oscillating_cluster = one_row_per_oscillating_cluster[one_row_per_oscillating_cluster['arena'] != self.one_descriptor_per_arena['arena']]
-                        # one_row_per_oscillating_cluster = pd.concat((one_row_per_oscillating_cluster, oscil_i))
-                        # one_row_per_oscillating_cluster.to_csv(file, sep=';', index=False, lineterminator='\n')
                 except PermissionError:
                     logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
             else:
