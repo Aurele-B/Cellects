@@ -150,74 +150,71 @@ class ShapeDescriptors:
         self.get_area()
 
         for name in self.descriptors.keys():
-            if self.area == 0:
-                self.descriptors[name] = 0
-            else:
-                if name == "mo":
-                    self.get_mo()
-                    self.descriptors[name] = self.mo
-                elif name == "area":
-                    self.descriptors[name] = self.area
-                elif name == "contours":
-                    self.get_contours()
-                    self.descriptors[name] = self.contours
-                elif name == "min_bounding_rectangle":
-                    self.get_min_bounding_rectangle()
-                    self.descriptors[name] = self.min_bounding_rectangle
-                elif name == "major_axis_len":
-                    self.get_major_axis_len()
-                    self.descriptors[name] = self.major_axis_len
-                elif name == "minor_axis_len":
-                    self.get_minor_axis_len()
-                    self.descriptors[name] = self.minor_axis_len
-                elif name == "axes_orientation":
-                    self.get_inertia_axes()
-                    self.descriptors[name] = self.axes_orientation
-                elif name == "standard_deviation_y":
-                    self.get_standard_deviations()
-                    self.descriptors[name] = self.sy
-                elif name == "standard_deviation_x":
-                    self.get_standard_deviations()
-                    self.descriptors[name] = self.sx
-                elif name == "skewness_y":
-                    self.get_skewness()
-                    self.descriptors[name] = self.sky
-                elif name == "skewness_x":
-                    self.get_skewness()
-                    self.descriptors[name] = self.skx
-                elif name == "kurtosis_y":
-                    self.get_kurtosis()
-                    self.descriptors[name] = self.ky
-                elif name == "kurtosis_x":
-                    self.get_kurtosis()
-                    self.descriptors[name] = self.kx
-                elif name == "convex_hull":
-                    self.get_convex_hull()
-                    self.descriptors[name] = self.convex_hull
-                elif name == "perimeter":
-                    self.get_perimeter()
-                    self.descriptors[name] = self.perimeter
-                elif name == "circularity":
-                    self.get_circularity()
-                    self.descriptors[name] = self.circularity
-                elif name == "rectangularity":
-                    self.get_rectangularity()
-                    self.descriptors[name] = self.rectangularity
-                elif name == "total_hole_area":
-                    self.get_total_hole_area()
-                    self.descriptors[name] = self.total_hole_area
-                elif name == "solidity":
-                    self.get_solidity()
-                    self.descriptors[name] = self.solidity
-                elif name == "convexity":
-                    self.get_convexity()
-                    self.descriptors[name] = self.convexity
-                elif name == "eccentricity":
-                    self.get_eccentricity()
-                    self.descriptors[name] = self.eccentricity
-                elif name == "euler_number":
-                    self.get_euler_number()
-                    self.descriptors[name] = self.euler_number
+            if name == "mo":
+                self.get_mo()
+                self.descriptors[name] = self.mo
+            elif name == "area":
+                self.descriptors[name] = self.area
+            elif name == "contours":
+                self.get_contours()
+                self.descriptors[name] = self.contours
+            elif name == "min_bounding_rectangle":
+                self.get_min_bounding_rectangle()
+                self.descriptors[name] = self.min_bounding_rectangle
+            elif name == "major_axis_len":
+                self.get_major_axis_len()
+                self.descriptors[name] = self.major_axis_len
+            elif name == "minor_axis_len":
+                self.get_minor_axis_len()
+                self.descriptors[name] = self.minor_axis_len
+            elif name == "axes_orientation":
+                self.get_inertia_axes()
+                self.descriptors[name] = self.axes_orientation
+            elif name == "standard_deviation_y":
+                self.get_standard_deviations()
+                self.descriptors[name] = self.sy
+            elif name == "standard_deviation_x":
+                self.get_standard_deviations()
+                self.descriptors[name] = self.sx
+            elif name == "skewness_y":
+                self.get_skewness()
+                self.descriptors[name] = self.sky
+            elif name == "skewness_x":
+                self.get_skewness()
+                self.descriptors[name] = self.skx
+            elif name == "kurtosis_y":
+                self.get_kurtosis()
+                self.descriptors[name] = self.ky
+            elif name == "kurtosis_x":
+                self.get_kurtosis()
+                self.descriptors[name] = self.kx
+            elif name == "convex_hull":
+                self.get_convex_hull()
+                self.descriptors[name] = self.convex_hull
+            elif name == "perimeter":
+                self.get_perimeter()
+                self.descriptors[name] = self.perimeter
+            elif name == "circularity":
+                self.get_circularity()
+                self.descriptors[name] = self.circularity
+            elif name == "rectangularity":
+                self.get_rectangularity()
+                self.descriptors[name] = self.rectangularity
+            elif name == "total_hole_area":
+                self.get_total_hole_area()
+                self.descriptors[name] = self.total_hole_area
+            elif name == "solidity":
+                self.get_solidity()
+                self.descriptors[name] = self.solidity
+            elif name == "convexity":
+                self.get_convexity()
+                self.descriptors[name] = self.convexity
+            elif name == "eccentricity":
+                self.get_eccentricity()
+                self.descriptors[name] = self.eccentricity
+            elif name == "euler_number":
+                self.get_euler_number()
+                self.descriptors[name] = self.euler_number
 
     """
         The following methods can be called to compute parameters for descriptors requiring it
@@ -330,15 +327,19 @@ class ShapeDescriptors:
         >>> print(len(SD.contours))
         8
         """
-        contours, hierarchy = cv2.findContours(self.binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        nb, shapes = cv2.connectedComponents(self.binary_image, ltype=cv2.CV_16U)
-        self.euler_number = (nb - 1) - len(contours)
-        self.contours = contours[0]
-        if len(contours) > 1:
-            all_lengths = np.zeros(len(contours))
-            for i, contour in enumerate(contours):
-                all_lengths[i] = len(contour)
-            self.contours = contours[np.argmax(all_lengths)]
+        if self.area == 0:
+            self.euler_number = 0.
+            self.contours = np.array([], np.uint8)
+        else:
+            contours, hierarchy = cv2.findContours(self.binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+            nb, shapes = cv2.connectedComponents(self.binary_image, ltype=cv2.CV_16U)
+            self.euler_number = (nb - 1) - len(contours)
+            self.contours = contours[0]
+            if len(contours) > 1:
+                all_lengths = np.zeros(len(contours))
+                for i, contour in enumerate(contours):
+                    all_lengths[i] = len(contour)
+                self.contours = contours[np.argmax(all_lengths)]
 
     def get_min_bounding_rectangle(self):
         """
@@ -377,9 +378,12 @@ class ShapeDescriptors:
         >>> print(len(SD.min_bounding_rectangle))
         3
         """
-        if self.contours is None:
-            self.get_contours()
-        self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
+        if self.area == 0:
+            self.min_bounding_rectangle = np.array([], np.uint8)
+        else:
+            if self.contours is None:
+                self.get_contours()
+            self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
 
     def get_inertia_axes(self):
         """
@@ -559,9 +563,12 @@ class ShapeDescriptors:
         >>> print(len(SD.convex_hull))
         4
         """
-        if self.contours is None:
-            self.get_contours()
-        self.convex_hull = cv2.convexHull(self.contours)
+        if self.area == 0:
+            self.convex_hull = np.array([], np.uint8)
+        else:
+            if self.contours is None:
+                self.get_contours()
+            self.convex_hull = cv2.convexHull(self.contours)
 
     def get_perimeter(self):
         """
@@ -591,9 +598,12 @@ class ShapeDescriptors:
         >>> print(SD.perimeter)
         8.0
         """
-        if self.contours is None:
-            self.get_contours()
-        self.perimeter = cv2.arcLength(self.contours, True)
+        if self.area == 0:
+            self.perimeter = 0.
+        else:
+            if self.contours is None:
+                self.get_contours()
+            self.perimeter = cv2.arcLength(self.contours, True)
 
     def get_circularity(self):
         """
@@ -627,11 +637,11 @@ class ShapeDescriptors:
         >>> print(SD.circularity)
         1.7671458676442586
         """
-        if self.perimeter is None:
-            self.get_perimeter()
-        if self.perimeter == 0:
-            self.circularity = 0
+        if self.area == 0:
+            self.circularity = 0.
         else:
+            if self.perimeter is None:
+                self.get_perimeter()
             self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
 
     def get_rectangularity(self):
@@ -677,13 +687,13 @@ class ShapeDescriptors:
         >>> print(SD.rectangularity)
         2.25
         """
-        if self.min_bounding_rectangle is None:
-            self.get_min_bounding_rectangle()
-        bounding_rectangle_area = self.min_bounding_rectangle[1][0] * self.min_bounding_rectangle[1][1]
-        if bounding_rectangle_area != 0:
-            self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
+        if self.area == 0:
+            self.rectangularity = 0.
         else:
-            self.rectangularity = 1
+            if self.min_bounding_rectangle is None:
+                self.get_min_bounding_rectangle()
+            bounding_rectangle_area = self.min_bounding_rectangle[1][0] * self.min_bounding_rectangle[1][1]
+            self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
 
     def get_total_hole_area(self):
         """
@@ -728,9 +738,9 @@ class ShapeDescriptors:
         # THIDS VERSION
         nb, new_order = cv2.connectedComponents(1 - self.binary_image)
         if nb > 2:
-            self.total_hole_area = (new_order > 2).sum()
+            self.total_hole_area = (new_order > 1).sum()
         else:
-            self.total_hole_area = 0
+            self.total_hole_area = 0.
 
     def get_solidity(self):
         """
@@ -778,13 +788,13 @@ class ShapeDescriptors:
         >>> print(SD.solidity)
         1.0
         """
-        if self.convex_hull is None:
-            self.get_convex_hull()
-        conv_h_cont_area = cv2.contourArea(self.convex_hull)
-        if conv_h_cont_area != 0:
-            self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
+        if self.area == 0:
+            self.solidity = 0.
         else:
-            self.solidity = 1
+            if self.convex_hull is None:
+                self.get_convex_hull()
+            conv_h_cont_area = cv2.contourArea(self.convex_hull)
+            self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
 
     def get_convexity(self):
         """

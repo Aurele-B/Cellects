@@ -33,6 +33,7 @@ data/output/*
 
 # coverage
 .coverage
+.coverage*
 htmlcov/
 
 # build

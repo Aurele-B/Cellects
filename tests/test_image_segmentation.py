@@ -54,9 +54,54 @@ class TestApplyFilter(CellectsUnitTest):
         result = apply_filter(self.test_image, "Median", [])
         self.assertEqual(result.shape, (3, 3))
 
+    def test_sato(self):
+        """Test Sato filter."""
+        result = apply_filter(self.test_image, "Sato", [1, 5])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_meijering(self):
+        """Test Meijering filter."""
+        result = apply_filter(self.test_image, "Meijering", [1, 5])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_hessian(self):
+        """Test Hessian filter."""
+        result = apply_filter(self.test_image, "Hessian", [1, 5])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_sharpen_no_params(self):
+        """Test Sharpen filter with no parameters."""
+        result = apply_filter(self.test_image, "Sharpen", [])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_mexican_hat_no_params(self):
+        """Test Mexican hat filter with no parameters."""
+        result = apply_filter(self.test_image, "Mexican hat", [])
+        self.assertEqual(result.shape, (3, 3))
+
     def test_farid_no_params(self):
         """Test Farid filter with no parameters."""
         result = apply_filter(self.test_image, "Farid", [])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_prewitt_no_params(self):
+        """Test Prewitt filter with no parameters."""
+        result = apply_filter(self.test_image, "Prewitt", [])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_roberts_no_params(self):
+        """Test Roberts filter with no parameters."""
+        result = apply_filter(self.test_image, "Roberts", [])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_scharr_no_params(self):
+        """Test Scharr filter with no parameters."""
+        result = apply_filter(self.test_image, "Scharr", [])
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_sobel_no_params(self):
+        """Test Sobel filter with no parameters."""
+        result = apply_filter(self.test_image, "Sobel", [])
         self.assertEqual(result.shape, (3, 3))
 
     def test_rescale_to_uint8(self):
@@ -68,20 +113,22 @@ class TestApplyFilter(CellectsUnitTest):
 
 
 class TestGetColorSpaces(CellectsUnitTest):
+    # Create a BGR image for testing
+    bgr_image = np.zeros((10, 10, 3), dtype=np.uint8)
 
     def test_typed_dict(self):
-        # Create a BGR image for testing
-        self.bgr_image = np.zeros((100, 100, 3), dtype=np.uint8)
-
         # Call the get_color_spaces function
         self.result = get_color_spaces(self.bgr_image)
         # Add assertions to verify the expected behavior
         self.assertIsInstance(self.result, Dict)
 
-    def test_complete_dict(self):
-        # Create a BGR image for testing
-        self.bgr_image = np.zeros((100, 100, 3), dtype=np.uint8)
+    def test_logical(self):
+        # Call the get_color_spaces function
+        self.result = get_color_spaces(self.bgr_image, ["yuv", "hls", "luv", "bgr", "logical"])
+        # Add assertions to verify the expected behavior
+        self.assertIsInstance(self.result, Dict)
 
+    def test_complete_dict(self):
         # Call the get_color_spaces function
         self.result = get_color_spaces(self.bgr_image)
 
@@ -152,20 +199,24 @@ class TestCombineColorSpaces(CellectsUnitTest):
 
 
 class TestGenerateColorSpaceCombination(CellectsUnitTest):
-    def test_generate_color_space_combination(self):
+    bgr_image = np.zeros((10, 10, 3), dtype=np.uint8)
+    bgr_image[5, 5] = 1
 
+    def test_generate_color_space_combination(self):
         # Create a BGR image for testing
-        self.bgr_image = np.zeros((100, 100, 3), dtype=np.uint8)
         c_space_dict = Dict()
         c_space_dict['bgr'] = np.array((1, 0, 1), np.uint8)
         c_space_dict['hsv'] = np.array((0.5, 5, 0.5), np.uint8)
-        c_spaces = List(['bgr', 'hsv'])
+        second_dict = Dict()
+        second_dict['luv'] = np.array((1, 0, 1), np.uint8)
+        c_spaces = List(['bgr', 'hsv', 'luv'])
 
-        subtract_background = np.zeros((100, 100), dtype=np.float64)
-        expected_result = np.zeros((100, 100), dtype=np.float64)
+        subtract_background = np.zeros((10, 10), dtype=np.float64)
+        expected_result = np.zeros((10, 10), dtype=np.float64)
 
-        result, _ = generate_color_space_combination(self.bgr_image, c_spaces, c_space_dict, background=subtract_background)
-        self.assertEqual(result.shape, (100, 100))
+        result, result2 = generate_color_space_combination(self.bgr_image, c_spaces, c_space_dict, second_dict,  background=subtract_background, convert_to_uint8=True)
+        self.assertEqual(result.shape, (10, 10))
+        self.assertEqual(result2.shape, (10, 10))
         self.assertTrue(np.allclose(result, expected_result))
 
 
@@ -202,18 +253,37 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(segmentation, expected_segmentation))
         self.assertTrue(np.array_equal(l_threshold_over_time, expected_l_threshold_over_time))
 
+    def test_segment_with_lum_value_lighter_background_negative_threshold(self):
+        converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
+        basic_bckgrnd_values = np.array([110, 150], dtype=np.int32)
+        l_threshold = -180
+        lighter_background = True
+        expected_segmentation = np.array([[[1, 1], [1, 0]], [[1, 1], [0, 0]]], dtype=np.uint8)
+        expected_l_threshold_over_time = np.array([140, 180], dtype=np.int64)
+        segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
+                                                                     l_threshold, lighter_background)
+        self.assertTrue(isinstance(segmentation, np.ndarray))
+
     def test_segment_with_lum_value_darker_background(self):
         converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
-        basic_bckgrnd_values = np.array([110, 130], dtype=np.uint8)
+        basic_bckgrnd_values = np.array([110, 130], dtype=np.int32)
         l_threshold = 150
         lighter_background = False
         expected_segmentation = np.array([[[0, 0], [0, 1]], [[1, 1], [1, 1]]], dtype=np.uint8)
         expected_l_threshold_over_time = np.array([130, 150], dtype=np.int64)
-
         segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
                                                                      l_threshold, lighter_background)
         self.assertTrue(np.array_equal(segmentation, expected_segmentation))
         self.assertTrue(np.array_equal(l_threshold_over_time, expected_l_threshold_over_time))
+
+    def test_segment_with_lum_value_darker_negative_threshold(self):
+        converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
+        basic_bckgrnd_values = np.array([110, 130], dtype=np.int32)
+        l_threshold = -180
+        lighter_background = False
+        segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
+                                                                     l_threshold, lighter_background)
+        self.assertTrue(isinstance(segmentation, np.ndarray))
 
 
 class TestRollingWindowSegmentation(CellectsUnitTest):
