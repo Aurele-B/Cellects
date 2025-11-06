@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
-"""
-This module contains functions for basic operations of image segmentation.
-It starts from converting bgr images into grayscale, filtering these grayscale images,
- and various way of splitting these grayscale pixels into two categories (i.e. methods of thresholding)
+"""Module for image segmentation operations including filtering, color space conversion, thresholding, and quality assessment.
+
+This module provides tools to process images through grayscale conversion, apply various filters (e.g., Gaussian, Median, Butterworth), perform thresholding methods like Otsu's algorithm, combine color spaces for enhanced segmentation, and evaluate binary image quality. Key functionalities include dynamic background subtraction, rolling window segmentation with localized thresholds, and optimization of segmentation masks using shape descriptors.
+
+Functions
+apply_filter : Apply skimage or OpenCV-based filters to grayscale images.
+get_color_spaces : Convert BGR images into specified color space representations (e.g., LAB, HSV).
+combine_color_spaces : Merge multiple color channels with coefficients to produce a segmented image.
+generate_color_space_combination : Create custom grayscale combinations using two sets of channel weights and backgrounds.
+otsu_thresholding : Binarize an image using histogram-based Otsu thresholding.
+segment_with_lum_value : Segment video frames using luminance thresholds adjusted for background variation.
+rolling_window_segmentation : Apply localized Otsu thresholding across overlapping patches to improve segmentation accuracy.
+binary_quality_index : Calculate a quality metric based on perimeter and connected components in binary images.
+find_threshold_given_mask : Binary search optimization to determine optimal threshold between masked regions.
+
+Notes
+Uses Numba's @njit decorator for JIT compilation of performance-critical functions like combine_color_spaces and _get_counts_jit.
 """
 import numpy as np
 import cv2

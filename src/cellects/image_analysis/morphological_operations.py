@@ -679,10 +679,10 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
 
     Examples
     --------
-    >>> main_shape = np.zeros((10, 10), dtype=np.uint8)
-    >>> main_shape[1:3, 1:3] = 1
-    >>> main_shape[1:3, 4:6] = 2
-    >>> shape1_idx, shape2_idx = reduce_image_size_for_speed(main_shape)
+    >>> image_of_2_shapes = np.zeros((10, 10), dtype=np.uint8)
+    >>> image_of_2_shapes[1:3, 1:3] = 1
+    >>> image_of_2_shapes[1:3, 4:6] = 2
+    >>> shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)
     >>> print(shape1_idx)
     (array([1, 1, 2, 2]), array([1, 2, 1, 2]))
     """
@@ -691,7 +691,7 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
     images_list = [sub_image]
     good_images = [0]
     sub_image = images_list[good_images[0]]
-    while (len(good_images) == 1 | len(good_images) == 2) & y_size > 3 & x_size > 3:
+    while (len(good_images) == 1 or len(good_images) == 2) and y_size > 3 and x_size > 3:
         y_size, x_size = sub_image.shape
         images_list = []
         images_list.append(sub_image[:((y_size // 2) + 1), :((x_size // 2) + 1)])
@@ -703,7 +703,9 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
             if np.any(image == 2):
                 if np.any(image == 1):
                     good_images.append(idx)
-        if len(good_images) == 2:
+        if len(good_images) == 0:
+            break
+        elif len(good_images) == 2:
             if good_images == [0, 1]:
                 sub_image = np.concatenate((images_list[good_images[0]], images_list[good_images[1]]), axis=1)
             elif good_images == [0, 2]:
@@ -863,82 +865,29 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image: NDArray[np.uint8], 
     sorted_against_y = np.argsort(centroids[:, 1])
     # row_nb = (y_boundaries == 1).sum()
     row_nb = np.max(((y_boundaries == 1).sum(), (y_boundaries == - 1).sum()))
-    component_per_row = int(np.ceil((nb_components - 1) / row_nb))
-    for row_i in range(row_nb):
-        row_i_start = row_i * component_per_row
-        if row_i == (row_nb - 1):
-            sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:], 0])
-            final_order[row_i_start:] = sorted_against_y[row_i_start:][sorted_against_x]
-        else:
-            row_i_end = (row_i + 1) * component_per_row
-            sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:row_i_end], 0])
-            final_order[row_i_start:row_i_end] = sorted_against_y[row_i_start:row_i_end][sorted_against_x]
+    if row_nb > 0:
+        component_per_row = int(np.ceil((nb_components - 1) / row_nb))
+        for row_i in range(row_nb):
+            row_i_start = row_i * component_per_row
+            if row_i == (row_nb - 1):
+                sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:], 0])
+                final_order[row_i_start:] = sorted_against_y[row_i_start:][sorted_against_x]
+            else:
+                row_i_end = (row_i + 1) * component_per_row
+                sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:row_i_end], 0])
+                final_order[row_i_start:row_i_end] = sorted_against_y[row_i_start:row_i_end][sorted_against_x]
+    else:
+        final_order = np.argsort(centroids[:, 0])
     ordered_centroids = centroids[final_order, :]
     ordered_stats = stats[1:, :]
     ordered_stats = ordered_stats[final_order, :]
 
-    # If it fails, use another algo
-    if (final_order == 0).sum() > 1:
-        nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(binary_image.astype(np.uint8),
-                                                                               connectivity=8)
-        # First order according to x: from left to right
-        # Remove the background and order centroids along x axis
-        centroids = centroids[1:, :]
-        x_order = np.argsort(centroids[:, 0])
-        centroids = centroids[x_order, :]
-
-
-        # Then use the boundaries of each Y peak to sort these shapes row by row
-        if y_boundaries is not None:
-            binary_image = deepcopy(output)
-            binary_image[np.nonzero(binary_image)] = 1
-            y_starts, y_ends = np.argwhere(y_boundaries == - 1), np.argwhere(y_boundaries == 1)
-
-            margins_ci = np.array((0.5, 0.4, 0.3, 0.2, 0.1))
-            for margin in margins_ci:
-                ranking_success: bool = True
-                y_order = np.zeros(centroids.shape[0], dtype=np.uint8)
-                count: np.uint8 = 0
-                y_margins = (y_ends - y_starts) * margin# 0.3
-                # Loop and try to fill each row with all components, fail if the final number is wrong
-                for y_interval in np.arange(len(y_starts)):
-                    for patch_i in np.arange(nb_components - 1):
-                        # Compare the y coordinate of the centroid with the detected y intervals with
-                        # an added margin in order to order coordinates
-                        if np.logical_and(centroids[patch_i, 1] >= (y_starts[y_interval] - y_margins[y_interval]),
-                                          centroids[patch_i, 1] <= (y_ends[y_interval] + y_margins[y_interval])):
-                            try:
-                                y_order[count] = patch_i
-                                count = count + 1
-                            except IndexError as exc:
-                                ranking_success = False
-
-                if ranking_success:
-                    break
-        else:
-            ranking_success = False
-        # if that all tested margins failed, do not rank_from_top_to_bottom_from_left_to_right, i.e. keep automatic ranking
-        if not ranking_success:
-            y_order = np.arange(centroids.shape[0])
-
-
-        # Second order according to y: from top to bottom
-        ordered_centroids = centroids[y_order, :]
-        ordered_stats = stats[1:, :]
-        ordered_stats = ordered_stats[x_order, :]
-        ordered_stats = ordered_stats[y_order, :]
-
     if get_ordered_image:
-        ordered_image = np.zeros(binary_image.shape, dtype=np.uint8)
-        for patch_j in np.arange(centroids.shape[0]):
-            sub_output = output[ordered_stats[patch_j, 1]: (ordered_stats[patch_j, 1] + ordered_stats[patch_j, 3]), ordered_stats[patch_j, 0]: (ordered_stats[patch_j, 0] + ordered_stats[patch_j, 2])]
-            sub_output = np.sort(np.unique(sub_output))
-            if len(sub_output) == 1:
-                ordered_image[output == sub_output[0]] = patch_j + 1
-            else:
-                ordered_image[output == sub_output[1]] = patch_j + 1
-
-
+        old_to_new = np.zeros_like(final_order)
+        old_to_new[final_order] = np.arange(len(final_order))
+        mapping_array = np.zeros(binary_image.shape, dtype=np.uint8)
+        mapping_array[output != 0] = old_to_new[output[output != 0] - 1] + 1
+        ordered_image = mapping_array.copy()
         return ordered_stats, ordered_centroids, ordered_image
     else:
         return ordered_stats, ordered_centroids
@@ -1036,7 +985,7 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
     without_shape[without_shape.shape[0] - 1, :] = 1
     without_shape[:, without_shape.shape[1] - 1] = 1
 
-    # Compare the distance between the contour of the shape and its centroid with this contout with the centroids of neighbors
+    # Compare the distance between the contour of the shape and its centroid with this contour with the centroids of neighbors
     # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
     previous_shape_to_expand = deepcopy(shape_to_expand)
     while np.logical_and(np.any(np.less_equal(itself_maxdist, neighbor_mindist)),

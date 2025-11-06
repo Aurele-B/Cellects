@@ -1,24 +1,57 @@
 #!/usr/bin/env python3
-"""
-This script contains 2 classes used by the OneImageAnalysis class
-They are threads to process the first image and save the selected combinations simultaneously
+"""Module containing classes for image processing and saving selected color space combinations.
+
+This module provides two thread-based components for analyzing images and storing results:
+
+ProcessFirstImage handles initial segmentation, thresholding, clustering, and shape validation
+SaveCombinationThread stores processed features in parent objects asynchronously
+The processing pipeline includes Otsu thresholding, k-means clustering, connected component analysis,
+and geometric filtering based on size/shape constraints.
+
+Classes
+ProcessFirstImage : Processes image data with segmentation techniques and validates shapes.
+SaveCombinationThread : Thread to save combination results while maintaining UI responsiveness.
+
+Functions (in ProcessFirstImage)
+shape_selection : Filters shapes by size thresholds and geometric criteria.
+kmeans : Performs clustering-based image segmentation into specified number of clusters.
+process_binary_image : Validates detected shapes against area constraints and spot count targets.
+
+Notes
+Uses threading.Thread for background operations to maintain application responsiveness during processing.
 """
 import threading
 import logging
 from copy import deepcopy
 import numpy as np
 import cv2
+from numpy.typing import NDArray
+from typing import Tuple
 from cellects.image_analysis.image_segmentation import otsu_thresholding, combine_color_spaces
 
 
 class ProcessFirstImage:
+    """
+    A class for processing lists.
+    """
     def __init__(self, l):
+        """
+        Arguments:
+            list : list
+
+        """
         self.start_processing(l)
 
-    def start_processing(self, l):
+    def start_processing(self, l: list):
         """
-        Wil process the first image according to rules and parameters in l
-        :param l: list containing the necessary data to process the first image
+
+        Start the processing based on given list input.
+
+        The method processes the provided list to perform various operations
+        on the image data. It sets up several attributes and performs different
+        image processing tasks like Otsu thresholding or k-means clustering.
+
+        The method does not return any value.
         """
         self.parent = l[0]
         get_one_channel_result = l[1]
@@ -85,14 +118,26 @@ class ProcessFirstImage:
                         self.parent.save_combination_features(self)
                         logging.info(str(saved_color_space_list[i]) + "-->" + str(self.csc_dict ))
 
-    def shape_selection(self, horizontal_size, shape, confint, do_not_delete=None):
+    def shape_selection(self, horizontal_size, shape: str, confint, do_not_delete: NDArray=None):
         """
-        This method use the statistics of the connected components of a binary image to make shape selection
-        :param horizontal_size: the average horizontal size of one shape in pixels
-        :param shape: the geometry of the shape: circle or rectangle
-        :param confint: confidence interval for horizontal size and shape detection
-        :param do_not_delete: binary image with 1 in area drawn by the user as "Cell"
-        :return: A binary matrix of the resulting validated shapes and the number of shapes detected
+
+        Selects and validates the shapes of stains based on their size and shape.
+
+        This method performs two main tasks:
+        1. Removes stains whose horizontal size varies too much from a reference value.
+        2. Determines the shape of each remaining stain and only keeps those that correspond to a reference shape.
+
+        The method first removes stains whose horizontal size is outside the specified confidence interval. Then, it identifies shapes that do not correspond to a predefined reference shape and removes them as well.
+
+        Args:
+            horizontal_size (int): The expected horizontal size of the stains to use as a reference.
+            shape (str): The shape type ('circle' or 'rectangle')
+                that the stains should match. Other shapes are not currently supported.
+            confint (float): The confidence interval as a decimal
+                representing the percentage within which the size of the stains should fall.
+            do_not_delete (NDArray, optional): An array of stain indices that should not be deleted.
+                Default is None.
+
         """
         # counter+=1;horizontal_size = self.spot_size; shape = self.parent.spot_shapes[counter];confint = self.parent.spot_size_confints[::-1][counter]
         # stats columns contain in that order:
@@ -145,14 +190,23 @@ class ProcessFirstImage:
         self.validated_shapes = shapes
         self.shape_number = nb_components - 1
 
-    def kmeans(self, cluster_number, biomask=None, backmask=None, bio_label=None):
+    def kmeans(self, cluster_number: int, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, bio_label=None):
         """
-        Use of Kmeans to detect the Cell(s) after having segmented the grayscale image into two or more categories
-        :param cluster_number: the number of categories to find
-        :param biomask: the mask of pixels marked as Cell(s) by the user
-        :param backmask: the mask of pixels marked as Background by the user
-        :param bio_label:
-        :return:
+
+        Perform k-means clustering on the image to segment it into a specified number of clusters.
+
+        Args:
+            cluster_number (int): The desired number of clusters.
+            biomask (NDArray[np.uint8]): Optional mask for biological regions. Default is None.
+            backmask (NDArray[np.uint8]): Optional mask for background regions. Default is None.
+            bio_label (int): The label assigned to the biological region. Default is None.
+
+        Returns:
+            None
+
+        Note:
+            This method modifies the `binary_image` and `bio_label` attributes of the instance.
+
         """
         image = self.image.reshape((-1, 1))
         image = np.float32(image)
@@ -181,13 +235,19 @@ class ProcessFirstImage:
                 self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
             self.binary_image[np.nonzero(kmeans_image == self.bio_label)] = 1
 
-    def process_binary_image(self, use_bio_and_back_masks=False):
+    def process_binary_image(self, use_bio_and_back_masks: bool=False):
         """
-        Process the binary image to get the final validated shapes
-        Starts by computin connected components, then remove the background pixels marked by the user,
-        then, if there are not several blob per arena, select spot according to their sizes
-        :param use_bio_and_back_masks: if true, will use the cell(s) and background matked by the user
-        :return:
+        Process the binary image to identify and validate shapes.
+
+        This method processes a binary image to detect connected components,
+        validate their sizes, and handle bio and back masks if specified.
+        It ensures that the number of validated shapes matches the expected
+        sample number or applies additional filtering if necessary.
+
+        Args:
+            use_bio_and_back_masks (bool): Whether to use bio and back masks
+                during the processing. Default is False.
+
         """
         self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
             self.binary_image, connectivity=8)
@@ -258,15 +318,33 @@ class ProcessFirstImage:
 
 
 class SaveCombinationThread(threading.Thread):
+    """
+    SaveCombinationThread
+
+    This class represents a thread for saving combinations.
+
+    """
     def __init__(self, parent=None):
+        """
+        **Args:**
+
+            - `parent`: The parent object that initiated the thread. This is an optional argument and defaults to 'None'.
+
+        """
         # super(SaveCombinationThread, self).__init__()
         threading.Thread.__init__(self)
         self.parent = parent
 
     def run(self):
         """
-        Save the current process_i data into the combination_features list
-        :return:
+        Runs the color space combination process and saves the results.
+
+        This method performs several tasks to save intermediate and final
+        results of the color space combination process. It logs messages,
+        updates lists with valid shapes, converts images to a specific format,
+        and updates combination features with various statistics. The method
+        also handles biomask and backmask calculations if they are not None.
+        Finally, it increments the saved color space number counter.
         """
         logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct spots detected.")
         self.parent.saved_images_list.append(self.process_i.validated_shapes)

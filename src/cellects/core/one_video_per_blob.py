@@ -1,16 +1,17 @@
-"""
-This class uses the first (and if is required more accuracy, other) image(s) to detect the contour of the arenas of
-one experiment and use that information to create videos of smaller size (to reduce RAM usage) and save them as
-.npy files on hard drive. Along the process, Cellects checks whether there is enough RAM, split the work when needed,
-and warn the user through a thread message that displays in the interface
+"""Process image data to detect experiment arenas and generate cropped video arrays.
 
-This class contains methods to automatically detect arenas from specimens detected in an image at the beginning of an experiment.
-Arenas can be delimited automatically or manually. Cellects includes two automatic algorithms: A fast one to be used when arenas are symmetric around the initial position of the specimens or sufficiently far from each other, and a slower one to be used otherwise. These automatic algorithms work even if the arenas are not detectable in the images, but only work when there is a single individual in each arena. In the case of manual delimitation, the user draws each arena by holding down the mouse button. The following paragraphs describe the two automatic algorithms.
-The fast algorithm computes each arena coordinate using the distances between the components detected in the seed image after step 1. For each component, Cellects finds its nearest neighbor and uses its distance as the side of the square, centered on the component, giving the x and y limits of the arena.
-If the initial position of the cells do not provide good estimates of the center of each arena, Cellects can use the slower algorithm to find them. Because Cellects is intended to be very general, it cannot use specific characteristics of a particular arena to find its edges. Instead, it uses the motion and/or growth of the cell to infer the position of each arena. To do so, Cellects segments a sample of 5 images (equally spaced in time) using the same algorithm as for the seed image. Even if this segmentation is not accurate, the following algorithm finds the arenas robustly. First, it finds a rough estimate of the expected position of the cell. To do this, it dilates the cell in the first frame, until the edge of the dilated image is closer to the nearest centroid of other cells than to its own centroid. Then, it moves to the second image, and also dilates it in order to link together different disconnected components that may result from an inaccurate segmentation. Then, it performs an AND operation between these two dilated images and dilates the result so that it remains one component per arena. By doing this to all cells, we get an estimate of their shape in the second frame, and we can compute their centroids. We then repeat this procedure, for each pair of consecutive frames. Finally, Cellects computes the bounding boxes that contain the cells detected in the 5 frames for each arena, and uses them to estimate each arena coordinate.
-In some experiments, all cells are located at one edge of the arena and move roughly in the same direction. Cellects includes an option to take advantage of this regularity and improve the accuracy of arena detection: Once the centroids of a frame have been estimated (as described above), Cellects finds the centroid with highest displacement with respect to the previous frame, and applies the same displacement to all centroids.
+This module implements arena detection algorithms for experimental tracking, using initial images
+to define region-of-interest boundaries. It provides fast/slow algorithms for arena localization
+and handles memory constraints when writing output as .npy files.
 
-It also contains methods to write videos (as np arrays .npy files) corresponding to the pixels delimited by these arenas.
+Classes
+OneVideoPerBlob : Finds bounding boxes containing blob motion over time and generates videos
+
+Functions
+Notes
+Includes RAM usage monitoring during video processing
+Provides both static shape-based and motion-tracking arena detection methods
+Generates numpy arrays of cropped video regions to reduce file size
 """
 
 import os
@@ -35,9 +36,26 @@ class OneVideoPerBlob:
         It does that, for each blob, considering a few information.
     """
 
-    def __init__(self, first_image, starting_blob_hsize_in_pixels, raw_images):
+    def __init__(self, first_image: object, starting_blob_hsize_in_pixels: int, raw_images: bool):
         """
+        Class representing a video processor for analyzing motion in images.
 
+        This class takes an initial image, the height size of starting blobs, and a
+        boolean indicating if raw images should be used. It initializes all variables
+        used in the following methods and creates required empty arrays, especially the
+        bounding box coordinates of each video.
+
+        Attributes:
+            first_image (object): The initial image for analysis.
+            original_shape_hsize (int, optional): The height size of the starting blobs
+                in pixels. Defaults to None.
+            raw_images (bool): Indicates if the input images should be used in raw form.
+
+        Args:
+            first_image (object): The initial image for analysis.
+            starting_blob_hsize_in_pixels (int): The height size of the starting blobs
+                in pixels.
+            raw_images (bool): Indicates if the input images should be used in raw form.
         """
         # Initialize all variables used in the following methods
         self.first_image = first_image
@@ -52,12 +70,11 @@ class OneVideoPerBlob:
         self.shapes_to_remove = None
         self.not_analyzed_individuals = None
 
-    def get_bounding_boxes(self, are_gravity_centers_moving, img_list, color_space_combination, color_number=2,
-                           sample_size=5, all_specimens_have_same_direction=True, display=False, filter_spec=None):
+    def get_bounding_boxes(self, are_gravity_centers_moving: bool, img_list: list, color_space_combination: dict,
+                           color_number: int=2, sample_size: int=5, all_specimens_have_same_direction: bool=True,
+                           display: bool=False, filter_spec: dict=None):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
-        # are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1; img_list=self.data_list; color_space_combination=self.vars['convert_for_origin']; color_number=self.vars["color_number"]; sample_size=5
-
-        self.big_kernel = Ellipse((self.k_size, self.k_size)).create()  # fromfunction(self.circle_fun, (self.k_size, self.k_size))
+        self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
         self.big_kernel = self.big_kernel.astype(np.uint8)
         self.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
         self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
@@ -75,9 +92,8 @@ class OneVideoPerBlob:
             if are_gravity_centers_moving:
                 self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size,
                                                  all_specimens_have_same_direction, display, filter_spec=filter_spec)
-                # new:
                 new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                #
+
                 for i in np.arange(1, self.first_image.shape_number + 1):
                     previous_shape = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
                     previous_shape[np.nonzero(self.unchanged_ordered_fimg == i)] = 1
@@ -95,7 +111,6 @@ class OneVideoPerBlob:
                 self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                     self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
                 self._get_quick_bb()
-                # self.print_bounding_boxes()
             else:
                 self._get_quick_bb()
             self.standardize_video_sizes()
@@ -108,16 +123,13 @@ class OneVideoPerBlob:
 
     def _get_quick_bb(self):
         """
-        Compute euclidean distance between cell(s) to get each arena bounding box
-            To earn computation time:
-            1) We use triu_indices to consider one time each pairwise distance
-            2) We only compute distances when x and y distances are small enough
-            (i.e. 3 * the minimal distance already calculated)
 
-        :return:
+        Compute the bounding boxes of arenas in an image.
+
+        This method performs a series of operations on the validated shapes, including
+        copying and erosion, computing minimal distances between pairs of components,
+        and updating the bounding box coordinates based on these calculations.
         """
-        from timeit import default_timer
-        tic = default_timer()
         shapes = deepcopy(self.modif_validated_shapes)
         eroded_shapes = cv2.erode(self.modif_validated_shapes, cross_33)
         shapes = shapes - eroded_shapes
@@ -155,7 +167,6 @@ class OneVideoPerBlob:
         for shape_i in np.arange(1, shape_nb + 1):
             # Get where the shape i appear in pairwise comparisons
             idx = np.nonzero(np.logical_or(all_distances[:, 0] == shape_i, all_distances[:, 1] == shape_i))
-            # print(all_distances[idx, 2])
             # Compute the minimal distance related to shape i and divide by 2
             if len(all_distances[idx, 2]) > 0:
                 dist = all_distances[idx, 2].min() // 2
@@ -166,9 +177,37 @@ class OneVideoPerBlob:
             self.right[shape_i - 1] = x_max[shape_i - 1] + dist.astype(np.int64)
             self.top[shape_i - 1] = y_min[shape_i - 1] - dist.astype(np.int64)
             self.bot[shape_i - 1] = y_max[shape_i - 1] + dist.astype(np.int64)
-        print((default_timer() - tic))
 
     def standardize_video_sizes(self):
+        """
+
+        Standardize video sizes for bounding boxes.
+
+        This method standardizes the sizes of the bounding boxes for videos.
+        It adjusts the top, bottom, left, and right boundaries to ensure they remain
+        within the picture shape. If any bounding box goes out of the frame,
+        it applies corrections or removes the corresponding individuals and
+        remakes bounding box finding. Additionally, it ensures that the sizes of
+        the boxes are even to prevent issues when writing videos with OpenCV.
+
+        Args:
+            None
+
+        Attributes:
+            standard (np.ndarray): An array to store the standardized bounding box coordinates.
+            shapes_to_remove (np.ndarray): Indices of shapes that need to be removed.
+            modif_validated_shapes (np.ndarray): Modified and validated shapes array.
+            not_analyzed_individuals (np.ndarray): Indices of individuals that were not analyzed.
+            top (np.ndarray): Top boundaries of the bounding boxes.
+            bot (np.ndarray): Bottom boundaries of the bounding boxes.
+            left (np.ndarray): Left boundaries of the bounding boxes.
+            right (np.ndarray): Right boundaries of the bounding boxes.
+
+        Notes:
+            This method modifies several instance attributes in-place.
+            It uses numpy operations extensively for efficient calculations.
+
+        """
         distance_threshold_to_consider_an_arena_out_of_the_picture = None# in pixels, worked nicely with - 50
 
         # The modifications allowing to not make videos of setups out of view, do not work for moving centers
@@ -235,21 +274,33 @@ class OneVideoPerBlob:
             self.right = self.standard[:, 3]
 
 
-    def _get_bb_with_moving_centers(self, img_list, color_space_combination, color_number, sample_size=2, all_specimens_have_same_direction=True, display=False, filter_spec=None):
-        """
-        Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
-        on following images. i.e. it segment evenly spaced images (See self._segment_blob_motion and OneImageAnalysis)
-        to make a rough tracking of blob motion allowing to be sure that the video will only contain the shapes that
-        have a chronological link with the shape as it was on the first image.
+    def _get_bb_with_moving_centers(self, img_list: list, color_space_combination: dict, color_number: int,
+                                    sample_size: int=2, all_specimens_have_same_direction: bool=True,
+                                    display: bool=False, filter_spec: dict=None):
+        """`
+        Read and segment each sample image to find where a growing material can go and therefore the limits of the
+        arena enclosing it.
 
-        :param img_list: The whole list of image names
-        :type img_list: list
-        :param sample_size: The picture number to analyse. The higher it is, the higher bath accuracy and computation
-        time are
-        :type sample_size: int
-        :param all_specimens_have_same_direction: Whether all specimens move roughly in the same direction or not
-        :type all_specimens_have_same_direction: bool
-        :return: For each shapes, the coordinate of a bounding box including all shape movements
+        Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
+        on following images. By segmenting evenly spaced images it makes a rough tracking of the specimen motion
+        in order to make sure that the resulting video will always contain it.
+
+        Args:
+            img_list (list): List of images to process.
+            color_space_combination (dict): Dictionary specifying the color space combination for segmentation.
+            color_number (int): Number of colors to consider for segmentation.
+            sample_size (int, optional): Number of samples to take from the image list. Defaults to 2.
+            all_specimens_have_same_direction (bool, optional): Flag indicating if all specimens have the same direction. Defaults to True.
+            display (bool, optional): Flag indicating if the segmentation result should be displayed. Defaults to False.
+            filter_spec (dict, optional): Dictionary specifying the filter specifications for segmentation. Defaults to None.
+
+        Returns:
+            None
+
+        Notes:
+            - This method processes each image in the provided list, segments blobs based on color and spatial features,
+            ranks them from top to bottom and left to right, and updates the ordered shapes based on their motion.
+
         """
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
 
@@ -389,7 +440,24 @@ class OneVideoPerBlob:
             self.bot[shape_i] = np.max(shape_i_indices[0])
         self.ordered_first_image = previous_ordered_image_i
 
-    def _segment_blob_motion(self, image, color_space_combination, color_number, filter_spec):
+    def _segment_blob_motion(self, image, color_space_combination: dict, color_number: int, filter_spec: dict):
+        """
+        _segment_blob_motion
+
+        Segment the motion in a blob from an image using specified color space
+        combinations, number of colors, and filter specifications.
+
+        Args:
+            image: The input image to analyze. Can be a file path or an image object.
+            color_space_combination (dict): A dictionary specifying the color space
+                combination to use for segmentation.
+            color_number (int): The number of colors to consider in the segmentation
+                process.
+            filter_spec (dict): A dictionary specifying the filter specifications to use.
+
+        Returns:
+            ndarray: The binary image resulting from the segmentation process.
+        """
         if isinstance(image, str):
             is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
             image = read_and_rotate(image, self.first_image.bgr, self.raw_images,
@@ -401,9 +469,32 @@ class OneVideoPerBlob:
         return In.binary_image
 
 
-    def prepare_video_writing(self, img_list, min_ram_free, in_colors=False):
-        #https://stackoverflow.com/questions/48672130/saving-to-hdf5-is-very-slow-python-freezing
-        #https://stackoverflow.com/questions/48385256/optimal-hdf5-dataset-chunk-shape-for-reading-rows/48405220#48405220
+    def prepare_video_writing(self, img_list: list, min_ram_free: float, in_colors: bool=False):
+        """
+        Prepare the video writing process.
+
+        This function prepares the necessary data structures and parameters for writing videos from a list of images.
+        It creates video names, calculates required memory, determines the number of batches needed based on available RAM,
+        and initiates the video arrays. This function is crucial for managing memory usage and ensuring that video writing
+        can proceed without exceeding available system resources.
+
+        Args:
+            img_list (list): The list of images to be processed into videos.
+            min_ram_free (float): Minimum amount of RAM that should remain free in GB.
+            in_colors (bool, optional): Whether the images are in color. Defaults to False.
+
+        Returns:
+            tuple: A tuple containing the following elements:
+                - bunch_nb (int): Number of batches required to process videos.
+                - video_nb_per_bunch (numpy.ndarray): Number of images per batch.
+                - sizes (numpy.ndarray): Dimensions of each video.
+                - video_bunch (list or numpy.ndarray): Initialized video arrays for the batch.
+                - vid_names (list): List of names for each video file.
+                - rom_memory_required (float or None): Additional ROM memory required in GB, if any.
+                - analysis_status (dict): Status of the analysis process with a continue flag and message.
+                - remaining (int): Number of images left over after batching.
+
+        """
         # 1) Create a list of video names
         if self.not_analyzed_individuals is not None:
             number_to_add = len(self.not_analyzed_individuals)
@@ -461,12 +552,27 @@ class OneVideoPerBlob:
         logging.info(f"Cellects will start writing {self.first_image.shape_number} videos. Given available memory, it will do it in {bunch_nb} time(s)")
         return bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining
 
-    def write_videos_as_np_arrays(self, img_list, min_ram_free, in_colors=False, reduce_image_dim=False):
-        #self=self.videos
-        #img_list = self.data_list
-        #min_ram_free = self.vars['min_ram_free']
-        #in_colors = not self.vars['already_greyscale']
+    def write_videos_as_np_arrays(self, img_list: list, min_ram_free: float, in_colors: bool=False,
+                                  reduce_image_dim: bool=False):
+        """
+        Write videos as numpy arrays.
 
+        This method processes a list of images, preparing and saving them
+        as numpy arrays while considering the available free RAM and other
+        specified parameters.
+
+        Args:
+            img_list (list): List of image file paths or objects.
+            min_ram_free (float): Minimum required RAM in MB for the process to run.
+            in_colors (bool, optional): Whether to keep the images in color. Defaults
+                to False.
+            reduce_image_dim (bool, optional): Whether to reduce the image dimensions.
+                Defaults to False.
+
+        Notes:
+            The method calculates the memory requirements, processes images in batches
+            (bunches), and saves them as numpy arrays based on specified conditions.
+        """
         is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors)
         for bunch in np.arange(bunch_nb):
@@ -482,7 +588,6 @@ class OneVideoPerBlob:
             prev_img = None
             images_done = bunch * len(img_list)
             for image_i, image_name in enumerate(img_list):
-                # print(str(image_i), end=' ')
                 img = read_and_rotate(image_name, prev_img, self.raw_images, is_landscape, self.first_image.crop_coord)
                 prev_img = deepcopy(img)
                 if not in_colors and reduce_image_dim:
@@ -507,34 +612,3 @@ class OneVideoPerBlob:
                          np.save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
                     else:
                          np.save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
-
-
-if __name__ == "__main__":
-    from glob import glob
-    from pathlib import Path
-    from cellects.core.cellects_paths import TEST_DIR
-    from cellects.utils.load_display_save import *
-    from cellects.utils.utilitarian import insensitive_glob
-    from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
-    from numpy import sort, array
-    # os.chdir(TEST_DIR / "experiment")
-    # image = readim("IMG_7653.jpg")
-    os.chdir(Path("D:/Directory/Data/100/101-104/"))
-    img_list = np.sort(insensitive_glob("IMG_" + '*' + ".jpg"))
-    image = readim(img_list[0])
-    first_image = OneImageAnalysis(image)
-    first_im_color_space_combination = {"lab": np.array((1, 0, 0), np.uint8)}
-    last_im_color_space_combination = {"lab": np.array((0, 0, 1), np.uint8)}
-    first_image.convert_and_segment(first_im_color_space_combination)
-    first_image.set_spot_shapes_and_size_confint('circle')
-    process_i = ProcessFirstImage(
-        [first_image, False, False, None, False, 8, None, 2, None, None, None])
-    process_i.binary_image = first_image.binary_image
-    process_i.process_binary_image()
-    first_image.validated_shapes = process_i.validated_shapes
-    first_image.shape_number = 8
-    first_image.get_crop_coordinates()
-    self = OneVideoPerBlob(first_image, 100, False)
-    are_gravity_centers_moving=1; color_space_combination=last_im_color_space_combination; color_number=2; sample_size=5; all_specimens_have_same_direction=True
-    self.get_bounding_boxes(are_gravity_centers_moving=1, img_list=img_list, color_space_combination=last_im_color_space_combination, color_number=2, sample_size=5, all_specimens_have_same_direction=False, display=True)
-

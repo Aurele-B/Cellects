@@ -1,29 +1,63 @@
 #!/usr/bin/env python3
-"""
-This script contains the class for studying oscillating clusters on videos in 2D
+"""Analyze oscillating clusters in 2D video data through flux tracking.
+
+This module implements a class to track cluster dynamics by analyzing pixel flux changes over time.
+The core functionality updates cluster identifiers, tracks periods of activity, and archives final data for completed clusters based on morphological analysis and contour boundaries.
+
+Classes
+ClusterFluxStudy : Updates flux information and tracks oscillating clusters in 2D space
+
+Functions
+update_flux : Processes flux changes to update cluster tracking and archive completed clusters
+
+Notes
+Uses cv2.connectedComponentsWithStats and custom distance calculations for boundary analysis
+Maintains cumulative pixel data for active clusters during time-lapse processing
 """
 import cv2
 import numpy as np
-from numpy import (
-    append, float32, sum, mean, zeros, empty, array, nonzero, unique,
-    isin, logical_or, logical_not, greater, uint8,
-    uint32, min, any, zeros)
+from numpy.typing import NDArray
+from typing import Tuple
 from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes
 
 
 class ClusterFluxStudy:
     """
-
+    This class updates the flux information and tracking of oscillating clusters.
     """
-    def __init__(self, dims):
-        self.dims = dims
+    def __init__(self, dims: Tuple):
+        """
+        This initializes with dimensions and manages
+        pixel data, cluster IDs, and the total number of clusters.
 
+        """
+        self.dims = dims
         self.pixels_data = np.empty((4, 0), dtype=np.uint32)
         self.clusters_id = np.zeros(self.dims[1:], dtype=np.uint32)
         # self.alive_clusters_in_flux = np.empty(0, dtype=np.uint32)#list()
         self.cluster_total_number = 0
 
-    def update_flux(self, t, contours, current_flux, period_tracking, clusters_final_data):
+    def update_flux(self, t, contours: NDArray[np.uint8], current_flux: NDArray, period_tracking: NDArray[np.uint32], clusters_final_data: NDArray[np.float32]) -> Tuple[NDArray[np.uint32], NDArray[np.float32]]:
+        """
+
+        Update the flux information and track periods for cluster data.
+
+        This function updates the tracking of clusters based on their flux, handles lost pixels,
+        and archives data for clusters that are no longer active.
+
+        Args:
+            t: Time point at which the update is being performed.
+            contours (NDArray[np.uint8]): Contour data representing the boundaries of clusters.
+            current_flux (NDArray): Array containing the current flux information for each pixel.
+            period_tracking (NDArray[np.uint32]): Array used to track the periods of clusters.
+            clusters_final_data (NDArray[np.float32]): Array storing final data for archived clusters.
+
+        Returns:
+            Tuple containing updated period_tracking and clusters_final_data arrays.
+                    - period_tracking (NDArray[np.uint32]): Updated tracking of periods for clusters.
+                    - clusters_final_data (NDArray[np.float32]): Updated final data of archived clusters.
+
+        """
         # Save the data from pixels that are not anymore in efflux
         lost = np.greater(self.clusters_id > 0, current_flux > 0)
         # Some pixels of that cluster faded, save their data
@@ -81,7 +115,6 @@ class ClusterFluxStudy:
                 minimal_distance = 1
             else:
                 if cluster_size > 200:
-
                     eroded_cluster_img = cv2.erode(cluster_img, cross_33)
                     cluster_img = np.nonzero(cluster_img - eroded_cluster_img)
                     contours[cluster_img] = 2

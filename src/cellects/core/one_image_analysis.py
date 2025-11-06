@@ -1,30 +1,18 @@
 #!/usr/bin/env python3
 """
-This script contains the OneImageAnalysis class
-OneImageAnalysis is a class containing many tools to analyze one image
+Module providing tools for single-image color space analysis and segmentation.
 
-An image can be coded in different color spaces, such as RGB, HSV, etc. These color spaces code the color of each pixel as three numbers, ranging from 0 to 255. Our aim is to find a combination of these three numbers that provides a single intensity value for each pixel, and which maximizes the contrast between the organism and the background. To increase the flexibility of our algorithm, we use more than one color space to look for these combinations. In particular, we use the RGB, LAB, HSV, LUV, HLS and YUV color spaces. What we call a color space combination is a transformation combining several channels of one or more color spaces.
-To find the optimal color space combination, Cellects uses one image (which we will call “seed image”). The software selects by default the first image of the sequence as seed image, but the user can select a different image where the cells are more visible.
-Cellects has a fully automatic algorithm to select a good color space combination, which proceeds in four steps:
+The OneImageAnalysis class offers comprehensive image processing capabilities including
+color space conversion (RGB, HSV, LAB, LUV, HLS, YUV), filtering (Gaussian, median, bilateral),
+segmentation (Otsu thresholding, k-means clustering), and shape-based validation. It supports
+multi-step optimization of color channel combinations to maximize contrast between organisms
+and background through automated selection workflows involving logical operations on segmented regions.
 
-First, it screens every channel of every color space. For instance, it converts the image into grayscale using the second channel of the color space HSV, and segments that grayscale image using Otsu thresholding. Once a binary image is computed from every channel, Cellects only keep the channels for which the number of connected components is lower than 10000, and the total area detected is higher than 100 pixels but lower than 0.75 times the total size of the image. By doing so, we eliminate the channels that produce the most noise.
+Classes
+OneImageAnalysis : Analyze images using multiple color spaces for optimal segmentation
 
-In the second step, Cellects uses all the channels that pass the first filter and tests all possible pairwise combinations. Cellects combines channels by summing their intensities and re-scaling the result between 0 and 255. It then performs the segmentation on these combinations, and filters them with the same criteria as in the first step.
-
-The third step uses the previously selected channels and combinations that produce the highest and lowest detected surface to make logical operations between them. It applies the AND operator between the two results having the highest surface, and the OR operator between the two results having the lowest surface. It thus generates another two candidate segmentations, which are added to the ones obtained in the previous steps.
-
-In the fourth step, Cellects works under the assumption that the image contains multiple similar arenas containing a collection of objects with similar size and shape, and keeps the segmentations whose standard error of the area is smaller than ten times the smallest area standard error across all segmentations. To account for cases in which the experimental setup induces segmentation errors in one particular direction, Cellects also keeps the segmentation with minimal width standard error across all segmentations, and the one with minimal height standard error across all segmentations. All retained segmentations are shown to the user, who can then select the best one.
-
-As an optional step, Cellects can refine the choice of color space combination, using the last image of the sequence instead of the seed image. In order to increase the diversity of combinations explored, this optional analysis is performed in a different way than for the seed image. Also, this refining can use information from the segmentation of the seed frame and from the geometry of the arenas to rank the quality of the segmentation emerging from each color space combination. To generate these combinations, Cellects follows four steps.
-The first step is identical to the first step of the previously described automatic algorithm (in section 1) and starts by screening every possible channel and color space.
-
-The second step aims to find combinations that consider many channels, rather than those with only one or two. To do that, it creates combinations that consist of the sum of all channels except one. It then filters these combinations in the same way as for the previous step. Then, all surviving combinations are retained, and also undergo the same process in which one more channel is excluded, and the process continues until reaching single-channel combinations. This process thus creates new combinations that include any number of channels.
-
-The third step filters these segmentations, keeping those that fulfill the following criteria: (1) The number of connected components is higher than the number of arenas and lower than 10000. (2) The detected area covers less than 99% of the image. (2) Less than 1% of the detected area falls outside the arenas. (4) Each connected component of the detected area covers less than 75% of the image.
-
-Finally, the fourth step ranks the remaining segmentations using the following criteria: If the user labeled any areas as “cell”, the ranking will reflect the amount of cell pixels in common between the segmentation and the user labels. If the user did not label any areas as cells but labeled areas as background, the ranking will reflect the number of background pixels in common. Otherwise, the ranking will reflect the number of pixels in common with the segmentation of the first image.
-
-
+Notes
+Uses QThread for background operations during combination processing.
 """
 
 import logging
@@ -35,10 +23,11 @@ import cv2  # named opencv-python
 import multiprocessing.pool as mp
 from numba.typed import List as TList
 from numba.typed import Dict as TDict
+from numpy.typing import NDArray
+from typing import Tuple
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
-from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
 class OneImageAnalysis:
@@ -87,15 +76,40 @@ class OneImageAnalysis:
         self.lab = None
         self.luv = None
         self.yuv = None
-    """
-        I/ Image modification for segmentation through thresholding
-        This part contain methods to convert, visualize, filter and threshold one image.
-    """
-    def convert_and_segment(self, c_space_dict, color_number=2, biomask=None,
-                            backmask=None, subtract_background=None, subtract_background2=None, grid_segmentation=False,
-                            lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None,
-                            filter_spec=None):
+    def convert_and_segment(self, c_space_dict: dict, color_number=2, biomask: NDArray[np.uint8]=None,
+                            backmask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
+                            subtract_background2: NDArray=None, grid_segmentation: bool=False,
+                            lighter_background: bool=None, side_length: int=20, step: int=5, int_variation_thresh=None,
+                            mask: NDArray=None, filter_spec: dict=None):
+        """
+        Convert an image to grayscale and segment it based on specified parameters.
 
+        This method converts the given color space dictionary into grayscale
+        images, combines them with existing color spaces and performs segmentation.
+        It has special handling for images that are already in grayscale.
+
+        **Args:**
+
+        - `c_space_dict` (dict): Dictionary containing color spaces.
+        - `color_number` (int, optional): Number of colors to use in segmentation. Defaults to 2.
+        - `biomask` (NDArray[np.uint8], optional): Biomask for segmentation. Defaults to None.
+        - `backmask` (NDArray[np.uint8], optional): Backmask for segmentation. Defaults to None.
+        - `subtract_background` (NDArray, optional): Background to subtract. Defaults to None.
+        - `subtract_background2` (NDArray, optional): Second background to subtract. Defaults to None.
+        - `grid_segmentation` (bool, optional): Flag for grid segmentation. Defaults to False.
+        - `lighter_background` (bool, optional): Flag for lighter background. Defaults to None.
+        - `side_length` (int, optional): Side length for segmentation grid. Defaults to 20.
+        - `step` (int, optional): Step size for segmentation grid. Defaults to 5.
+        - `int_variation_thresh` (optional): Threshold for intensity variation. Defaults to None.
+        - `mask` (NDArray, optional): Additional mask for segmentation. Defaults to None.
+        - `filter_spec` (dict, optional): Filter specifications. Defaults to None.
+
+        **Attributes:**
+
+        - `self.already_greyscale` (bool): Indicates whether the image is already greyscale.
+        - `self.all_c_spaces` (list): List of color spaces.
+
+        """
         if self.already_greyscale:
             self.segmentation(logical='None', color_number=2, biomask=biomask, backmask=backmask,
                               grid_segmentation=grid_segmentation, lighter_background=lighter_background,
@@ -130,7 +144,32 @@ class OneImageAnalysis:
                                   int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
 
 
-    def segmentation(self, logical='None', color_number=2, biomask=None, backmask=None, bio_label=None, bio_label2=None, grid_segmentation=False, lighter_background=None, side_length=20, step=5, int_variation_thresh=None, mask=None, filter_spec=None):
+    def segmentation(self, logical: str='None', color_number: int=2, biomask: NDArray[np.uint8]=None,
+                     backmask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None, grid_segmentation: bool=False,
+                     lighter_background: bool=None, side_length: int=20, step: int=5, int_variation_thresh: float=None,
+                     mask: NDArray=None, filter_spec: dict=None):
+        """
+        Implement segmentation on the image using various methods and parameters.
+
+        Args:
+            logical (str): Logical operation to perform between two binary images.
+                           Options are 'Or', 'And', 'Xor'. Default is 'None'.
+            color_number (int): Number of colors to use in segmentation. Must be greater than 2
+                                for kmeans clustering. Default is 2.
+            biomask (NDArray[np.uint8]): Binary mask for biological areas. Default is None.
+            backmask (NDArray[np.uint8]): Binary mask for background areas. Default is None.
+            bio_label (Any): Label for biological features. Default is None.
+            bio_label2 (Any): Secondary label for biological features. Default is None.
+            grid_segmentation (bool): Whether to perform grid segmentation. Default is False.
+            lighter_background (bool): Indicates if the background is lighter than objects.
+                                       Default is None.
+            side_length (int): Side length of the grid. Default is 20.
+            step (int): Step size in the grid. Default is 5.
+            int_variation_thresh (float): Threshold for intensity variation. Default is None.
+            mask (NDArray): Mask to apply during segmentation. Default is None.
+            filter_spec (dict): Dictionary of filters to apply on the image before segmentation.
+
+        """
         if filter_spec is not None and filter_spec["filter1_type"] != "":
             self.image = apply_filter(self.image, filter_spec["filter1_type"], filter_spec["filter1_param"])
         if (color_number > 2):
@@ -140,7 +179,7 @@ class OneImageAnalysis:
                 self.binary_image = otsu_thresholding(self.image)
                 lighter_background = self.binary_image.sum() > (self.binary_image.size / 2)
             if int_variation_thresh is None:
-                int_variation_thresh =100 - (np.ptp(self.image) * 90 / 255)
+                int_variation_thresh = 100 - (np.ptp(self.image) * 90 / 255)
             self.grid_segmentation(lighter_background, side_length, step, int_variation_thresh, mask)
         else:
             # logging.info("Segment the image using Otsu thresholding")
@@ -149,7 +188,6 @@ class OneImageAnalysis:
                 if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum():
                     # Ones of the binary image have more in common with the background than with the specimen
                     self.binary_image = 1 - self.binary_image
-                # self.binary_image = self.correct_with_previous_binary_image(self.binary_image.copy())
 
             if logical != 'None':
                 # logging.info("Segment the image using Otsu thresholding")
@@ -171,41 +209,52 @@ class OneImageAnalysis:
                 self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
             self.binary_image = self.binary_image.astype(np.uint8)
 
+    def generate_subtract_background(self, c_space_dict: dict):
+        """
+        Generate a background-subtracted image using specified color space dictionary.
 
-    def correct_with_previous_binary_image(self, binary_image):
-        # If binary image is more than twenty times bigger or smaller than the previous binary image:
-        # otsu thresholding failed, we use a threshold of 127 instead
-        if binary_image.sum() > self.previous_binary_image.sum() * 20 or binary_image.sum() < self.previous_binary_image.sum() * 0.05:
-            binary_adaptive = cv2.adaptiveThreshold(bracket_to_uint8_image_contrast(self.image), 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
-            # from skimage import filters
-            # threshold_value = filters.threshold_li(self.image)
-            # binary_image = self.image >= threshold_value
-            binary_image = self.image >= 127
-            # And again, make sure than these pixels are shared with the previous binary image
-            if (binary_image * (1 - self.previous_binary_image)).sum() > (binary_image * self.previous_binary_image).sum():
-                binary_image = 1 - binary_image
-        return binary_image.astype(np.uint8)
+        This method first checks if color spaces have already been generated or
+        if the image is greyscale. If not, it generates color spaces from the BGR
+        image. It then converts and segments the image using the provided color space
+        dictionary without grid segmentation. A disk-shaped structuring element is
+        created and used to perform a morphological opening operation on the image,
+        resulting in a background-subtracted version. If there is a second image
+        (see Also: image2), the same operation is performed on it.
 
+        Args:
+            c_space_dict (dict): Dictionary containing color space specifications
+                for the segmentation process.
 
-    def get_largest_shape(self):
-        shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
-        sorted_area = np.sort(stats[1:, 4])
-        self.validated_shapes = np.zeros(self.binary_image.shape, dtype=np.uint8)
-        self.validated_shapes[np.nonzero(shapes == np.nonzero(stats[:, 4] == sorted_area[-1])[0])] = 1
-
-    def generate_subtract_background(self, c_space_dict):
+        Attributes:
+            disk_size: Radius of the disk-shaped structuring element
+                used for morphological operations, calculated based on image dimensions.
+            subtract_background: Background-subtracted version of `image` obtained
+                after morphological operations with the disk-shaped structuring element.
+            subtract_background2: Background-subtracted version of `image2` obtained
+                after morphological operations with the disk-shaped structuring element,
+                if `image2` is present."""
         logging.info("Generate background using the generate_subtract_background method of OneImageAnalysis class")
         if len(self.all_c_spaces) == 0 and not self.already_greyscale:
             self.all_c_spaces = get_color_spaces(self.bgr)
         self.convert_and_segment(c_space_dict, grid_segmentation=False)
-        # self.image = generate_color_space_combination(c_space_dict, self.all_c_spaces)
         disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
         disk = np.uint8(Ellipse((disk_size, disk_size)).create())
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
         if self.image2 is not None:
             self.subtract_background2 = cv2.morphologyEx(self.image2, cv2.MORPH_OPEN, disk)
 
-    def check_if_image_border_attest_drift_correction(self):
+    def check_if_image_border_attest_drift_correction(self) -> bool:
+        """
+        Check if the given binary image requires border attenuation and drift correction.
+
+        In order to determine the need for border attenuation or drift correction, this function
+        evaluates the borders of a binary image. If any two opposite borders are fully black,
+        it assumes that there is an issue requiring correction.
+
+        Returns:
+            bool: True if border attenuation or drift correction is required, False otherwise.
+
+        """
         t = np.all(self.binary_image[0, :])
         b = np.all(self.binary_image[-1, :])
         l = np.all(self.binary_image[:, 0])
@@ -219,7 +268,19 @@ class OneImageAnalysis:
         else:
             return False
 
-    def adjust_to_drift_correction(self, logical):
+    def adjust_to_drift_correction(self, logical: str):
+        """
+        Adjust the image and binary image to correct for drift.
+
+        This method applies a drift correction by dilating the binary image, calculating
+        the mean value of the drifted region and applying it back to the image. After this,
+        it applies Otsu's thresholding method to determine a new binary image and adjusts
+        the second image if present. The logical operation specified is then applied to the
+        binary images.
+
+        Args:
+            logical (str): Logical operation ('Or', 'And', 'Xor') to apply to the binary
+                images."""
         if not self.drift_correction_already_adjusted:
             self.drift_correction_already_adjusted = True
 
@@ -231,14 +292,6 @@ class OneImageAnalysis:
             self.image[np.nonzero(self.binary_image)] = drift_correction
             threshold = get_otsu_threshold(self.image)
             binary = (self.image > threshold)
-            # while np.any(binary * self.binary_image) and threshold > 1: #binary.sum() > self.binary_image.sum()
-            #     threshold -= 1
-            #     binary1 = (self.image > threshold)
-            #     binary2 = np.logical_not(binary1)
-            #     if binary1.sum() < binary2.sum():
-            #         binary = binary1
-            #     else:
-            #         binary = binary2
             self.binary_image = binary.astype(np.uint8)
 
             if self.image2 is not None:
@@ -251,7 +304,7 @@ class OneImageAnalysis:
                     binary = binary1
                 else:
                     binary = binary2
-                while np.any(binary * self.binary_image2) and threshold > 1:  # binary.sum() > self.binary_image.sum()
+                while np.any(binary * self.binary_image2) and threshold > 1:
                     threshold -= 1
                     binary1 = (self.image2 > threshold)
                     binary2 = np.logical_not(binary1)
@@ -268,15 +321,44 @@ class OneImageAnalysis:
                     self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
                 self.binary_image = self.binary_image.astype(np.uint8)
 
-    def set_spot_shapes_and_size_confint(self, spot_shape):
-        self.spot_size_confints = np.arange(0.75, 0.00, - 0.05)# np.concatenate((np.arange(0.75, 0.00, - 0.05), np.arange(0.05, 0.00, -0.005)))#
+    def set_spot_shapes_and_size_confint(self, spot_shape: str):
+        """
+        Set spot shapes and their associated size confidence intervals based on the given
+        spot shape.
+
+        Parameters:
+            spot_shape (str): The shape to set for all spots. If None, alternating
+                shapes 'circle' and 'rectangle' will be used.
+        """
+        self.spot_size_confints = np.arange(0.75, 0.00, - 0.05)
         if spot_shape is None:
             self.spot_shapes = np.tile(["circle", "rectangle"], len(self.spot_size_confints))
             self.spot_size_confints = np.repeat(self.spot_size_confints, 2)
         else:
             self.spot_shapes = np.repeat(spot_shape, len(self.spot_size_confints))
 
-    def find_first_im_csc(self, sample_number=None, several_blob_per_arena=True,  spot_shape=None, spot_size=None, kmeans_clust_nb=None, biomask=None, backmask=None, color_space_dictionaries=None, carefully=False):
+    def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
+                          spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
+                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None,
+                          carefully: bool=False):
+        """
+        Prepare color space lists, dictionaries and matrices.
+
+        Args:
+            sample_number: An integer representing the sample number. Defaults to None.
+            several_blob_per_arena: A boolean indicating whether there are several blobs per arena. Defaults to True.
+            spot_shape: A string representing the shape of the spot. Defaults to None.
+            spot_size: An integer representing the size of the spot. Defaults to None.
+            kmeans_clust_nb: An integer representing the number of clusters for K-means. Defaults to None.
+            biomask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
+            backmask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
+            color_space_dictionaries: A list of dictionaries containing color space information. Defaults to None.
+            carefully: A boolean indicating whether to process the data carefully. Defaults to False.
+
+        Note:
+            This method processes the input data to find the first image that matches certain criteria, using various color spaces and masks.
+
+        """
         logging.info(f"Prepare color space lists, dictionaries and matrices")
         if len(self.all_c_spaces) == 0:
             self.all_c_spaces = get_color_spaces(self.bgr)
@@ -298,7 +380,6 @@ class OneImageAnalysis:
         self.set_spot_shapes_and_size_confint(spot_shape)
 
         self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 11), dtype=np.uint32)
-        # ["c1", "c2", "c3", "unaltered_cc_nb", "concomp_nb", "total_area", "width_std", "height_std", "centrodist_std", "biosum", "backsum"]
         unaltered_cc_nb, cc_nb, area, width_std, height_std, area_std, biosum, backsum = 3, 4, 5, 6, 7, 8, 9, 10
         self.saved_images_list = TList()
         self.converted_images_list = TList()
@@ -313,12 +394,9 @@ class OneImageAnalysis:
             list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,
                          sample_number, spot_size, kmeans_clust_nb, biomask, backmask, None]
             ProcessFirstImage(list_args)
-            # logging.info(csc_dict)
 
         if sample_number is not None and carefully:
-            # tic = default_timer()
             # Try to add csc together
-            # possibilities = np.arange(len(self.saved_color_space_list))
             possibilities = []
             if self.saved_csc_nb > 6:
                 different_color_spaces = np.unique(self.saved_color_space_list)
@@ -472,7 +550,6 @@ class OneImageAnalysis:
         # Save and return a dictionnary containing the selected color space combinations
         # and their corresponding binary images
 
-        # first_im_combinations = [i for i in np.arange(fit.sum())]
         self.im_combinations = []
         for saved_csc in cc_efficiency_order:
             if fit[saved_csc]:
@@ -483,8 +560,6 @@ class OneImageAnalysis:
                 self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
                 for k, v in self.saved_color_space_list[saved_csc].items():
                     self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                # self.im_combinations[len(self.im_combinations) - 1]["csc"] = {list(self.saved_color_space_list[saved_csc])[0]: self.combination_features[saved_csc, :3]}
-
                 if backmask is not None:
                     shape_number, shapes = cv2.connectedComponents(self.saved_images_list[saved_csc], connectivity=8)
                     if np.any(shapes[backmask]):
@@ -499,20 +574,25 @@ class OneImageAnalysis:
                 self.im_combinations[len(self.im_combinations) - 1]["shape_number"] = self.combination_features[saved_csc, cc_nb]
                 self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = self.converted_images_list[saved_csc]
 
-        # logging.info(default_timer()-tic)
         self.saved_color_space_list = []
         self.saved_images_list = None
         self.converted_images_list = None
         self.combination_features = None
 
-    # def save_combination_features(self, process_i):
-    #     if self.save_combination_thread.is_alive():
-    #         self.save_combination_thread.join()
-    #     self.save_combination_thread = SaveCombinationThread(self)
-    #     self.save_combination_thread.process_i = process_i
-    #     self.save_combination_thread.start()
+    def save_combination_features(self, process_i: object):
+        """
+        Saves the combination features of a given processed image.
 
-    def save_combination_features(self, process_i):
+        Args:
+            process_i (object): The processed image object containing various attributes
+                such as validated_shapes, image, csc_dict, unaltered_concomp_nb,
+                shape_number, total_area, stats, biomask, and backmask.
+
+            Attributes:
+                processed image object
+                    validated_shapes (array-like): The validated shapes of the processed image.
+                    image (array-like): The image data.
+                    csc_dict (dict): Color space conversion dictionary"""
         self.saved_images_list.append(process_i.validated_shapes)
         self.converted_images_list.append(np.round(process_i.image).astype(np.uint8))
         self.saved_color_space_list.append(process_i.csc_dict)
@@ -532,13 +612,46 @@ class OneImageAnalysis:
                 (1 - process_i.validated_shapes)[process_i.backmask[0], process_i.backmask[1]])
         self.saved_csc_nb += 1
 
-    def update_current_images(self, current_combination_id):
+    def update_current_images(self, current_combination_id: int):
+        """
+        Update the current images based on a given combination ID.
+
+        This method updates two attributes of the instance: `image` and
+        `validated_shapes`. The `image` attribute is set to the value of the key
+        "converted_image" from a dictionary in `im_combinations` which is
+        indexed by the provided `current_combination_id`. Similarly, the
+        `validated_shapes` attribute is set to the value of the key "binary_image"
+        from the same dictionary.
+
+        Args:
+            current_combination_id (int): The ID of the combination whose
+                images should be set as the current ones.
+
+        """
         self.image = self.im_combinations[current_combination_id]["converted_image"]
         self.validated_shapes = self.im_combinations[current_combination_id]["binary_image"]
 
-    def find_last_im_csc(self, concomp_nb, total_surfarea, max_shape_size, out_of_arenas=None, ref_image=None,
-                                subtract_background=None, kmeans_clust_nb=None, biomask=None, backmask=None,
-                                color_space_dictionaries=None, carefully=False):
+    def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, out_of_arenas: NDArray=None,
+                         ref_image: NDArray=None, subtract_background: NDArray=None, kmeans_clust_nb: int=None,
+                         biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None,
+                         color_space_dictionaries: dict=None, carefully: bool=False):
+        """
+        Find the last image color space configurations that meets given criteria.
+
+        Args:
+            concomp_nb (int): A tuple of two integers representing the minimum and maximum number of connected components.
+            total_surfarea (int): The total surface area required for the image.
+            max_shape_size (int): The maximum shape size allowed in the image.
+            out_of_arenas (NDArray, optional): A numpy array representing areas outside the field of interest.
+            ref_image (NDArray, optional): A reference image for comparison.
+            subtract_background (NDArray, optional): A numpy array representing the background to be subtracted.
+            kmeans_clust_nb (int, optional): The number of clusters for k-means clustering.
+            biomask (NDArray[np.uint8], optional): A binary mask for biological structures.
+            backmask (NDArray[np.uint8], optional): A binary mask for background areas.
+            color_space_dictionaries (dict, optional): Dictionaries of color space configurations.
+            carefully (bool, optional): A flag indicating whether to process colorspaces carefully.
+
+        """
         if len(self.all_c_spaces) == 0:
             self.all_c_spaces = get_color_spaces(self.bgr)
         if color_space_dictionaries is None:
@@ -575,26 +688,21 @@ class OneImageAnalysis:
         potentials = TDict()
         for csc_dict in color_space_dictionaries:
             self.image = combine_color_spaces(csc_dict, self.all_c_spaces, subtract_background)
-            # self.generate_color_space_combination(c_space_dict, subtract_background)
             if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                 self.kmeans(kmeans_clust_nb, biomask, backmask)
             else:
                 self.binary_image = otsu_thresholding(self.image)
             surf = np.sum(self.binary_image)
             if surf < total_surfarea:
-                # nb, shapes = cv2.connectedComponents(oia.binary_image)
                 nb, shapes = cv2.connectedComponents(self.binary_image)
-                # outside_pixels = np.sum(oia.binary_image * out_of_arenas)
                 outside_pixels = np.sum(self.binary_image * out_of_arenas)
                 if outside_pixels < out_of_arenas_threshold:
                     if (nb > concomp_nb[0]) and (nb < concomp_nb[1]):
-                        # in_common = np.sum(ref_image * oia.binary_image)
                         in_common = np.sum(ref_image * self.binary_image)
                         if in_common > 0:
                             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
                             nb -= 1
                             if np.all(np.sort(stats[:, 4])[:-1] < max_shape_size):
-                                # oia.viewing()
                                 c_space = list(csc_dict.keys())[0]
                                 self.converted_images_list.append(self.image)
                                 self.saved_images_list.append(self.binary_image)
@@ -620,14 +728,11 @@ class OneImageAnalysis:
 
             # Add a combination of all selected channels :
             self.saved_color_space_list.append(potentials)
-            # all_potential_combinations.append(potentials)
             self.image = combine_color_spaces(potentials, self.all_c_spaces, subtract_background)
-            # self.generate_color_space_combination(potentials, subtract_background)
             if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                 self.kmeans(kmeans_clust_nb, biomask, backmask)
             else:
                 self.binary_image = otsu_thresholding(self.image)
-            # self.thresholding()
             surf = self.binary_image.sum()
             nb, shapes = cv2.connectedComponents(self.binary_image)
             nb -= 1
@@ -648,10 +753,6 @@ class OneImageAnalysis:
                 self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
                     (1 - self.binary_image)[backmask[0], backmask[1]])
             self.saved_csc_nb += 1
-        # current = {"total_area": surf, "concomp_nb": nb, "out_of_arenas": outside_pixels,
-        #            "surf_in_common": in_common}
-        # combination_features = combination_features.append(current, ignore_index=True)
-
         # All combination processing
         # Try to remove color space one by one
         i = 0
@@ -671,7 +772,6 @@ class OneImageAnalysis:
                     self.kmeans(kmeans_clust_nb, biomask, backmask)
                 else:
                     self.binary_image = otsu_thresholding(self.image)
-                # self.thresholding()
                 surf = np.sum(self.binary_image)
                 if surf < total_surfarea:
                     nb, shapes = cv2.connectedComponents(self.binary_image)
@@ -698,10 +798,6 @@ class OneImageAnalysis:
                                         self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
                                             (1 - self.binary_image)[backmask[0], backmask[1]])
                                     self.saved_csc_nb += 1
-                                    # all_potential_combinations.append(try_potentials)
-                                    # current = {"total_area": surf, "concomp_nb": nb, "out_of_arenas": outside_pixels,
-                                    #            "surf_in_common": in_common}
-                                    # combination_features = combination_features.append(current, ignore_index=True)
                                     color_space_to_remove.append(c_space)
                                     if i > 0:
                                         color_space_to_remove.append(previous_c_space)
@@ -727,20 +823,13 @@ class OneImageAnalysis:
                 self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
                     (1 - self.binary_image)[backmask[0], backmask[1]])
             self.saved_csc_nb += 1
-            # all_potential_combinations.append(potentials)
-            # current = {"total_area": surf, "concomp_nb": nb, "out_of_arenas": outside_pixels,
-            #            "surf_in_common": in_common}
-            # combination_features = combination_features.append(current, ignore_index=True)
 
         self.combination_features = self.combination_features[:self.saved_csc_nb, :]
         # Among all potentials, select the best one, according to criterion decreasing in importance
-        # a = combination_features.sort_values(by=["surf_in_common"], ascending=False)
-        # self.channel_combination = all_potential_combinations[a[:1].index[0]]
         cc_efficiency_order = np.argsort(self.combination_features[:, surf_in_common_idx])
 
         # Save and return a dictionnary containing the selected color space combinations
         # and their corresponding binary images
-
         self.im_combinations = []
         for saved_csc in cc_efficiency_order:
             if len(self.saved_color_space_list[saved_csc]) > 0:
@@ -757,25 +846,25 @@ class OneImageAnalysis:
         self.converted_images_list = None
         self.combination_features = None
 
-    """
-        Thresholding is a very simple and fast segmentation method. Kmeans can be implemented in a function bellow
-    """
-    def thresholding(self, luminosity_threshold=None, lighter_background=None):
-        if luminosity_threshold is not None:
-            binarymg = np.zeros(self.image.shape, dtype=np.uint8)
-            if lighter_background:
-                binarymg[self.image < luminosity_threshold] = 1
-            else:
-                binarymg[self.image > luminosity_threshold] = 1
-        else:
-            ret, binarymg = cv2.threshold(self.image, 0, 1, cv2.THRESH_OTSU)
-        #binarymg = binarymg - 1
-        # Make sure that blobs are 1 and background is 0
-        if np.sum(binarymg) > np.sum(1 - binarymg):
-            binarymg = 1 - binarymg
-        self.binary_image = binarymg
+    def kmeans(self, cluster_number: int, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None,
+               logical: str='None', bio_label=None, bio_label2=None):
+        """
+        Perform K-Means clustering on the image and generate binary images based on clusters.
 
-    def kmeans(self, cluster_number, biomask=None, backmask=None, logical='None', bio_label=None, bio_label2=None):
+        Args:
+            cluster_number (int): The number of clusters to form.
+            biomask (Optional[NDArray[np.uint8]]): Mask indicating biological regions. Defaults to None.
+            backmask (Optional[NDArray[np.uint8]]): Mask indicating background regions. Defaults to None.
+            logical (str): Optional parameter to determine if logical segmentation should be performed. Defaults to 'None'.
+            bio_label (Optional[int]): Label for biological regions in clustering. Defaults to None.
+            bio_label2 (Optional[int]): Label for biology in logical segmentation. Defaults to None.
+
+        Raises:
+            ValueError: If logic is set, but biomask or backmask are not provided.
+
+        Returns:
+            None
+        """
         image = self.image.reshape((-1, 1))
         image = np.float32(image)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
@@ -850,20 +939,23 @@ class OneImageAnalysis:
                     self.bio_label2 = np.nonzero(sum_per_label == np.min(sum_per_label))
                 self.binary_image2[np.nonzero(kmeans_image == self.bio_label2)] = 1
 
-    def binarize_k_means_product(self, grey_idx):
-        binarization = np.zeros_like(self.binary_image)
-        binarization[np.nonzero(self.binary_image == grey_idx)] = 1
-        self.binary_image = binarization
-
-    def grid_segmentation(self, lighter_background, side_length=8, step=2, int_variation_thresh=20, mask=None):
+    def grid_segmentation(self, lighter_background: bool, side_length: int=8, step: int=2, int_variation_thresh: int=20,
+                          mask: NDArray=None):
         """
-        Segment small squares of the images to detect local intensity valleys
-        This method segment the image locally using otsu thresholding on a rolling window
-        :param side_length: The size of the window to detect the blobs
-        :type side_length: uint8
-        :param step:
-        :type step: uint8
-        :return:
+        Perform grid segmentation on the image.
+
+        This method applies a sliding window approach to segment the image into
+        a grid-like pattern based on intensity variations and optionally uses a mask.
+        The segmented regions are stored in `self.binary_image`.
+
+        Args:
+            lighter_background (bool): If True, areas lighter than the Otsu threshold are considered;
+                otherwise, darker areas are considered.
+            side_length (int, optional): The size of each grid square. Default is 8.
+            step (int, optional): The step size for the sliding window. Default is 2.
+            int_variation_thresh (int, optional): Threshold for intensity variation within a grid.
+                Default is 20.
+            mask (NDArray, optional): A binary mask to restrict the segmentation area. Default is None.
         """
         if len(self.image.shape) == 3:
             print("Image is not Grayscale")
@@ -910,7 +1002,6 @@ class OneImageAnalysis:
             y_windows += to_add
             x_windows += to_add
             for y_start in y_windows:
-                # y_start = 4
                 if y_start < self.image.shape[0]:
                     y_end = y_start + side_length
                     if y_end < self.image.shape[0]:
@@ -936,11 +1027,15 @@ class OneImageAnalysis:
         self.binary_image[min_y:max_y, min_x:max_x][homogeneities >= (((side_length // step) // 2) + 1)] = 0
 
 
-    """
-        III/ Use validated shapes to exclude from analysis the image parts that are far from them
-        i.e. detect projected shape boundaries over both axis and determine crop coordinates
-    """
-    def get_crop_coordinates(self, are_zigzag=None):
+    def get_crop_coordinates(self):
+        """
+        Get the crop coordinates for image processing.
+
+        This function projects the image on both x and y axes to detect rows
+        and columns of arenas, calculates the boundaries for cropping,
+        and determines if the arenas are zigzagged.-
+
+        """
         logging.info("Project the image on the y axis to detect rows of arenas")
         self.y_boundaries, y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
         logging.info("Project the image on the x axis to detect columns of arenas")
@@ -990,12 +1085,27 @@ class OneImageAnalysis:
             cy_max = len(self.y_boundaries) - 1
 
         self.crop_coord = [cy_min, cy_max, cx_min, cx_max]
-        return are_zigzag
-        # plt.imshow(self.image)
-        #plt.scatter(cx_min,cy_min)
-        #plt.scatter(cx_max, cy_max)
 
-    def projection_to_get_peaks_boundaries(self, axis):
+    def projection_to_get_peaks_boundaries(self, axis: int) -> Tuple[NDArray, int]:
+        """
+
+        Projection to get peaks' boundaries.
+
+        Calculate the projection of an array along a specified axis and
+        identify the boundaries of non-zero peaks.
+
+        Args:
+            axis: int,
+                The axis along which to calculate the projection and identify
+                peaks' boundaries.
+
+        Returns:
+            Tuple[NDArray, int]:
+                A tuple containing two elements: an array representing the slopes
+                of peaks' boundaries and an integer representing the maximum sum
+                along the specified axis.
+
+        """
         sums = np.sum(self.validated_shapes, axis)
         slopes = np.greater(sums, 0)
         slopes = np.append(0, np.diff(slopes))
@@ -1005,34 +1115,20 @@ class OneImageAnalysis:
                 slopes[coord[ci]] = - 1
         return slopes, sums.max()
 
-    def jackknife_cutting(self, changes):
-        """
-        This function compare the mean distance between each 1 in a vector of 0.
-        Since a few irregular intervals affect less the median that the mean,
-        It try to remove each 1, one by one to see if it reduce enough the difference between mean and median.
-        If the standard error of that difference is higher than 2,
-        we remove each point whose removal decrease that difference by half of the median of these differences.
-        i.e. differences between jackkniffed means and original median of the distance between each 1.
-        """
-        indices = np.nonzero(changes)[0]
-        indices_to_remove = np.zeros(len(indices), dtype=bool)
-        # To test the impact of a removal, changes must contain at least four 1.
-        if len(indices) > 3:
-            jackknifed_mean = np.zeros(np.sum(changes == 1))
-            for dot_i in np.arange(len(indices)):
-                steep = changes == 1
-                steep[indices[dot_i]] = False
-                new_indices = np.where(steep == 1)[0]
-                if dot_i != 0:
-                    new_indices[dot_i:] = indices[(dot_i + 1):] - (indices[dot_i] - indices[dot_i - 1])
-                jackknifed_mean[dot_i] = np.mean(np.diff(new_indices))
-            improving_cuts = np.absolute(jackknifed_mean - np.median(np.diff(indices)))
-            if np.std(improving_cuts) > 2:
-                improving_cuts = np.argwhere(improving_cuts < 0.5 * np.median(improving_cuts))
-                indices_to_remove[improving_cuts] = 1
-        return indices_to_remove
-
     def automatically_crop(self, crop_coord):
+        """
+        Automatically crops the image using the given crop coordinates.
+
+        This method crops various attributes of the image such as the main image,
+        binary image, and color spaces. It also updates internal states related to
+        cropping.
+
+        Args:
+            crop_coord (tuple): The coordinates for cropping in the format
+                (start_y, end_y, start_x, end_x), representing the bounding box region
+                to crop from the image.
+
+        """
         if not self.cropped:
             logging.info("Crop using the automatically_crop method of OneImageAnalysis class")
             self.cropped = True

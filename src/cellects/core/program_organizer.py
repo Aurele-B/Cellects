@@ -26,7 +26,7 @@ from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len
-from cellects.image_analysis.morphological_operations import Ellipse, cross_33
+from cellects.image_analysis.morphological_operations import Ellipse, keep_one_connected_component
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
@@ -868,7 +868,7 @@ class ProgramOrganizer:
             if self.vars['several_blob_per_arena']:
                 image.validated_shapes = image.binary_image
             else:
-                image.get_largest_shape()
+                image = keep_one_connected_component(image)
 
             self.vars['origin_list'].append(image.validated_shapes)
 
