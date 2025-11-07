@@ -365,9 +365,16 @@ def get_otsu_threshold(image: NDArray):
     weight2 = np.cumsum(hist[::-1])[::-1]
 
     # Get the class means mu0(t)
-    mean1 = np.cumsum(hist * bin_mids) / weight1
+    if weight1.all():
+        mean1 = np.cumsum(hist * bin_mids) / weight1
+    else:
+        mean1 = np.zeros_like(bin_mids)
+
     # Get the class means mu1(t)
-    mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
+    if weight2.all():
+        mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
+    else:
+        mean2 = np.zeros_like(bin_mids)
 
     inter_class_variance = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
 
@@ -717,3 +724,32 @@ def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDA
         if val > thresh:
             count_b += 1
     return count_a, count_b
+
+
+def extract_first_pc(rgb_image: NDArray, standardize=True):
+    """Extract and threshold the first principal component."""
+    # Ensure correct shape
+    if rgb_image.shape[0] == 3:
+        rgb_image = np.transpose(rgb_image, (1, 2, 0))
+
+    height, width, channels = rgb_image.shape
+    pixels = rgb_image.reshape(-1, channels)
+
+    # Standardize if requested
+    if standardize:
+        scaler = StandardScaler()
+        pixels_scaled = scaler.fit_transform(pixels)
+    else:
+        pixels_scaled = pixels
+
+    # Apply PCA with only 1 component
+    pca = PCA(n_components=1)
+    pca_result = pca.fit_transform(pixels_scaled)
+
+    # Reshape back to image format
+    first_pc = pca_result.reshape(height, width)
+
+    # Threshold negative values to 0
+    first_pc_thresholded = np.maximum(first_pc, 0)
+
+    return first_pc_thresholded, pca.explained_variance_ratio_[0]

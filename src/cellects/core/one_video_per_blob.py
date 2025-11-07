@@ -13,7 +13,6 @@ Includes RAM usage monitoring during video processing
 Provides both static shape-based and motion-tracking arena detection methods
 Generates numpy arrays of cropped video regions to reduce file size
 """
-
 import os
 import logging
 from copy import deepcopy

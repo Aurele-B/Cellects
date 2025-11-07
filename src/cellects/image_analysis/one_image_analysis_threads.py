@@ -22,7 +22,6 @@ Uses threading.Thread for background operations to maintain application responsi
 """
 import threading
 import logging
-from copy import deepcopy
 import numpy as np
 import cv2
 from numpy.typing import NDArray
@@ -76,7 +75,8 @@ class ProcessFirstImage:
             self.unaltered_concomp_nb, shapes = cv2.connectedComponents(self.binary_image)
             if 1 < self.unaltered_concomp_nb < 10000:
                 self.total_area = np.sum(self.binary_image)
-                if 100 < self.total_area < self.binary_image.size * 0.75:
+                inf_lim = np.min((100, np.ceil(self.binary_image.size / 1000)))
+                if inf_lim < self.total_area < self.binary_image.size * 0.9:
                     self.process_binary_image()
                     self.parent.save_combination_features(self)
                     # except RuntimeWarning:
@@ -91,7 +91,7 @@ class ProcessFirstImage:
             previous_sum = combination_features[i, 5]
             for j in possibilities[::-1]:
                 csc_dict2 = saved_color_space_list[j]
-                csc_dict = deepcopy(self.csc_dict)
+                csc_dict = self.csc_dict.copy()
                 keys = list(csc_dict.keys())
 
                 k2 = list(csc_dict2.keys())[0]
@@ -113,7 +113,7 @@ class ProcessFirstImage:
                     if previous_shape_number >= self.shape_number and self.total_area > previous_sum * 0.9:
                         previous_shape_number = self.shape_number
                         previous_sum = self.total_area
-                        self.csc_dict = deepcopy(csc_dict)
+                        self.csc_dict = csc_dict.copy()
                         self.unaltered_concomp_nb = combination_features[i, 3]
                         self.parent.save_combination_features(self)
                         logging.info(str(saved_color_space_list[i]) + "-->" + str(self.csc_dict ))
@@ -263,9 +263,10 @@ class ProcessFirstImage:
                 if np.any(self.shapes[self.biomask]):
                     do_not_delete = np.unique(self.shapes[self.biomask])
                     do_not_delete = do_not_delete[do_not_delete != 0]
+
         if not self.several_blob_per_arena and self.spot_size is not None:
             counter = 0
-            self.shapes2 = deepcopy(self.shapes)
+            self.shapes2 = self.shapes.copy()
             while self.shape_number != self.sample_number and counter < len(self.parent.spot_size_confints):
                 self.shape_selection(horizontal_size=self.spot_size, shape=self.parent.spot_shapes[counter],
                                      confint=self.parent.spot_size_confints[counter], do_not_delete=do_not_delete)
@@ -273,7 +274,7 @@ class ProcessFirstImage:
                 counter += 1
             if self.shape_number == self.sample_number:
                 self.shapes = self.shapes2
-        if self.shape_number == self.sample_number:
+        if self.sample_number is None or (self.shape_number - 1) == self.sample_number:
             self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
             self.validated_shapes[self.shapes > 0] = 1
         else:

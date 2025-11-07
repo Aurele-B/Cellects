@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MotionAnalysis class for processing video data and extracting motion/shape descriptors from biological specimens.
+"""Module for analyzing motion, growth patterns, and structural properties of biological specimens in video data.
 
 This module provides comprehensive tools to analyze videos of biological samples (e.g., cell colonies) by:
 1. Loading and converting RGB videos to grayscale using configurable color space combinations
@@ -7,43 +7,6 @@ This module provides comprehensive tools to analyze videos of biological samples
 3. Applying post-processing steps including error correction algorithms for shape continuity
 4. Computing morphological descriptors over time (area, perimeter, fractal dimension, etc.)
 5. Detecting network structures and oscillatory behavior in dynamic biological systems
-
-Classes
--------
-MotionAnalysis : Processes video data to analyze specimen motion, growth patterns, and structural properties.
-    Provides methods for loading videos, performing segmentation using multiple algorithms,
-    post-processing results with error correction, extracting morphological descriptors,
-    detecting network structures, analyzing oscillations, and saving processed outputs.
-
-Functions
----------
-load_images_and_videos : Loads and converts video files to appropriate format for analysis
-get_converted_video : Converts RGB video to grayscale based on specified color space parameters
-detection : Performs multi-strategy segmentation of the specimen across all frames
-update_shape : Applies post-processing filters and error correction algorithms to refine shape detection
-save_results : Saves processed videos, binary segmentations, and computed descriptors
-
-Notes
------
-- Processes large video datasets with memory optimization strategies including typed arrays (NumPy)
-  and progressive processing techniques.
-- Supports both single-specimen and multi-specimen analysis with configurable parameters for:
-   - Segmentation sensitivity thresholds
-   - Error correction algorithms
-   - Network detection methods
-   - Fractal dimension calculation
-
-"""
-
-
-"""Module for analyzing motion, growth patterns, and structural properties of biological specimens in video data.
-
-This module provides comprehensive tools to analyze videos of biological samples (e.g., cell colonies) by:
-1. Loading and converting RGB videos to grayscale using configurable color space combinations.
-2. Performing multi-strategy segmentation (frame-by-frame, intensity thresholding, derivative-based detection).
-3. Applying post-processing steps including error correction algorithms for shape continuity.
-4. Computing morphological descriptors over time (area, perimeter, fractal dimension, etc.).
-5. Detecting network structures and oscillatory behavior in dynamic biological systems.
 
 Classes
 -------
@@ -62,106 +25,15 @@ save_results : Saves processed data, efficiency tests, and annotated videos.
 
 Notes
 -----
+The features of this module include:
+- Processes large video datasets with memory optimization strategies including typed arrays (NumPy)
+  and progressive processing techniques.
 - The module supports both single-specimen and multi-specimen analysis through configurable parameters.
 - Segmentation strategies include intensity-based thresholding, gradient detection, and combinations thereof.
 - Post-processing includes morphological operations to refine segmented regions and error correction for specific use cases (e.g., Physarum polycephalum).
-- Graph extraction is available to represent network structures as vertex-edge tables.
-
-"""
-"""
-This script contains the MotionAnalysis class. This class, called by program_organizer,
- calls all methods used to read, process videos and save results.
-1. load_images_and_videos: It starts by loading a video in .npy (which must have been written before, thanks to the one_video_per_blob file)
- and if it exists, the background used for background subtraction. Then, it uses a particular color space combination
- to convert the rgb video into greyscale.
- At this point, arenas have been delimited and each can be analyzed separately. The following describes what happens during the analysis of one arena. Also, while Cellects can work with either one or several cells in each arena, we will describe the algorithm for a single cell, making clarifications whenever anything changes for multiple cells.
-Cellects starts by reading and converting the video of each arena into grayscale, using the selected color space combination. Then, it processes it through the following steps.
-3. It validates the presence/absence of the specimen(s) in the first image of the video, named origin.
-Cellects finds the frame in which the cell is visible for the first time in each arena. When the seed image is the first image, then all cells are visible from the beginning. Otherwise, it will apply the same segmentation as for the seed image to the first, second, third images, etc. until the cell appears in one of them.
-4. It browses the first frames of the video to find the average covering duration of a pixel.
-It does so using a very conservative method, to make sure that only pixels that really are covered by the specimen(s)
-are used to do compute that covering duration.
-5. It performs the main segmentation algorithm on the whole video.
-This segmentation will consist in transforming the grayscale video resulting from the color space combination conversion
- into a binary video of presence/absence. To do this, Cellects provides several different options to detect specimen
- motion and growth throughout the video. The video segmentation transforms a grayscale video into a binary one.
- In simple datasets with strong contrast between specimens and background, Cellects can simply segment each image by
- thresholding. In more challenging conditions, the algorithm tracks the intensity of each pixel over time,
- using this dynamical information to determine when a pixel has been covered. This is done through an automatically
- determined threshold on the intensity or on its derivative. Additionally, Cellects can apply the logical operators
- AND or OR to these intensity and derivative thresholds. The default option is the dynamical intensity threshold and it
- works in many cases, but the user interface lets the user quickly check the results of different options and choose
- the best one by visual inspection of the segmentation result in different frames.
- For Cellects to be as versatile as possible, the user can select across five segmentation strategies.
-The first option is the simplest: It starts at the frame in which the cell is visible for the first time and segments the video frame by frame, using the same method as when analyzing only one image (as described in sections 1 and 2). The only difference is an optional background subtraction algorithm, which subtracts the first image to all others.
-The second option segments each frame by intensity thresholding. The threshold changes over time to adapt to changes in the background over time. To estimate the optimal threshold for each frame, Cellects proceeds as follows: It first estimates the typical background intensity of each frame as an intensity higher than the first decile of all pixels in the frame. Then, it defines an initial threshold for each frame at a fixed distance above this decile. This fixed distance is initially low, so that the initial segmentation is an overestimation of the actual area covered by the specimen. Then, it performs segmentation of all frames. If any frame presents a growth greater than a user_set threshold (whose default value is 5% of the area), all thresholds are diminished by 10%. Then the segmentation is performed again, and this process continues until no frame presents excessive growth. This description refers to cases in which the background is darker than the specimen. Cellects automatically detects if contrast is reversed, and adapts the method accordingly. Finally, Cellects segments the whole video with these adjusted intensity thresholds.
-The third option uses the change in intensity over time: For each pixel, it considers the evolution in time of its intensity, and considers that the cell covers the pixel when the slope of this intensity over time exceeds a threshold (Fig 3d in the main text).  For each frame, Cellects computes each frame’s threshold with the similar procedure as in the second option, except for the following. As the value of the slope of a derivative is highly sensitive to noise, Cellects first smooths the intensity curves using a moving average with a window length adapted to the typical time it takes for the cell to cover each pixel. Cellects tries to compute this typical time using the dynamics of a subset of pixels whose intensity varies strongly at the beginning of the growth (see the code for further details), and uses a default value of 10 frames when this computation fails. Cellects also uses this subset of pixels to get the reference slope threshold. Finally, it progressively modifies this reference until the video segmentation matches the required growth ratio, as in the second step.
-The two next options are combinations of the two first ones.
-The fourth is a logical OR between the intensity value and the intensity slope segmentations. It provides a very permissive segmentation, which is useful when parts of the cells are very hard to detect.
-The fifth is the logical AND between the intensity value and the intensity slope segmentations. It provides a more restrictive segmentation that can be useful when both the value and the slope segmentations detect areas that are not covered by the cell.
-6. Video post-processing improves the resulting binary video obtained through segmentation.
-The final step consists in improving the segmentation (see section S3.5 of the Supplementary Materials for more information). Cellects will first apply several filters that consistently improve the results, such as checking that each detected pixel was also detected at least twice in the three previous frames, omitting images containing too many detected pixels, and performing morphological opening and closing. Optionally, the user can activate the detection of areas left by the cell (See section S3.5.B of the Supplementary Materials for details).
-
-Additionally, optional algorithms correct particular types of errors. The first algorithm is useful when the substrate on which the cells are at the first image is of a different color than the substrate on which they will grow, expand or move. This color difference may produce holes in the segmentation and we developed an optional algorithm to correct this kind of error around the initial shape. The second algorithm should be used when each arena contains a single specimen, which should generate a single connected component. We can use this information to correct mistakes in models such as P. polycephalum, whose strong heterogeneity produces large variations of opacity. In these cases, segmentation may fail in the most transparent parts of the specimens and identify two disconnected components. The correction algorithm merges these disconnecting components by finding the most likely pixels connecting them and the most likely times at which those pixels were covered during growth.
-6.A Basic post-processing
-This process improves the raw segmentation. It includes algorithms to filter out aberrant frames, remove small artifacts and holes, and to detect when the specimens leave pixels. First, it checks that every pixel was detected at least twice in the three previous frames. Second, it excludes frames containing too many newly detected pixels, according to the maximal growth ratio per frame (as defined in section 3B). For these frames, the previous segmentation is kept, making the analysis robust to events producing a sharp variation in the brightness of a few images in the video (for example, when an enclosed device is temporarily opened or a light is switched on or off). Third, it removes potential small artifacts and holes by performing morphological opening followed by morphological closing.
-
-6.B Cell leaving detection
-This optional algorithm detects when areas are left by the specimens. It is useful when the cells not only grow but also move, so they can leave pixels that were covered before. When a pixel is covered, Cellects saves the intensity it had before being covered, computed as the median of the pixel’s intensity over a time window before it was covered. The length of this time window matches the typical time it takes for the cell to cover each pixel (computed as described in section 4.B, third segmentation strategy). Then, pixels at the border of the cell whose intensity fall below the saved intensity, rescaled by a user-defined multiplier (set by default at 1) are considered to be left by the cell. When there should be only one cell in the arena, Cellects tries to remove each component one by one, accepting this removal only when it does not break the connectivity of all parts of the cell.
-
-6.C Special error correction algorithms
-At the time of writing, Cellects contains two post-processing algorithms adapted to two specific situations. The first one is useful when there should be only one specimen per arena and when Cellects fails to detect its distant parts because their connections are not sufficiently visible. The second one is useful when Cellects fails to detect small areas around the initial shape, for example due to reflections near the edges. The following explains how these optional algorithms work.
-
-6.D Connect distant components:
-This algorithm automatically and progressively adds distant shapes to the main one. This correcting process occurs in three steps. First, it selects which distant component should get connected to the main one. The user can adjust this selection process according to the distance of the distant components with the main shape, and the minimal and maximal size of these components. Second, for each distant component, it computes and creates the shortest connection with the main shape. The width of that connection depends on the size of the distant shape where the connection occurs. Third, it uses an algorithm similar to the one used to correct errors around initial shape to estimate how quickly the gaps should be filled. This algorithm uses distance and timing vectors to create a dynamic connection between these two shapes (Figure 3f-h in the main text).
-
-6.E Correct errors around initial shape:
-This correcting process occurs in two steps. The first one scans the formation of holes around the initial segmentation during the beginning of the growth. The second one finds out when and how these holes are to be filled. To determine how the holes should be covered, Cellects uses the same algorithm as the one used to connect distant components. Computing the speed at which growth occurs from the initial position allows Cellects to fill the holes at the same speed, and therefore to correct these errors.
-
-7. Special algorithms for Physarum polycephalum
-Although done for this organism, these methods can be used with other biological models, such as mycelia.
-7.A. Oscillatory activity detection:
-This algorithm analyzes grayscale video frames to detect whether pixel intensities increase or decrease over time. To prevent artifacts from arena-scale illumination fluctuations, pixel intensities are first standardized by the average intensity of the entire image. A pixel is considered to have increased (or decreased) in intensity if at least four of its eight neighboring pixels have also shown an increase (or decrease). Then, regions with adjacent pixels whose intensity is changing in the same direction are detected, keeping only those larger than a user-selected threshold. Each region is tracked throughout the video, recording its oscillatory period, phase, and coordinates until it dissipates or reaches the video’s end.
-
-7.B. Network detection:
-P. polycephalum cells are composed of two types of compartments: A tubular network that transports cytoplasmic materials, and a thinner compartment that covers the rest of the space. Cellects’ initial segmentation does not distinguish between these two compartments, detecting all pixels that have been covered by any of them. This step distinguishes them, in order to segment the tubular network, whose intensity is further from that of the background.
-Cellects detects such a network using an algorithm that scores the segmentation results after using filters of
-vesselness detection: sato and frangi. On top of testing these filters with around 10 variations of their parameters,
-Cellects tries to segment the images adaptatively: segmenting each part of the image using a 2D rolling window.
-Once the best segmentation strategy is found for the last image of the video, it is used to segment the network in all
-other frames
-
-8. Graph extraction:
-Cellects can extract the graph of the specimen, or if detected, of its internal network.
-To do so, Cellects does the following:
-- Get the skeleton of the binary matrix of presence/absence of the specimen, as well as the specimen/network
- width at avery pixel of the skeleton.
-If the original position from which the specimen started has not the same color as the rest of the arena, apply
-a special algorithm to draw the skeleton at the border of that origin.
-- Smooth the skeleton using an algorithm removing small loops of 3 pixels widths
-- Keep only the largest connected component of the skeleton
-- Use pixel connectivity and their neighborhood connectivity to detect all tips and branching vertices of the graph
-summarizing the skeleton.
-- Find and label all edges connecting tips and remove those that are shorter than the width of the skeleton arm it is connected to
-- Find and label all edges connecting touching vertices
-- Find and label all edges connected to the two previoussly mentioned vertices
-- Find and label all edges forming loops and connected to only one vertex
-- Remove all shapes of 1 or two pixels that are neither detected as vertices nor edges,
-if and only if they do not break the skeleton into more than one connected component.
-- Remove edge duplicates
-- Remove vertices connectiong 2 edges
-- Finally, create and save the tables storing edge and vertex coordinates and properties
-
-9. Save
-Once the image analysis is finished, the software determines the value of each morphological descriptor at each time frame (SI - Table 1). Finally, Cellects saves a new video for each arena with the original video next to the converted video displaying the segmentation result, so that the user can easily validate the result. If an arena shows a poor segmentation result, the user can re-analyze it, tuning all parameters for that specific arena.
-- the final results of the segmentation and its contour (if applicable)
-- descriptors summarizing the whole video
-- validation images (efficiency tests) and videos
-
-10. If this class has been used in the video_analysis_window only on one arena, the method
-change_results_of_one_arena will open (or create if not existing) tables in the focal folder
-and adjust every row corresponding to that particular arena to the current analysis results.
-
+- Biological network detection and graph extraction is available to represent network structures as vertex-edge tables.
+- Biological oscillatory pattern detection
+- Fractal dimension calculation
 """
 
 import weakref
@@ -310,17 +182,22 @@ class MotionAnalysis:
     def load_images_and_videos(self, videos_already_in_ram, i: int):
         """
 
-        Load images and videos from a video file or preloaded data.
+        Load images and videos from disk or RAM.
 
-        This method is responsible for loading image and video data for processing.
-        It can either load data from a video file specified by `vid_name` or use preloaded
-        data passed as `videos_already_in_ram`. The data is loaded into appropriate attributes
-        based on whether the video is already in greyscale format or needs to be converted.
+        Parameters
+        ----------
+        videos_already_in_ram : numpy.ndarray or None
+            Video data that is already loaded into RAM. If `None`, videos will be
+            loaded from disk.
+        i : int
+            Index used to select the origin and background data.
 
-        Args:
-            videos_already_in_ram (numpy.ndarray | None): Preloaded video data. If `None`,
-                the method will load data from a video file.
-            i (int): Index used to access various lists in the `vars` attribute.
+        Notes
+        -----
+        This method logs information about the arena number and loads necessary data
+        from disk or RAM based on whether videos are already in memory. It sets various
+        attributes like `self.origin`, `self.background`, and `self.converted_video`.
+
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
@@ -358,26 +235,36 @@ class MotionAnalysis:
 
     def get_converted_video(self):
         """
-        Convert an RGB video into a greyscale video.
+        Get the converted video in grayscale format.
 
-        This method converts the current video stored in `self.visu` into a
-        greyscale format using specified color space combinations. It supports
-        background subtraction and filtering of the resulting greyscale images.
+        This method processes the RGB visual video and converts it into a
+        grayscale image using specified color space combinations. It handles
+        background subtraction and optional filters for further processing.
 
-        Important Attributes Used:
-        --------------------------
-            - `self.vars` (dict): Contains various configuration variables.
-            - `self.visu` (np.ndarray): The video to be converted.
-            - `self.converted_video` and `self.converted_video2`
-              (np.ndarray): Storage for the resultant greyscale video frames.
-            - `self.background` and `self.background2`
-              (optional np.ndarray): Background images for subtraction.
-            - `self.one_descriptor_per_arena` (dict): Keeps track of arena tracking descriptors.
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method.
+            Must have attributes:
+                - vars: Dictionary with processing parameters
+                - visu: Array of RGB video frames
+                - background, background2: Background images for subtraction
+                - one_descriptor_per_arena: Arena descriptor
+
+        Returns
+        -------
+        None
+            The method modifies the `converted_video` and optionally
+            `converted_video2` attributes of the `self` object directly.
 
         Notes
         -----
-            - The method supports both float64 and uint8 data types
-              for the greyscale video frames, depending on the configuration.
+        This function modifies the state of the instance, i.e., updates its
+        `converted_video` and potentially `converted_video2` attributes.
+        There is no need to return these values as they are stored
+        in the instance itself.
+        This method modifies the instance's `converted_video` and potentially
+        `converted_video2` attributes as a side effect.
         """
         if not self.vars['already_greyscale']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
@@ -493,10 +380,27 @@ class MotionAnalysis:
 
     def get_covering_duration(self, step: int):
         """
-        Find a frame with significant growth/motion and determine the number of frames necessary for a pixel to get covered.
+        Determine the number of frames necessary for a pixel to get covered.
 
-        Args:
-            step (int): The step size used in the analysis.
+        This function identifies the time when significant growth or motion occurs
+        in a video and calculates the number of frames needed for a pixel to be
+        completely covered. It also handles noise and ensures that the calculated
+        step value is reasonable.
+
+        Parameters
+        ----------
+        step : int
+            The initial step size for frame analysis.
+
+        Raises
+        ------
+        Exception
+            If an error occurs during the calculation process.
+
+        Notes
+        -----
+        This function may modify several instance attributes including
+        `substantial_time`, `step`, and `start`.
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Find a frame with a significant growth/motion and determine the number of frames necessary for a pixel to get covered")
         ## Find the time at which growth reached a substantial growth.
@@ -572,38 +476,31 @@ class MotionAnalysis:
 
     def detection(self, compute_all_possibilities: bool=False):
         """
-        Perform cell motion and growth detection using various segmentation algorithms.
 
-        This method is responsible for detecting cell motion and growth within a video
-        based on different segmentation strategies. It supports frame-by-frame segmentation,
-        luminosity threshold segmentation, and luminosity slope segmentation.
+            Perform frame-by-frame or luminosity-based segmentation on video data to detect cell motion and growth.
 
-        Args:
-            compute_all_possibilities (bool): If True, compute all possible combinations
-                of segmentation algorithms and store the results. Default is False.
+            This function processes video frames using either frame-by-frame segmentation or luminosity-based
+            segmentation algorithms to detect cell motion and growth. It handles drift correction, adjusts parameters
+            based on configuration settings, and applies logical operations to combine results from different segmentation
+            methods.
 
-        Attributes:
-            lost_frames (int): Number of frames not analyzed during processing.
-            segmentation (numpy.ndarray): Binary video representing the segmentation
-                results. Shape is defined by the video dimensions and data type is uint8.
-            converted_video (numpy.ndarray): Video frames after conversion, with shape
-                defined by the video dimensions.
-            converted_video2 (numpy.ndarray): Additional converted video frames, with
-                shape defined by the video dimensions.
-            lum_slope_segmentation (numpy.ndarray): Gradient segmentation results based
-                on luminosity slopes.
-            luminosity_segmentation (numpy.ndarray): ndarray containing the segmentation resulting from the method
-            using luminosity values.
-            gradient_segmentation (numpy.ndarray): ndarray containing the segmentation resulting from the method
-            using luminosity slopes.
-            logical_and (numpy.ndarray): ndarray containing the segmentation resulting from the method
-            using luminosity slopes AND values.
-            logical_or (numpy.ndarray): ndarray containing the segmentation resulting from the method
-            using luminosity slopes AND values.
+            Parameters
+            ----------
+            compute_all_possibilities : bool, optional
+                Flag to determine if all segmentation possibilities should be computed, by default False
 
-        Note:
-            This method involves several internal steps, including image adjustments,
-            mask creation, and logical operations between segmentation results."""
+            Returns
+            -------
+            None
+
+            Notes
+            -----
+            This function modifies the instance variables `self.segmentation`, `self.converted_video`,
+            and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
+            Depending on the configuration settings, it performs various segmentation algorithms and updates
+            the instance variables accordingly.
+
+        """
         self.lost_frames = self.step
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
@@ -689,19 +586,19 @@ class MotionAnalysis:
 
     def frame_by_frame_segmentation(self, t: int, mask_coord=None):
         """
+            Frame-by-frame segmentation of video frames using given parameters.
 
-        Perform frame-by-frame segmentation on a video.
+            Parameters
+            ----------
+            t : int
+                The frame index to process.
+            mask_coord : numpy.ndarray, optional
+                Coordinates for the mask valid around a number of images.
 
-        This method processes a single frame of the video at time `t` to perform segmentation.
-        It uses various parameters stored in a dictionary and may optionally use additional frames a
-        round the current frame to handle drift correction.
-
-        Args:
-            t (int): The time index of the frame in the video to perform segmentation on.
-            mask_coord (array-like, optional): The coordinates of a mask used to handle drift correction.
-
-        Returns:
-            OneImageAnalysis: An object containing the analysis and segmentation results of the frame.
+            Returns
+            -------
+            analysisi : OneImageAnalysis
+                An instance of `OneImageAnalysis` with segmentation results.
 
         """
         contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
@@ -756,20 +653,27 @@ class MotionAnalysis:
 
     def lum_value_segmentation(self, converted_video: NDArray, do_threshold_segmentation: bool) -> Tuple[NDArray, NDArray]:
         """
-        Compute the segmentation of a video based on luminosity values.
+        Perform segmentation based on luminosity values from a video.
 
-        Args:
-            converted_video (np.ndarray): The input video data in numpy array format.
-            do_threshold_segmentation (bool): Flag indicating whether to perform
-                threshold segmentation.
+        Parameters
+        ----------
+        converted_video : NDArray
+            The input video data in a NumPy array format.
+        do_threshold_segmentation : bool
+            Flag to determine whether threshold segmentation should be applied.
 
-        Returns:
-            tuple: A tuple containing two elements:
-                - luminosity_segmentation (np.ndarray or None): The computed
-                  segmentation based on luminosity values.
-                - l_threshold_over_time (np.ndarray): The luminosity threshold
-                  over time.
+        Returns
+        -------
+        Tuple[NDArray, NDArray]
+            A tuple containing two NumPy arrays:
+            - The first array is the luminosity segmentation of the video.
+            - The second array represents the luminosity threshold over time.
 
+        Notes
+        -----
+        This function operates under the assumption that there is sufficient motion in the video data.
+        If no valid thresholds are found for segmentation, the function returns None for
+        `luminosity_segmentation`.
         """
         shape_motion_failed: bool = False
         if self.vars['lighter_background']:
@@ -846,13 +750,34 @@ class MotionAnalysis:
 
     def smooth_pixel_slopes(self, converted_video: NDArray) -> NDArray:
         """
-        Smooth the pixel slopes of a greyscale video using convolution.
+        Apply smoothing to pixel slopes in a video by convolving with a moving average kernel.
 
-        Args:
-            converted_video (numpy.ndarray): The video data to be smoothed.
+        Parameters
+        ----------
+        converted_video : NDArray
+            The input video array to be smoothed.
 
-        Returns:
-            numpy.ndarray: The smoothed video data.
+        Returns
+        -------
+        NDArray
+            Smoothed video array with pixel slopes averaged using a moving average kernel.
+
+        Raises
+        ------
+        MemoryError
+            If there is not enough RAM available to perform the smoothing operation.
+
+        Notes
+        -----
+        This function applies a moving average kernel to each pixel across the frames of
+        the input video. The smoothing operation can be repeated based on user-defined settings.
+        The precision of the output array is controlled by a flag that determines whether to
+        save memory at the cost of accuracy.
+
+        Examples
+        --------
+        >>> smoothed = smooth_pixel_slopes(converted_video)
+        >>> print(smoothed.shape)  # Expected output will vary depending on the input video shape
         """
         try:
             if self.vars['lose_accuracy_to_save_memory']:
@@ -892,19 +817,27 @@ class MotionAnalysis:
 
     def lum_slope_segmentation(self, converted_video: NDArray) -> NDArray:
         """
-        Segment the video based on luminance slope.
+        Perform lum slope segmentation on the given video.
 
-        Args:
-            converted_video (NDArray): The input video data in a numpy array format.
+        Parameters
+        ----------
+        converted_video : NDArray
+            The input video array for segmentation processing.
 
-        Returns:
-            NDArray: A binary segmentation mask indicating the segmented regions.
+        Returns
+        -------
+        NDArray
+            Segmented gradient array of the video. If segmentation fails,
+            returns `None` for the corresponding frames.
 
-        Args/Parameters:
-            converted_video (NDArray): The input video data in a numpy array format.
+        Notes
+        -----
+        This function may consume significant memory and adjusts
+        data types (float16 or float64) based on available RAM.
 
-        Returns:
-            NDArray: A binary segmentation mask indicating the segmented regions.
+        Examples
+        --------
+        >>> result = lum_slope_segmentation(converted_video)
         """
         shape_motion_failed : bool = False
         gradient_segmentation = np.zeros(self.dims, np.uint8)
@@ -1000,13 +933,11 @@ class MotionAnalysis:
 
     def update_ring_width(self):
         """
-        A method to update the ring width for an ellipse by ensuring that the pixel
-        ring depth is odd and greater than 3.
 
-        Attributes:
-            self.pixel_ring_depth (int): The depth of the pixel ring.
-            self.vars (dict): Dictionary containing variables like detection_range_factor.
+        Update the `pixel_ring_depth` and create an erodila disk.
 
+        This method ensures that the pixel ring depth is odd and at least 3,
+        then creates an erodila disk of that size.
         """
         # Make sure that self.pixels_depths are odd and greater than 3
         if self.pixel_ring_depth <= 3:
@@ -1019,26 +950,20 @@ class MotionAnalysis:
     def initialize_post_processing(self):
         """
 
-        Initialize post-processing for arena data.
+        Initialize post-processing for video analysis.
 
-        This method initializes several internal states and prepares the environment
-        for subsequent processing steps. It involves setting up binary masks,
-        handling different origin states, computing surface areas, and optionally
-        correcting errors around initial shapes or preventing fast growth near the periphery.
+        This function initializes various parameters and prepares the binary
+        representation used in post-processing of video data. It logs information about
+        the settings, handles initial origin states, sets up segmentation data,
+        calculates surface areas, and optionally corrects errors around the initial
+        shape or prevents fast growth near the periphery.
 
-        Attributes:
-            binary (numpy.ndarray): A 3D array representing the binary state of the arena.
-            covering_intensity (numpy.ndarray): A 2D array to store intensity values for
-                covering pixels.
-            segmentation (numpy.ndarray): A 3D array to store segmentation masks for each frame.
-            mean_distance_per_frame (None): Placeholder for mean distance per frame computation.
-            surfarea (numpy.ndarray): A 1D array to store surface area values for each frame.
-            gravity_field (numpy.ndarray): A 2D array representing the gravity field based
-                on inverted distance transform.
-            rays (numpy.ndarray): A 2D array representing rays for error correction around initial shape.
-            sun (numpy.ndarray): A 2D array representing the central point for rays in error correction.
-            holes (numpy.ndarray): A 2D array to store hole data for error correction.
-            near_periphery (numpy.ndarray): A 2D array to mark pixels near the periphery of the arena.
+        Notes
+        -----
+        This function performs several initialization steps and logs relevant information,
+        including handling different origin states, updating segmentation data, and
+        calculating the gravity field based on binary representation.
+
         """
         ## Initialization
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
@@ -1103,16 +1028,21 @@ class MotionAnalysis:
 
     def update_shape(self, show_seg: bool):
         """
-        Update the shape of detected objects in a video frame by analyzing segmentation data and applying morphological operations.
+        Update the shape of detected objects in the current frame by analyzing
+        segmentation potentials and applying morphological operations.
 
-        This method processes the segmentation data to update the shape of detected objects in the current video frame.
-        It involves several steps such as filtering potential pixels, handling noisy images, dilating and eroding shapes,
-        and adding distant shapes.
-        Additionally, it calculates the mean distance covered per frame, corrects for wrong disconnections,
-        and corrects for errors around the initial shape.
+        Parameters
+        ----------
+        show_seg : bool
+            Flag indicating whether to display segmentation results.
 
-        Args:
-            show_seg (bool): A flag to indicate whether segmentation should be displayed.
+        Notes
+        -----
+        This function performs several operations to update the shape of detected objects:
+        - Analyzes segmentation potentials from previous frames.
+        - Applies morphological operations to refine the shape.
+        - Updates internal state variables such as `binary` and `covering_intensity`.
+
         """
         # Get from gradients, a 2D matrix of potentially covered pixels
         # I/ dilate the shape made with covered pixels to assess for covering
