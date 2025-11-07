@@ -3,7 +3,7 @@
 This script contains all unit tests of the progressively add distant shapes script
 """
 import unittest
-from tests._base import CellectsUnitTest
+from tests._base import CellectsUnitTest, binary_video_test
 from cellects.image_analysis.progressively_add_distant_shapes import *
 from cellects.image_analysis.morphological_operations import *
 
@@ -23,40 +23,7 @@ class TestProgressivelyAddDistantShapes(CellectsUnitTest):
                                             [1, 0, 0],
                                             [0, 0, 2]], dtype=np.uint8)
         self.pads1 = ProgressivelyAddDistantShapes(self.new_potentials, self.previous_shape, max_distance=3)
-        self.binary = np.zeros((6, 10, 10), dtype=np.uint8)
-        self.binary[0, :5, :5] = rhombus_55
-        self.binary[1, :6, :6] = Ellipse((6, 6)).create()
-        self.binary[2, :7, :7] = Ellipse((7, 7)).create()
-        self.binary[3, :, :] = np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                                    [0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-                                    [1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                                    [0, 0, 1, 1, 1, 0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
-        self.binary[4, :, :] = np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                                    [0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-                                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                                    [0, 0, 1, 1, 1, 0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=np.uint8)
-        self.binary[5, :, :] = np.array([[0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                                    [0, 0, 1, 1, 1, 1, 1, 1, 1, 0],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                                    [1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                                    [0, 1, 1, 1, 1, 0, 0, 0, 1, 1],
-                                    [0, 1, 1, 1, 1, 0, 0, 1, 1, 1],
-                                    [0, 0, 1, 1, 1, 0, 0, 1, 1, 0]], dtype=np.uint8)
+        self.binary = binary_video_test
         self.expected_connection = np.array([[0, 0, 0, 0, 1, 1, 0, 0, 0, 0],
                                     [0, 0, 1, 1, 1, 1, 1, 1, 1, 0],
                                     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1],

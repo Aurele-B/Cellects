@@ -28,13 +28,65 @@ from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.image_analysis.morphological_operations import Ellipse, keep_one_connected_component
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
-from cellects.core.motion_analysis import MotionAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class
 
 
 class ProgramOrganizer:
+    """
+    Organizes and manages variables, configuration settings, and processing workflows for motion analysis in a Cellects project.
+
+    This class maintains global state and analysis-specific data structures, handles file operations,
+    processes image/video inputs, and generates output tables. It provides methods to load/save configurations,
+    segment images, track objects across frames, and export results with metadata.
+
+    Attributes
+    ----------
+    one_arena_done : bool
+        Flag indicating whether a single arena has been processed.
+    reduce_image_dim : bool
+        Whether image dimensions should be reduced (e.g., from color to grayscale).
+    first_exp_ready_to_run : bool
+        Indicates if the initial experiment setup is complete and ready for execution.
+    data_to_save : dict of {str: bool}
+        Specifies which data types (first image, coordinates, EXIF) require saving.
+    videos : OneVideoPerBlob or None
+        Video processing container instance.
+    motion : MotionAnalysis or None
+        Motion tracking and analysis module.
+    all : dict
+        Global configuration parameters for the entire workflow.
+    vars : dict
+        Analysis-specific variables used by `MotionAnalysis`.
+    first_im, last_im : np.ndarray or None
+        First and last images of the dataset for preprocessing.
+    data_list : list of str
+        List of video/image file paths in the working directory.
+    computed_video_options : np.ndarray of bool
+        Flags indicating which video processing options have been applied.
+    one_row_per_arena, one_row_per_frame, one_row_per_oscillating_cluster : pd.DataFrame or None
+        Result tables for different levels of analysis (per arena, per frame, and oscillating clusters).
+
+    Methods:
+    --------
+    save_variable_dict() : Save configuration dictionaries to file.
+    load_variable_dict() : Load saved configuration or initialize defaults.
+    look_for_data() : Discover video/image files in the working directory.
+    update_folder_id(...) : Update folder-specific metadata based on file structure.
+    ...
+
+    Examples
+    --------
+    >>> organizer = ProgramOrganizer()
+    >>> # Initialize configuration from default or existing file
+    >>> organizer.load_variable_dict()
+    >>> # Locate data files and process first image
+    >>> organizer.look_for_data()
+    >>> organizer.get_first_image()
+    >>> # Perform initial segmentation for analysis
+    >>> organizer.fast_image_segmentation(is_first_image=True)
+    """
     def __init__(self):
         """
             This class stores all variables required for analysis as well as
@@ -52,7 +104,6 @@ class ProgramOrganizer:
             os.remove(Path(CELLECTS_DIR.parent / 'PickleRick.pkl'))
         if os.path.isfile(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl')):
             os.remove(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl'))
-        # self.delineation_number = 0
         self.one_arena_done: bool = False
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
@@ -77,9 +128,26 @@ class ProgramOrganizer:
         self.one_row_per_arena = None
         self.one_row_per_frame = None
         self.one_row_per_oscillating_cluster = None
-        # self.fractal_box_sizes = None
 
     def save_variable_dict(self):
+        """
+        Saves the configuration dictionaries (`self.all` and `self.vars`) to a pickle file.
+
+        If bio_mask or back_mask are not required for all folders, they are excluded from the saved data.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        RuntimeError
+            If an unexpected error occurs during file writing (logged but suppressed).
+
+        Notes
+        -----
+        This method is used to preserve state between Cellects sessions or restart scenarios.
+        """
         logging.info("Save the parameters dictionaries in the Cellects folder")
         self.all['vars'] = self.vars
         all_vars = deepcopy(self.all)
@@ -90,18 +158,21 @@ class ProgramOrganizer:
         pickle_rick.write_file(all_vars, ALL_VARS_PKL_FILE)
 
     def load_variable_dict(self):
-        # loading_succeed: bool = False
-        # if os.path.isfile('Data to run Cellects quickly.pkl'):
-        #     try:
-        #         with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #             data_to_run_cellects_quickly = pickle.load(fileopen)
-        #         if 'vars' in data_to_run_cellects_quickly:
-        #             self.vars = data_to_run_cellects_quickly['vars']
-        #             loading_succeed = True
-        #             logging.info("Success to load vars from the data folder")
-        #     except EOFError:
-        #         logging.error("Pickle error: will try to load vars from the Cellects folder")
+        """
+        Loads configuration dictionaries from a pickle file if available, otherwise initializes defaults.
 
+        Tries to load saved parameters. If the file doesn't exist or loading fails due to corruption,
+        default values are used instead (logging relevant warnings).
+
+        Raises
+        ------
+        FileNotFoundError
+            If no valid configuration file is found and default initialization fails.
+
+        Notes
+        -----
+        This method ensures robust operation by handling missing or corrupted configuration files gracefully.
+        """
         if os.path.isfile(ALL_VARS_PKL_FILE):
             logging.info("Load the parameters from all_vars.pkl in the config of the Cellects folder")
             try:  # NEW
@@ -124,101 +195,33 @@ class ProgramOrganizer:
         if self.all['cores'] == 1:
             self.all['cores'] = os.cpu_count() - 1
 
-    def analyze_without_gui(self):
-        # Eventually load "all" dir before calling this function
-        # self = po
-        # if len(self.all['folder_list']) == 0:
-        #     folder_list = "/"
-        # else:
-        #     folder_list = self.all['folder_list']
-        # for exp_i, folder_name in enumerate(folder_list):
-        #     # exp_i = 0 ; folder_name = folder_list
-
-        self=ProgramOrganizer()
-        self.load_variable_dict()
-        # dd = DefaultDicts()
-        # self.all = dd.all
-        # self.vars = dd.vars
-        self.all['global_pathway'] = "/Users/Directory/Data/dossier1"
-        self.all['first_folder_sample_number'] = 6
-        # self.all['global_pathway'] = "D:\Directory\Data\Audrey\dosier1"
-        # self.all['first_folder_sample_number'] = 6
-        # self.all['radical'] = "IMG"
-        # self.all['extension'] = ".jpg"
-        # self.all['im_or_vid'] = 0
-        self.look_for_data()
-        self.load_data_to_run_cellects_quickly()
-        if not self.first_exp_ready_to_run:
-            self.get_first_image()
-            self.fast_image_segmentation(True)
-            # self.first_image.find_first_im_csc(sample_number=self.sample_number,
-            #                                    several_blob_per_arena=None,
-            #                                    spot_shape=None, spot_size=None,
-            #                                    kmeans_clust_nb=2,
-            #                                    biomask=None, backmask=None,
-            #                                    color_space_dictionaries=None,
-            #                                    carefully=True)
-            self.cropping(is_first_image=True)
-            self.get_average_pixel_size()
-            self.delineate_each_arena()
-            self.get_background_to_subtract()
-            self.get_origins_and_backgrounds_lists()
-            self.get_last_image()
-            self.fast_image_segmentation(is_first_image=False)
-            self.find_if_lighter_background()
-            self.extract_exif()
-        self.update_output_list()
-        look_for_existing_videos = insensitive_glob('ind_' + '*' + '.npy')
-        there_already_are_videos = len(look_for_existing_videos) == len(self.vars['analyzed_individuals'])
-        logging.info(
-            f"{len(look_for_existing_videos)} .npy video files found for {len(self.vars['analyzed_individuals'])} arenas to analyze")
-        do_write_videos = not there_already_are_videos or (
-                there_already_are_videos and self.all['overwrite_unaltered_videos'])
-        if do_write_videos:
-            self.videos = OneVideoPerBlob(self.first_image, self.starting_blob_hsize_in_pixels, self.all['raw_images'])
-            self.videos.left = self.left
-            self.videos.right = self.right
-            self.videos.top = self.top
-            self.videos.bot = self.bot
-            self.videos.first_image.shape_number = self.sample_number
-            self.videos.write_videos_as_np_arrays(
-                self.data_list, self.vars['min_ram_free'], not self.vars['already_greyscale'], self.reduce_image_dim)
-        self.instantiate_tables()
-
-        i=1
-        show_seg=True
-
-        if os.path.isfile(f"coord_specimen{i + 1}_t720_y1475_x1477.npy"):
-            binary_coord = np.load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
-            l = [i, i + 1, self.vars, False, False, show_seg, None]
-            sav = self
-            self = MotionAnalysis(l)
-            self.binary = np.zeros((720, 1475, 1477), dtype=np.uint8)
-            self.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
-        else:
-            l = [i, i + 1, self.vars, True, False, show_seg, None]
-            sav = self
-            self = MotionAnalysis(l)
-        self.get_descriptors_from_binary()
-        self.detect_growth_transitions()
-        # self.networks_detection(show_seg)
-        self.study_cytoscillations(show_seg)
-
-        # for i, arena in enumerate(self.vars['analyzed_individuals']):
-        #     l = [i, i + 1, self.vars, True, False, False, None]
-        #     analysis_i = MotionAnalysis(l)
-        #     self.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
-        #                                                              analysis_i.efficiency_test_2)
-        # self.save_tables()
-        #
-        # self = MotionAnalysis(l)
-        # l = [5, 6, self.vars, True, False, False, None]
-        # sav=self
-        # self.get_descriptors_from_binary()
-        # self.detect_growth_transitions()
-
     def look_for_data(self):
-        # global_pathway = 'I:\Directory\Tracking_data\generalization_and_potentiation\drop_nak1'
+        """
+        Discovers all relevant video/image data in the working directory.
+
+        Uses natural sorting to handle filenames with numeric suffixes. Validates file consistency and logs warnings
+        if filename patterns are inconsistent across folders.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If no files match the specified naming convention.
+
+        Notes
+        -----
+        This method assumes all data files follow a predictable pattern with numeric extensions. Use caution in
+        unpredictable directory structures where this may fail silently or produce incorrect results.
+
+        Examples
+        --------
+        >>> organizer.look_for_data()
+        >>> print(organizer.data_list)
+        ['/path/to/video1.avi', '/path/to/video2.avi']
+        """
         os.chdir(Path(self.all['global_pathway']))
         logging.info(f"Dir: {self.all['global_pathway']}")
         self.data_list = insensitive_glob(
@@ -276,21 +279,13 @@ class ProgramOrganizer:
             if data_to_run_cellects_quickly is None:
                 data_to_run_cellects_quickly = {}
 
-            # try:
-            #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-            #         data_to_run_cellects_quickly = pickle.load(fileopen)
-            # except pickle.UnpicklingError:
-            #     logging.error("Pickle error")
-            #     data_to_run_cellects_quickly = {}
             if ('validated_shapes' in data_to_run_cellects_quickly) and ('coordinates' in data_to_run_cellects_quickly) and ('all' in data_to_run_cellects_quickly):
                 logging.info("Success to load Data to run Cellects quickly.pkl from the user chosen directory")
                 self.all = data_to_run_cellects_quickly['all']
                 # If you want to add a new variable, first run an updated version of all_vars_dict,
                 # then put a breakpoint here and run the following + self.save_data_to_run_cellects_quickly() :
-                # self.all['vars']['lose_accuracy_to_save_memory'] = False
                 self.vars = self.all['vars']
                 self.update_data()
-                print(self.vars['convert_for_motion'])
                 folder_changed = False
                 if current_global_pathway != self.all['global_pathway']:
                     folder_changed = True
@@ -319,8 +314,6 @@ class ProgramOrganizer:
                     self.last_image.automatically_crop(self.first_image.crop_coord)
                 else:
                     self.first_image.crop_coord = None
-                # self.cropping(True)
-                # self.cropping(False)
                 self.first_image.validated_shapes = data_to_run_cellects_quickly['validated_shapes']
                 self.first_image.im_combinations = []
                 self.current_combination_id = 0
@@ -330,7 +323,6 @@ class ProgramOrganizer:
                 self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
                 
                 self.first_exp_ready_to_run = True
-                print(f"Overwrite is {self.all['overwrite_unaltered_videos']}")
                 if self.vars['subtract_background'] and len(self.vars['background_list']) == 0:
                     self.first_exp_ready_to_run = False
             else:
@@ -374,12 +366,6 @@ class ProgramOrganizer:
             if data_to_run_cellects_quickly is None:
                 logging.error("Failed to load Data to run Cellects quickly.pkl before update. Abort saving.")
 
-            # try:
-            #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-            #         data_to_run_cellects_quickly = pickle.load(fileopen)
-            # except pickle.UnpicklingError:
-            #     logging.error("Pickle error")
-            #     data_to_run_cellects_quickly = {}
         else:
             if new_one_if_does_not_exist:
                 logging.info("Create Data to run Cellects quickly.pkl in the user chosen directory")
@@ -395,14 +381,8 @@ class ProgramOrganizer:
                 self.all['overwrite_unaltered_videos'] = True
             if self.data_to_save['exif']:
                 self.vars['exif'] = self.extract_exif()
-                # data_to_run_cellects_quickly['exif'] = self.extract_exif()
-            # if self.data_to_save['background_and_origin_list']:
-            #     logging.info(f"Origin shape is {self.vars['origin_list'][0].shape}")
-            #     data_to_run_cellects_quickly['background_and_origin_list'] = [self.vars['origin_list'], self.vars['background_list'], self.vars['background_list2']]
             self.all['vars'] = self.vars
-            print(self.vars['convert_for_motion'])
             data_to_run_cellects_quickly['all'] = self.all
-            # data_to_run_cellects_quickly['all']['vars']['origin_state'] = "fluctuating"
             pickle_rick = PickleRick()
             pickle_rick.write_file(data_to_run_cellects_quickly, 'Data to run Cellects quickly.pkl')
 
@@ -447,23 +427,6 @@ class ProgramOrganizer:
                 timings = timings / 60
         return timings
 
-        #
-        # if not os.path.isfile("timings.csv") or self.all['overwrite_cellects_data']:
-        #     if self.vars['time_step'] == 0:
-        #         if self.all['im_or_vid'] == 1:
-        #             savetxt("timings.csv", np.arange(self.vars['dims'][0]), fmt='%10d', delimiter=',')
-        #         else:
-        #             if sys.platform.startswith('win'):
-        #                 pathway = os.getcwd() + '\\'
-        #             else:
-        #                 pathway = os.getcwd() + '/'
-        #             timings = extract_time(self.data_list, pathway, self.all['raw_images'])
-        #             timings = timings - timings[0]
-        #             timings = timings / 60
-        #     else:
-        #         timings = np.arange(0, self.vars['dims'][0] * self.vars['time_step'], self.vars['time_step'])
-        #     savetxt("timings.csv", timings, fmt='%1.2f', delimiter=',')
-
     def get_first_image(self):
         logging.info("Load first image")
         just_read_image = self.first_im is not None
@@ -490,8 +453,6 @@ class ProgramOrganizer:
                 counter = 0
                 while cap.isOpened() and (counter < self.all['first_detection_frame']):
                     ret, frame = cap.read()
-                    # if self.reduce_image_dim:
-                    #     frame = frame[:, :, 0]
                     self.analysis_instance[counter, ...] = frame
                     counter += 1
 
@@ -504,10 +465,8 @@ class ProgramOrganizer:
             self.vars['img_number'] = len(self.data_list)
             self.all['raw_images'] = is_raw_image(self.data_list[0])
             self.first_im = readim(self.data_list[self.all['first_detection_frame'] - 1], self.all['raw_images'])
-            # if self.reduce_image_dim:
-            #     self.first_im = self.first_im[:, :, 0]
             self.vars['dims'] = [self.vars['img_number'], self.first_im.shape[0], self.first_im.shape[1]]
-            # self.first_im = readim(self.data_list[0], self.all['raw_images'])
+
         if len(self.first_im.shape) == 3:
             if np.all(np.equal(self.first_im[:, :, 0], self.first_im[:, :, 1])) and np.all(
                     np.equal(self.first_im[:, :, 1], self.first_im[:, :, 2])):
@@ -538,23 +497,53 @@ class ProgramOrganizer:
                 if self.reduce_image_dim:
                     frame = frame[:, :, 0]
                 self.analysis_instance[-1, ...] = frame
-                # if counter == self.vars['img_number'] - 1:
-                #     if self.reduce_image_dim:
-                #         frame = frame[:, :, 0]
-                #     break
                 counter += 1
             self.last_im = frame
             cap.release()
         else:
-            # self.last_im = readim(self.data_list[-1], self.all['raw_images'])
             is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
             self.last_im = read_and_rotate(self.data_list[-1], self.first_im, self.all['raw_images'], is_landscape)
             if self.reduce_image_dim:
                 self.last_im = self.last_im[:, :, 0]
         self.last_image = OneImageAnalysis(self.last_im)
 
-    # self.message_when_thread_finished.emit("")
     def fast_image_segmentation(self, is_first_image, biomask=None, backmask=None, spot_size=None):
+        """
+        Segments input images to detect objects or cells for motion analysis.
+
+        Applies color space conversion and thresholding strategies based on configuration.
+        If `is_first_image`, it also handles initial drift correction logic if enabled.
+
+        Parameters
+        ----------
+        is_first_image : bool
+            Indicates whether the image corresponds to the first frame in a sequence.
+        biomask : np.ndarray, optional
+            Binary mask specifying regions of interest for biological features.
+        backmask : np.ndarray, optional
+            Binary mask defining background areas to exclude from analysis.
+        spot_size : int or None
+            Expected size threshold for object detection (in pixels).
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If segmentation fails due to invalid input dimensions or corrupted images.
+
+        Notes
+        -----
+        This method modifies internal state (`self.first_image`, `self.last_image`) directly and should be called after
+        loading the first/last image with `get_first_image()` / `get_last_image()`.
+
+        Examples
+        --------
+        >>> organizer.get_first_image()
+        >>> organizer.fast_image_segmentation(is_first_image=True)
+        """
         if is_first_image:
             self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                  self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
@@ -599,12 +588,8 @@ class ProgramOrganizer:
             self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
             self.first_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.first_image.image).astype(np.uint8)
             self.first_image.im_combinations[self.current_combination_id]['shape_number'] = process_i.shape_number
-            # self.first_image.generate_color_space_combination(self.vars['convert_for_origin'], subtract_background)
+
         else:
-            # self.last_image.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
-            # if self.vars['drift_already_corrected']:
-            #     drift_correction, drift_correction2 = self.last_image.adjust_to_drift_correction()
-            #     self.last_image.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'])
             self.cropping(is_first_image=False)
             print(self.vars["filter_spec"])
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
@@ -621,14 +606,6 @@ class ProgramOrganizer:
             self.last_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_motion']
             self.last_image.im_combinations[self.current_combination_id]['binary_image'] = self.last_image.binary_image
             self.last_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.last_image.image).astype(np.uint8)
-
-            # self.last_image.generate_color_space_combination(self.vars['convert_for_motion'], subtract_background)
-            # if self.all["more_than_two_colors"]:
-            #    self.last_image.kmeans(self.vars["color_number"])
-            # else:
-            # self.last_image.thresholding()
-            # if self.all['are_gravity_centers_moving'] != 1:
-            #     self.delineate_each_arena()
 
     def cropping(self, is_first_image):
         if not self.vars['drift_already_corrected']:
@@ -648,26 +625,6 @@ class ProgramOrganizer:
                         else:
                             self.first_image.get_crop_coordinates()
 
-
-                        # try:
-                        #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-                        #         data_to_run_cellects_quickly = pickle.load(fileopen)
-                        #         if 'coordinates' in data_to_run_cellects_quickly:
-                        #             logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
-                        #             (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                        #                 data_to_run_cellects_quickly['coordinates']
-                        #             self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                        #         else:
-                        #             self.first_image.get_crop_coordinates()
-                        # except pickle.UnpicklingError:
-                        #     logging.error("Pickle error")
-                        #     self.first_image.get_crop_coordinates()
-
-
-                    # if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('coordinates.pkl')):
-                    #     with open('coordinates.pkl', 'rb') as fileopen:
-                    #         (ccy1, ccy2, ccx1, ccx2, self.videos.left, self.videos.right, self.videos.top,
-                    #          self.videos.bot) = pickle.load(fileopen)
                     else:
                         self.first_image.get_crop_coordinates()
                     if self.all['automatically_crop']:
@@ -677,12 +634,6 @@ class ProgramOrganizer:
             else:
                 if not self.last_image.cropped and self.all['automatically_crop']:
                     self.last_image.automatically_crop(self.first_image.crop_coord)
-        # if self.all['automatically_crop'] and not self.vars['drift_already_corrected']:
-        #     if is_first_image:
-        #         self.first_image.get_crop_coordinates()
-        #         self.first_image.automatically_crop(self.first_image.crop_coord)
-        #     else:
-        #         self.last_image.automatically_crop(self.first_image.crop_coord)
 
     def get_average_pixel_size(self):
         logging.info("Get average pixel size")
@@ -711,7 +662,6 @@ class ProgramOrganizer:
         if self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = 10
         else:
-            # if self.vars['origin_state'] != "invisible":
             self.vars['first_move_threshold'] = np.round(
                 self.all['first_move_threshold_in_mm²'] /
                 self.vars['average_pixel_size']).astype(np.uint8)
@@ -722,9 +672,6 @@ class ProgramOrganizer:
             self.first_image,
             self.starting_blob_hsize_in_pixels,
             self.all['raw_images'])
-        # self.delineation_number += 1
-        # if self.delineation_number > 1:
-        #     print('stophere')
         analysis_status = {"continue": True, "message": ""}
         if (self.sample_number > 1 and not self.vars['several_blob_per_arena']):
             compute_get_bb: bool = True
@@ -742,32 +689,6 @@ class ProgramOrganizer:
                                 self.first_image.image.shape[1] == (ccx2 - ccx1)):  # maybe useless now
                             logging.info("Get the coordinates of all arenas from Data to run Cellects quickly.pkl")
                             compute_get_bb = False
-
-
-                # try:
-                #     with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-                #         data_to_run_cellects_quickly = pickle.load(fileopen)
-                # except pickle.UnpicklingError:
-                #     logging.error("Pickle error")
-                #     data_to_run_cellects_quickly = {}
-                # if 'coordinates' in data_to_run_cellects_quickly:
-                #     (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                #         data_to_run_cellects_quickly['coordinates']
-                #     self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                #     if (self.first_image.image.shape[0] == (ccy2 - ccy1)) and (
-                #             self.first_image.image.shape[1] == (ccx2 - ccx1)):  # maybe useless now
-                #         logging.info("Get the coordinates of all arenas from Data to run Cellects quickly.pkl")
-                #         compute_get_bb = False
-
-            # if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('coordinates.pkl')):
-            #     with open('coordinates.pkl', 'rb') as fileopen:
-            #         (ccy1, ccy2, ccx1, ccx2, self.videos.left, self.videos.right, self.videos.top, self.videos.bot) = pickle.load(fileopen)
-
-            # if (not self.all['overwrite_unaltered_videos'] and
-            #         os.path.isfile('coordinates.pkl')):
-            #     with open('coordinates.pkl', 'rb') as fileopen:
-            #         (vertical_shape, horizontal_shape, self.videos.left, self.videos.right, self.videos.top,
-            #             self.videos.bot) = pickle.load(fileopen)
 
             if compute_get_bb:
                 if self.all['im_or_vid'] == 1:
@@ -806,24 +727,16 @@ class ProgramOrganizer:
         if self.videos.not_analyzed_individuals is not None:
             self.vars['analyzed_individuals'] = np.delete(self.vars['analyzed_individuals'],
                                                        self.videos.not_analyzed_individuals - 1)
-        # logging.info(self.top)
+
         return analysis_status
 
     def get_background_to_subtract(self):
-        """
-            Repenser le moment où ça arrive et trouver pourquoi ça marche pas
-        """
-        # self.vars['subtract_background'] = False
         if self.vars['subtract_background']:
             self.first_image.generate_subtract_background(self.vars['convert_for_motion'])
 
     def get_origins_and_backgrounds_lists(self):
         logging.info("Create origins and background lists")
         if self.top is None:
-            # self.top = [1]
-            # self.bot = [self.first_im.shape[0] - 2]
-            # self.left = [1]
-            # self.right = [self.first_im.shape[1] - 2]
             self.top = np.array([1])
             self.bot = np.array([self.first_im.shape[0] - 2])
             self.left = np.array([1])
@@ -861,10 +774,6 @@ class ProgramOrganizer:
                 self.vars['background_list'].append(image.image)
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     self.vars['background_list2'].append(image.image2)
-
-            # self.vars['origins_list'].append(self.first_image.validated_shapes[self.top[arena]:(self.bot[arena]),
-            #                                  self.left[arena]:(self.right[arena])])
-            #
             if self.vars['several_blob_per_arena']:
                 image.validated_shapes = image.binary_image
             else:
@@ -873,14 +782,10 @@ class ProgramOrganizer:
             self.vars['origin_list'].append(image.validated_shapes)
 
     def choose_color_space_combination(self):
-        # self = po
-        # 2) Represent the segmentation using a particular color space combination
         if self.all['are_gravity_centers_moving'] != 1:
             analysis_status = self.delineate_each_arena()
-        # self.fi.automatically_crop(self.first_image.crop_coord)
         self.last_image = OneImageAnalysis(self.last_im)
         self.last_image.automatically_crop(self.videos.first_image.crop_coord)
-        # csc = ColorSpaceCombination(self.last_image.image)
 
         concomp_nb = [self.sample_number, self.sample_number * 50]
         if self.all['are_zigzag'] == "columns":
@@ -905,20 +810,9 @@ class ProgramOrganizer:
             out_of_arenas = None
         ref_image = self.videos.first_image.validated_shapes
         self.last_image.find_potential_channels(concomp_nb, total_surfarea, max_shape_size, out_of_arenas, ref_image)
-        # csc.find_potential_channels(concomp_nb, total_surfarea, max_shape_size, out_of_arenas, ref_image)
-        # csc.find_potential_channels(concomp_nb, total_surfarea, max_shape_size, out_of_arenas, ref_image, self.first_image.subtract_background)
         self.vars['convert_for_motion'] = self.last_image.channel_combination
 
         self.fast_image_segmentation(False)
-        # if self.vars['subtract_background']:
-        #     csc = ColorSpaceCombination(self.last_image.image)
-        #     csc.generate(self.vars['convert_for_motion'], self.first_image.subtract_background)
-        # if self.all["more_than_two_colors"]:
-        #     csc.kmeans(self.vars["color_number"])
-        # else:
-        #     csc.thresholding()
-        # self.last_image.image = csc.image
-        # self.last_image.binary_image = csc.binary_image
 
     def untype_csc_dict(self):
         new_convert_for_origin = {}
@@ -942,11 +836,6 @@ class ProgramOrganizer:
         self.vars['convert_for_motion2'] = {}
 
     def type_csc_dict(self):
-        # self.vars['convert_for_motion']['logical'] = 'And'
-        # self.vars['convert_for_motion']['hsv'] = np.array((0, 0, 1))
-        # self.vars['convert_for_motion']['logical'] = 'And'
-        # self.vars['convert_for_motion']['lab2'] = np.array((0, 0, 1))
-
         new_convert_for_origin = TDict()
         self.vars['convert_for_origin2'] = TDict()
         self.vars['logical_between_csc_for_origin'] = None
@@ -974,7 +863,7 @@ class ProgramOrganizer:
         self.vars['convert_for_motion'] = new_convert_for_motion
 
         if self.vars['color_number'] > 2:
-            self.vars['bio_label'] = None#self.first_image.bio_label
+            self.vars['bio_label'] = None
             if self.vars['convert_for_motion']['logical']  != 'None':
                 self.vars['bio_label2'] = None
 
@@ -1037,8 +926,6 @@ class ProgramOrganizer:
                     self.vars['luminosity_threshold'] = 127
 
     def load_one_arena(self, arena):
-        #self.delineate_each_arena()
-        #self.choose_color_space_combination()
         add_to_c = 1
         self.one_arena_done = True
         i = np.nonzero(self.vars['analyzed_individuals'] == arena)[0][0]
@@ -1067,9 +954,6 @@ class ProgramOrganizer:
         for image_i, image_name in enumerate(self.data_list):
             img = read_and_rotate(image_name, prev_img, self.all['raw_images'], is_landscape, self.first_image.crop_coord)
             prev_img = deepcopy(img)
-            # if self.videos.first_image.crop_coord is not None:
-            #     img = img[self.videos.first_image.crop_coord[0]:self.videos.first_image.crop_coord[1],
-            #               self.videos.first_image.crop_coord[2]:self.videos.first_image.crop_coord[3], :]
             img = img[self.top[arena - 1]: (self.bot[arena - 1] + add_to_c),
                                                     self.left[arena - 1]: (self.right[arena - 1] + add_to_c), :]
 
@@ -1091,29 +975,9 @@ class ProgramOrganizer:
                 self.converted_video[image_i, ...] = greyscale_image
                 if self.vars['convert_for_motion']['logical'] != 'None':
                     self.converted_video2[image_i, ...] = greyscale_image2
-                # csc = OneImageAnalysis(img)
-                # else:
-                #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                # # self.converted_video[image_i, ...] = csc.image
-                # self.converted_video[image_i, ...] = csc.image
-                # if self.vars['convert_for_motion']['logical'] != 'None':
-                #     self.converted_video2[image_i, ...] = csc.image2
-
-        # write_video(self.visu, f"ind_{arena}{self.vars['videos_extension']}", is_color=True, fps=1)
 
     def update_output_list(self):
         self.vars['descriptors'] = {}
-        # self.vars['descriptors']['final_area'] = True  # [False, True, False]
-        # if self.vars['first_move_threshold'] is not None:
-        #     self.vars['descriptors']['first_move'] = True  # [False, True, False]
-
-        # if self.vars['iso_digi_analysis']:
-        #     self.vars['descriptors']['is_growth_isotropic'] = True  # [False, True, False]
-        #     self.vars['descriptors']['iso_digi_transi'] = True  # [False, True, False]
-
-        # if self.vars['oscilacyto_analysis']:
-        # self.vars['descriptors']['max_magnitude'] = True#[False, True, False]
-        # self.vars['descriptors']['frequency_of_max_magnitude'] = True#[False, True, False]
         for descriptor in self.all['descriptors'].keys():
             if descriptor == 'standard_deviation_xy':
                 self.vars['descriptors']['standard_deviation_x'] = self.all['descriptors'][descriptor]
@@ -1137,15 +1001,6 @@ class ProgramOrganizer:
         self.vars['descriptors']['vertices_number'] = self.vars['network_analysis']
         self.vars['descriptors']['edges_number'] = self.vars['network_analysis']
         self.vars['descriptors']['newly_explored_area'] = self.vars['do_fading']
-        """                             if self.vars['descriptors_means']:
-                    self.vars['output_list'] += [f'{descriptor}_mean']
-                    self.vars['output_list'] += [f'{descriptor}_std']
-                if self.vars['descriptors_regressions']:
-                    self.vars['output_list'] += [f"{descriptor}_reg_start"]
-                    self.vars['output_list'] += [f"{descriptor}_reg_end"]
-                    self.vars['output_list'] += [f'{descriptor}_slope']
-                    self.vars['output_list'] += [f'{descriptor}_intercept']
-        """
 
     def update_available_core_nb(self, image_bit_number=256, video_bit_number=140):# video_bit_number=176
         if self.vars['lose_accuracy_to_save_memory']:
@@ -1175,9 +1030,7 @@ class ProgramOrganizer:
         max_repeat_in_memory = (available_memory // necessary_memory).astype(np.uint16)
         if max_repeat_in_memory > 1:
             max_repeat_in_memory = np.max(((available_memory // (2 * necessary_memory)).astype(np.uint16), 1))
-        # if sys.platform.startswith('win'):
-        #     available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-        # else:
+
 
         self.cores = np.min((self.all['cores'], max_repeat_in_memory))
         if self.cores > self.sample_number:
@@ -1208,12 +1061,6 @@ class ProgramOrganizer:
         logging.info("Instantiate results tables and validation images")
         self.one_row_per_oscillating_cluster = None
         self.fractal_box_sizes = None
-        # if self.vars['oscilacyto_analysis']:
-        #     self.one_row_per_oscillating_cluster = pd.DataFrame(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
-        #                                                        'edge_distance'])
-        # if self.vars['fractal_analysis']:
-        #     self.fractal_box_sizes = pd.DataFrame(columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-
         if self.vars['already_greyscale']:
             if len(self.first_image.bgr.shape) == 2:
                 self.first_image.bgr = np.stack((self.first_image.bgr, self.first_image.bgr, self.first_image.bgr), axis=2).astype(np.uint8)
@@ -1239,6 +1086,33 @@ class ProgramOrganizer:
 
 
     def save_tables(self):
+        """
+        Exports analysis results to CSV files and saves visualization outputs.
+
+        Generates the following output:
+        - one_row_per_arena.csv, one_row_per_frame.csv : Tracking data per arena/frame.
+        - software_settings.csv : Full configuration settings for reproducibility.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        PermissionError
+            If any output file is already open in an external program (logged and re-raised).
+
+        Notes
+        -----
+        Ensure no exported CSV files are open while running this method to avoid permission errors. This
+        function will fail gracefully if the files cannot be overwritten.
+
+        Examples
+        --------
+        >>> organizer.save_tables()
+        Analysis efficiency, last image.JPG  # Output image saved in working directory
+        one_row_per_arena.csv               # Exported tracking table
+        """
         logging.info("Save results tables and validation images")
         if not self.vars['several_blob_per_arena']:
             try:
@@ -1287,8 +1161,6 @@ class ProgramOrganizer:
         cv2.imwrite(
             f"Analysis efficiency, {np.ceil(self.vars['img_number'] / 10).astype(np.uint64)}th image{extension}",
             self.first_image.bgr)
-        # self.save_analysis_parameters.to_csv("analysis_parameters.csv", sep=";")
-
         software_settings = deepcopy(self.vars)
         for key in ['descriptors', 'analyzed_individuals', 'exif', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             software_settings.pop(key, None)
@@ -1304,13 +1176,3 @@ class ProgramOrganizer:
             self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
 
 
-
-# if __name__ == "__main__":
-#     po = ProgramOrganizer()
-#     os.chdir(Path("D:\Directory\Data\Example\Example\Example"))
-#     # po.all['global_pathway'] = Path("C:/Users/APELab/Documents/Aurèle/Cellects/install/Installer_and_example/Example")
-#     po.load_variable_dict()
-#     po.all['global_pathway']
-#     po.load_data_to_run_cellects_quickly()
-#     po.all['global_pathway']
-#     po.save_data_to_run_cellects_quickly()

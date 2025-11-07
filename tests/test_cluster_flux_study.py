@@ -2,7 +2,7 @@
 """
 This script contains tests for ClusterFluxStudy class.
 """
-from tests._base import CellectsUnitTest
+from tests._base import CellectsUnitTest, patches_video
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
 from cellects.image_analysis.morphological_operations import image_borders
 import numpy as np
@@ -16,11 +16,9 @@ class TestClusterFluxStudy(CellectsUnitTest):
     def setUp(self):
         """Set up test fixtures."""
         # Typical dimensions for testing (2D image of size 100x100)
-        self.dims = (5, 10, 10)  # (channels, height, width)
-        self.video = np.random.choice([0, 1, 2], 500, p=[0.9, 0.05, 0.05]).reshape((5, 10, 10)).astype(np.uint8)
-        for t in range(self.dims[0]):
-            self.video[t, ...] = cv2.dilate(self.video[t, ...], np.ones((3, 3), dtype=np.uint8), iterations=2)
-        self.video[t, ...] = 0
+        self.dims = patches_video.shape # (channels, height, width)
+        self.video = patches_video
+        self.video[-1, ...] = 0
         self.video = np.random.randint(0, 2, (5, 10, 10), dtype=np.uint8)  # (channels, height, width)
         self.cluster_study = ClusterFluxStudy(self.dims)
         self.period_tracking = np.zeros(self.dims[1:], dtype=np.uint32)

@@ -4,10 +4,8 @@ Unit tests for morphological operations.
 """
 
 import unittest
-
 import numpy as np
-
-from tests._base import CellectsUnitTest
+from tests._base import CellectsUnitTest, several_arenas_bin_img
 from cellects.image_analysis.morphological_operations import *
 
 
@@ -632,17 +630,7 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         """Setup test fixtures, including a binary image and y-axis boundaries."""
         super().setUpClass()
 
-        cls.binary_image = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-                                          [0,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0],
-                                          [0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  0],
-                                          [0,  0,  1,  0,  0,  1,  1,  0,  1,  1,  0],
-                                          [0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
-                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-                                          [0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0],
-                                          [0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0],
-                                          [0,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0],
-                                          [0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0],
-                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]], dtype=np.uint8)
+        cls.binary_image = several_arenas_bin_img
         cls.y_boundaries = np.array([0,  1,  0,  0,  -1,  0,  1,  0,  0,  -1,  0], dtype=np.int8)
 
     def test_rank_from_top_to_bottom_from_left_to_right(self):
