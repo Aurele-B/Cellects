@@ -141,6 +141,66 @@ def translate_dict(old_dict: dict) -> Dict:
     return numba_dict
 
 
+def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict]:
+    """
+
+    Split a dictionary into two dictionaries based on specific criteria and return their keys.
+
+    Split the input dictionary `c_space_dict` into two dictionaries: one for items not
+    ending with '2' and another where the key is truncated by removing its last
+    character if it does end with '2'. Additionally, return the keys that have been
+    processed.
+
+    Parameters
+    ----------
+    c_space_dict : dict
+        The dictionary to be split. Expected keys are strings and values can be any type.
+
+    Returns
+    -------
+    first_dict : dict
+        Dictionary containing items from `c_space_dict` whose keys do not end with '2'.
+    second_dict : dict
+        Dictionary containing items from `c_space_dict` whose keys end with '2',
+        where the key is truncated by removing its last character.
+    c_spaces : list
+        List of keys from `c_space_dict` that have been processed.
+
+    Raises
+    ------
+    None
+
+    Notes
+    -----
+    No critical information to share.
+
+    Examples
+    --------
+    >>> c_space_dict = {'key1': 10, 'key2': 20, 'logical': 30}
+    >>> first_dict, second_dict, c_spaces = split_dict(c_space_dict)
+    >>> print(first_dict)
+    {'key1': 10}
+    >>> print(second_dict)
+    {'key': 20}
+    >>> print(c_spaces)
+    ['key1', 'key']
+
+    """
+    first_dict = Dict()
+    second_dict = Dict()
+    c_spaces = []
+    for k, v in c_space_dict.items():
+        if k == 'PCA' or k != 'logical' and np.absolute(v).sum() > 0:
+            print(k, v)
+            if k[-1] != '2':
+                first_dict[k] = v
+                c_spaces.append(k)
+            else:
+                second_dict[k[:-1]] = v
+                c_spaces.append(k[:-1])
+    return first_dict, second_dict, c_spaces
+
+
 def reduce_path_len(pathway: str, to_start: int, from_end: int) -> str:
     """
     Reduce the length of a given pathway string by truncating it from both ends.

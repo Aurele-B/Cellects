@@ -1082,6 +1082,8 @@ class AdvancedParameters(WindowType):
         if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
+                    if np.any(channels[i, :] < 0.):
+                        channels[i, :] + channels[i, :].min()
                     self.parent().po.vars['convert_for_motion'][space] = channels[i, :]
         if len(self.parent().po.vars['convert_for_motion']) == 1 or channels.sum() == 0:
             self.csc_dict_is_empty = True

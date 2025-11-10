@@ -25,7 +25,7 @@ from cellects.utils.load_display_save import extract_time  # named exif
 from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import PickleRick, read_and_rotate, readim, is_raw_image, read_h5_array, get_h5_keys
-from cellects.utils.utilitarian import insensitive_glob, vectorized_len
+from cellects.utils.utilitarian import insensitive_glob, vectorized_len, split_dict
 from cellects.image_analysis.morphological_operations import Ellipse, keep_one_connected_component
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.core.one_video_per_blob import OneVideoPerBlob
@@ -924,57 +924,6 @@ class ProgramOrganizer:
                     self.vars['luminosity_threshold'] = np.min(covered_values) - 1
                 else:
                     self.vars['luminosity_threshold'] = 127
-
-    def load_one_arena(self, arena):
-        add_to_c = 1
-        self.one_arena_done = True
-        i = np.nonzero(self.vars['analyzed_individuals'] == arena)[0][0]
-        self.converted_video = np.zeros(
-            (len(self.data_list), self.bot[i] - self.top[i] + add_to_c, self.right[i] - self.left[i] + add_to_c),
-            dtype=float)
-        if not self.vars['already_greyscale']:
-            self.visu = np.zeros((len(self.data_list), self.bot[i] - self.top[i] + add_to_c, self.right[i] - self.left[i] + add_to_c, 3), dtype=np.uint8)
-            if self.vars['convert_for_motion']['logical'] != 'None':
-                self.converted_video2 = np.zeros((len(self.data_list), self.bot[i] - self.top[i] + add_to_c, self.right[i] - self.left[i] + add_to_c), dtype=float)
-            first_dict = TDict()
-            second_dict = TDict()
-            c_spaces = []
-            for k, v in self.vars['convert_for_motion'].items():
-                if k != 'logical' and v.sum() > 0:
-                    if k[-1] != '2':
-                        first_dict[k] = v
-                        c_spaces.append(k)
-                    else:
-                        second_dict[k[:-1]] = v
-                        c_spaces.append(k[:-1])
-        prev_img = None
-        background = None
-        background2 = None
-        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
-        for image_i, image_name in enumerate(self.data_list):
-            img = read_and_rotate(image_name, prev_img, self.all['raw_images'], is_landscape, self.first_image.crop_coord)
-            prev_img = deepcopy(img)
-            img = img[self.top[arena - 1]: (self.bot[arena - 1] + add_to_c),
-                                                    self.left[arena - 1]: (self.right[arena - 1] + add_to_c), :]
-
-            if self.vars['already_greyscale']:
-                if self.reduce_image_dim:
-                    self.converted_video[image_i, ...] = img[:, :, 0]
-                else:
-                    self.converted_video[image_i, ...] = img
-            else:
-                self.visu[image_i, ...] = img
-                if self.vars['subtract_background']:
-                    background = self.vars['background_list'][i]
-                    if self.vars['convert_for_motion']['logical'] != 'None':
-                        background2 = self.vars['background_list2'][i]
-                greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces, first_dict,
-                                                                                     second_dict, background, background2,
-                                                                                     self.vars[
-                                                                                         'lose_accuracy_to_save_memory'])
-                self.converted_video[image_i, ...] = greyscale_image
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    self.converted_video2[image_i, ...] = greyscale_image2
 
     def update_output_list(self):
         self.vars['descriptors'] = {}

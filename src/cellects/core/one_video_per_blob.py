@@ -61,7 +61,7 @@ class OneVideoPerBlob:
         self.original_shape_hsize = starting_blob_hsize_in_pixels
         self.raw_images = raw_images
         if self.original_shape_hsize is not None:
-            self.k_size = int(((self.original_shape_hsize // 5) * 2) + 1)
+            self.k_size = int((np.ceil(self.original_shape_hsize / 5) * 2) + 1)
 
         # 7) Create required empty arrays: especially the bounding box coordinates of each video
         self.ordered_first_image = None
@@ -73,52 +73,57 @@ class OneVideoPerBlob:
                            color_number: int=2, sample_size: int=5, all_specimens_have_same_direction: bool=True,
                            display: bool=False, filter_spec: dict=None):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
-        self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
-        self.big_kernel = self.big_kernel.astype(np.uint8)
-        self.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
-        self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
-            self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-        self.unchanged_ordered_fimg = deepcopy(self.ordered_first_image)
-        self.modif_validated_shapes = deepcopy(self.first_image.validated_shapes)
-        self.standard = - 1
-        counter = 0
-        while np.any(np.less(self.standard, 0)) and counter < 20:
-            counter += 1
-            self.left = np.zeros(self.first_image.shape_number, dtype=np.int64)
-            self.right = np.repeat(self.modif_validated_shapes.shape[1], self.first_image.shape_number)
-            self.top = np.zeros(self.first_image.shape_number, dtype=np.int64)
-            self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
-            if are_gravity_centers_moving:
-                self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size,
-                                                 all_specimens_have_same_direction, display, filter_spec=filter_spec)
-                new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
+        if self.first_image.validated_shapes.any():
+            self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
+            self.big_kernel = self.big_kernel.astype(np.uint8)
+            self.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
+            self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
+                self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
+            self.unchanged_ordered_fimg = deepcopy(self.ordered_first_image)
+            self.modif_validated_shapes = deepcopy(self.first_image.validated_shapes)
+            self.standard = - 1
+            counter = 0
+            while np.any(np.less(self.standard, 0)) and counter < 20:
+                counter += 1
+                self.left = np.zeros(self.first_image.shape_number, dtype=np.int64)
+                self.right = np.repeat(self.modif_validated_shapes.shape[1], self.first_image.shape_number)
+                self.top = np.zeros(self.first_image.shape_number, dtype=np.int64)
+                self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
+                if are_gravity_centers_moving:
+                    self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size,
+                                                     all_specimens_have_same_direction, display, filter_spec=filter_spec)
+                    new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
 
-                for i in np.arange(1, self.first_image.shape_number + 1):
-                    previous_shape = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                    previous_shape[np.nonzero(self.unchanged_ordered_fimg == i)] = 1
-                    new_potentials = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                    new_potentials[np.nonzero(self.ordered_first_image == i)] = 1
-                    new_potentials[np.nonzero(self.unchanged_ordered_fimg == i)] = 0
+                    for i in np.arange(1, self.first_image.shape_number + 1):
+                        previous_shape = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
+                        previous_shape[np.nonzero(self.unchanged_ordered_fimg == i)] = 1
+                        new_potentials = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
+                        new_potentials[np.nonzero(self.ordered_first_image == i)] = 1
+                        new_potentials[np.nonzero(self.unchanged_ordered_fimg == i)] = 0
 
-                    pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance=2)
-                    pads.consider_shapes_sizes(min_shape_size=10)
-                    pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
-                    new_ordered_first_image[np.nonzero(pads.expanded_shape)] = i
-                self.ordered_first_image = new_ordered_first_image
-                self.modif_validated_shapes = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                self.modif_validated_shapes[np.nonzero(self.ordered_first_image)] = 1
-                self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
-                    self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-                self._get_quick_bb()
-            else:
-                self._get_quick_bb()
-            self.standardize_video_sizes()
-        if counter == 20:
-            self.top[self.top < 0] = 1
-            self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 2
-            self.left[self.left < 0] = 1
-            self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
-
+                        pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance=2)
+                        pads.consider_shapes_sizes(min_shape_size=10)
+                        pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
+                        new_ordered_first_image[np.nonzero(pads.expanded_shape)] = i
+                    self.ordered_first_image = new_ordered_first_image
+                    self.modif_validated_shapes = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
+                    self.modif_validated_shapes[np.nonzero(self.ordered_first_image)] = 1
+                    self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
+                        self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
+                    self._get_quick_bb()
+                else:
+                    self._get_quick_bb()
+                self.standardize_video_sizes()
+            if counter == 20:
+                self.top[self.top < 0] = 1
+                self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 2
+                self.left[self.left < 0] = 1
+                self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
+        else:
+            self.top = np.array(0, dtype=np.int64)
+            self.bot = np.array(self.first_image.image.shape[0], dtype=np.int64)
+            self.left = np.array(0, dtype=np.int64)
+            self.right = np.array(self.first_image.image.shape[1], dtype=np.int64)
 
     def _get_quick_bb(self):
         """
@@ -304,14 +309,14 @@ class OneVideoPerBlob:
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
 
         self.motion_list = list()
-        if img_list.dtype.type is np.str_:
+        if isinstance(img_list[0], str):
             frame_number = len(img_list)
         sample_numbers = np.floor(np.linspace(0, frame_number, sample_size)).astype(int)
         for frame_idx in np.arange(sample_size):
             if frame_idx == 0:
                 self.motion_list.insert(frame_idx, self.first_image.validated_shapes)
             else:
-                if img_list.dtype.type is np.str_:
+                if isinstance(img_list[0], str):
                     image = img_list[sample_numbers[frame_idx] - 1]
                 else:
                     image = img_list[sample_numbers[frame_idx] - 1, ...]
@@ -327,14 +332,6 @@ class OneVideoPerBlob:
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
         previous_ordered_image_i = deepcopy(self.ordered_first_image)
         is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
-        if img_list.dtype.type is np.str_:
-            img_to_display = read_and_rotate(img_list[sample_numbers[1] - 1], self.first_image.bgr, self.raw_images, is_landscape,
-                                  self.first_image.crop_coord)
-        else:
-            img_to_display = img_list[sample_numbers[1] - 1, ...]
-            if self.first_image.cropped:
-                img_to_display = img_to_display[self.first_image.crop_coord[0]:self.first_image.crop_coord[1],
-                                                self.first_image.crop_coord[2]:self.first_image.crop_coord[3], :]
         print("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
         for step_i in np.arange(1, sample_size):
             print(step_i)
@@ -344,14 +341,15 @@ class OneVideoPerBlob:
             image_i = cv2.dilate(image_i, self.small_kernels, iterations=5)
 
             # Display the segmentation result for all shapes at this frame
-            if img_list.dtype.type is np.str_:
-                img_to_display = read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr, self.raw_images,
-                                                 is_landscape, self.first_image.crop_coord)
-            else:
-                img_to_display = img_list[sample_numbers[step_i] - 1, ...]
-                if self.first_image.cropped:
-                    img_to_display = img_to_display[self.first_image.crop_coord[0]: self.first_image.crop_coord[1],
-                                     self.first_image.crop_coord[2]: self.first_image.crop_coord[3], :]
+            if display:
+                if isinstance(img_list[0], str):
+                    img_to_display = read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr, self.raw_images,
+                                                     is_landscape, self.first_image.crop_coord)
+                else:
+                    img_to_display = img_list[sample_numbers[step_i] - 1, ...]
+                    if self.first_image.cropped:
+                        img_to_display = img_to_display[self.first_image.crop_coord[0]: self.first_image.crop_coord[1],
+                                         self.first_image.crop_coord[2]: self.first_image.crop_coord[3], :]
 
             for shape_i in range(self.first_image.shape_number):
                 shape_to_expand = np.zeros(image_i.shape, dtype=np.uint8)

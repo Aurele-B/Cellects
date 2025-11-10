@@ -267,7 +267,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
             image = subtract_background - image
     # add (resp. subtract) the most negative (resp. smallest) value to the whole matrix to get a min = 0
     image -= np.min(image)
-    # Make analysable this image by bracketing its values between 0 and 255 and converting it to uint8
+    # Make analysable this image by bracketing its values between 0 and 255
     max_im = np.max(image)
     if max_im != 0:
         image = 255 * (image / max_im)
@@ -275,7 +275,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
 
 
-def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False) -> NDArray[np.uint8]:
+def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False, all_c_spaces: dict={}) -> NDArray[np.uint8]:
     """
     Generate color space combinations for an input image.
 
@@ -317,20 +317,26 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
     >>> print(greyscale_image1.shape)
     (100, 100)
     """
-    all_c_spaces = get_color_spaces(bgr_image, c_spaces)
-    try:
-        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
-    except:
-        first_dict = translate_dict(first_dict)
-        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+    greyscale_image2 = None
+    first_pc_vector = None
+    if "PCA" in c_spaces:
+        greyscale_image, var_ratio, first_pc_vector = extract_first_pc(bgr_image)
+    else:
+        if len(all_c_spaces) == 0:
+            all_c_spaces = get_color_spaces(bgr_image, c_spaces)
+        try:
+            greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+        except:
+            first_dict = translate_dict(first_dict)
+            greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+        if len(second_dict) > 0:
+            greyscale_image2 = combine_color_spaces(second_dict, all_c_spaces, background2)
+
     if convert_to_uint8:
         greyscale_image = bracket_to_uint8_image_contrast(greyscale_image)
-    greyscale_image2 = None
-    if len(second_dict) > 0:
-        greyscale_image2 = combine_color_spaces(second_dict, all_c_spaces, background2)
-        if convert_to_uint8:
+        if greyscale_image2 is not None and len(second_dict) > 0:
             greyscale_image2 = bracket_to_uint8_image_contrast(greyscale_image2)
-    return greyscale_image, greyscale_image2
+    return greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector
 
 
 @njit()
@@ -726,30 +732,47 @@ def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDA
     return count_a, count_b
 
 
-def extract_first_pc(rgb_image: NDArray, standardize=True):
-    """Extract and threshold the first principal component."""
-    # Ensure correct shape
+def extract_first_pc(rgb_image: np.ndarray, standardize: bool=True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Extract the first principal component from an RGB image.
+
+    Parameters:
+        rgb_image (np.ndarray): Input RGB image of shape (height, width, 3).
+        standardize (bool): Whether to center and scale pixel values.
+
+    Returns:
+        np.ndarray: Image representing the first PC.
+        float: Explained variance ratio for the first component.
+    """
     if rgb_image.shape[0] == 3:
         rgb_image = np.transpose(rgb_image, (1, 2, 0))
-
     height, width, channels = rgb_image.shape
-    pixels = rgb_image.reshape(-1, channels)
+    pixels = rgb_image.reshape(-1, channels)  # Flatten to Nx3 matrix
 
-    # Standardize if requested
     if standardize:
-        scaler = StandardScaler()
-        pixels_scaled = scaler.fit_transform(pixels)
+        mean = np.mean(pixels, axis=0)
+        std = np.std(pixels, axis=0)
+        std[std == 0] = 1.0  # Avoid division by zero
+        pixels_scaled = (pixels - mean) / std
     else:
         pixels_scaled = pixels
 
-    # Apply PCA with only 1 component
-    pca = PCA(n_components=1)
-    pca_result = pca.fit_transform(pixels_scaled)
+    # Perform SVD on standardized data to get principal components
+    U, d, Vt = np.linalg.svd(pixels_scaled, full_matrices=False)
 
-    # Reshape back to image format
-    first_pc = pca_result.reshape(height, width)
+    # First PC is the projection of each pixel onto first right singular vector (Vt[0])
+    first_pc_vector = Vt[0]  # Shape: (3,)
+    eigen = d ** 2
+    total_variance = np.sum(eigen)
 
-    # Threshold negative values to 0
-    first_pc_thresholded = np.maximum(first_pc, 0)
+    explained_variance_ratio = np.zeros_like(eigen)
+    np.divide(eigen, total_variance, out=explained_variance_ratio, where=total_variance != 0)
 
-    return first_pc_thresholded, pca.explained_variance_ratio_[0]
+    # Compute first principal component scores
+    first_pc_scores = U[:, 0] * d[0]
+
+    # Reshape to image shape and threshold negative values
+    first_pc_image = first_pc_scores.reshape(height, width)
+    # first_pc_thresholded = np.maximum(first_pc_image, 0)
+
+    return first_pc_image, explained_variance_ratio[0], first_pc_vector

@@ -147,7 +147,7 @@ from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
 from cellects.utils.load_display_save import read_and_rotate
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.utils.load_display_save import write_video
 from cellects.core.motion_analysis import MotionAnalysis
@@ -438,7 +438,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
         if self.parent().imageanalysiswindow.back_masks_number != 0:
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2 or shape_nb == self.parent().po.sample_number:
-            self.message_from_thread.emit("Image segmentation, wait 30 seconds at most")
+            self.message_from_thread.emit("Image segmentation, wait")
             if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
                 self.parent().po.get_average_pixel_size()
                 spot_size = self.parent().po.starting_blob_hsize_in_pixels
@@ -802,17 +802,7 @@ class OneArenaThread(QtCore.QThread):
                     else:
                         self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
                                                        self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
-                first_dict = TDict()
-                second_dict = TDict()
-                c_spaces = []
-                for k, v in self.parent().po.vars['convert_for_motion'].items():
-                     if k != 'logical' and v.sum() > 0:
-                        if k[-1] != '2':
-                            first_dict[k] = v
-                            c_spaces.append(k)
-                        else:
-                            second_dict[k[:-1]] = v
-                            c_spaces.append(k[:-1])
+                first_dict, second_dict, c_spaces = split_dict(self.parent().po.vars['convert_for_motion'])
             prev_img = None
             background = None
             background2 = None
@@ -842,7 +832,7 @@ class OneArenaThread(QtCore.QThread):
                         background = self.parent().po.vars['background_list'][i]
                         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                             background2 = self.parent().po.vars['background_list2'][i]
-                    greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces,
+                    greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces,
                                                                                          first_dict,
                                                                                          second_dict,background,background2,
                                                                                          self.parent().po.vars[
@@ -862,33 +852,6 @@ class OneArenaThread(QtCore.QThread):
                     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                         self.parent().po.converted_video2[image_i, ...] = greyscale_image2
 
-
-
-                    # csc = OneImageAnalysis(img)
-                    # if self.parent().po.vars['subtract_background']:
-                    #     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                    #                                              self.parent().po.vars['background_list'][i],
-                    #                                              self.parent().po.vars['background_list2'][i])
-                    #     else:
-                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                    #                                              self.parent().po.vars['background_list'][i], None)
-                    # else:
-                    #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                    # # self.parent().po.converted_video[image_i, ...] = csc.image
-                    # if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #     self.parent().po.converted_video[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image)
-                    # else:
-                    #     self.parent().po.converted_video[image_i, ...] = csc.image
-                    # if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    #     if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #         self.parent().po.converted_video2[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image2)
-                    #     else:
-                    #         self.parent().po.converted_video2[image_i, ...] = csc.image2
-
-
-
-            # self.parent().po.load_one_arena(arena)
             save_loaded_video = True
             if self.parent().po.vars['already_greyscale']:
                 self.videos_in_ram = self.parent().po.converted_video

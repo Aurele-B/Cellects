@@ -53,7 +53,7 @@ from cellects.image_analysis.morphological_operations import (find_major_incline
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
+from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array, split_dict
 
 
 class MotionAnalysis:
@@ -175,7 +175,6 @@ class MotionAnalysis:
                 self.networks_detection(show_seg)
                 self.study_cytoscillations(show_seg)
                 self.fractal_descriptions()
-                self.get_descriptors_summary()
                 if videos_already_in_ram is None:
                     self.save_results()
 
@@ -268,17 +267,7 @@ class MotionAnalysis:
         """
         if not self.vars['already_greyscale']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
-            first_dict = TDict()
-            second_dict = TDict()
-            c_spaces = []
-            for k, v in self.vars['convert_for_motion'].items():
-                if k != 'logical' and v.sum() > 0:
-                    if k[-1] != '2':
-                        first_dict[k] = v
-                        c_spaces.append(k)
-                    else:
-                        second_dict[k[:-1]] = v
-                        c_spaces.append(k[:-1])
+            first_dict, second_dict, c_spaces = split_dict(self.vars['convert_for_motion'])
             if self.vars['lose_accuracy_to_save_memory']:
                 self.converted_video = np.zeros(self.visu.shape[:3], dtype=np.uint8)
             else:
@@ -296,7 +285,7 @@ class MotionAnalysis:
                     img = self.visu[1, ...]
                 else:
                     img = self.visu[counter, ...]
-                greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces, first_dict,
+                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces, first_dict,
                                                                                      second_dict, self.background,
                                                                                      self.background2,
                                                                                      self.vars['lose_accuracy_to_save_memory'])
