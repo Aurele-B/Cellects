@@ -377,7 +377,7 @@ def video2numpy(vid_name: str, conversion_dict=None, background=None, true_frame
             converted_video = np.zeros((video.shape[0], video.shape[1], frame_width), dtype=np.uint8)
             for counter in np.arange(video.shape[0]):
                 img = video[counter, :, :frame_width, :]
-                greyscale_image, greyscale_image2 = generate_color_space_combination(img, list(conversion_dict.keys()),
+                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, list(conversion_dict.keys()),
                                                                                      conversion_dict, background=background,
                                                                                      convert_to_uint8=True)
                 converted_video[counter, ...] = greyscale_image

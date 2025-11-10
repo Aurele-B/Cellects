@@ -26,8 +26,9 @@ from numba.typed import Dict as TDict
 from numpy.typing import NDArray
 from typing import Tuple
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, extract_first_pc
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
+from cellects.utils.utilitarian import split_dict
 
 
 class OneImageAnalysis:
@@ -76,6 +77,9 @@ class OneImageAnalysis:
         self.lab = None
         self.luv = None
         self.yuv = None
+        self.greyscale = None
+        self.greyscale2 = None
+        self.first_pc_vector = None
     def convert_and_segment(self, c_space_dict: dict, color_number=2, biomask: NDArray[np.uint8]=None,
                             backmask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
                             subtract_background2: NDArray=None, grid_segmentation: bool=False,
@@ -110,38 +114,14 @@ class OneImageAnalysis:
         - `self.all_c_spaces` (list): List of color spaces.
 
         """
-        if self.already_greyscale:
-            self.segmentation(logical='None', color_number=2, biomask=biomask, backmask=backmask,
-                              grid_segmentation=grid_segmentation, lighter_background=lighter_background,
-                              side_length=side_length, step=step, int_variation_thresh=int_variation_thresh, mask=mask,
-                              filter_spec=filter_spec)
-        else:
-            if len(self.all_c_spaces) == 0:
-                self.all_c_spaces = get_color_spaces(self.bgr)
-            # if c_space_dict['logical'] != 'None':
-            first_dict = TDict()
-            second_dict = TDict()
-            for k, v in c_space_dict.items():
-                 if k != 'logical' and v.sum() > 0:
-                    if k[-1] != '2':
-                        first_dict[k] = v
-                    else:
-                        second_dict[k[:-1]] = v
-            logging.info(first_dict)
-            self.image = combine_color_spaces(first_dict, self.all_c_spaces, subtract_background)
-            if len(second_dict) > 0:
-                self.image2 = combine_color_spaces(second_dict, self.all_c_spaces, subtract_background2)
-                self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
-                                  backmask=backmask, grid_segmentation=grid_segmentation,
-                                  lighter_background=lighter_background, side_length=side_length, step=step,
-                                  int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
+        if not self.already_greyscale:
+            first_dict, second_dict, c_spaces = split_dict(c_space_dict)
+            self.image, self.image2, self.all_c_spaces, self.first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, subtract_background, subtract_background2)
 
-            else:
-
-                self.segmentation(logical='None', color_number=color_number, biomask=biomask,
-                                  backmask=backmask, grid_segmentation=grid_segmentation,
-                                  lighter_background=lighter_background, side_length=side_length, step=step,
-                                  int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
+        self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
+                          backmask=backmask, grid_segmentation=grid_segmentation,
+                          lighter_background=lighter_background, side_length=side_length, step=step,
+                          int_variation_thresh=int_variation_thresh, mask=mask, filter_spec=filter_spec)
 
 
     def segmentation(self, logical: str='None', color_number: int=2, biomask: NDArray[np.uint8]=None,
@@ -171,19 +151,21 @@ class OneImageAnalysis:
 
         """
         if filter_spec is not None and filter_spec["filter1_type"] != "":
-            self.image = apply_filter(self.image, filter_spec["filter1_type"], filter_spec["filter1_param"])
+            self.greyscale = apply_filter(self.image, filter_spec["filter1_type"], filter_spec["filter1_param"])
+        else:
+            self.greyscale = self.image
         if (color_number > 2):
             self.kmeans(color_number, biomask, backmask, logical, bio_label, bio_label2)
         elif grid_segmentation:
             if lighter_background is None:
-                self.binary_image = otsu_thresholding(self.image)
+                self.binary_image = otsu_thresholding(self.greyscale)
                 lighter_background = self.binary_image.sum() > (self.binary_image.size / 2)
             if int_variation_thresh is None:
-                int_variation_thresh = 100 - (np.ptp(self.image) * 90 / 255)
+                int_variation_thresh = 100 - (np.ptp(self.greyscale) * 90 / 255)
             self.grid_segmentation(lighter_background, side_length, step, int_variation_thresh, mask)
         else:
             # logging.info("Segment the image using Otsu thresholding")
-            self.binary_image = otsu_thresholding(self.image)
+            self.binary_image = otsu_thresholding(self.greyscale)
             if self.previous_binary_image is not None:
                 if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum():
                     # Ones of the binary image have more in common with the background than with the specimen
@@ -192,14 +174,15 @@ class OneImageAnalysis:
             if logical != 'None':
                 # logging.info("Segment the image using Otsu thresholding")
                 if filter_spec is not None and filter_spec["filter2_type"] != "":
-                    self.image2 = apply_filter(self.image2, filter_spec["filter2_type"], filter_spec["filter2_param"])
-                self.binary_image2 = otsu_thresholding(self.image2)
+                    self.greyscale2 = apply_filter(self.image2, filter_spec["filter2_type"], filter_spec["filter2_param"])
+                else:
+                    self.greyscale2 = self.image2
+                self.binary_image2 = otsu_thresholding(self.greyscale2)
                 if self.previous_binary_image is not None:
                     if (self.binary_image2 * (1 - self.previous_binary_image)).sum() > (
                             self.binary_image2 * self.previous_binary_image).sum():
                         self.binary_image2 = 1 - self.binary_image2
                     # self.binary_image2 = self.correct_with_previous_binary_image(self.binary_image2.copy())
-
         if logical != 'None':
             if logical == 'Or':
                 self.binary_image = np.logical_or(self.binary_image, self.binary_image2)
@@ -777,7 +760,6 @@ class OneImageAnalysis:
                 if i > 0:
                     try_potentials.pop(previous_c_space)
                 self.image = combine_color_spaces(try_potentials, self.all_c_spaces, subtract_background)
-                # self.generate_color_space_combination(try_potentials, subtract_background)
                 if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
                     self.kmeans(kmeans_clust_nb, biomask, backmask)
                 else:
@@ -1053,12 +1035,12 @@ class OneImageAnalysis:
         logging.info("Get crop coordinates using the get_crop_coordinates method of OneImageAnalysis class")
         row_number = len(np.nonzero(self.y_boundaries)[0]) // 2
         col_number = len(np.nonzero(self.x_boundaries)[0]) // 2
-        if (x_max_sum / col_number) * 2 < (y_max_sum / row_number):
-            are_zigzag = "columns"
-        elif (x_max_sum / col_number) > (y_max_sum / row_number) * 2:
-            are_zigzag = "rows"
-        else:
-            are_zigzag = None
+        are_zigzag = None
+        if col_number > 0 and row_number > 0:
+            if (x_max_sum / col_number) * 2 < (y_max_sum / row_number):
+                are_zigzag = "columns"
+            elif (x_max_sum / col_number) > (y_max_sum / row_number) * 2:
+                are_zigzag = "rows"
         # here automatically determine if are zigzag
         x_boundary_number = (self.x_boundaries == 1).sum()
         if x_boundary_number > 1:
@@ -1075,7 +1057,7 @@ class OneImageAnalysis:
             if cx_max > len(self.x_boundaries): cx_max = len(self.x_boundaries) - 1
         else:
             cx_min = 0
-            cx_max = len(self.x_boundaries) - 1
+            cx_max = len(self.x_boundaries)# - 1
 
         y_boundary_number = (self.y_boundaries == 1).sum()
         if y_boundary_number > 1:
@@ -1092,7 +1074,7 @@ class OneImageAnalysis:
             if cy_max > len(self.y_boundaries): cy_max = len(self.y_boundaries) - 1
         else:
             cy_min = 0
-            cy_max = len(self.y_boundaries) - 1
+            cy_max = len(self.y_boundaries)# - 1
 
         self.crop_coord = [cy_min, cy_max, cx_min, cx_max]
 
@@ -1151,6 +1133,10 @@ class OneImageAnalysis:
                     self.im_combinations[i]["binary_image"] = self.im_combinations[i]["binary_image"][crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3]]
                     self.im_combinations[i]["converted_image"] = self.im_combinations[i]["converted_image"][crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3]]
             self.binary_image = self.binary_image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3]]
+            if self.greyscale is not None:
+                self.greyscale = self.greyscale[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
+            if self.greyscale2 is not None:
+                self.greyscale2 = self.greyscale2[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             if self.image2 is not None:
                 self.image2 = self.image2[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             if self.binary_image2 is not None:

@@ -312,7 +312,7 @@ class  NetworkDetection:
             are parameters for those color spaces.
 
         """
-        self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
+        self.greyscale_image, g2 = generate_color_space_combination(img, c_space_dict)
 
     def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
         """

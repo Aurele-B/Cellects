@@ -12,6 +12,7 @@ import time
 from copy import deepcopy
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
+from numba.core.compiler_machinery import pass_info
 
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetLastImThread, FirstImageAnalysisThread,
@@ -22,6 +23,7 @@ from cellects.gui.custom_widgets import (
     Combobox, Checkbox, FixedText)
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import filter_dict
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
 class ImageAnalysisWindow(MainTabsType):
@@ -528,10 +530,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.all['first_detection_frame'] = int(self.image_number.value())
             self.message.setText(f"Reading image n°{self.parent().po.all['first_detection_frame']}")
             self.thread["GetFirstIm"].start()
-            # self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_im)
-            
+
 
     def several_blob_per_arena_check(self):
         is_checked = self.one_blob_per_arena.isChecked()
@@ -703,12 +704,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter2_param2.setVisible(has_param2)
         self.filter2_param2_label.setVisible(has_param2)
 
-        self.filter1_param1.setVisible(is_checked)
         self.grid_segmentation.setVisible(is_checked)
         self.grid_segmentation_label.setVisible(is_checked)
 
         for i in range(5):
-            self.row1[i].setVisible(color_analysis and self.row1[0].currentText() != "None")
+            if i == 0:
+                self.row1[i].setVisible(color_analysis)
+            else:
+                self.row1[i].setVisible(color_analysis and not "PCA" in self.csc_dict) #  and self.row1[0].currentText() != "PCA"
             self.row21[i].setVisible(color_analysis and self.row21[0].currentText() != "None")
             self.row2[i].setVisible(color_analysis and self.row2[0].currentText() != "None")
             self.row22[i].setVisible(color_analysis and self.row22[0].currentText() != "None")
@@ -716,7 +719,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.row3[i].setVisible(color_analysis and self.row3[0].currentText() != "None")
                 self.row23[i].setVisible(color_analysis and self.row23[0].currentText() != "None")
         if color_analysis:
-            if self.row1[0].currentText() != "None":
+            if self.row1[0].currentText() != "PCA":
                 if self.row2[0].currentText() == "None":
                     self.row1[4].setVisible(True)
                 else:
@@ -758,7 +761,10 @@ class ImageAnalysisWindow(MainTabsType):
                 self.hold_click_flag = True
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
         else:
-            self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
+            if "PCA" in self.csc_dict:
+                self.popup_img = FullScreenImage(bracket_to_uint8_image_contrast(self.parent().po.first_image.greyscale), self.parent().screen_width, self.parent().screen_height)
+            else:
+                self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
             # img = resize(self.drawn_image, (self.parent().screen_width, self.parent().screen_height))
             # cv2.imshow("Full screen image display", img)
@@ -963,7 +969,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.save_user_defined_csc()
             self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
-                self.message.setText('Choose a color space, modify a channel and visualize')
+                self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
             self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
@@ -977,7 +983,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.save_user_defined_csc()
             self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
-                self.message.setText('Choose a color space, increase a channel and visualize')
+                self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
             else:
                 self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
@@ -1190,7 +1196,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.edit_labels_widget = QtWidgets.QWidget()
         self.edit_labels_layout = QtWidgets.QHBoxLayout()
 
-        self.space_label = FixedText('Color space:', halign='l',
+        self.space_label = FixedText('Color combination:', halign='l',
                                     tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
                                     night_mode=self.parent().po.all['night_mode'])
         # self.c1 = FixedText('  C1', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
@@ -1213,7 +1219,7 @@ class ImageAnalysisWindow(MainTabsType):
         # 3) First CSC
         self.first_csc_widget = QtWidgets.QWidget()
         self.first_csc_layout = QtWidgets.QGridLayout()
-        self.row1 = self.one_csc_editing()
+        self.row1 = self.one_csc_editing(with_PCA=True)
         self.row1[4].clicked.connect(self.display_row2)
         self.row2 = self.one_csc_editing()
         self.row2[4].clicked.connect(self.display_row3)
@@ -1447,19 +1453,6 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.edit_widget.setLayout(self.edit_layout)
 
-    def one_csc_editing(self):
-        widget_list = []
-        widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
-                                       night_mode=self.parent().po.all['night_mode']))
-        widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        widget_list[0].setFixedWidth(100)
-        for i in [1, 2, 3]:
-            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
-            widget_list[i].setFixedWidth(45)
-        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
-
-        return widget_list
-
     def filter1_changed(self):
         current_filter = self.filter1.currentText()
         self.parent().po.vars['filter_spec']['filter1_type'] = current_filter
@@ -1515,6 +1508,37 @@ class ImageAnalysisWindow(MainTabsType):
 
     def filter2_param2_changed(self):
         self.parent().po.vars['filter_spec']['filter2_param'][1] = float(self.filter2_param2.value())
+
+    def one_csc_editing(self, with_PCA=False):
+        widget_list = []
+        if with_PCA:
+            widget_list.insert(0, Combobox(["PCA", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
+                                           night_mode=self.parent().po.all['night_mode']))
+            widget_list[0].currentTextChanged.connect(self.pca_changed)
+        else:
+            widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
+                                           night_mode=self.parent().po.all['night_mode']))
+        widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        widget_list[0].setFixedWidth(100)
+        for i in [1, 2, 3]:
+            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
+            widget_list[i].setFixedWidth(45)
+        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
+        return widget_list
+
+    def pca_changed(self):
+        if self.row1[0].currentText() == 'PCA':
+            self.logical_operator_between_combination_result.setCurrentText('None')
+            for i in range(1, 5):
+                self.row1[i].setVisible(False)
+                self.row2[i].setVisible(False)
+                self.row3[i].setVisible(False)
+            self.logical_operator_label.setVisible(False)
+            self.logical_operator_between_combination_result.setVisible(False)
+        else:
+            for i in range(1, 5):
+                self.row1[i].setVisible(True)
+
 
     def logical_op_changed(self):
         # show = self.logical_operator_between_combination_result.currentText() != 'None'
@@ -1577,43 +1601,47 @@ class ImageAnalysisWindow(MainTabsType):
         self.display_logical_operator()
 
     def update_csc_editing_display(self):
-        c_space_order = ["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"]
         remaining_c_spaces = []
         row_number1 = 0
         row_number2 = 0
-        for i, (k, v) in enumerate(self.csc_dict.items()):
-            if k != "logical":
-                if k[-1] != "2":
-                    if row_number1 == 0:
-                        row_to_change = self.row1
-                    elif row_number1 == 1:
-                        row_to_change = self.row2
-                    elif row_number1 == 2:
-                        row_to_change = self.row3
+        if "PCA" in self.csc_dict.keys():
+            for i in range(1, 4):
+                self.row1[i].setVisible(False)
+        else:
+            c_space_order = ["PCA", "bgr", "hsv", "hls", "lab", "luv", "yuv"]
+            for i, (k, v) in enumerate(self.csc_dict.items()):
+                if k != "logical":
+                    if k[-1] != "2":
+                        if row_number1 == 0:
+                            row_to_change = self.row1
+                        elif row_number1 == 1:
+                            row_to_change = self.row2
+                        elif row_number1 == 2:
+                            row_to_change = self.row3
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number1 += 1
+                        current_row_number = row_number1
                     else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number1 += 1
-                    current_row_number = row_number1
-                else:
-                    if row_number2 == 0:
-                        row_to_change = self.row21
-                    elif row_number2 == 1:
-                        row_to_change = self.row22
-                    elif row_number2 == 2:
-                        row_to_change = self.row23
-                    else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number2 += 1
-                    current_row_number = row_number2
-                    k = k[:-1]
-                if current_row_number <= 3:
-                    row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
-                    row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
-                    for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
-                        row_to_change[i1].setValue(v[i2])
-                        row_to_change[i1].setVisible(self.parent().po.all['expert_mode'])
-                    if current_row_number < 3:
-                        row_to_change[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
+                        if row_number2 == 0:
+                            row_to_change = self.row21
+                        elif row_number2 == 1:
+                            row_to_change = self.row22
+                        elif row_number2 == 2:
+                            row_to_change = self.row23
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number2 += 1
+                        current_row_number = row_number2
+                        k = k[:-1]
+                    if current_row_number <= 3:
+                        row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
+                        row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
+                        for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
+                            row_to_change[i1].setValue(v[i2])
+                            row_to_change[i1].setVisible(self.parent().po.all['expert_mode'])
+                        if current_row_number < 3:
+                            row_to_change[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
 
         # If not all color space combinations are filled, put None and 0 in boxes
         if row_number1 < 3:
@@ -1699,7 +1727,7 @@ class ImageAnalysisWindow(MainTabsType):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
                     self.csc_dict[space] = channels[i, :]
-        if len(self.csc_dict) == 1 or channels.sum() == 0:
+        if not 'PCA' in self.csc_dict and (len(self.csc_dict) == 1 or np.absolute(channels).sum() == 0):
             self.csc_dict_is_empty = True
         else:
             self.csc_dict_is_empty = False
@@ -1898,6 +1926,11 @@ class ImageAnalysisWindow(MainTabsType):
                 else:
                     # if self.parent().po.vars['origin_state'] != 'invisible':
                     #     self.parent().po.vars['origin_state'] = "fluctuating"
+                    if "PCA" in self.csc_dict:
+                        if self.parent().po.last_image.first_pc_vector is None:
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.last_image.first_pc_vector), "logical": None}
+                        else:
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.first_image.first_pc_vector), "logical": None}
                     self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
                     self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                     self.go_to_next_widget()

@@ -5,11 +5,36 @@ This script contains all unit tests of the one_video_per_blob script
 import unittest
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.core.one_video_per_blob import OneVideoPerBlob
+from cellects.image_analysis.image_segmentation import generate_color_space_combination
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from tests.test_based_run import load_test_folder, run_image_analysis_for_testing
 from tests._base import CellectsUnitTest, several_arenas_img
+from pathlib import Path
 import numpy as np
 import cv2
 import os
+po = load_test_folder("/Users/Directory/Scripts/python/Cellects/data/experiment", 1)
+po.get_first_image()
+greyscale, vap, csc = extract_first_pc(po.first_image.image)
+pca = bracket_to_uint8_image_contrast(greyscale)
+from_csc, _, _, _ = generate_color_space_combination(po.first_image.image, ["bgr"], {"bgr": csc})
+from_csc = bracket_to_uint8_image_contrast(from_csc)
+np.allclose(pca, from_csc)
+po.first_image.get_crop_coordinates()
+po.first_image.shape_number = 1
+po.fast_image_segmentation(True)
+po.videos = OneVideoPerBlob(po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
+are_gravity_centers_moving = True
+img_list = po.data_list
+color_space_combination = {"bgr": np.ones(3, dtype=np.uint8)}
+color_number=2
+sample_size=5
+all_specimens_have_same_direction = True,
+display = False
+filter_spec = None
+po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, color_space_combination)
+##### Current pb: The algorithm does not work when it does not detect a shape at each frame.
+
 
 class TestOneImageAnalysis(CellectsUnitTest):
     """Test suite for OneImageAnalysis class"""
@@ -18,8 +43,8 @@ class TestOneImageAnalysis(CellectsUnitTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.image = several_arenas_img
-        cls.oia = OneImageAnalysis(cls.image)
-        cls.ovpb = OneVideoPerBlob(cls.oia, starting_blob_hsize_in_pixels=2, raw_images=False)
+        cls.po = load_test_folder(str(cls.path_experiment), 1)
+        cls.po.videos = OneVideoPerBlob(cls.po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
 
 # class TestOneVideoPerBlob(CellectsUnitTest):
 #     """Test suite for the OneVideoPerBlob class."""
