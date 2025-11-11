@@ -295,7 +295,7 @@ class  NetworkDetection:
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
-    def change_greyscale(self, img: NDArray[np.uint8], c_space_dict: dict):
+    def change_greyscale(self, img: NDArray[np.uint8], first_dict: dict):
         """
         Change the image to greyscale using color space combinations.
 
@@ -312,7 +312,7 @@ class  NetworkDetection:
             are parameters for those color spaces.
 
         """
-        self.greyscale_image, g2 = generate_color_space_combination(img, c_space_dict)
+        self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
     def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
         """

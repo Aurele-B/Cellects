@@ -73,7 +73,7 @@ several_arenas_bin_img = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
                                         [0,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0],
                                         [0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0],
                                         [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]], dtype=np.uint8)
-several_arenas_img = np.zeros((several_arenas_bin_img.shape[0],several_arenas_bin_img.shape[1],3), dtype=np.uint8)
+several_arenas_img = np.zeros((several_arenas_bin_img.shape[0], several_arenas_bin_img.shape[1], 3), dtype=np.uint8)
 several_arenas_img[:, :, 0][several_arenas_bin_img > 0] = np.random.randint(205, 255, several_arenas_bin_img.sum())
 several_arenas_img[:, :, 0][several_arenas_bin_img == 0] = np.random.randint(0, 50, several_arenas_bin_img.size - several_arenas_bin_img.sum())
 several_arenas_img[:, :, 1][several_arenas_bin_img > 0] = np.random.randint(205, 255, several_arenas_bin_img.sum())

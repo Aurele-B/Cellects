@@ -4,8 +4,9 @@ This script contains all unit tests of the one_video_per_blob script
 """
 import unittest
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.core.one_video_per_blob import OneVideoPerBlob
-from cellects.image_analysis.image_segmentation import generate_color_space_combination
+from cellects.core.one_video_per_blob import *
+from cellects.core.program_organizer import ProgramOrganizer
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, extract_first_pc
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from tests.test_based_run import load_test_folder, run_image_analysis_for_testing
 from tests._base import CellectsUnitTest, several_arenas_img
@@ -13,28 +14,39 @@ from pathlib import Path
 import numpy as np
 import cv2
 import os
-po = load_test_folder("/Users/Directory/Scripts/python/Cellects/data/experiment", 1)
-po.get_first_image()
-greyscale, vap, csc = extract_first_pc(po.first_image.image)
-pca = bracket_to_uint8_image_contrast(greyscale)
-from_csc, _, _, _ = generate_color_space_combination(po.first_image.image, ["bgr"], {"bgr": csc})
-from_csc = bracket_to_uint8_image_contrast(from_csc)
-np.allclose(pca, from_csc)
-po.first_image.get_crop_coordinates()
-po.first_image.shape_number = 1
-po.fast_image_segmentation(True)
-po.videos = OneVideoPerBlob(po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
-are_gravity_centers_moving = True
-img_list = po.data_list
-color_space_combination = {"bgr": np.ones(3, dtype=np.uint8)}
-color_number=2
-sample_size=5
-all_specimens_have_same_direction = True,
-display = False
-filter_spec = None
-po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, color_space_combination)
-##### Current pb: The algorithm does not work when it does not detect a shape at each frame.
-
+# po = load_test_folder("/Users/Directory/Scripts/python/Cellects/data/experiment", 1)
+# po.get_first_image()
+# greyscale, vap, csc = extract_first_pc(po.first_image.image)
+# po.first_image.image = bracket_to_uint8_image_contrast(greyscale)
+# po.first_image.segmentation()
+# po.first_image.get_crop_coordinates()
+# po.first_image.shape_number = 1
+# # po.fast_image_segmentation(True)
+# po.videos = OneVideoPerBlob(po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
+# are_gravity_centers_moving = True
+# img_list = po.data_list
+# color_space_combination = {"logical": 'None', "bgr": np.ones(3, dtype=np.uint8)}
+# po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, color_space_combination)
+# ##### Current pb: The algorithm does not work when it does not detect a shape at each frame.
+# image = several_arenas_img
+# po = ProgramOrganizer()
+# po.first_image = OneImageAnalysis(image, shape_number=6)
+# color_number=2
+# sample_size=1
+# all_specimens_have_same_direction = True,
+# display = False
+# filter_spec = None
+# color_space_combination = {"logical": 'None', "bgr": np.ones(3, dtype=np.uint8)}
+# po.first_image.convert_and_segment(color_space_combination)
+# po.first_image.validated_shapes = po.first_image.binary_image
+# po.videos = OneVideoPerBlob(po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
+# img_list = [several_arenas_img]
+# self=po.videos
+# po.videos.get_bounding_boxes(True, img_list, color_space_combination, sample_size=sample_size)
+# po.videos.top
+# po.videos.bot
+# po.videos.left
+# po.videos.right
 
 class TestOneImageAnalysis(CellectsUnitTest):
     """Test suite for OneImageAnalysis class"""
@@ -43,20 +55,43 @@ class TestOneImageAnalysis(CellectsUnitTest):
     def setUpClass(cls):
         super().setUpClass()
         cls.image = several_arenas_img
-        cls.po = load_test_folder(str(cls.path_experiment), 1)
+        cls.shape_number = 6
+        cls.po = ProgramOrganizer()
+        cls.po.first_image = OneImageAnalysis(cls.image, cls.shape_number)
+        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        # cls.po.fast_image_segmentation(is_first_image=True)
+        cls.po.first_image.convert_and_segment(cls.color_space_combination)
+        cls.po.first_image.validated_shapes = cls.po.first_image.binary_image
         cls.po.videos = OneVideoPerBlob(cls.po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
 
-# class TestOneVideoPerBlob(CellectsUnitTest):
-#     """Test suite for the OneVideoPerBlob class."""
-#     @classmethod
-#     def setUpClass(cls):
-#         super().setUpClass()
-#         cls.i = 0
-#         cls.po = load_test_folder(str(cls.path_experiment), 1)
-#         cls.po = run_image_analysis_for_testing(cls.po)
-#         cls.po.update_output_list()
-#         cls.po.videos = OneVideoPerBlob(cls.po.first_image, cls.po.starting_blob_hsize_in_pixels, cls.po.all['raw_images'])
+    def test_get_bounding_boxes_with_moving_centers(self):
+        are_gravity_centers_moving = False
+        img_list = [self.image]
+        color_number = 2
+        sample_size = 1
+        all_specimens_have_same_direction = True,
+        display = False
+        filter_spec = None
+        self.po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, self.color_space_combination, sample_size=sample_size)
+        self.assertTrue(np.array_equal(self.po.videos.top, np.array([1, 1, 1, 6, 6, 6], np.int64)))
+        self.assertTrue(np.array_equal(self.po.videos.bot, np.array([ 5,  5,  5, 10, 10, 10], np.int64)))
+        self.assertTrue(np.array_equal(self.po.videos.left, np.array([2, 5, 8, 2, 5, 8], np.int64)))
+        self.assertTrue(np.array_equal(self.po.videos.right, np.array([ 4,  7, 10,  4,  7, 10], np.int64)))
 
+    # def test_get_bounding_boxes_with_moving_centers(self):
+    #     are_gravity_centers_moving = True
+    #     img_list = [self.image]
+    #     color_number = 2
+    #     sample_size = 5
+    #     all_specimens_have_same_direction = True,
+    #     display = False
+    #     filter_spec = None
+    #     self.po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, color_space_combination)
+    #
+    #     self.assertEqual(self.po.videos.top, 0)
+    #     self.assertEqual(self.po.videos.left, 0)
+    #     self.assertEqual(self.po.videos.bot, 11)
+    #     self.assertEqual(self.po.videos.right, 11)
     # def test_get_bounding_boxes_without_moving_centers(self):
     #     """Test get_bounding_boxes without moving centers and default parameters."""
     #     # Create a mock image list for testing

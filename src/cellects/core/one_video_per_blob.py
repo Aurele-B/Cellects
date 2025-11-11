@@ -58,6 +58,8 @@ class OneVideoPerBlob:
         """
         # Initialize all variables used in the following methods
         self.first_image = first_image
+        if self.first_image.crop_coord is None:
+            self.first_image.get_crop_coordinates()
         self.original_shape_hsize = starting_blob_hsize_in_pixels
         self.raw_images = raw_images
         if self.original_shape_hsize is not None:
@@ -74,6 +76,7 @@ class OneVideoPerBlob:
                            display: bool=False, filter_spec: dict=None):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         if self.first_image.validated_shapes.any():
+
             self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
             self.big_kernel = self.big_kernel.astype(np.uint8)
             self.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
@@ -309,7 +312,7 @@ class OneVideoPerBlob:
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
 
         self.motion_list = list()
-        if isinstance(img_list[0], str):
+        if isinstance(img_list, list):
             frame_number = len(img_list)
         sample_numbers = np.floor(np.linspace(0, frame_number, sample_size)).astype(int)
         for frame_idx in np.arange(sample_size):
@@ -334,8 +337,6 @@ class OneVideoPerBlob:
         is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         print("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
         for step_i in np.arange(1, sample_size):
-            print(step_i)
-
             previously_ordered_centroids = deepcopy(ordered_centroids)
             image_i = deepcopy(self.motion_list[step_i])
             image_i = cv2.dilate(image_i, self.small_kernels, iterations=5)

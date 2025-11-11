@@ -922,10 +922,12 @@ class ImageAnalysisWindow(MainTabsType):
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
             self.parent().po.carefully = False
-            self.parent().po.visualize = False
             if self.is_first_image_flag:
+                self.parent().po.visualize = True
+                self.row1[0].setCurrentIndex(0)
                 self.run_first_image_analysis()
             else:
+                self.parent().po.visualize = False
                 self.run_last_image_analysis()
 
     def carefully_is_clicked(self):
@@ -1092,7 +1094,7 @@ class ImageAnalysisWindow(MainTabsType):
 
         try:
             self.thread["UpdateImage"].message_when_thread_finished.disconnect()
-        except RuntimeError:
+        except RuntimeError or RuntimeWarning:
             pass
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
