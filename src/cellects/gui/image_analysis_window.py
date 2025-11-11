@@ -922,12 +922,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
             self.parent().po.carefully = False
+            self.parent().po.visualize = True
+            self.row1[0].setCurrentIndex(0)
             if self.is_first_image_flag:
-                self.parent().po.visualize = True
-                self.row1[0].setCurrentIndex(0)
                 self.run_first_image_analysis()
             else:
-                self.parent().po.visualize = False
                 self.run_last_image_analysis()
 
     def carefully_is_clicked(self):
