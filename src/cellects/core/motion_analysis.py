@@ -330,7 +330,6 @@ class MotionAnalysis:
             if self.vars['lighter_background']:
                 # Initialize the covering_intensity matrix as a reference for pixel fading
                 self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
-            self.substantial_growth = 1.2 * self.origin.sum()
         else:
             self.start = 0
             analysisi = OneImageAnalysis(self.converted_video[0, :, :])
@@ -344,7 +343,7 @@ class MotionAnalysis:
             else:
                 mask_coord = None
             while np.logical_and(np.sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
-                analysisi = self.frame_by_frame_segmentation(self.start, mask_coord)
+                analysisi = self.frame_by_frame_segmentation(self.start, mask_coord, self.origin)
                 self.start += 1
 
             # Use connected components to find which shape is the nearest from the image center.
@@ -365,7 +364,7 @@ class MotionAnalysis:
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == np.argmax(stats[1:, 4])] = 1
             self.origin_idx = np.nonzero(self.origin)
-            self.substantial_growth = self.origin.sum() + 250
+        self.substantial_growth = np.min((1.2 * self.origin.sum(), self.origin.sum() + 250))
 
     def get_covering_duration(self, step: int):
         """
@@ -404,12 +403,13 @@ class MotionAnalysis:
                     true_pixels[1])
         else:
             mask_coord = None
+        prev_bin_im = self.origin
         while np.logical_and(occurrence < 3, self.substantial_time < (self.dims[0] - step - 1)):
             self.substantial_time += step
-            growth_vision = self.frame_by_frame_segmentation(self.substantial_time, mask_coord)
-
-
-            surfarea = np.sum(growth_vision.binary_image * self.borders)
+            growth_vision = self.frame_by_frame_segmentation(self.substantial_time, mask_coord, prev_bin_im)
+            prev_bin_im = growth_vision.binary_image * self.borders
+            surfarea = np.sum(prev_bin_im)
+            prev_bin_im = np.logical_or(prev_bin_im, self.origin).astype(np.uint8)
             if surfarea > self.substantial_growth:
                 occurrence += 1
         # get a rough idea of the area covered during this time
@@ -430,7 +430,15 @@ class MotionAnalysis:
         growth *= self.borders
         growth_vision = OneImageAnalysis(growth)
         growth_vision.segmentation()
-        self.substantial_image = cv2.erode(growth_vision.binary_image, cross_33, iterations=2)
+        if self.vars['several_blob_per_arena']:
+            _, _, stats, _ = cv2.connectedComponentsWithStats(self.origin)
+            do_erode = np.any(stats[1:, 4] > 50)
+        else:
+            do_erode = self.origin.sum() > 50
+        if do_erode:
+            self.substantial_image = cv2.erode(growth_vision.binary_image, cross_33, iterations=2)
+        else:
+            self.substantial_image = growth_vision.binary_image
 
         if np.any(self.substantial_image):
             natural_noise = np.nonzero(intensity_extent == np.min(intensity_extent))
@@ -573,7 +581,7 @@ class MotionAnalysis:
         self.converted_video2 = None
 
 
-    def frame_by_frame_segmentation(self, t: int, mask_coord=None):
+    def frame_by_frame_segmentation(self, t: int, mask_coord=None, previous_binary_image: NDArray[np.uint8]=None):
         """
             Frame-by-frame segmentation of video frames using given parameters.
 
@@ -629,7 +637,9 @@ class MotionAnalysis:
         if t == 0:
             analysisi.previous_binary_image = self.origin
         else:
-            analysisi.previous_binary_image = deepcopy(self.segmentation[t - 1, ...])
+            if previous_binary_image is None:
+                previous_binary_image = self.origin
+            analysisi.previous_binary_image = previous_binary_image
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
