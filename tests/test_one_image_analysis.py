@@ -5,6 +5,7 @@ This script contains all unit tests of the one_image_analysis script
 import unittest
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces
+from cellects.image_analysis.morphological_operations import image_borders
 from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img
 import numpy as np
 
@@ -20,6 +21,36 @@ class TestOneImageAnalysis(CellectsUnitTest):
         # csc = Dict()
         # csc['lab'] = np.array((0,0,1), np.uint8)
         # combine_color_spaces(csc, oia.all_c_spaces)
+
+    def test_subtract_background(self):
+        c_space_dict = dict()
+        c_space_dict['bgr'] = np.ones(3, dtype=np.uint8)
+        c_space_dict['logical'] = "and"
+        c_space_dict['hsv2'] = np.ones(3, dtype=np.uint8)
+        self.oia.generate_subtract_background(c_space_dict)
+        self.assertTrue(self.oia.subtract_background.any())
+
+    def test_whether_image_border_attest_drift_correction(self):
+        self.oia.binary_image = image_borders(several_arenas_img.shape[:2])
+        result0 = self.oia.check_if_image_border_attest_drift_correction()
+        self.assertFalse(result0)
+        self.oia.binary_image = 1 - image_borders(several_arenas_img.shape[:2])
+        result1 = self.oia.check_if_image_border_attest_drift_correction()
+        self.assertTrue(result1)
+        self.oia.binary_image[4, :] = 0
+        result2 = self.oia.check_if_image_border_attest_drift_correction()
+        self.assertFalse(result2)
+
+    def test_adjust_to_drift_correction(self):
+        self.oia.image = self.oia.image[:, :, 0]
+        self.oia.image2 = self.oia.image[:, :].copy()
+        self.oia.binary_image = 1 - image_borders(several_arenas_img.shape[:2])
+        self.oia.binary_image2 = 1 - image_borders(several_arenas_img.shape[:2])
+        self.oia.image2 = self.oia.image.copy()
+        self.oia.adjust_to_drift_correction("And")
+        self.oia.adjust_to_drift_correction("Or")
+        self.oia.adjust_to_drift_correction("Xor")
+        self.assertIsInstance(self.oia.binary_image, np.ndarray)
 
     def test_find_first_im_csc(self):
         """test find_first_im_csc main functionality"""
@@ -151,6 +182,7 @@ class TestOneImageAnalysis(CellectsUnitTest):
         color_number = 3
         self.oia.convert_and_segment(c_space_dict, color_number)
         self.assertTrue(self.oia.binary_image.any())
+
 
 
 
