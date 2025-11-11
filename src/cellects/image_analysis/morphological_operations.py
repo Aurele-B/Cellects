@@ -961,24 +961,33 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
     ndarray of uint8
         The expanded shape.
     """
-
+    # shape_to_expand=test_shape
+    # shape_i=0
+    # shape_original_centroid=ordered_centroids[shape_i, :]
+    # ref_centroids=np.delete(ordered_centroids, shape_i, axis=0)
+    # kernel=self.small_kernels
+    previous_shape_to_expand = shape_to_expand.copy()
     without_shape = deepcopy(without_shape_i)
-    # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
-    centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
-        ref_centroids[1:, 1] - shape_original_centroid[1]))
-    nearest_shapes = np.where(np.greater(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
+    if ref_centroids.shape[0] > 1:
+        # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
+        centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
+            ref_centroids[1:, 1] - shape_original_centroid[1]))
+        nearest_shapes = np.where(np.greater_equal(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
 
-    # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
-    neighbor_mindist = np.min(centroid_distances)
-    idx = np.nonzero(shape_to_expand)
-    for shape_j in nearest_shapes:
-        neighbor_mindist = np.minimum(neighbor_mindist, np.min(
-            np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
-    neighbor_mindist *= 0.5
-    # Get the maximal distance of the focal shape between its contour and its centroids
-    itself_maxdist = np.max(
-        np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
-
+        # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
+        neighbor_mindist = np.min(centroid_distances)
+        idx = np.nonzero(shape_to_expand)
+        for shape_j in nearest_shapes:
+            neighbor_mindist = np.minimum(neighbor_mindist, np.min(
+                np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
+        neighbor_mindist *= 0.5
+        # Get the maximal distance of the focal shape between its contour and its centroids
+        itself_maxdist = np.max(
+            np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
+    else:
+        itself_maxdist = np.max(shape_to_expand.shape)
+        neighbor_mindist = itself_maxdist
+        nearest_shapes = []
     # Put 1 at the border of the reference image in order to be able to stop the while loop once border reached
     without_shape[0, :] = 1
     without_shape[:, 0] = 1
@@ -987,10 +996,9 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
 
     # Compare the distance between the contour of the shape and its centroid with this contour with the centroids of neighbors
     # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
-    previous_shape_to_expand = deepcopy(shape_to_expand)
     while np.logical_and(np.any(np.less_equal(itself_maxdist, neighbor_mindist)),
                          np.count_nonzero(shape_to_expand * without_shape) == 0):
-        previous_shape_to_expand = deepcopy(shape_to_expand)
+        previous_shape_to_expand = shape_to_expand.copy()
         # Dilate the shape by the kernel size
         shape_to_expand = cv2.dilate(shape_to_expand, kernel, iterations=1,
                                      borderType=cv2.BORDER_CONSTANT | cv2.BORDER_ISOLATED)
