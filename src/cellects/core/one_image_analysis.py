@@ -25,6 +25,7 @@ from numba.typed import List as TList
 from numba.typed import Dict as TDict
 from numpy.typing import NDArray
 from typing import Tuple
+from skimage.measure import perimeter
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, extract_first_pc
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
@@ -156,7 +157,7 @@ class OneImageAnalysis:
             self.greyscale = apply_filter(self.image, filter_spec["filter1_type"], filter_spec["filter1_param"])
         else:
             self.greyscale = self.image
-        if (color_number > 2):
+        if color_number > 2:
             self.kmeans(color_number, biomask, backmask, logical, bio_label, bio_label2)
         elif grid_segmentation:
             if lighter_background is None:
@@ -169,7 +170,7 @@ class OneImageAnalysis:
             # logging.info("Segment the image using Otsu thresholding")
             self.binary_image = otsu_thresholding(self.greyscale)
             if self.previous_binary_image is not None:
-                if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum():
+                if (self.binary_image * (1 - self.previous_binary_image)).sum() > (self.binary_image * self.previous_binary_image).sum() + perimeter(self.binary_image):
                     # Ones of the binary image have more in common with the background than with the specimen
                     self.binary_image = 1 - self.binary_image
 

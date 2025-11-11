@@ -3,27 +3,62 @@
 This script contains all unit tests of the one_image_analysis script
 """
 import unittest
-from cellects.core.motion_analysis import MotionAnalysis
-from tests.test_based_run import load_test_folder, run_image_analysis_for_testing, run_write_videos_for_testing
-from tests._base import CellectsUnitTest
-import numpy as np
-import cv2
-import os
 
-class TestOneImageAnalysis(CellectsUnitTest):
+from cellects.config.all_vars_dict import DefaultDicts
+from cellects.core.motion_analysis import *
+from tests.test_based_run import load_test_folder, run_image_analysis_for_testing, run_write_videos_for_testing
+from tests._base import CellectsUnitTest, several_arenas_vid, several_arenas_bin_vid
+import numpy as np
+
+# color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+# visu = several_arenas_vid
+# videos_already_in_ram = [several_arenas_vid, several_arenas_vid[:, :, :, 0]]
+# origin_list = [several_arenas_bin_vid[0]]
+# i = 0
+# dd = DefaultDicts()
+# vars = dd.vars
+# for k in vars['descriptors'].keys():
+#     vars['descriptors'][k] = True
+# vars['origin_list'] = origin_list
+# vars['first_move_threshold'] = 1
+# vars['lighter_background'] = False
+# vars['several_blob_per_arena'] = True
+# l = [i, i + 1, vars, False, False, False, videos_already_in_ram]
+# ma = MotionAnalysis(l)
+# ma.get_origin_shape()
+# ma.get_covering_duration(1)
+# ma.origin
+# ma.substantial_growth
+# ma.substantial_image
+# self = ma
+# ma.detection(compute_all_possibilities=True)
+
+class TestMotionAnalysis(CellectsUnitTest):
     """Test suite for OneImageAnalysis class"""
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        cls.videos_already_in_ram = [several_arenas_vid, several_arenas_vid[:, :, :, 0]]
         cls.i = 0
-        cls.po = load_test_folder(str(cls.path_experiment), 1)
-        cls.po = run_image_analysis_for_testing(cls.po)
-        cls.po.update_output_list()
-        cls.po = run_write_videos_for_testing(cls.po)
-        i = 0
-        l = [i, i + 1, cls.po.vars, False, False, False, None]
-        cls.ma = MotionAnalysis(l)
+        cls.dd = DefaultDicts()
+        cls.vars = cls.dd.vars
+        for k in cls.vars['descriptors'].keys():
+            cls.vars['descriptors'][k] = True
+        cls.origin_list = [several_arenas_bin_vid[0]]
+        cls.vars['origin_list'] = cls.origin_list
+        cls.vars['first_move_threshold'] = 1
+        cls.vars['lighter_background'] = False
+        cls.vars['several_blob_per_arena'] = True
+        cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
+        cls.ma = MotionAnalysis(cls.l)
+
+    def test_motion_analysis(self):
+        self.ma.get_origin_shape()
+        self.assertTrue(self.ma.start is not None)
+        self.ma.get_covering_duration(1)
+        self.ma.detection(True)
 
     # def test_load_images_with_existing_video(self):
     #     """Test loading images from video file when not preloaded."""
