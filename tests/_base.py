@@ -2,7 +2,7 @@
 from __future__ import annotations
 import cv2
 import numpy as np
-from cellects.image_analysis.morphological_operations import rhombus_55, Ellipse
+from cellects.image_analysis.morphological_operations import rhombus_55, Ellipse, cross_33
 
 import os
 from pathlib import Path
@@ -84,3 +84,28 @@ several_arenas_img[:, :, 2][several_arenas_bin_img == 0] = np.random.randint(0, 
 patches_video = np.random.choice([0, 1, 2], 500, p=[0.9, 0.05, 0.05]).reshape((5, 10, 10)).astype(np.uint8)
 for t in range(5):
     patches_video[t, ...] = cv2.dilate(patches_video[t, ...], np.ones((3, 3), dtype=np.uint8), iterations=2)
+
+several_arenas_bin_vid = np.zeros((8, 20, 20), dtype=np.uint8)
+several_arenas_bin_vid[0:3, 4:7, 4:7] += cross_33
+several_arenas_bin_vid[0:3, 13:16, 4:7] += cross_33
+several_arenas_bin_vid[1:4, 4:7, 6:9] += cross_33
+several_arenas_bin_vid[1:4, 13:16, 6:9] += cross_33
+several_arenas_bin_vid[2:6, 4:7, 7:10] += cross_33
+several_arenas_bin_vid[2:6, 13:16, 7:10] += cross_33
+several_arenas_bin_vid[3:5, 4:7, 8:11] += cross_33
+several_arenas_bin_vid[3:5, 13:16, 8:11] += cross_33
+several_arenas_bin_vid[4:6, 4:7, 9:12] += cross_33
+several_arenas_bin_vid[4:6, 13:16, 9:12] += cross_33
+several_arenas_bin_vid[5:8, 4:7, 10:13] += cross_33
+several_arenas_bin_vid[5:8, 13:16, 10:13] += cross_33
+several_arenas_bin_vid[7, 4:7, 11:14] += cross_33
+several_arenas_bin_vid[7, 13:16, 11:14] += cross_33
+several_arenas_bin_vid[several_arenas_bin_vid > 0] = 1
+
+several_arenas_vid = np.zeros((several_arenas_bin_vid.shape[0],several_arenas_bin_vid.shape[1],several_arenas_bin_vid.shape[2],3), dtype=np.uint8)
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())

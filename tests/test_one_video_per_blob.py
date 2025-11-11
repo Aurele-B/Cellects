@@ -9,7 +9,7 @@ from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, extract_first_pc
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from tests.test_based_run import load_test_folder, run_image_analysis_for_testing
-from tests._base import CellectsUnitTest, several_arenas_img
+from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
 from pathlib import Path
 import numpy as np
 import cv2
@@ -32,15 +32,16 @@ import os
 # po = ProgramOrganizer()
 # po.first_image = OneImageAnalysis(image, shape_number=6)
 # color_number=2
-# sample_size=1
-# all_specimens_have_same_direction = True,
+# sample_size=2
+# are_gravity_centers_moving = True
+# img_list = [image, image]
+# all_specimens_have_same_direction = True
+# never_closer_than_2_pixels = False
 # display = False
 # filter_spec = None
 # color_space_combination = {"logical": 'None', "bgr": np.ones(3, dtype=np.uint8)}
-# po.first_image.convert_and_segment(color_space_combination)
-# po.first_image.validated_shapes = po.first_image.binary_image
+# po.first_image.validated_shapes = several_arenas_bin_img
 # po.videos = OneVideoPerBlob(po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
-# img_list = [several_arenas_img]
 # self=po.videos
 # po.videos.get_bounding_boxes(True, img_list, color_space_combination, sample_size=sample_size)
 # po.videos.top
@@ -54,29 +55,58 @@ class TestOneImageAnalysis(CellectsUnitTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.image = several_arenas_img
-        cls.shape_number = 6
+        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+
+        cls.img_list = several_arenas_vid
+        cls.image = several_arenas_vid[0]
+        cls.shape_number = 2
         cls.po = ProgramOrganizer()
         cls.po.first_image = OneImageAnalysis(cls.image, cls.shape_number)
-        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        # cls.po.fast_image_segmentation(is_first_image=True)
-        cls.po.first_image.convert_and_segment(cls.color_space_combination)
-        cls.po.first_image.validated_shapes = cls.po.first_image.binary_image
+        cls.po.first_image.validated_shapes = several_arenas_bin_vid[0]
         cls.po.videos = OneVideoPerBlob(cls.po.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
 
+
+        cls.image2 = several_arenas_img
+        cls.shape_number2 = 6
+        cls.po2 = ProgramOrganizer()
+        cls.po2.first_image = OneImageAnalysis(cls.image2, cls.shape_number2)
+        cls.po2.first_image.validated_shapes = several_arenas_bin_img
+        cls.po2.videos = OneVideoPerBlob(cls.po2.first_image, starting_blob_hsize_in_pixels=2, raw_images=False)
+
     def test_get_bounding_boxes_with_moving_centers(self):
-        are_gravity_centers_moving = False
-        img_list = [self.image]
+        are_gravity_centers_moving = True
+        img_list = self.img_list
         color_number = 2
-        sample_size = 1
-        all_specimens_have_same_direction = True,
+        sample_size = 4
+        all_specimens_have_same_direction = True
         display = False
         filter_spec = None
-        self.po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, self.color_space_combination, sample_size=sample_size)
-        self.assertTrue(np.array_equal(self.po.videos.top, np.array([1, 1, 1, 6, 6, 6], np.int64)))
-        self.assertTrue(np.array_equal(self.po.videos.bot, np.array([ 5,  5,  5, 10, 10, 10], np.int64)))
-        self.assertTrue(np.array_equal(self.po.videos.left, np.array([2, 5, 8, 2, 5, 8], np.int64)))
-        self.assertTrue(np.array_equal(self.po.videos.right, np.array([ 4,  7, 10,  4,  7, 10], np.int64)))
+        color_space_combination = self.color_space_combination
+        self.po.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, self.color_space_combination,
+                                          sample_size=sample_size)
+        visited_pixels = np.any(several_arenas_bin_vid[:-1, ...], axis=0)
+        Y, X = np.nonzero(visited_pixels)
+        self.assertTrue(self.po.videos.top.min() <= Y.min())
+        self.assertTrue(self.po.videos.left.min() <= X.min())
+        self.assertTrue(self.po.videos.bot.max() >= Y.max())
+        self.assertTrue(self.po.videos.right.max() >= X.max())
+
+
+    def test_get_bounding_boxes_with_moving_centers_with_close_shapes(self):
+        are_gravity_centers_moving = True
+        img_list = [self.image2, self.image2]
+        color_number = 2
+        sample_size = 2
+        all_specimens_have_same_direction = True
+        display = False
+        filter_spec = None
+        color_space_combination = self.color_space_combination
+        self.po2.videos.get_bounding_boxes(are_gravity_centers_moving, img_list, self.color_space_combination,
+                                          sample_size=sample_size)
+        self.assertTrue(np.allclose(self.po2.videos.top, np.array([1, 1, 1, 6, 6, 6], np.int64), atol=1))
+        self.assertTrue(np.allclose(self.po2.videos.bot, np.array([ 5,  5,  5, 10, 10, 10], np.int64), atol=1))
+        self.assertTrue(np.allclose(self.po2.videos.left, np.array([2, 5, 8, 2, 5, 8], np.int64), atol=1))
+        self.assertTrue(np.allclose(self.po2.videos.right, np.array([ 4,  7, 10,  4,  7, 10], np.int64), atol=1))
 
     # def test_get_bounding_boxes_with_moving_centers(self):
     #     are_gravity_centers_moving = True

@@ -94,7 +94,8 @@ class OneVideoPerBlob:
                 self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
                 if are_gravity_centers_moving:
                     self._get_bb_with_moving_centers(img_list, color_space_combination, color_number, sample_size,
-                                                     all_specimens_have_same_direction, display, filter_spec=filter_spec)
+                                                     all_specimens_have_same_direction, display,
+                                                     filter_spec=filter_spec)
                     new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
 
                     for i in np.arange(1, self.first_image.shape_number + 1):
@@ -284,29 +285,51 @@ class OneVideoPerBlob:
     def _get_bb_with_moving_centers(self, img_list: list, color_space_combination: dict, color_number: int,
                                     sample_size: int=2, all_specimens_have_same_direction: bool=True,
                                     display: bool=False, filter_spec: dict=None):
-        """`
-        Read and segment each sample image to find where a growing material can go and therefore the limits of the
-        arena enclosing it.
+        """
+            _get_bb_with_moving_centers(self, img_list: list, color_space_combination: dict,
+                                        color_number: int, sample_size: int=2,
+                                        all_specimens_have_same_direction: bool=True,
+                                        display: bool=False, filter_spec: dict=None)
 
-        Starting with the first image, this function try to make each shape grow to see if it covers segmented pixels
-        on following images. By segmenting evenly spaced images it makes a rough tracking of the specimen motion
-        in order to make sure that the resulting video will always contain it.
+            Summary
+            -------
+            Read, segment, and rank shapes across multiple images to detect moving centers,
+            adjusting centroids based on movement.
 
-        Args:
-            img_list (list): List of images to process.
-            color_space_combination (dict): Dictionary specifying the color space combination for segmentation.
-            color_number (int): Number of colors to consider for segmentation.
-            sample_size (int, optional): Number of samples to take from the image list. Defaults to 2.
-            all_specimens_have_same_direction (bool, optional): Flag indicating if all specimens have the same direction. Defaults to True.
-            display (bool, optional): Flag indicating if the segmentation result should be displayed. Defaults to False.
-            filter_spec (dict, optional): Dictionary specifying the filter specifications for segmentation. Defaults to None.
+            Extended Description
+            --------------------
+            Processes a list of images to identify and rank shapes, segmenting motion-blurred
+            shapes using kernels and updating centroids. Adjustments are made if all specimens
+            move in the same direction.
 
-        Returns:
-            None
+            Parameters
+            ----------
+            img_list : list
+                List of images or file paths to be processed.
+            color_space_combination : dict
+                Dictionary detailing the color space combination used for segmentation.
+            color_number : int
+                Number of colors to be considered in the segmentation process.
+            sample_size : int, optional
+                Number of frames to sample from `img_list`. Default is 2.
+            all_specimens_have_same_direction : bool, optional
+                Flag indicating if all specimens move in the same direction. Default is True.
+            display : bool, optional
+                Flag to enable visualization of intermediate results. Default is False.
+            filter_spec : dict, optional
+                Additional filtering specifications for shape segmentation. Default is None.
 
-        Notes:
-            - This method processes each image in the provided list, segments blobs based on color and spatial features,
-            ranks them from top to bottom and left to right, and updates the ordered shapes based on their motion.
+            Raises
+            ------
+            FileNotFoundError
+                If any image in `img_list` is a path and does not exist.
+            ValueError
+                If `color_space_combination` or other parameters are invalid.
+
+            Notes
+            -----
+            This function processes image sequences to identify shapes, track their movement,
+            and adjust centroids accordingly. Intermediate results can be displayed for debugging.
 
         """
         print("Read and segment each sample image and rank shapes from top to bot and from left to right")
@@ -314,6 +337,8 @@ class OneVideoPerBlob:
         self.motion_list = list()
         if isinstance(img_list, list):
             frame_number = len(img_list)
+        else:
+            frame_number = img_list.shape[0]
         sample_numbers = np.floor(np.linspace(0, frame_number, sample_size)).astype(int)
         for frame_idx in np.arange(sample_size):
             if frame_idx == 0:
@@ -322,121 +347,97 @@ class OneVideoPerBlob:
                 if isinstance(img_list[0], str):
                     image = img_list[sample_numbers[frame_idx] - 1]
                 else:
-                    image = img_list[sample_numbers[frame_idx] - 1, ...]
+                    image = img_list[sample_numbers[frame_idx] - 1]
                 self.motion_list.insert(frame_idx, self._segment_blob_motion(image, color_space_combination,
                                                                              color_number, filter_spec=filter_spec))
 
-
         self.big_kernels = Ellipse((self.k_size, self.k_size)).create().astype(np.uint8)
-        self.small_kernels = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
+        self.small_kernels = cross_33
         self.small_kernels = self.small_kernels.astype(np.uint8)
 
         ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-        previous_ordered_image_i = deepcopy(self.ordered_first_image)
-        is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
+        ordered_image_i = deepcopy(self.ordered_first_image)
         print("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
         for step_i in np.arange(1, sample_size):
             previously_ordered_centroids = deepcopy(ordered_centroids)
-            image_i = deepcopy(self.motion_list[step_i])
-            image_i = cv2.dilate(image_i, self.small_kernels, iterations=5)
-
-            # Display the segmentation result for all shapes at this frame
-            if display:
-                if isinstance(img_list[0], str):
-                    img_to_display = read_and_rotate(img_list[sample_numbers[step_i] - 1], self.first_image.bgr, self.raw_images,
-                                                     is_landscape, self.first_image.crop_coord)
-                else:
-                    img_to_display = img_list[sample_numbers[step_i] - 1, ...]
-                    if self.first_image.cropped:
-                        img_to_display = img_to_display[self.first_image.crop_coord[0]: self.first_image.crop_coord[1],
-                                         self.first_image.crop_coord[2]: self.first_image.crop_coord[3], :]
-
-            for shape_i in range(self.first_image.shape_number):
-                shape_to_expand = np.zeros(image_i.shape, dtype=np.uint8)
-                shape_to_expand[previous_ordered_image_i == (shape_i + 1)] = 1
-                without_shape_i = deepcopy(previous_ordered_image_i)
-                without_shape_i[previous_ordered_image_i == (shape_i + 1)] = 0
-                test_shape = expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_shape_i,
-                                                                               ordered_centroids[shape_i, :],
-                                                                               np.delete(ordered_centroids, shape_i,
-                                                                                         axis=0), self.big_kernels)
-                test_shape = expand_until_neighbor_center_gets_nearer_than_own(test_shape, without_shape_i,
-                                                                               ordered_centroids[shape_i, :],
-                                                                               np.delete(ordered_centroids, shape_i,
-                                                                                         axis=0), self.small_kernels)
-                confirmed_shape = test_shape * image_i
-                previous_ordered_image_i[np.nonzero(confirmed_shape)] = shape_i + 1
-                # update the image by putting a purple mask around the current shape
-                contours, useless = cv2.findContours(confirmed_shape, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-                cv2.drawContours(img_to_display, contours, -1, (255, 0, 180), 3)
-                if display:
-                    imtoshow = cv2.resize(img_to_display.astype(np.uint8), (960, 540))
-                    cv2.imshow('Rough detection', imtoshow)
-                    cv2.waitKey(1)
-            if display:
-                cv2.destroyAllWindows()
+            new_image_i = deepcopy(self.motion_list[step_i])
+            detected_shape_number = self.first_image.shape_number + 1
+            c = 0
+            while c < 5 and detected_shape_number == self.first_image.shape_number + 1:
+                c += 1
+                image_i = new_image_i
+                new_image_i = cv2.dilate(image_i, self.small_kernels, iterations=1)
+                detected_shape_number, _ = cv2.connectedComponents(new_image_i, connectivity=8)
+            if c == 0:
+                break
+            else:
+                for shape_i in range(self.first_image.shape_number):
+                    shape_to_expand = np.zeros(image_i.shape, dtype=np.uint8)
+                    shape_to_expand[ordered_image_i == (shape_i + 1)] = 1
+                    without_shape_i = ordered_image_i.copy()
+                    without_shape_i[ordered_image_i == (shape_i + 1)] = 0
+                    if self.k_size != 3:
+                        test_shape = expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_shape_i,
+                                                                                       ordered_centroids[shape_i, :],
+                                                                                       np.delete(ordered_centroids, shape_i,
+                                                                                                 axis=0), self.big_kernels)
+                    else:
+                        test_shape = shape_to_expand
+                    test_shape = expand_until_neighbor_center_gets_nearer_than_own(test_shape, without_shape_i,
+                                                                                   ordered_centroids[shape_i, :],
+                                                                                   np.delete(ordered_centroids, shape_i,
+                                                                                             axis=0), self.small_kernels)
+                    confirmed_shape = test_shape * image_i
+                    ordered_image_i[confirmed_shape > 0] = shape_i + 1
 
 
-            mask_to_display = np.zeros(image_i.shape, dtype=np.uint8)
-            mask_to_display[np.nonzero(previous_ordered_image_i)] = 1
-            contours_to_display, useless = cv2.findContours(mask_to_display,
-                                                          cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-            cv2.drawContours(img_to_display, contours_to_display, -1, (255, 0, 0), 3)
-            if display:
-                imtoshow = cv2.resize(img_to_display.astype(np.uint8), (960, 540))
-                cv2.imshow('Rough detection', imtoshow)
-                cv2.waitKey(1)
+                mask_to_display = np.zeros(image_i.shape, dtype=np.uint8)
+                mask_to_display[ordered_image_i > 0] = 1
 
-            # If the blob moves enough to drastically change its gravity center,
-            # update the ordered centroids at each frame.
-            detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
-                                                                             connectivity=8)
-            mask_to_display = mask_to_display.astype(np.uint8)
-            while np.logical_and(detected_shape_number - 1 != self.first_image.shape_number,
-                                 np.sum(mask_to_display > 0) < mask_to_display.size):
-                mask_to_display = cv2.dilate(mask_to_display, self.small_kernels, iterations=1)
+                # If the blob moves enough to drastically change its gravity center,
+                # update the ordered centroids at each frame.
                 detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
                                                                                  connectivity=8)
-                mask_to_display[np.nonzero(mask_to_display)] = 1
+
                 mask_to_display = mask_to_display.astype(np.uint8)
-                if display:
-                    imtoshow = cv2.resize(mask_to_display * 255, (960, 540))
-                    cv2.imshow('expansion', imtoshow)
-                    cv2.waitKey(1)
-            if display:
-                cv2.destroyAllWindows()
-            ordered_stats, ordered_centroids = rank_from_top_to_bottom_from_left_to_right(mask_to_display,
-                                                                                          self.first_image.y_boundaries)
+                while np.logical_and(detected_shape_number - 1 != self.first_image.shape_number,
+                                     np.sum(mask_to_display > 0) < mask_to_display.size):
+                    mask_to_display = cv2.dilate(mask_to_display, self.small_kernels, iterations=1)
+                    detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
+                                                                                     connectivity=8)
+                    mask_to_display[np.nonzero(mask_to_display)] = 1
+                    mask_to_display = mask_to_display.astype(np.uint8)
+                ordered_stats, ordered_centroids = rank_from_top_to_bottom_from_left_to_right(mask_to_display,
+                                                                                              self.first_image.y_boundaries)
 
-            new_ordered_centroids = ordered_centroids
-            if all_specimens_have_same_direction:
-                # Adjust each centroid position according to the maximal centroid displacement.
-                x_diffs = new_ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
-                if np.mean(x_diffs) > 0: # They moved left, we add to x
-                    add_to_x = np.max(x_diffs) - x_diffs
-                else: #They moved right, we remove from x
-                    add_to_x = np.min(x_diffs) - x_diffs
-                new_ordered_centroids[:, 0] = new_ordered_centroids[:, 0] + add_to_x
+                if all_specimens_have_same_direction:
+                    # Adjust each centroid position according to the maximal centroid displacement.
+                    x_diffs = ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
+                    if np.mean(x_diffs) > 0: # They moved left, we add to x
+                        add_to_x = np.max(x_diffs) - x_diffs
+                    else: #They moved right, we remove from x
+                        add_to_x = np.min(x_diffs) - x_diffs
+                    ordered_centroids[:, 0] = ordered_centroids[:, 0] + add_to_x
 
-                y_diffs = new_ordered_centroids[:, 1] - previously_ordered_centroids[:, 1]
-                if np.mean(y_diffs) > 0:  # They moved down, we add to y
-                    add_to_y = np.max(y_diffs) - y_diffs
-                else:  # They moved up, we remove from y
-                    add_to_y = np.min(y_diffs) - y_diffs
-                new_ordered_centroids[:, 1] = new_ordered_centroids[:, 1] + add_to_y
+                    y_diffs = ordered_centroids[:, 1] - previously_ordered_centroids[:, 1]
+                    if np.mean(y_diffs) > 0:  # They moved down, we add to y
+                        add_to_y = np.max(y_diffs) - y_diffs
+                    else:  # They moved up, we remove from y
+                        add_to_y = np.min(y_diffs) - y_diffs
+                    ordered_centroids[:, 1] = ordered_centroids[:, 1] + add_to_y
 
-            ordered_centroids = new_ordered_centroids
+                ordered_image_i = mask_to_display
 
-            # Normalize each bounding box
+        # Normalize each bounding box
 
         for shape_i in range(self.first_image.shape_number):
-            shape_i_indices = np.where(previous_ordered_image_i == shape_i + 1)
+            shape_i_indices = np.where(ordered_image_i == shape_i + 1)
             self.left[shape_i] = np.min(shape_i_indices[1])
             self.right[shape_i] = np.max(shape_i_indices[1])
             self.top[shape_i] = np.min(shape_i_indices[0])
             self.bot[shape_i] = np.max(shape_i_indices[0])
-        self.ordered_first_image = previous_ordered_image_i
+        self.ordered_first_image = ordered_image_i
 
     def _segment_blob_motion(self, image, color_space_combination: dict, color_number: int, filter_spec: dict):
         """
