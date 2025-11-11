@@ -223,7 +223,7 @@ class OneImageAnalysis:
         if len(self.all_c_spaces) == 0 and not self.already_greyscale:
             self.all_c_spaces = get_color_spaces(self.bgr)
         self.convert_and_segment(c_space_dict, grid_segmentation=False)
-        disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
+        disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
         disk = np.uint8(Ellipse((disk_size, disk_size)).create())
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
         if self.image2 is not None:
