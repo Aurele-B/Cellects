@@ -223,7 +223,7 @@ class GetLastImThread(QtCore.QThread):
 
 
 class UpdateImageThread(QtCore.QThread):
-    message_when_thread_finished = QtCore.Signal(bool)
+    message_when_thread_finished = QtCore.Signal()
 
     def __init__(self, parent=None):
         super(UpdateImageThread, self).__init__(parent)
@@ -414,7 +414,7 @@ class UpdateImageThread(QtCore.QThread):
                         image[mask[0], mask[1], :] = np.array((224, 160, 81), dtype=np.uint8)
 
         self.parent().imageanalysiswindow.display_image.update_image(image)
-        self.message_when_thread_finished.emit(True)
+        self.message_when_thread_finished.emit()
 
 
 class FirstImageAnalysisThread(QtCore.QThread):
@@ -473,8 +473,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                kmeans_clust_nb=kmeans_clust_nb,
                                                                biomask=self.parent().po.all["bio_mask"],
                                                                backmask=self.parent().po.all["back_mask"],
-                                                               color_space_dictionaries=None,
-                                                               carefully=self.parent().po.carefully)
+                                                               color_space_dictionaries=None)
             else:
                 if self.parent().po.all['scale_with_image_or_cells'] == 0:
                     self.parent().po.get_average_pixel_size()
@@ -487,8 +486,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    kmeans_clust_nb=kmeans_clust_nb,
                                                                                    biomask=self.parent().po.all["bio_mask"],
                                                                                    backmask=self.parent().po.all["back_mask"],
-                                                                                   color_space_dictionaries=None,
-                                                                                   carefully=self.parent().po.carefully)
+                                                                                   color_space_dictionaries=None)
 
         logging.info(f" image analysis lasted {default_timer() - tic} secondes")
         logging.info(f" image analysis lasted {np.round((default_timer() - tic) / 60)} minutes")

@@ -2,7 +2,7 @@
 """ADD DETAIL OF THE MODULE"""
 import os
 import logging
-from numpy import min, max, all, any, arange, repeat
+import numpy as np
 from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import LoadFirstFolderIfSeveralThread
@@ -151,12 +151,8 @@ class IfSeveralFoldersWindow(WindowType):
             if item_number == 0:
                 self.message.setText("Select at least one folder")
             else:
-                # self.tableau.selectedItems()
                 sample_number_per_folder = []
                 folder_list = []
-                # sample_number =
-                # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
-                #     sample_number = self.parent().po.all['sample_number_per_folder']
                 for i in np.arange(item_number):
                     if i % 2 == 0:
                         folder_list.append(self.tableau.selectedItems()[i].text())
@@ -164,27 +160,10 @@ class IfSeveralFoldersWindow(WindowType):
                         sample_number_per_folder.append(int(self.tableau.selectedItems()[i].text()))
                 self.parent().po.all['first_folder_sample_number'] = int(self.tableau.selectedItems()[1].text())
 
-                #
-                # for index in self.tableau.selectionModel().selectedRows():
-                #     folder_list.append(self.parent().po.all['folder_list'][index.row()])
-                #     # if not isinstance(self.parent().po.all['sample_number_per_folder'], int):
-                #     sample_number = self.parent().po.all['sample_number_per_folder'][index.row()]
-                #     sample_number_per_folder.append(sample_number)
-
                 self.parent().po.all['folder_list'] = folder_list
                 self.parent().po.all['sample_number_per_folder'] = sample_number_per_folder
                 self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'],
                                                   self.parent().po.all['folder_list'][0])
-                print(os.getcwd())
-                # if not isinstance(self.parent().po.all['sample_number_per_folder'], int):
-                #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0], self.parent().po.all['folder_list'][0])
-                # else:
-                #     self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'], self.parent().po.all['folder_list'][0])
-
-                # if self.parent.subwidgets_stack.count() == 5:
-                #     self.parent.instantiate_widget(ImageAnalysisWindow(self.parent))
-                # if not self.parent().imageanalysiswindow.initialized:
-
                 self.thread["LoadFirstFolderIfSeveral"].start()
                 self.thread["LoadFirstFolderIfSeveral"].message_when_thread_finished.connect(self.first_folder_loaded)
 
@@ -206,11 +185,9 @@ class IfSeveralFoldersWindow(WindowType):
             self.instantiates_widgets_and_do_image_analysis()
 
     def instantiates_widgets_and_do_image_analysis(self):
-        print(os.getcwd())
         self.parent().instantiate_widgets(severalfolder_included=False)
         self.parent().imageanalysiswindow.true_init()
         self.parent().firstwindow.instantiate = False
-        print(os.getcwd())
         self.parent().change_widget(2)# ImageAnalysisWindow
         # self.parent().change_widget(3)  # VideoAnalysisWindow
 

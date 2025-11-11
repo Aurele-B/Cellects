@@ -591,7 +591,6 @@ class ProgramOrganizer:
 
         else:
             self.cropping(is_first_image=False)
-            print(self.vars["filter_spec"])
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,

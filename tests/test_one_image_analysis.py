@@ -4,12 +4,9 @@ This script contains all unit tests of the one_image_analysis script
 """
 import unittest
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.core.one_video_per_blob import OneVideoPerBlob
-from tests.test_based_run import load_test_folder, run_image_analysis_for_testing
+from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces
 from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img
 import numpy as np
-import cv2
-import os
 
 class TestOneImageAnalysis(CellectsUnitTest):
     """Test suite for OneImageAnalysis class"""
@@ -19,6 +16,10 @@ class TestOneImageAnalysis(CellectsUnitTest):
         super().setUpClass()
         cls.image = several_arenas_img
         cls.oia = OneImageAnalysis(cls.image)
+        cls.oia.all_c_spaces = get_color_spaces(cls.image)
+        # csc = Dict()
+        # csc['lab'] = np.array((0,0,1), np.uint8)
+        # combine_color_spaces(csc, oia.all_c_spaces)
 
     def test_find_first_im_csc(self):
         """test find_first_im_csc main functionality"""
@@ -30,7 +31,6 @@ class TestOneImageAnalysis(CellectsUnitTest):
         biomask = None
         backmask = None
         color_space_dictionaries = None
-        carefully = False
         self.oia.find_first_im_csc()
         self.assertGreater(self.oia.saved_csc_nb, 0)
 

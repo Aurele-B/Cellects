@@ -45,7 +45,7 @@ class OneImageAnalysis:
 
         ps: A viewing method displays the image before and after the most advanced modification made in instance
     """
-    def __init__(self, image):
+    def __init__(self, image, shape_number=0):
         self.image = image
         if len(self.image.shape) == 2:
             self.already_greyscale = True
@@ -59,7 +59,7 @@ class OneImageAnalysis:
         self.previous_binary_image = None
         self.validated_shapes = np.zeros(self.image.shape[:2], dtype=np.uint8)
         self.centroids = 0
-        self.shape_number = 0
+        self.shape_number = shape_number
         self.concomp_stats = 0
         self.y_boundaries = None
         self.x_boundaries = None
@@ -116,7 +116,9 @@ class OneImageAnalysis:
         """
         if not self.already_greyscale:
             first_dict, second_dict, c_spaces = split_dict(c_space_dict)
-            self.image, self.image2, self.all_c_spaces, self.first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, subtract_background, subtract_background2)
+            self.image, self.image2, all_c_spaces, self.first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, subtract_background, subtract_background2)
+            if len(all_c_spaces) > len(self.all_c_spaces):
+                self.all_c_spaces = all_c_spaces
 
         self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
                           backmask=backmask, grid_segmentation=grid_segmentation,
@@ -322,8 +324,7 @@ class OneImageAnalysis:
 
     def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
                           spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
-                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None,
-                          carefully: bool=False):
+                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, carefully: bool=False):
         """
         Prepare color space lists, dictionaries and matrices.
 
@@ -343,12 +344,12 @@ class OneImageAnalysis:
 
         """
         logging.info(f"Prepare color space lists, dictionaries and matrices")
-
         self.im_combinations = []
         self.saved_images_list = TList()
         self.converted_images_list = TList()
         self.saved_color_space_list = list()
         self.saved_csc_nb = 0
+
         if self.image.any():
             if len(self.all_c_spaces) == 0:
                 self.all_c_spaces = get_color_spaces(self.bgr)
@@ -356,7 +357,7 @@ class OneImageAnalysis:
                 if carefully:
                     colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
                 else:
-                    colorspace_list = ["lab", "hsv"]
+                    colorspace_list = ["bgr"]
                 color_space_dictionaries = TList()
                 for i, c_space in enumerate(colorspace_list):
                     for i in np.arange(3):
@@ -374,7 +375,6 @@ class OneImageAnalysis:
             self.save_combination_thread = SaveCombinationThread(self)
             get_one_channel_result = True
             combine_channels = False
-
             for csc_dict in color_space_dictionaries:
                 logging.info(f"Try detection with each color space channel, one by one. Currently analyzing {csc_dict}")
                 list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,

@@ -7,7 +7,6 @@ import unittest
 from tests._base import CellectsUnitTest
 from tests.test_based_run import *
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.utils.load_display_save import PickleRick
 import numpy as np
 from numba.typed import Dict as TDict
 
@@ -27,8 +26,8 @@ class TestCellects(CellectsUnitTest):
 
     def test_save_data_to_run_cellects_quickly(self):
         if not os.path.isfile(self.path_experiment / "Data to run Cellects quickly.pkl"):
-            crop_coord = np.array((0, 244, 0, 299))
-            coordinates = np.array((1, 297, 1, 242))
+            crop_coord = np.array((0, 245, 0, 300))
+            coordinates = np.array((1, 298, 1, 243))
             dd = DefaultDicts()
             self.po.all = dd.all
             self.po.vars = dd.vars
@@ -70,8 +69,8 @@ class TestCellects(CellectsUnitTest):
 
     def test_load_data_to_run_cellects_quickly(self):
         self.test_save_data_to_run_cellects_quickly()
-        crop_coord = np.array((0, 244, 0, 299))
-        coordinates = np.array((1, 297, 1, 242))
+        crop_coord = np.array((0, 245, 0, 300))
+        coordinates = np.array((1, 298, 1, 243))
         self.assertTrue(np.array_equal(self.po.first_image.crop_coord, crop_coord))
         self.assertTrue(np.array_equal(self.po.left[0], coordinates[0]))
         self.assertTrue(np.array_equal(self.po.right[0], coordinates[1]))

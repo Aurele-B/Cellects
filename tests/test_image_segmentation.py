@@ -4,7 +4,7 @@ This script contains all unit tests of the image segmentation script
 """
 
 import unittest
-from tests._base import CellectsUnitTest
+from tests._base import CellectsUnitTest, several_arenas_img
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
@@ -515,6 +515,127 @@ class TestFindThresholdGivenMask(CellectsUnitTest):
         result = find_threshold_given_mask(greyscale, mask)
         # Just verify it returns a value in range
         self.assertTrue(0 <= result <= 255)
+
+class TestExtractFirstPC(CellectsUnitTest):
+    """Test suite for extract_first_pc function."""
+
+    def test_extract_first_pc_hwc_format(self):
+        """Test that extract_first_pc works with HWC format (height, width, channels)."""
+        # Create a simple test image (HWC format)
+        bgr_image = np.array([
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]]
+        ])
+
+        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+        # Verify shapes
+        self.assertEqual(first_pc_image.shape, (2, 2))
+        self.assertEqual(first_pc_vector.shape, (3,))
+
+        # Verify explained variance is between 0 and 1
+        self.assertTrue(0 <= explained_variance_ratio <= 1)
+
+    def test_extract_first_pc_chw_format(self):
+        """Test that extract_first_pc works with CHW format (channels, height, width)."""
+        # Create a simple test image (CHW format)
+        bgr_image = np.array([
+            [[1, 4], [7, 10]],
+            [[2, 5], [8, 11]],
+            [[3, 6], [9, 12]]
+        ])
+
+        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+        # Verify shapes
+        self.assertEqual(first_pc_image.shape, (2, 2))
+        self.assertEqual(first_pc_vector.shape, (3,))
+
+    def test_with_standardization(self):
+        """Test that standardization affects the results."""
+        bgr_image = np.array([
+            [[1, 2, 3], [4, 5, 6]],
+            [[7, 8, 9], [10, 11, 12]]
+        ])
+
+        # With standardization
+        first_pc_with_std, _, _ = extract_first_pc(bgr_image, standardize=True)
+
+        # Without standardization
+        first_pc_without_std, _, _ = extract_first_pc(bgr_image, standardize=False)
+
+        # Results should be different when standardization is applied
+        self.assertFalse(np.allclose(first_pc_with_std, first_pc_without_std))
+
+    def test_zero_std_channels(self):
+        """Test handling of channels with zero standard deviation."""
+        # Create image where one channel is constant (std=0)
+        bgr_image = np.array([
+            [[1, 2, 1], [4, 5, 4]],  # Third channel is constant (all 1s)
+            [[7, 8, 7], [10, 11, 10]]
+        ])
+
+        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+        # Should not raise any errors and return valid results
+        self.assertEqual(first_pc_image.shape, (2, 2))
+        self.assertEqual(first_pc_vector.shape, (3,))
+
+    def test_single_pixel_image(self):
+        """Test edge case with single pixel image."""
+        bgr_image = np.array([[[1, 2, 3]]])  # Single pixel
+
+        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+        # Verify shapes
+        self.assertEqual(first_pc_image.shape, (1, 1))
+        self.assertEqual(first_pc_vector.shape, (3,))
+
+    def test_empty_image(self):
+        """Test edge case with empty image."""
+        bgr_image = np.array([[]])  # Empty image
+
+        with self.assertRaises(ValueError):
+            extract_first_pc(bgr_image)
+
+    def test_explained_variance_sum(self):
+        """Test that explained variances sum to 1 (approximately)."""
+        bgr_image = np.random.rand(4, 4, 3)
+
+        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+        # The explained variance ratio should be between 0 and 1
+        self.assertTrue(0 <= explained_variance_ratio <= 1)
+
+    def test_first_pc_shape_consistency(self):
+        """Test that first PC image shape matches original height and width."""
+        # Test with various image sizes
+        for height, width in [(10, 5), (256, 256), (3, 3)]:
+            bgr_image = np.random.rand(height, width, 3)
+
+            first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+
+            self.assertEqual(first_pc_image.shape, (height, width))
+
+    def test_first_pc_vector_normalization(self):
+        """Test that first PC vector is normalized."""
+        bgr_image = np.random.rand(5, 5, 3)
+
+        _, _, first_pc_vector = extract_first_pc(bgr_image)
+
+        # First PC vector should be normalized (unit length)
+        self.assertAlmostEqual(np.linalg.norm(first_pc_vector), 1.0, places=6)
+
+    def test_first_pc_vector_use_for_conversion(self):
+        """Test when first PC vector is used for conversion."""
+        bgr_image = several_arenas_img
+
+        greyscale, _, first_pc_vector = extract_first_pc(bgr_image)
+        pca = bracket_to_uint8_image_contrast(greyscale)
+        from_csc, _, _, _ = generate_color_space_combination(bgr_image, ["bgr"], {"bgr": first_pc_vector})
+        from_csc = bracket_to_uint8_image_contrast(from_csc)
+
+        self.assertTrue(np.allclose(pca, from_csc, atol=1))
 
 
 if __name__ == '__main__':

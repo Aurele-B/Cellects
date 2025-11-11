@@ -732,22 +732,52 @@ def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDA
     return count_a, count_b
 
 
-def extract_first_pc(rgb_image: np.ndarray, standardize: bool=True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def extract_first_pc(bgr_image: np.ndarray, standardize: bool=True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Extract the first principal component from an RGB image.
 
-    Parameters:
-        rgb_image (np.ndarray): Input RGB image of shape (height, width, 3).
-        standardize (bool): Whether to center and scale pixel values.
+    Extract the first principal component from a BGR image.
 
-    Returns:
-        np.ndarray: Image representing the first PC.
-        float: Explained variance ratio for the first component.
+    Parameters
+    ----------
+    bgr_image : numpy.ndarray
+        A 3D or 2D array representing the BGR image. Expected shape is either
+        (height, width, 3) or (3, height, width).
+    standardize : bool, optional
+        If True, standardizes the image pixel values by subtracting the mean and
+        dividing by the standard deviation before computing the principal
+        components. Default is True.
+
+    Returns
+    -------
+    numpy.ndarray
+        The first principal component image, reshaped to the original image height and width.
+    float
+        The explained variance ratio of the first principal component.
+    numpy.ndarray
+        The first principal component vector.
+
+    Notes
+    -----
+    The principal component analysis (PCA) is performed using Singular Value Decomposition (SVD).
+    Standardization helps in scenarios where the pixel values have different scales.
+    Pixels with zero standard deviation are handled by setting their standardization
+    denominator to 1.0 to avoid division by zero.
+
+    Examples
+    --------
+    >>> bgr_image = np.random.rand(100, 200, 3)  # Example BGR image
+    >>> first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+    >>> print(first_pc_image.shape)
+    (100, 200)
+    >>> print(explained_variance_ratio)
+    0.339
+    >>> print(first_pc_vector.shape)
+    (3,)
     """
-    if rgb_image.shape[0] == 3:
-        rgb_image = np.transpose(rgb_image, (1, 2, 0))
-    height, width, channels = rgb_image.shape
-    pixels = rgb_image.reshape(-1, channels)  # Flatten to Nx3 matrix
+    if bgr_image.shape[0] == 3:
+        bgr_image = np.transpose(bgr_image, (1, 2, 0))
+    height, width, channels = bgr_image.shape
+    pixels = bgr_image.reshape(-1, channels)  # Flatten to Nx3 matrix
 
     if standardize:
         mean = np.mean(pixels, axis=0)

@@ -191,7 +191,6 @@ def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict]:
     c_spaces = []
     for k, v in c_space_dict.items():
         if k == 'PCA' or k != 'logical' and np.absolute(v).sum() > 0:
-            print(k, v)
             if k[-1] != '2':
                 first_dict[k] = v
                 c_spaces.append(k)
