@@ -223,7 +223,7 @@ class GetLastImThread(QtCore.QThread):
 
 
 class UpdateImageThread(QtCore.QThread):
-    message_when_thread_finished = QtCore.Signal()
+    message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
         super(UpdateImageThread, self).__init__(parent)
@@ -414,7 +414,7 @@ class UpdateImageThread(QtCore.QThread):
                         image[mask[0], mask[1], :] = np.array((224, 160, 81), dtype=np.uint8)
 
         self.parent().imageanalysiswindow.display_image.update_image(image)
-        self.message_when_thread_finished.emit()
+        self.message_when_thread_finished.emit(True)
 
 
 class FirstImageAnalysisThread(QtCore.QThread):
