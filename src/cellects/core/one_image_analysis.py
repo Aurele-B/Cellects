@@ -81,6 +81,7 @@ class OneImageAnalysis:
         self.greyscale = None
         self.greyscale2 = None
         self.first_pc_vector = None
+
     def convert_and_segment(self, c_space_dict: dict, color_number=2, biomask: NDArray[np.uint8]=None,
                             backmask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
                             subtract_background2: NDArray=None, grid_segmentation: bool=False,
@@ -164,7 +165,7 @@ class OneImageAnalysis:
                 self.binary_image = otsu_thresholding(self.greyscale)
                 lighter_background = self.binary_image.sum() > (self.binary_image.size / 2)
             if int_variation_thresh is None:
-                int_variation_thresh = 100 - (np.ptp(self.greyscale) * 90 / 255)
+                int_variation_thresh = 100 - (np.ptp(self.greyscale).astype(np.float64) * 90 / 255)
             self.grid_segmentation(lighter_background, side_length, step, int_variation_thresh, mask)
         else:
             # logging.info("Segment the image using Otsu thresholding")
@@ -195,6 +196,11 @@ class OneImageAnalysis:
                 self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
             self.binary_image = self.binary_image.astype(np.uint8)
 
+    def _get_all_color_spaces(self):
+        """Generate and store all supported color spaces for the image."""
+        if len(self.all_c_spaces) == 0 and not self.already_greyscale:
+            self.all_c_spaces = get_color_spaces(self.bgr)
+
     def generate_subtract_background(self, c_space_dict: dict):
         """
         Generate a background-subtracted image using specified color space dictionary.
@@ -220,8 +226,7 @@ class OneImageAnalysis:
                 after morphological operations with the disk-shaped structuring element,
                 if `image2` is present."""
         logging.info("Generate background using the generate_subtract_background method of OneImageAnalysis class")
-        if len(self.all_c_spaces) == 0 and not self.already_greyscale:
-            self.all_c_spaces = get_color_spaces(self.bgr)
+        self._get_all_color_spaces()
         self.convert_and_segment(c_space_dict, grid_segmentation=False)
         disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
         disk = np.uint8(Ellipse((disk_size, disk_size)).create())
@@ -352,8 +357,7 @@ class OneImageAnalysis:
         self.saved_csc_nb = 0
 
         if self.image.any():
-            if len(self.all_c_spaces) == 0:
-                self.all_c_spaces = get_color_spaces(self.bgr)
+            self._get_all_color_spaces()
             if color_space_dictionaries is None:
                 if carefully:
                     colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
@@ -453,8 +457,10 @@ class OneImageAnalysis:
 
                 # If most images are very low in biosum or backsum, try to mix them together to improve that score
                 # Do a logical And between the two best biomasks
+                print(self.saved_csc_nb)
                 if biomask is not None:
                     if not np.all(np.isin((bio1, bio2), (most1, most2))):
+                        print('h1')
                         process_i.image = self.converted_images_list[bio1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[bio2]).astype(
                         np.uint8)
@@ -469,8 +475,8 @@ class OneImageAnalysis:
 
                 # Do a logical And between the two best backmask
                 if backmask is not None:
-
                     if not np.all(np.isin((back1, back2), (most1, most2))):
+                        print('h2')
                         process_i.image = self.converted_images_list[back1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[back1], self.saved_images_list[back2]).astype(
                         np.uint8)
@@ -642,8 +648,7 @@ class OneImageAnalysis:
             carefully (bool, optional): A flag indicating whether to process colorspaces carefully.
 
         """
-        if len(self.all_c_spaces) == 0:
-            self.all_c_spaces = get_color_spaces(self.bgr)
+        self._get_all_color_spaces()
         if color_space_dictionaries is None:
             if carefully:
                 colorspace_list = TList(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
@@ -882,17 +887,17 @@ class OneImageAnalysis:
                 all_labels = kmeans_image[biomask[0], biomask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
-                self.bio_label = np.nonzero(sum_per_label == np.max(sum_per_label))
+                self.bio_label = np.nonzero(sum_per_label == np.max(sum_per_label))[0]
             elif backmask is not None:
                 all_labels = kmeans_image[backmask[0], backmask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
-                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
+                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))[0]
             else:
                 for i in range(cluster_number):
                     sum_per_label[i] = (kmeans_image == i).sum()
-                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
-            self.binary_image[np.nonzero(kmeans_image == self.bio_label)] = 1
+                self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))[0]
+            self.binary_image[np.nonzero(np.isin(kmeans_image, self.bio_label))] = 1
 
         if logical != 'None':
             image = self.image2.reshape((-1, 1))
@@ -1007,7 +1012,6 @@ class OneImageAnalysis:
                                         if np.any(potential_detection):
                                             if np.ptp(potential_detection[np.nonzero(potential_detection)]) < int_variation_thresh:
                                                 homogeneities[y_start:y_end, x_start:x_end] += 1
-
                                             threshold = get_otsu_threshold(potential_detection)
                                             if lighter_background:
                                                 net_coord = np.nonzero(potential_detection < threshold)
@@ -1127,8 +1131,7 @@ class OneImageAnalysis:
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
             self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])
-            if len(self.all_c_spaces) > 0:
-                self.all_c_spaces = get_color_spaces(self.bgr)
+            self._get_all_color_spaces()
             if self.im_combinations is not None:
                 for i in np.arange(len(self.im_combinations)):
                     self.im_combinations[i]["binary_image"] = self.im_combinations[i]["binary_image"][crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3]]
