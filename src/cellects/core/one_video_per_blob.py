@@ -76,7 +76,6 @@ class OneVideoPerBlob:
                            display: bool=False, filter_spec: dict=None):
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         if self.first_image.validated_shapes.any():
-
             self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
             self.big_kernel = self.big_kernel.astype(np.uint8)
             self.small_kernel = np.array(((0, 1, 0), (1, 1, 1), (0, 1, 0)), dtype=np.uint8)
@@ -239,7 +238,6 @@ class OneVideoPerBlob:
 
         # If it occurs at least one time, apply a correction, otherwise, continue and write videos
         # If the overflow is strong, remove the corresponding individuals and remake bounding_box finding
-
         if np.any(np.less(out_of_pic, distance_threshold_to_consider_an_arena_out_of_the_picture)):
             # Remove shapes
             self.standard = - 1
@@ -358,7 +356,7 @@ class OneVideoPerBlob:
         ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
             self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
         ordered_image_i = deepcopy(self.ordered_first_image)
-        print("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
+        logging.info("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
         for step_i in np.arange(1, sample_size):
             previously_ordered_centroids = deepcopy(ordered_centroids)
             new_image_i = deepcopy(self.motion_list[step_i])
@@ -468,7 +466,7 @@ class OneVideoPerBlob:
         return In.binary_image
 
 
-    def prepare_video_writing(self, img_list: list, min_ram_free: float, in_colors: bool=False):
+    def prepare_video_writing(self, img_list: list, min_ram_free: float, in_colors: bool=False, pathway: str=""):
         """
         Prepare the video writing process.
 
@@ -506,7 +504,7 @@ class OneVideoPerBlob:
             ind_i += 1
             while np.any(np.isin(self.not_analyzed_individuals, ind_i)):
                 ind_i += 1
-            vid_names.append("ind_" + str(ind_i) + ".npy")
+            vid_names.append(pathway + "ind_" + str(ind_i) + ".npy")
             counter += 1
         img_nb = len(img_list)
 
@@ -552,7 +550,7 @@ class OneVideoPerBlob:
         return bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining
 
     def write_videos_as_np_arrays(self, img_list: list, min_ram_free: float, in_colors: bool=False,
-                                  reduce_image_dim: bool=False):
+                                  reduce_image_dim: bool=False, pathway: str=""):
         """
         Write videos as numpy arrays.
 
@@ -573,7 +571,7 @@ class OneVideoPerBlob:
             (bunches), and saves them as numpy arrays based on specified conditions.
         """
         is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
-        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors)
+        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors, pathway=pathway)
         for bunch in np.arange(bunch_nb):
             print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
             if bunch == (bunch_nb - 1) and remaining > 0:
