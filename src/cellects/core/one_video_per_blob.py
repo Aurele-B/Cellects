@@ -19,7 +19,7 @@ from copy import deepcopy
 import numpy as np
 import cv2
 import psutil
-
+from numpy.typing import NDArray
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_minimal_distance_between_2_shapes, \
     rank_from_top_to_bottom_from_left_to_right, \
     expand_until_neighbor_center_gets_nearer_than_own, get_line_points
@@ -37,24 +37,33 @@ class OneVideoPerBlob:
 
     def __init__(self, first_image: object, starting_blob_hsize_in_pixels: int, raw_images: bool):
         """
-        Class representing a video processor for analyzing motion in images.
+        Initialize an instance of a class that processes video frames.
 
-        This class takes an initial image, the height size of starting blobs, and a
-        boolean indicating if raw images should be used. It initializes all variables
-        used in the following methods and creates required empty arrays, especially the
-        bounding box coordinates of each video.
+        Parameters
+        ----------
+        first_image : object
+            The first frame in the video sequence.
+        starting_blob_hsize_in_pixels : int
+            The initial size of a blob in pixels.
+        raw_images : bool
+            Whether the images are raw.
 
-        Attributes:
-            first_image (object): The initial image for analysis.
-            original_shape_hsize (int, optional): The height size of the starting blobs
-                in pixels. Defaults to None.
-            raw_images (bool): Indicates if the input images should be used in raw form.
+        Attributes
+        ----------
+        ordered_first_image : None or object
+            Placeholder for the ordered first image in the sequence.
+        motion_list : list
+            List to store motion events or states.
+        shapes_to_remove : None or object
+            Placeholder for shapes that need to be removed from analysis.
+        not_analyzed_individuals : None or object
+            Placeholder for individuals not yet analyzed.
 
-        Args:
-            first_image (object): The initial image for analysis.
-            starting_blob_hsize_in_pixels (int): The height size of the starting blobs
-                in pixels.
-            raw_images (bool): Indicates if the input images should be used in raw form.
+        Notes
+        -----
+        This class initializes various variables and sets up arrays necessary for the
+        analysis of video frames.
+
         """
         # Initialize all variables used in the following methods
         self.first_image = first_image
@@ -74,6 +83,32 @@ class OneVideoPerBlob:
     def get_bounding_boxes(self, are_gravity_centers_moving: bool, img_list: list, color_space_combination: dict,
                            color_number: int=2, sample_size: int=5, all_specimens_have_same_direction: bool=True,
                            display: bool=False, filter_spec: dict=None):
+        """
+        Get the coordinates of all arenas using one or several image(s).
+
+        Parameters
+        ----------
+        are_gravity_centers_moving : bool
+            Flag indicating if the gravity centers are moving.
+        img_list : list
+            List of images to process.
+        color_space_combination : dict
+            Dictionary containing color space combinations.
+        color_number : int, optional
+            Number of colors to consider, by default 2.
+        sample_size : int, optional
+            Size of the sample, by default 5.
+        all_specimens_have_same_direction : bool, optional
+            Flag indicating if all specimens have the same direction, by default True.
+        display : bool, optional
+            Flag to display results, by default False.
+        filter_spec : dict, optional
+            Filter specifications, by default None.
+
+        Notes
+        -----
+        - This function uses Numba's @njit decorator for performance.
+        """
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         if self.first_image.validated_shapes.any():
             self.big_kernel = Ellipse((self.k_size, self.k_size)).create()
@@ -130,12 +165,15 @@ class OneVideoPerBlob:
 
     def _get_quick_bb(self):
         """
+        Get quick bounding boxes for the validated shapes.
 
-        Compute the bounding boxes of arenas in an image.
+        This method calculates the minimal distance between pairs of components
+        in the validated shapes and uses this information to determine bounding boxes.
 
-        This method performs a series of operations on the validated shapes, including
-        copying and erosion, computing minimal distances between pairs of components,
-        and updating the bounding box coordinates based on these calculations.
+        Notes
+        -----
+        This method modifies the following attributes:
+        - `left`, `right`, `top`, and `bot` to store the coordinates of the bounding boxes.
         """
         shapes = deepcopy(self.modif_validated_shapes)
         eroded_shapes = cv2.erode(self.modif_validated_shapes, cross_33)
@@ -187,32 +225,43 @@ class OneVideoPerBlob:
 
     def standardize_video_sizes(self):
         """
+        Standardize video sizes by adjusting bounding boxes.
 
-        Standardize video sizes for bounding boxes.
+        Extended Description
+        --------------------
+        This function adjusts the bounding boxes of detected shapes in a video frame.
+        It ensures that all bounding boxes are within the frame's boundaries and
+        standardizes their sizes to avoid issues with odd dimensions during video writing.
 
-        This method standardizes the sizes of the bounding boxes for videos.
-        It adjusts the top, bottom, left, and right boundaries to ensure they remain
-        within the picture shape. If any bounding box goes out of the frame,
-        it applies corrections or removes the corresponding individuals and
-        remakes bounding box finding. Additionally, it ensures that the sizes of
-        the boxes are even to prevent issues when writing videos with OpenCV.
+        Parameters
+        ----------
+        distance_threshold_to_consider_an_arena_out_of_the_picture : int, optional
+            Threshold in pixels to consider a bounding box out of the picture.
+            If `None`, defaults to the minimum value in `out_of_pic`.
 
-        Args:
-            None
+        Returns
+        -------
+        None
+            The function modifies the following attributes of the class instance:
 
-        Attributes:
-            standard (np.ndarray): An array to store the standardized bounding box coordinates.
-            shapes_to_remove (np.ndarray): Indices of shapes that need to be removed.
-            modif_validated_shapes (np.ndarray): Modified and validated shapes array.
-            not_analyzed_individuals (np.ndarray): Indices of individuals that were not analyzed.
-            top (np.ndarray): Top boundaries of the bounding boxes.
-            bot (np.ndarray): Bottom boundaries of the bounding boxes.
-            left (np.ndarray): Left boundaries of the bounding boxes.
-            right (np.ndarray): Right boundaries of the bounding boxes.
-
-        Notes:
-            This method modifies several instance attributes in-place.
-            It uses numpy operations extensively for efficient calculations.
+        Attributes Modified
+        ------------------
+        standard : numpy.ndarray
+            Standardized bounding boxes.
+        shapes_to_remove : numpy.ndarray
+            Indices of shapes to be removed from the image.
+        modif_validated_shapes : numpy.ndarray
+            Modified validated shapes after removing out-of-picture areas.
+        ordered_stats : list of float
+            Updated order statistics for the shapes.
+        ordered_centroids : numpy.ndarray
+            Centroids of the ordered shapes.
+        ordered_first_image : numpy.ndarray
+            First image with updated order statistics and centroids.
+        first_image.shape_number : int
+            Updated number of shapes in the first image.
+        not_analyzed_individuals : numpy.ndarray
+            Indices of individuals not analyzed after modifications.
 
         """
         distance_threshold_to_consider_an_arena_out_of_the_picture = None# in pixels, worked nicely with - 50
@@ -437,23 +486,33 @@ class OneVideoPerBlob:
             self.bot[shape_i] = np.max(shape_i_indices[0])
         self.ordered_first_image = ordered_image_i
 
-    def _segment_blob_motion(self, image, color_space_combination: dict, color_number: int, filter_spec: dict):
+    def _segment_blob_motion(self, image, color_space_combination: dict, color_number: int, filter_spec: dict) -> NDArray[np.uint8]:
         """
-        _segment_blob_motion
 
-        Segment the motion in a blob from an image using specified color space
-        combinations, number of colors, and filter specifications.
+        Segment one image using the OneImageAnalysis class
 
-        Args:
-            image: The input image to analyze. Can be a file path or an image object.
-            color_space_combination (dict): A dictionary specifying the color space
-                combination to use for segmentation.
-            color_number (int): The number of colors to consider in the segmentation
-                process.
-            filter_spec (dict): A dictionary specifying the filter specifications to use.
+        Parameters
+        ----------
+        image : str or np.ndarray
+            The input image, either as a file path (str) or an already loaded image array.
+        color_space_combination : dict
+            A dictionary specifying the color space combination to be used for segmentation.
+        color_number : int
+            The number representing the specific hue or color to segment in the image.
+        filter_spec : dict
+            A dictionary containing filter specifications for post-processing of the segmented image.
 
-        Returns:
-            ndarray: The binary image resulting from the segmentation process.
+        Returns
+        -------
+        ndarray[np.uint8]
+            A binary image array representing the segmented blob motion.
+
+        Notes
+        -----
+        This function processes an input image to segment blobs based on color information.
+        The method utilizes various color space conversions and filtering techniques
+        to isolate the desired object from the background.
+
         """
         if isinstance(image, str):
             is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
@@ -468,29 +527,40 @@ class OneVideoPerBlob:
 
     def prepare_video_writing(self, img_list: list, min_ram_free: float, in_colors: bool=False, pathway: str=""):
         """
-        Prepare the video writing process.
 
-        This function prepares the necessary data structures and parameters for writing videos from a list of images.
-        It creates video names, calculates required memory, determines the number of batches needed based on available RAM,
-        and initiates the video arrays. This function is crucial for managing memory usage and ensuring that video writing
-        can proceed without exceeding available system resources.
+        Prepare the raw video (.npy) writing process for Cellects.
 
-        Args:
-            img_list (list): The list of images to be processed into videos.
-            min_ram_free (float): Minimum amount of RAM that should remain free in GB.
-            in_colors (bool, optional): Whether the images are in color. Defaults to False.
+        Parameters
+        ----------
+        img_list : list
+            List of images to be processed.
+        min_ram_free : float
+            Minimum amount of RAM in GB that should remain free.
+        in_colors : bool, optional
+            Whether the images are in color. Default is False.
+        pathway : str, optional
+            Path to save the video files. Default is an empty string.
 
-        Returns:
-            tuple: A tuple containing the following elements:
-                - bunch_nb (int): Number of batches required to process videos.
-                - video_nb_per_bunch (numpy.ndarray): Number of images per batch.
-                - sizes (numpy.ndarray): Dimensions of each video.
-                - video_bunch (list or numpy.ndarray): Initialized video arrays for the batch.
-                - vid_names (list): List of names for each video file.
-                - rom_memory_required (float or None): Additional ROM memory required in GB, if any.
-                - analysis_status (dict): Status of the analysis process with a continue flag and message.
-                - remaining (int): Number of images left over after batching.
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - bunch_nb: int, number of bunches needed for video writing.
+            - video_nb_per_bunch: int, number of videos per bunch.
+            - sizes: ndarray, dimensions of each video.
+            - video_bunch: list or ndarray, initialized video arrays.
+            - vid_names: list, names of the video files.
+            - rom_memory_required: None or float, required ROM memory.
+            - analysis_status: dict, status and message of the analysis process.
+            - remaining: int, remainder videos that do not fit in a complete bunch.
 
+        Notes
+        -----
+        - The function calculates necessary memory and ensures 10% extra to avoid issues.
+        - It checks for available RAM and adjusts the number of bunches accordingly.
+        - If using color images, memory requirements are tripled.
+
+        expected output depends on the provided images and RAM availability
         """
         # 1) Create a list of video names
         if self.not_analyzed_individuals is not None:
@@ -552,23 +622,37 @@ class OneVideoPerBlob:
     def write_videos_as_np_arrays(self, img_list: list, min_ram_free: float, in_colors: bool=False,
                                   reduce_image_dim: bool=False, pathway: str=""):
         """
-        Write videos as numpy arrays.
+        Save video frames as NumPy arrays.
 
-        This method processes a list of images, preparing and saving them
-        as numpy arrays while considering the available free RAM and other
-        specified parameters.
+        Write the given list of images into NumPy array format for video storage,
+        considering memory constraints and optional color reduction.
 
-        Args:
-            img_list (list): List of image file paths or objects.
-            min_ram_free (float): Minimum required RAM in MB for the process to run.
-            in_colors (bool, optional): Whether to keep the images in color. Defaults
-                to False.
-            reduce_image_dim (bool, optional): Whether to reduce the image dimensions.
-                Defaults to False.
+        Parameters
+        ----------
+        img_list : list
+            List of image file names to process.
+        min_ram_free : float
+            Minimum amount of RAM that should be free in MB to start processing.
+        in_colors : bool, optional
+            Whether to keep images in color. Default is False.
+        reduce_image_dim : bool, optional
+            Whether to reduce image dimensions by keeping only one color channel.
+            Default is False. Only applicable if `in_colors` is False.
+        pathway : str, optional
+            Path to save the video arrays. Default is an empty string.
 
-        Notes:
-            The method calculates the memory requirements, processes images in batches
-            (bunches), and saves them as numpy arrays based on specified conditions.
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This method manages memory usage by processing the videos in batches. It checks available RAM,
+        reads and rotates images, crops them as specified, and saves the processed portions as NumPy arrays.
+
+        Examples
+        --------
+        >>> write_videos_as_np_arrays(img_list=['image1.png', 'image2.png'], min_ram_free=500)
         """
         is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
         bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.prepare_video_writing(img_list, min_ram_free, in_colors, pathway=pathway)
