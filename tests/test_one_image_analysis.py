@@ -71,6 +71,14 @@ class TestOneImageAnalysisBasicOperations(CellectsUnitTest):
         self.oia.segmentation(grid_segmentation=True, side_length=2, step=1, mask=mask)
         self.assertIsInstance(self.oia.binary_image, np.ndarray)
 
+    def test_grid_segmentation_large_image_with_mask(self):
+        self.oia.image = np.full((100, 100), 25, dtype=np.uint8)
+        self.oia.image[44:55, 44:55] = several_arenas_img[:, :, 0]
+        mask = np.zeros_like(self.oia.image)
+        mask[44, 44] = 1
+        self.oia.segmentation(grid_segmentation=True, side_length=2, step=1, mask=mask)
+        self.assertIsInstance(self.oia.binary_image, np.ndarray)
+
     def test_set_spot_shapes_and_size_confint(self):
         self.oia.set_spot_shapes_and_size_confint("circle")
         self.assertIsInstance(self.oia.spot_shapes, np.ndarray)
@@ -102,6 +110,22 @@ class TestOneImageAnalysisBasicOperations(CellectsUnitTest):
         self.oia.kmeans(cluster_number=2, backmask=backmask, logical="And")
         self.assertTrue(self.oia.binary_image.any())
 
+    def test_get_crop_coordinates(self):
+        self.oia.validated_shapes = np.vstack((np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18)))
+        self.oia.get_crop_coordinates()
+        self.assertTrue(self.oia.crop_coord is not None)
+        self.oia.validated_shapes = np.vstack((np.tile([0, 0, 0, 1], 4), np.tile([0, 1, 0, 0], 4), np.tile([0, 0, 0, 1], 4), np.tile([0, 1, 0, 0], 4), np.tile([0, 0, 0, 1], 4), np.tile([0, 1, 0, 0], 4)))
+        self.oia.get_crop_coordinates()
+        self.assertTrue(self.oia.crop_coord is not None)
+
+    def test_automatically_crop(self):
+        self.oia.greyscale2 = self.oia.image
+        self.oia.image2 = self.oia.image.copy()
+        self.oia.binary_image2 = several_arenas_bin_img.copy()
+        self.oia.subtract_background = self.oia.image.copy()
+        self.oia.subtract_background2 = self.oia.image.copy()
+        self.oia.automatically_crop([0, 5, 0, 5])
+        self.assertTrue(self.oia.y_boundaries is not None)
 
 class TestOneImageAnalysisConvertAndSegment(CellectsUnitTest):
     """Test suite for OneImageAnalysis class"""
