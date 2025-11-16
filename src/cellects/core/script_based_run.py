@@ -9,10 +9,8 @@ import pandas as pd
 import cv2
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
-from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.core.motion_analysis import MotionAnalysis
-from cellects.config.all_vars_dict import DefaultDicts
-from cellects.utils.load_display_save import show
+from cellects.utils.load_display_save import write_video_sets
 
 
 def load_one_folder(pathway, sample_number):
@@ -65,14 +63,14 @@ def write_videos(po):
     do_write_videos = not there_already_are_videos or (
             there_already_are_videos and po.all['overwrite_unaltered_videos'])
     if do_write_videos:
-        po.videos = OneVideoPerBlob(po.first_image, po.starting_blob_hsize_in_pixels, po.all['raw_images'])
-        po.videos.left = po.left
-        po.videos.right = po.right
-        po.videos.top = po.top
-        po.videos.bot = po.bot
-        po.videos.first_image.shape_number = po.sample_number
-        po.videos.write_videos_as_np_arrays(
-            po.data_list, po.vars['min_ram_free'], not po.vars['already_greyscale'], po.reduce_image_dim)
+        po.first_image.shape_number = po.sample_number
+        in_colors = not po.vars['already_greyscale']
+        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = po.prepare_video_writing(
+            po.data_list, po.vars['min_ram_free'], in_colors)
+        write_video_sets(po.data_list, sizes, vid_names, po.first_image.crop_coord,
+                         (po.top, po.bot, po.left, po.right), bunch_nb, video_nb_per_bunch,
+                         remaining, po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, po.reduce_image_dim,
+                         pathway="")
     po.instantiate_tables()
     return po
 

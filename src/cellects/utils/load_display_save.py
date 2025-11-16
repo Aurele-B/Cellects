@@ -300,6 +300,75 @@ def write_video(np_array: NDArray[np.uint8], vid_name: str, is_color: bool=True,
         vid.release()
 
 
+def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord, bounding_boxes,
+                      bunch_nb: int, video_nb_per_bunch: int, remaining: int,
+                      raw_images: bool, is_landscape: bool, use_list_of_vid: bool,
+                      in_colors: bool=False, reduce_image_dim: bool=False, pathway: str=""):
+    """
+    Save video frames as NumPy arrays.
+
+    Write the given list of images into NumPy array format for video storage,
+    considering memory constraints and optional color reduction.
+
+    Parameters
+    ----------
+    img_list : list
+        List of image file names to process.
+    min_ram_free : float
+        Minimum amount of RAM that should be free in MB to start processing.
+    in_colors : bool, optional
+        Whether to keep images in color. Default is False.
+    reduce_image_dim : bool, optional
+        Whether to reduce image dimensions by keeping only one color channel.
+        Default is False. Only applicable if `in_colors` is False.
+    pathway : str, optional
+        Path to save the video arrays. Default is an empty string.
+
+    Notes
+    -----
+    This method manages memory usage by processing the videos in batches. It checks available RAM,
+    reads and rotates images, crops them as specified, and saves the processed portions as NumPy arrays.
+
+    """
+    top, bot, left, right = bounding_boxes
+    for bunch in np.arange(bunch_nb):
+        print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
+        if bunch == (bunch_nb - 1) and remaining > 0:
+            arenas = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining, dtype=np.uint32)
+        else:
+            arenas = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch, dtype=np.uint32)
+        if use_list_of_vid:
+            video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arenas]
+        else:
+            video_bunch = np.zeros(np.append(sizes[0, :], len(arenas)), dtype=np.uint8)
+        prev_img = None
+        images_done = bunch * len(img_list)
+        for image_i, image_name in enumerate(img_list):
+            img = read_and_rotate(image_name, prev_img, raw_images, is_landscape, crop_coord)
+            prev_img = img.copy()
+            if not in_colors and reduce_image_dim:
+                img = img[:, :, 0]
+
+            for arena_i, arena_name in enumerate(arenas):
+                # arena_i = 0; arena_name = arena[arena_i]
+                sub_img = img[top[arena_name]: (bot[arena_name] + 1), left[arena_name]: (right[arena_name] + 1), ...]
+                if use_list_of_vid:
+                    video_bunch[arena_i][image_i, ...] = sub_img
+                else:
+                    if len(video_bunch.shape) == 5:
+                        video_bunch[image_i, :, :, :, arena_i] = sub_img
+                    else:
+                        video_bunch[image_i, :, :, arena_i] = sub_img
+        for arena_i, arena_name in enumerate(arenas):
+            if use_list_of_vid:
+                 np.save(pathway + vid_names[arena_name], video_bunch[arena_i])
+            else:
+                if len(video_bunch.shape) == 5:
+                     np.save(pathway + vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                else:
+                     np.save(pathway + vid_names[arena_name], video_bunch[:, :, :, arena_i])
+
+
 def video2numpy(vid_name: str, conversion_dict=None, background=None, true_frame_width=None):
     """
     Convert a video file to a NumPy array.
