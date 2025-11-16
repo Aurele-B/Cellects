@@ -59,56 +59,9 @@ class TestOneImageAnalysisBasicOperations(CellectsUnitTest):
         self.oia.adjust_to_drift_correction("Xor")
         self.assertIsInstance(self.oia.binary_image, np.ndarray)
 
-    def test_grid_segmentation(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        self.oia.segmentation(grid_segmentation=True, side_length=2, step=1)
-        self.assertTrue(self.oia.binary_image.any())
-
-    def test_grid_segmentation_with_mask(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        mask = np.zeros_like(several_arenas_bin_img)
-        mask[-1, -1] = 1
-        self.oia.segmentation(grid_segmentation=True, side_length=2, step=1, mask=mask)
-        self.assertIsInstance(self.oia.binary_image, np.ndarray)
-
-    def test_grid_segmentation_large_image_with_mask(self):
-        self.oia.image = np.full((100, 100), 25, dtype=np.uint8)
-        self.oia.image[44:55, 44:55] = several_arenas_img[:, :, 0]
-        mask = np.zeros_like(self.oia.image)
-        mask[44, 44] = 1
-        self.oia.segmentation(grid_segmentation=True, side_length=2, step=1, mask=mask)
-        self.assertIsInstance(self.oia.binary_image, np.ndarray)
-
     def test_set_spot_shapes_and_size_confint(self):
         self.oia.set_spot_shapes_and_size_confint("circle")
         self.assertIsInstance(self.oia.spot_shapes, np.ndarray)
-
-    def test_kmeans(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        self.oia.image2 = several_arenas_img[:, :, 2]
-        self.oia.kmeans(cluster_number=2,  logical="And")
-        self.assertTrue(self.oia.binary_image.any())
-
-    def test_kmeans_with_biolabel(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        self.oia.image2 = several_arenas_img[:, :, 2]
-        self.oia.kmeans(cluster_number=2, bio_label=1, bio_label2=1, logical="And")
-        self.assertTrue(self.oia.binary_image.any())
-
-    def test_kmeans_with_biomask(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        self.oia.image2 = several_arenas_img[:, :, 2]
-        biomask = several_arenas_bin_img
-        self.oia.kmeans(cluster_number=2, biomask=biomask, logical="And")
-        self.assertTrue(self.oia.binary_image.any())
-
-    def test_kmeans_with_backmask(self):
-        self.oia.image = several_arenas_img[:, :, 0]
-        self.oia.image2 = several_arenas_img[:, :, 2]
-        backmask = np.zeros((self.oia.image.shape[0], self.oia.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        self.oia.kmeans(cluster_number=2, backmask=backmask, logical="And")
-        self.assertTrue(self.oia.binary_image.any())
 
     def test_get_crop_coordinates(self):
         self.oia.validated_shapes = np.vstack((np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18)))
