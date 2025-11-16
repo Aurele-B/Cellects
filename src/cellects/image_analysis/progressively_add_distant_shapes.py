@@ -418,8 +418,6 @@ class ProgressivelyAddDistantShapes:
         rated_extension *= self.expanded_shape
         self.expanded_shape += rated_extension
 
-    #binary_video = self.binary[(self.step // 2):(self.t + 1), :, :]
-    #draft_seg = self.segmentation[(self.step // 2):(self.t + 1), :, :]
     def modify_past_analysis(self, binary_video: NDArray[np.uint8], draft_seg: NDArray[np.uint8]) -> NDArray[np.uint8]:
         """
         Modify past analysis based on binary video and draft segmentation.

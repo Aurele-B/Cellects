@@ -11,10 +11,10 @@ import unittest
 class CellectsUnitTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        d = Path(__file__).resolve().parents[1] / "data" # set up data path for the tests
-        cls.path_input = d / "input"
-        cls.path_output = d / "output"
-        cls.path_experiment = d / "experiment"
+        cls.d = Path(__file__).resolve().parents[1] / "data" # set up data path for the tests
+        cls.path_input = cls.d / "input"
+        cls.path_output = cls.d / "output"
+        cls.path_experiment = cls.d / "experiment"
 
         if not os.path.isdir(cls.path_output):
             os.mkdir(cls.path_output)
@@ -103,9 +103,9 @@ several_arenas_bin_vid[7, 13:16, 11:14] += cross_33
 several_arenas_bin_vid[several_arenas_bin_vid > 0] = 1
 
 several_arenas_vid = np.zeros((several_arenas_bin_vid.shape[0],several_arenas_bin_vid.shape[1],several_arenas_bin_vid.shape[2],3), dtype=np.uint8)
-several_arenas_vid[:, :, :, 0][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 0][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 1][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 1][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 2][several_arenas_bin_vid > 0] = np.random.randint(205, 255, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 2][several_arenas_bin_vid == 0] = np.random.randint(0, 50, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())

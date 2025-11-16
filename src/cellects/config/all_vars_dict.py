@@ -41,7 +41,6 @@ class DefaultDicts:
             'extract_time_interval': True,
             'do_multiprocessing': False,
             'extension': '.tif',
-            'first_detection_frame': 1,
             'folder_number': 1,
             'first_folder_sample_number': 1,
             'first_move_threshold_in_mm²': 10,
@@ -68,7 +67,7 @@ class DefaultDicts:
         }
 
         self.vars = {
-            'analyzed_individuals': np.empty(0, dtype=np.uint16),
+            'analyzed_individuals': np.array([1], dtype=np.uint16),
             'arena_shape': 'rectangle', # 'circle',
             'bio_label': 1,
             'bio_label2': 1,
@@ -83,6 +82,7 @@ class DefaultDicts:
             'first_move_threshold': None,
             'img_number': 0,
             'iso_digi_analysis': True,
+            'first_detection_frame': 0,
             'luminosity_threshold': 127,
             'max_size_for_connection': 300,
             'min_size_for_connection': 20,
@@ -91,8 +91,9 @@ class DefaultDicts:
             'network_analysis': False,
             'graph_extraction': False,
             'network_detection_threshold': 20,
-            'network_mesh_side_length': 8,
-            'network_mesh_step_length': 2,
+            'mesh_side_length': 4,
+            'mesh_step_length': 2,
+            'int_var_threshold': None,
             'fractal_analysis': False,
             'fractal_box_side_threshold': 32,
             'fractal_zoom_step': 0,
@@ -148,8 +149,3 @@ class DefaultDicts:
             po.all = self.all
             po.vars = self.vars
             po.save_variable_dict()
-
-
-
-if __name__ == "__main__":
-    DefaultDicts().save_as_pkl()
