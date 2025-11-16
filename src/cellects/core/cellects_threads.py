@@ -146,9 +146,7 @@ from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
 from cellects.utils.load_display_save import read_and_rotate
-from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
-from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.utils.load_display_save import write_video
 from cellects.core.motion_analysis import MotionAnalysis
 
@@ -522,12 +520,12 @@ class LastImageAnalysisThread(QtCore.QThread):
             else:
                 concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
                 if self.parent().po.all['are_zigzag'] == "columns":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
                 elif self.parent().po.all['are_zigzag'] == "rows":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
                 else:
-                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
-                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
                     inter_dist = np.max(dist1, dist2)
                 if self.parent().po.all['starting_blob_shape'] == "circle":
                     max_shape_size = np.pi * np.square(inter_dist)
@@ -536,12 +534,12 @@ class LastImageAnalysisThread(QtCore.QThread):
                 total_surfarea = max_shape_size * self.parent().po.sample_number
             out_of_arenas = None
             if self.parent().po.all['are_gravity_centers_moving'] != 1:
-                out_of_arenas = np.ones_like(self.parent().po.videos.first_image.validated_shapes)
+                out_of_arenas = np.ones_like(self.parent().po.first_image.validated_shapes)
                 for blob_i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
                     out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
                     self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
             ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'])
+            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
             kmeans_clust_nb = None
             self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
                                                          ref_image, self.parent().po.first_image.subtract_background,
@@ -613,11 +611,6 @@ class SaveManualDelineationThread(QtCore.QThread):
 
         logging.info("Save manual video delineation")
         self.parent().po.vars['analyzed_individuals'] = np.arange(self.parent().po.sample_number) + 1
-        self.parent().po.videos = OneVideoPerBlob(self.parent().po.first_image, self.parent().po.starting_blob_hsize_in_pixels, self.parent().po.all['raw_images'])
-        self.parent().po.videos.left = self.parent().po.left
-        self.parent().po.videos.right = self.parent().po.right
-        self.parent().po.videos.top = self.parent().po.top
-        self.parent().po.videos.bot = self.parent().po.bot
 
 
 class GetExifDataThread(QtCore.QThread):
@@ -809,7 +802,6 @@ class OneArenaThread(QtCore.QThread):
                 current_percentage, eta = pat_tracker.get_progress()
                 is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                 img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
-                # img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
                 prev_img = deepcopy(img)
                 if self.parent().po.first_image.cropped:
                     img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
@@ -938,10 +930,10 @@ class OneArenaThread(QtCore.QThread):
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             r = weakref.ref(analysis_i)
-            analysis_i.segmentation = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
+            analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
-                    analysis_i.segmentation = self.parent().po.motion.segmentation
+                    analysis_i.segmented = self.parent().po.motion.segmented
                 else:
                     if seg_i == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -951,10 +943,10 @@ class OneArenaThread(QtCore.QThread):
                         mask = self.parent().po.motion.logical_and
                     elif seg_i == 4:
                         mask = self.parent().po.motion.logical_or
-                    analysis_i.segmentation[mask[0], mask[1], mask[2]] = 1
+                    analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
             else:
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    analysis_i.segmentation = self.parent().po.motion.segmentation
+                    analysis_i.segmented = self.parent().po.motion.segmented
 
             analysis_i.start = time_parameters[0]
             analysis_i.step = time_parameters[1]
@@ -986,7 +978,7 @@ class OneArenaThread(QtCore.QThread):
 
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
-                    self.parent().po.motion.segmentation = analysis_i.binary
+                    self.parent().po.motion.segmented = analysis_i.binary
                 elif seg_i == 1:
                     self.parent().po.motion.luminosity_segmentation = np.nonzero(analysis_i.binary)
                 elif seg_i == 2:
@@ -996,7 +988,7 @@ class OneArenaThread(QtCore.QThread):
                 elif seg_i == 4:
                     self.parent().po.motion.logical_or = np.nonzero(analysis_i.binary)
             else:
-                self.parent().po.motion.segmentation = analysis_i.binary
+                self.parent().po.motion.segmented = analysis_i.binary
 
         # self.message_from_thread_starting.emit("If there are problems, change some parameters and try again")
         self.when_detection_finished.emit("Post processing done, read to see the result")
@@ -1018,7 +1010,7 @@ class VideoReaderThread(QtCore.QThread):
 
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
-                    video_mask = self.parent().po.motion.segmentation
+                    video_mask = self.parent().po.motion.segmented
                 else:
                     if self.parent().po.all['video_option'] == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -1033,7 +1025,7 @@ class VideoReaderThread(QtCore.QThread):
             else:
                 video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    video_mask = self.parent().po.motion.segmentation
+                    video_mask = self.parent().po.motion.segmented
 
             if self.parent().po.load_quick_full == 1:
                 video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
@@ -1070,7 +1062,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
         else:
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
                 else:
                     if self.parent().po.all['video_option'] == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -1085,7 +1077,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
             else:
                 self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
 
         if self.parent().po.vars['do_fading']:
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
@@ -1259,15 +1251,8 @@ class RunAllThread(QtCore.QThread):
             logging.info(f"Starting video writing")
             # self.videos.write_videos_as_np_arrays(self.data_list, self.vars['convert_for_motion'], in_colors=self.vars['save_in_colors'])
             in_colors = not self.parent().po.vars['already_greyscale']
-            self.parent().po.videos = OneVideoPerBlob(self.parent().po.first_image,
-                                                      self.parent().po.starting_blob_hsize_in_pixels,
-                                                      self.parent().po.all['raw_images'])
-            self.parent().po.videos.left = self.parent().po.left
-            self.parent().po.videos.right = self.parent().po.right
-            self.parent().po.videos.top = self.parent().po.top
-            self.parent().po.videos.bot = self.parent().po.bot
-            self.parent().po.videos.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.parent().po.videos.prepare_video_writing(
+            self.parent().po.first_image.shape_number = self.parent().po.sample_number
+            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = self.parent().po.prepare_video_writing(
                 self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
             if analysis_status["continue"]:
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
@@ -1275,14 +1260,13 @@ class RunAllThread(QtCore.QThread):
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                     arena_percentage = 0
-                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1) and remaining > 0:
                             arena = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
                         else:
                             arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        if self.parent().po.videos.use_list_of_vid:
+                        if use_list_of_vid:
                             video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
                         else:
                             video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
@@ -1302,7 +1286,7 @@ class RunAllThread(QtCore.QThread):
                                 try:
                                     sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
                                               self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
-                                    if self.parent().po.videos.use_list_of_vid:
+                                    if use_list_of_vid:
                                         video_bunch[arena_i][image_i, ...] = sub_img
                                     else:
                                         if len(video_bunch.shape) == 5:
@@ -1323,7 +1307,7 @@ class RunAllThread(QtCore.QThread):
                                 try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
                                     self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
-                                    if self.parent().po.videos.use_list_of_vid:
+                                    if use_list_of_vid:
                                         np.save(vid_names[arena_name], video_bunch[arena_i])
                                     else:
                                         if len(video_bunch.shape) == 5:
