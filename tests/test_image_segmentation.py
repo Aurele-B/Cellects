@@ -4,7 +4,7 @@ This script contains all unit tests of the image segmentation script
 """
 
 import unittest
-from tests._base import CellectsUnitTest, several_arenas_img
+from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
@@ -113,25 +113,21 @@ class TestApplyFilter(CellectsUnitTest):
 
 
 class TestGetColorSpaces(CellectsUnitTest):
+    """
+    Unit test class for testing the get_color_spaces function.
+
+    This class contains tests to verify the correct behavior of
+    the `get_color_spaces` function, which converts an input image into various color spaces.
+    """
     # Create a BGR image for testing
     bgr_image = np.zeros((10, 10, 3), dtype=np.uint8)
 
-    def test_typed_dict(self):
+    def test_get_color_spaces(self):
+        """Test get color spaces from a BGR image."""
         # Call the get_color_spaces function
         self.result = get_color_spaces(self.bgr_image)
         # Add assertions to verify the expected behavior
         self.assertIsInstance(self.result, Dict)
-
-    def test_logical(self):
-        # Call the get_color_spaces function
-        self.result = get_color_spaces(self.bgr_image, ["yuv", "hls", "luv", "bgr", "logical"])
-        # Add assertions to verify the expected behavior
-        self.assertIsInstance(self.result, Dict)
-
-    def test_complete_dict(self):
-        # Call the get_color_spaces function
-        self.result = get_color_spaces(self.bgr_image)
-
         self.assertIn('bgr', self.result)
         self.assertIn('lab', self.result)
         self.assertIn('hsv', self.result)
@@ -145,6 +141,13 @@ class TestGetColorSpaces(CellectsUnitTest):
         self.assertEqual(self.result['luv'].size, self.bgr_image.size)
         self.assertEqual(self.result['hls'].size, self.bgr_image.size)
         self.assertEqual(self.result['yuv'].size, self.bgr_image.size)
+
+    def test_get_color_spaces_with_logical(self):
+        """Test get color spaces from a BGR image with a logical value."""
+        # Call the get_color_spaces function
+        self.result = get_color_spaces(self.bgr_image, ["yuv", "hls", "luv", "bgr", "logical"])
+        # Add assertions to verify the expected behavior
+        self.assertIsInstance(self.result, Dict)
 
 
 class TestCombineColorSpaces(CellectsUnitTest):
@@ -199,10 +202,17 @@ class TestCombineColorSpaces(CellectsUnitTest):
 
 
 class TestGenerateColorSpaceCombination(CellectsUnitTest):
+    """
+    Unit test class for the `generate_color_space_combination` function.
+
+    This class sets up a BGR image and tests the functionality of generating
+    color space combinations with various parameters.
+    """
     bgr_image = np.zeros((10, 10, 3), dtype=np.uint8)
     bgr_image[5, 5] = 1
 
     def test_generate_color_space_combination(self):
+        """Test generating color space combinations basic functionality."""
         # Create a BGR image for testing
         first_dict = Dict()
         first_dict['bgr'] = np.array((1, 0, 1), np.uint8)
@@ -223,7 +233,9 @@ class TestGenerateColorSpaceCombination(CellectsUnitTest):
 
 
 class TestOtsuThreshold(CellectsUnitTest):
+    """Unit test class for the `get_otsu_threshold` function."""
     def test_get_otsu_threshold(self):
+        """Test get_otsu_threshold basic functionality."""
         image = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], dtype=np.uint8)
 
         expected_threshold = 5
@@ -233,7 +245,9 @@ class TestOtsuThreshold(CellectsUnitTest):
 
 
 class TestOtsuThresholding(CellectsUnitTest):
+    """Unit test class for the `otsu_thresholding` function."""
     def test_otsu_thresholding(self):
+        """Test otsu_thresholding basic functionality."""
         image = np.array([[[-100, 150.54752, 200287, 250, 300], [-100, -150, 200, 250, 300], [100, 150.5735, 200, 250, 300]], [[100.56, 15054, 200, 250, 300], [100, 150, 200.548, 250, 300], [100, 150, 200, 250, 300]]], dtype=np.float64)
         expected_binary_image = np.zeros(image.shape, np.uint8)
         expected_binary_image[0, 0, 2] = 1
@@ -242,7 +256,9 @@ class TestOtsuThresholding(CellectsUnitTest):
 
 
 class TestSegmentWithLumValue(CellectsUnitTest):
+    """Unit test class for the `segment_with_lum_value` function."""
     def test_segment_with_lum_value_lighter_background(self):
+        """Test segment_with_lum_value with a lighter background."""
         converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
         basic_bckgrnd_values = np.array([110, 150], dtype=np.uint8)
         l_threshold = 180
@@ -256,6 +272,7 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(l_threshold_over_time, expected_l_threshold_over_time))
 
     def test_segment_with_lum_value_lighter_background_negative_threshold(self):
+        """Test segment_with_lum_value with a negative threshold."""
         converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
         basic_bckgrnd_values = np.array([110, 150], dtype=np.int32)
         l_threshold = -180
@@ -267,6 +284,7 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         self.assertTrue(isinstance(segmentation, np.ndarray))
 
     def test_segment_with_lum_value_darker_background(self):
+        """Test segment_with_lum_value with a darker background."""
         converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
         basic_bckgrnd_values = np.array([110, 130], dtype=np.int32)
         l_threshold = 150
@@ -279,6 +297,7 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         self.assertTrue(np.array_equal(l_threshold_over_time, expected_l_threshold_over_time))
 
     def test_segment_with_lum_value_darker_negative_threshold(self):
+        """Test segment_with_lum_value with a darker background and a negative threshold."""
         converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
         basic_bckgrnd_values = np.array([110, 130], dtype=np.int32)
         l_threshold = -180
@@ -286,6 +305,53 @@ class TestSegmentWithLumValue(CellectsUnitTest):
         segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
                                                                      l_threshold, lighter_background)
         self.assertTrue(isinstance(segmentation, np.ndarray))
+
+class TestKmeans(CellectsUnitTest):
+    """Test suite for Kmeans function"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialize data for testing"""
+        super().setUpClass()
+        cls.image = several_arenas_img[:, :, 0]
+        cls.image2 = several_arenas_img[:, :, 2]
+
+    def test_kmeans(self):
+        """Test kmeans basic functionality."""
+        binary_image, binary_image2, new_bio_label, new_bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb=2,  logical="And")
+        self.assertTrue(binary_image.any())
+
+    def test_kmeans_with_biolabel(self):
+        """Test kmeans with bio label."""
+        binary_image, binary_image2, new_bio_label, new_bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb=2, bio_label=1, bio_label2=1,  logical="And")
+        self.assertTrue(binary_image.any())
+
+    def test_kmeans_with_biomask(self):
+        """Test kmeans with biomask."""
+        biomask = several_arenas_bin_img
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, biomask=biomask, logical="And")
+        self.assertTrue(binary_image.any())
+
+    def test_kmeans_with_backmask(self):
+        """Test kmeans with backmask."""
+        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        backmask[:, 0] = 1
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, backmask=backmask, logical="And")
+        self.assertTrue(binary_image.any())
+
+class TestWindowedThresholding(CellectsUnitTest):
+    """Test suite for windowed_thresholding function"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialize data for testing"""
+        super().setUpClass()
+        cls.image = several_arenas_img[:, :, 0]
+
+    def test_windowed_thresholding(self):
+        """Test windowed_thresholding basic functionality."""
+        binary_image = windowed_thresholding(self.image, side_length=2, step=1)
+        self.assertTrue(binary_image.any())
 
 
 class TestRollingWindowSegmentation(CellectsUnitTest):

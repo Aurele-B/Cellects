@@ -340,6 +340,65 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
 
 
 @njit()
+def get_window_allowed_for_segmentation(im_shape: Tuple, mask:NDArray[np.uint8]=None, padding: int=0) -> Tuple[int, int, int, int]:
+    """
+    Get the allowed window for segmentation within an image.
+
+    This function calculates a bounding box (min_y, max_y, min_x, max_x) around
+    a segmentation mask or the entire image if no mask is provided.
+
+    Parameters
+    ----------
+    im_shape : Tuple[int, int]
+        The shape of the image (height, width).
+    mask : NDArray[np.uint8], optional
+        The binary mask for segmentation. Default is `None`.
+    padding : int, optional
+        Additional padding around the bounding box. Default is 0.
+
+    Returns
+    -------
+    Tuple[int, int, int, int]
+        A tuple containing the bounding box coordinates (min_y, max_y,
+        min_x, max_x).
+
+    Notes
+    -----
+    This function uses NumPy operations to determine the bounding box.
+    If `mask` is `None`, the full image dimensions are used.
+
+    Examples
+    --------
+    >>> im_shape = (500, 400)
+    >>> mask = np.zeros((500, 400), dtype=np.uint8)
+    >>> mask[200:300, 200:300] = 1
+    >>> result = get_window_allowed_for_segmentation(im_shape, mask, padding=10)
+    >>> print(result)
+    (190, 310, 190, 310)
+
+    >>> result = get_window_allowed_for_segmentation(im_shape)
+    >>> print(result)
+    (0, 500, 0, 400)
+    """
+    if mask is None or mask.sum() == 0:
+        min_y = 0
+        min_x = 0
+        max_y = im_shape[0]
+        max_x = im_shape[1]
+    else:
+        y, x = np.nonzero(mask)
+        min_y = np.min(y)
+        min_y = np.max((min_y - padding, 0))
+        min_x = np.min(x)
+        min_x = np.max((min_x - padding, 0))
+        max_y = np.max(y)
+        max_y = np.min((max_y + padding + 1, mask.shape[0]))
+        max_x = np.max(x)
+        max_x = np.min((max_x + padding + 1, mask.shape[0]))
+    return min_y, max_y, min_x, max_x
+
+
+@njit()
 def get_otsu_threshold(image: NDArray):
     """
     Calculate the optimal threshold value for an image using Otsu's method.
@@ -492,6 +551,194 @@ def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArr
                 l_threshold = 255
             segmentation += converted_video > l_threshold
     return segmentation, l_threshold_over_time
+
+
+
+def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
+           biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, logical: str='None',
+           bio_label=None, bio_label2=None, previous_binary_image: NDArray[np.uint8]=None):
+    """
+
+    Perform K-means clustering on a greyscale image to generate binary images.
+
+    Extended Description
+    --------------------
+    This function applies the K-means algorithm to a greyscale image or pair of images to segment them into binary images. It supports optional masks and previous segmentation labels for refining the clustering.
+
+    Parameters
+    ----------
+    greyscale : NDArray
+        The input greyscale image to segment.
+    greyscale2 : NDArray, optional
+        A second greyscale image for logical operations. Default is `None`.
+    kmeans_clust_nb : int, optional
+        Number of clusters for K-means. Default is `2`.
+    biomask : NDArray[np.uint8], optional
+        Mask for selecting biological objects. Default is `None`.
+    backmask : NDArray[np.uint8], optional
+        Mask for selecting background regions. Default is `None`.
+    logical : str, optional
+        Logical operation flag to enable processing of the second image. Default is `'None'`.
+    bio_label : int, optional
+        Label for biological objects in the first segmentation. Default is `None`.
+    bio_label2 : int, optional
+        Label for biological objects in the second segmentation. Default is `None`.
+    previous_binary_image : NDArray[np.uint8], optional
+        Previous binary image for refinement. Default is `None`.
+
+    Other Parameters
+    ----------------
+    **greyscale2, logical, bio_label2**: Optional parameters for processing a second image with logical operations.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - `binary_image`: Binary image derived from the first input.
+        - `binary_image2`: Binary image for the second input if processed, else `None`.
+        - `new_bio_label`: New biological label for the first segmentation.
+        - `new_bio_label2`: New biological label for the second segmentation, if applicable.
+
+    Notes
+    -----
+    - The function performs K-means clustering with random centers.
+    - If `logical` is not `'None'`, both images are processed.
+    - Default clustering uses 2 clusters, modify `kmeans_clust_nb` for different needs.
+
+    """
+    new_bio_label = None
+    new_bio_label2 = None
+    binary_image2 = None
+    image = greyscale.reshape((-1, 1))
+    image = np.float32(image)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    compactness, label, center = cv2.kmeans(image, kmeans_clust_nb, None, criteria, attempts=10, flags=cv2.KMEANS_RANDOM_CENTERS)
+    kmeans_image = np.uint8(label.flatten().reshape(greyscale.shape[:2]))
+    sum_per_label = np.zeros(kmeans_clust_nb)
+    binary_image = np.zeros(greyscale.shape[:2], np.uint8)
+    if previous_binary_image is not None:
+        binary_images = []
+        image_scores = np.zeros(kmeans_clust_nb, np.uint64)
+        for i in range(kmeans_clust_nb):
+            binary_image_i = np.zeros(greyscale.shape[:2], np.uint8)
+            binary_image_i[kmeans_image == i] = 1
+            image_scores[i] = (binary_image_i * previous_binary_image).sum()
+            binary_images.append(binary_image_i)
+        binary_image[kmeans_image == np.argmax(image_scores)] = 1
+    elif bio_label is not None:
+        binary_image[kmeans_image == bio_label] = 1
+        new_bio_label = bio_label
+    else:
+        if biomask is not None:
+            all_labels = kmeans_image[biomask[0], biomask[1]]
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (all_labels == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[1]
+        elif backmask is not None:
+            all_labels = kmeans_image[backmask[0], backmask[1]]
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (all_labels == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[-2]
+        else:
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (kmeans_image == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[-2]
+        binary_image[np.nonzero(np.isin(kmeans_image, new_bio_label))] = 1
+
+    if logical != 'None' and greyscale is not None:
+        image = greyscale2.reshape((-1, 1))
+        image = np.float32(image)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        compactness, label, center = cv2.kmeans(image, kmeans_clust_nb, None, criteria, attempts=10,
+                                                flags=cv2.KMEANS_RANDOM_CENTERS)
+        kmeans_image = np.uint8(label.flatten().reshape(greyscale.shape[:2]))
+        sum_per_label = np.zeros(kmeans_clust_nb)
+        binary_image2 = np.zeros(greyscale.shape[:2], np.uint8)
+        if previous_binary_image is not None:
+            binary_images = []
+            image_scores = np.zeros(kmeans_clust_nb, np.uint64)
+            for i in range(kmeans_clust_nb):
+                binary_image_i = np.zeros(greyscale.shape[:2], np.uint8)
+                binary_image_i[kmeans_image == i] = 1
+                image_scores[i] = (binary_image_i * previous_binary_image).sum()
+                binary_images.append(binary_image_i)
+            binary_image2[kmeans_image == np.argmax(image_scores)] = 1
+        elif bio_label2 is not None:
+            binary_image2[kmeans_image == bio_label2] = 1
+            new_bio_label2 = bio_label2
+        else:
+            if biomask is not None:
+                all_labels = kmeans_image[biomask[0], biomask[1]]
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (all_labels == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[1]
+            elif backmask is not None:
+                all_labels = kmeans_image[backmask[0], backmask[1]]
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (all_labels == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[-2]
+            else:
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (kmeans_image == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[-2]
+            binary_image2[kmeans_image == new_bio_label2] = 1
+    return binary_image, binary_image2, new_bio_label, new_bio_label2
+
+
+@njit()
+def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_length: int=4, step: int=2, int_var_thresh: float=None):
+    """
+    Perform grid segmentation on the image.
+
+    This method applies a sliding window approach to segment the image into
+    a grid-like pattern based on intensity variations and optionally uses a mask.
+    The segmented regions are stored in `self.binary_image`.
+
+    Args:
+        lighter_background (bool): If True, areas lighter than the Otsu threshold are considered;
+            otherwise, darker areas are considered.
+        side_length (int, optional): The size of each grid square. Default is 8.
+        step (int, optional): The step size for the sliding window. Default is 2.
+        int_var_thresh (int, optional): Threshold for intensity variation within a grid.
+            Default is 20.
+        mask (NDArray, optional): A binary mask to restrict the segmentation area. Default is None.
+    """
+    if lighter_background is None:
+        binary_image = otsu_thresholding(image)
+        lighter_background = binary_image.sum() > (binary_image.size / 2)
+    if int_var_thresh is None:
+        int_var_thresh = np.ptp(image).astype(np.float64) * 0.1
+    grid_image = np.zeros(image.shape, np.uint64)
+    homogeneities = np.zeros(image.shape, np.uint64)
+    mask = np.ones(image.shape, np.uint64)
+    for to_add in np.arange(0, side_length, step):
+        y_windows = np.arange(0, image.shape[0], side_length)
+        x_windows = np.arange(0, image.shape[1], side_length)
+        y_windows += to_add
+        x_windows += to_add
+        for y_start in y_windows:
+            if y_start < image.shape[0]:
+                y_end = y_start + side_length
+                if y_end < image.shape[0]:
+                    for x_start in x_windows:
+                        if x_start < image.shape[1]:
+                            x_end = x_start + side_length
+                            if x_end < image.shape[1]:
+                                if np.any(mask[y_start:y_end, x_start:x_end]):
+                                    potential_detection = image[y_start:y_end, x_start:x_end]
+                                    if np.any(potential_detection):
+                                        if np.ptp(potential_detection[np.nonzero(potential_detection)]) < int_var_thresh:
+                                            homogeneities[y_start:y_end, x_start:x_end] += 1
+                                        threshold = get_otsu_threshold(potential_detection)
+                                        if lighter_background:
+                                            net_coord = np.nonzero(potential_detection < threshold)
+                                        else:
+                                            net_coord = np.nonzero(potential_detection > threshold)
+                                        grid_image[y_start + net_coord[0], x_start + net_coord[1]] += 1
+
+    binary_image = (grid_image >= (side_length // step)).astype(np.uint8)
+    binary_image[homogeneities >= (((side_length // step) // 2) + 1)] = 0
+    return binary_image
 
 
 def _network_perimeter(threshold, img: NDArray):

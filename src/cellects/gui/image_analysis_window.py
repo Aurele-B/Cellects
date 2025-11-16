@@ -76,7 +76,7 @@ class ImageAnalysisWindow(MainTabsType):
                                             tip="Change this number if cells are invisible on the first image, never otherwise\nIf they cannot be seen on the first image, increase this number and read until all cells have appeared.",
                                             night_mode=self.parent().po.all['night_mode'])
         self.image_number_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.image_number = Spinbox(min=1, max=self.parent().po.vars['img_number'], val=self.parent().po.all['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
+        self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'], val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
         self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
 
@@ -527,8 +527,8 @@ class ImageAnalysisWindow(MainTabsType):
 
     def read_is_clicked(self):
         if not self.thread["GetFirstIm"].isRunning():
-            self.parent().po.all['first_detection_frame'] = int(self.image_number.value())
-            self.message.setText(f"Reading image n°{self.parent().po.all['first_detection_frame']}")
+            self.parent().po.vars['first_detection_frame'] = int(self.image_number.value())
+            self.message.setText(f"Reading image n°{self.parent().po.vars['first_detection_frame']}")
             self.thread["GetFirstIm"].start()
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_im)
@@ -1846,7 +1846,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.message.setText(text_from_thread)
 
     def starting_differs_from_growing_check(self):
-        if self.parent().po.all['first_detection_frame'] > 1:
+        if self.parent().po.vars['first_detection_frame'] > 1:
             self.parent().po.vars['origin_state'] = 'invisible'
         else:
             if self.starting_differs_from_growing_cb.isChecked():
