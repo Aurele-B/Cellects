@@ -1438,8 +1438,10 @@ class EdgeIdentification:
             self.vertex_table[np.isin(self.vertex_table[:, 2], food_vertices), 4] = 1
 
         if growing_areas is not None:
-            growing = self.vertex_table[:, 2] == np.unique(self.vertices * growing_areas)[1:]
-            self.vertex_table[growing, 4] = 2
+            growing = np.unique(self.vertices * growing_areas)[1:]
+            if len(growing) > 0:
+                growing = self.vertex_table[:, 2] == growing
+                self.vertex_table[growing, 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.vertices > 0).astype(np.uint8))
         for i, v_i in enumerate(np.nonzero(stats[:, 4] > 1)[0][1:]):
