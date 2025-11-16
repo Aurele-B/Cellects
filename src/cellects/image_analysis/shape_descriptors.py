@@ -427,8 +427,10 @@ class ShapeDescriptors:
         """
         if self.mo is None:
             self.get_mo()
-
-        self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = get_inertia_axes(self.mo)
+        if self.area == 0:
+            self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = 0, 0, 0, 0, 0
+        else:
+            self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = get_inertia_axes(self.mo)
 
     def get_standard_deviations(self):
         """
@@ -794,7 +796,11 @@ class ShapeDescriptors:
             if self.convex_hull is None:
                 self.get_convex_hull()
             conv_h_cont_area = cv2.contourArea(self.convex_hull)
-            self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
+            hull_area = cv2.contourArea(self.convex_hull)
+            if hull_area == 0:
+                self.solidity = 0.
+            else:
+                self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
 
     def get_convexity(self):
         """
