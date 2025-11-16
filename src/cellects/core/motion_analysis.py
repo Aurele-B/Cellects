@@ -53,7 +53,7 @@ from cellects.image_analysis.morphological_operations import (find_major_incline
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array, split_dict
+from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array, split_dict, greater_along_first_axis, less_along_first_axis
 
 
 class MotionAnalysis:
@@ -127,13 +127,14 @@ class MotionAnalysis:
         self.binary = None
         self.origin_idx = None
         self.smoothing_flag: bool = False
+        self.drift_mask_coord = None
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
         self.dims = self.converted_video.shape
-        self.segmentation = np.zeros(self.dims, dtype=np.uint8)
+        self.segmented = np.zeros(self.dims, dtype=np.uint8)
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
         self.mean_intensity_per_frame = np.mean(self.converted_video, (1, 2))
@@ -228,9 +229,7 @@ class MotionAnalysis:
                 if self.vars['convert_for_motion']['logical'] == 'None':
                     self.visu, self.converted_video = videos_already_in_ram
                 else:
-                    (self.visu,
-                        self.converted_video,
-                        self.converted_video2) = videos_already_in_ram
+                    self.visu, self.converted_video, self.converted_video2 = videos_already_in_ram
 
     def get_converted_video(self):
         """
@@ -324,6 +323,15 @@ class MotionAnalysis:
               or largest, based on 'appearance_detection_method'.
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Make sure of origin shape")
+        if self.vars['drift_already_corrected']:
+            self.drift_mask_coord = np.zeros((self.dims[0], 4), dtype=np.uint32)
+            for frame_i in np.arange(self.dims[0]):  # 100):#
+                true_pixels = np.nonzero(self.converted_video[frame_i, ...])
+                self.drift_mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]), np.min(true_pixels[1]), np.max(true_pixels[1])
+            if np.all(self.drift_mask_coord[:, 0] == 0) and np.all(self.drift_mask_coord[:, 1] == self.dims[1] - 1) and np.all(
+                    self.drift_mask_coord[:, 2] == 0) and np.all(self.drift_mask_coord[:, 3] == self.dims[2] - 1):
+                logging.error(f"Drift correction has been wrongly detected. Images do not contain zero-valued pixels")
+                self.vars['drift_already_corrected'] = False
         if self.vars['origin_state'] == "constant":
             self.start = 1
             self.origin_idx = np.nonzero(self.origin)
@@ -332,19 +340,10 @@ class MotionAnalysis:
                 self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
         else:
             self.start = 0
-            analysisi = OneImageAnalysis(self.converted_video[0, :, :])
-            analysisi.binary_image = 0
-            if self.vars['drift_already_corrected']:
-                mask_coord = np.zeros((self.dims[0], 4), dtype=np.uint32)
-                for frame_i in np.arange(self.dims[0]):  # 100):#
-                    true_pixels = np.nonzero(self.converted_video[frame_i, ...])
-                    mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]), np.min(true_pixels[1]), np.max(
-                        true_pixels[1])
-            else:
-                mask_coord = None
+            analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
             while np.logical_and(np.sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
-                analysisi = self.frame_by_frame_segmentation(self.start, mask_coord, self.origin)
                 self.start += 1
+                analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
 
             # Use connected components to find which shape is the nearest from the image center.
             if self.vars['several_blob_per_arena']:
@@ -395,18 +394,13 @@ class MotionAnalysis:
         self.substantial_time = self.start
         # To avoid noisy images to have deleterious effects, make sure that area area reaches the threshold thrice.
         occurrence = 0
+        allowed_window = None
         if self.vars['drift_already_corrected']:
-            mask_coord = np.zeros((self.dims[0], 4), dtype=np.uint32)
-            for frame_i in np.arange(self.dims[0]):  # 100):#
-                true_pixels = np.nonzero(self.converted_video[frame_i, ...])
-                mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]), np.min(true_pixels[1]), np.max(
-                    true_pixels[1])
-        else:
-            mask_coord = None
+            allowed_window = self.drift_mask_coord[:, 0].max(), self.drift_mask_coord[:, 1].min(), self.drift_mask_coord[:, 2].max(), self.drift_mask_coord[:, 3].min()
         prev_bin_im = self.origin
         while np.logical_and(occurrence < 3, self.substantial_time < (self.dims[0] - step - 1)):
             self.substantial_time += step
-            growth_vision = self.frame_by_frame_segmentation(self.substantial_time, mask_coord, prev_bin_im)
+            growth_vision = self.frame_by_frame_segmentation(self.substantial_time, prev_bin_im)
             prev_bin_im = growth_vision.binary_image * self.borders
             surfarea = np.sum(prev_bin_im)
             prev_bin_im = np.logical_or(prev_bin_im, self.origin).astype(np.uint8)
@@ -429,7 +423,7 @@ class MotionAnalysis:
         growth = bracket_to_uint8_image_contrast(growth)
         growth *= self.borders
         growth_vision = OneImageAnalysis(growth)
-        growth_vision.segmentation()
+        growth_vision.segmentation(allowed_window=allowed_window)
         if self.vars['several_blob_per_arena']:
             _, _, stats, _ = cv2.connectedComponentsWithStats(self.origin)
             do_erode = np.any(stats[1:, 4] > 50)
@@ -492,32 +486,23 @@ class MotionAnalysis:
 
             Notes
             -----
-            This function modifies the instance variables `self.segmentation`, `self.converted_video`,
+            This function modifies the instance variables `self.segmented`, `self.converted_video`,
             and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
             Depending on the configuration settings, it performs various segmentation algorithms and updates
             the instance variables accordingly.
 
         """
+        self.start = np.max((self.start, 1))
         self.lost_frames = self.step
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
         # Replace these 0 by normal background values before segmenting
         if self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
-            self.segmentation = np.zeros(self.dims, dtype=np.uint8)
-            if self.vars['drift_already_corrected']:
-                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Adjust images to drift correction and segment them")
-                # 1. Get the mask valid for a number of images around it (step).
-                mask_coord = np.zeros((self.dims[0], 4), dtype=np.uint32)
-                for frame_i in np.arange(self.dims[0]):#100):#
-                    true_pixels = np.nonzero(self.converted_video[frame_i, ...])
-                    mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]), np.min(true_pixels[1]), np.max(true_pixels[1])
-            else:
-                mask_coord = None
-
+            self.segmented = np.zeros(self.dims, dtype=np.uint8)
             for t in np.arange(self.dims[0]):#20):#
-                analysisi = self.frame_by_frame_segmentation(t, mask_coord)
-                self.segmentation[t, ...] = analysisi.binary_image
+                analysisi = self.frame_by_frame_segmentation(t)
+                self.segmented[t, ...] = analysisi.binary_image
 
                 if self.vars['lose_accuracy_to_save_memory']:
                     self.converted_video[t, ...] = bracket_to_uint8_image_contrast(analysisi.image)
@@ -564,24 +549,24 @@ class MotionAnalysis:
             elif not self.vars['frame_by_frame_segmentation']:
                 if self.vars['do_threshold_segmentation'] and not self.vars['do_slope_segmentation']:
                     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity threshold segmentation algorithm")
-                    self.segmentation = luminosity_segmentation
+                    self.segmented = luminosity_segmentation
                 if self.vars['do_slope_segmentation']:# and not self.vars['do_threshold_segmentation']: NEW
                     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity slope segmentation algorithm")
                     # gradient_segmentation[:(self.lost_frames + 1), ...] = luminosity_segmentation[:(self.lost_frames + 1), ...]
                     if not self.vars['do_threshold_segmentation']:# NEW
-                        self.segmentation = gradient_segmentation
+                        self.segmented = gradient_segmentation
                 if np.logical_and(self.vars['do_threshold_segmentation'], self.vars['do_slope_segmentation']):
                     if self.vars['true_if_use_light_AND_slope_else_OR']:
                         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold AND slope segmentation algorithms")
-                        self.segmentation = np.logical_and(luminosity_segmentation, gradient_segmentation)
+                        self.segmented = np.logical_and(luminosity_segmentation, gradient_segmentation)
                     else:
                         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold OR slope segmentation algorithms")
-                        self.segmentation = np.logical_or(luminosity_segmentation, gradient_segmentation)
-                self.segmentation = self.segmentation.astype(np.uint8)
-        self.converted_video2 = None
+                        self.segmented = np.logical_or(luminosity_segmentation, gradient_segmentation)
+                self.segmented = self.segmented.astype(np.uint8)
+        # self.converted_video2 = None
 
 
-    def frame_by_frame_segmentation(self, t: int, mask_coord=None, previous_binary_image: NDArray[np.uint8]=None):
+    def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray[np.uint8]=None):
         """
             Frame-by-frame segmentation of video frames using given parameters.
 
@@ -599,54 +584,59 @@ class MotionAnalysis:
 
         """
         contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
-        if self.vars['convert_for_motion']['logical'] != 'None':
-            contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
         # 1. Get the mask valid for a number of images around it (step).
+        allowed_window = None
         if self.vars['drift_already_corrected']:
-            if t < self.step // 2:
-                t_start = 0
-                t_end = self.step
-            elif t > (self.dims[0] - self.step // 2):
-                t_start = self.dims[0] - self.step
-                t_end = self.dims[0]
-            else:
-                t_start = t - (self.step // 2)
-                t_end = t + (self.step // 2)
-            min_y, max_y = np.max(mask_coord[t_start:t_end, 0]), np.min(mask_coord[t_start:t_end, 1])
-            min_x, max_x = np.max(mask_coord[t_start:t_end, 2]), np.min(mask_coord[t_start:t_end, 3])
+            half_step = np.ceil(self.step / 2).astype(int)
+            t_start = t - half_step
+            t_end = t + half_step
+            t_start = np.max((t_start, 0))
+            t_end = np.min((t_end, self.dims[0]))
+            min_y, max_y = np.max(self.drift_mask_coord[t_start:t_end, 0]), np.min(self.drift_mask_coord[t_start:t_end, 1])
+            min_x, max_x = np.max(self.drift_mask_coord[t_start:t_end, 2]), np.min(self.drift_mask_coord[t_start:t_end, 3])
+            allowed_window = min_y, max_y, min_x, max_x
             # 3. Bracket the focal image
-            image_i = contrasted_im[min_y:(max_y + 1), min_x:(max_x + 1)].astype(np.float64)
-            image_i /= np.mean(image_i)
-            image_i = OneImageAnalysis(image_i)
-            if self.vars['convert_for_motion']['logical'] != 'None':
-                image_i2 = contrasted_im2[min_y:(max_y + 1), min_x:(max_x + 1)]
-                image_i2 /= np.mean(image_i2)
-                image_i.image2 = image_i2
-            mask = (self.converted_video[t, ...] > 0).astype(np.uint8)
-        else:
-            mask = None
+            # image_i = contrasted_im[min_y:(max_y + 1), min_x:(max_x + 1)].astype(np.float64)
+            # mean_i = image_i.mean()
+            # if mean_i > 0:
+            #     image_i = image_i / mean_i
+            # image_i = OneImageAnalysis(image_i)
+            # image_i = OneImageAnalysis(contrasted_im)
+            # if self.vars['convert_for_motion']['logical'] != 'None':
+                # image_i2 = contrasted_im2[min_y:(max_y + 1), min_x:(max_x + 1)]
+                # mean_i2 = image_i2.mean()
+                # if mean_i2 > 0:
+                #     image_i2 = image_i2 / mean_i2
+                # image_i.image2 = image_i2
+                # image_i.image2 = contrasted_im2
+            # mask = np.zeros_like(contrasted_im)
+            # mask[min_y:max_y, min_x:max_x] = 1
+            # mask = (self.converted_video[t, ...] > 0).astype(np.uint8)
         # 3. Bracket the focal image
         if self.vars['grid_segmentation']:
-            int_variation_thresh = 100 - (np.ptp(contrasted_im) * 90 / 255)
+            int_var_thresh = 100 - (np.ptp(contrasted_im) * 90 / 255)
         else:
-            int_variation_thresh = None
-        analysisi = OneImageAnalysis(bracket_to_uint8_image_contrast(contrasted_im / np.mean(contrasted_im)))
+            int_var_thresh = None
+        analysisi = OneImageAnalysis(contrasted_im)
         if self.vars['convert_for_motion']['logical'] != 'None':
-            analysisi.image2 = bracket_to_uint8_image_contrast(contrasted_im2 / np.mean(contrasted_im2))
+            contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
+            analysisi.image2 = contrasted_im2
 
-        if t == 0:
-            analysisi.previous_binary_image = self.origin
+        if previous_binary_image is None:
+            previous_binary_image = self.origin
         else:
-            if previous_binary_image is None:
-                previous_binary_image = self.origin
-            analysisi.previous_binary_image = previous_binary_image
+            if t == 0:
+                analysisi.previous_binary_image = self.origin
+            else:
+                analysisi.previous_binary_image = previous_binary_image
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
                                grid_segmentation=self.vars['grid_segmentation'],
                                lighter_background=self.vars['lighter_background'],
-                               side_length=20, step=5, int_variation_thresh=int_variation_thresh, mask=mask,
-                               filter_spec=None) # filtering already done when creating converted_video
+                               side_length=self.vars['mesh_side_length'],
+                               step=self.vars['mesh_step_length'], int_var_thresh=int_var_thresh,
+                               allowed_window=allowed_window, filter_spec=self.vars['filter_spec']) # filtering already done when creating converted_video
 
         return analysisi
 
@@ -892,7 +882,7 @@ class MotionAnalysis:
             max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['maximal_growth_factor']
             # Try different values of do_slope_segmentation and keep the one that does not
             # segment more than x percent of the image
-            while counter <= 14:
+            while counter < value_segmentation_thresholds.shape[0]:
                 ease_slope_segmentation = value_segmentation_thresholds[counter]
                 if self.vars['lighter_background']:
                     gradient_threshold = (1 + ease_slope_segmentation) * np.max(covering_slopes)
@@ -917,15 +907,20 @@ class MotionAnalysis:
                     index_to_keep = valid_number - 1
                 ease_slope_segmentation = value_segmentation_thresholds[
                     np.uint8(np.floor(np.mean(np.nonzero(validated_thresholds)[0][index_to_keep])))]
-            else:
-                ease_slope_segmentation = 0
 
-            if self.vars['lighter_background']:
-                gradient_threshold = (1 - ease_slope_segmentation) * np.max(covering_slopes)
-                gradient_segmentation[:-self.lost_frames, :, :] = np.less(derive, gradient_threshold)[self.lost_frames:, :, :]
+                if self.vars['lighter_background']:
+                    gradient_threshold = (1 - ease_slope_segmentation) * np.max(covering_slopes)
+                    gradient_segmentation[:-self.lost_frames, :, :] = np.less(derive, gradient_threshold)[
+                        self.lost_frames:, :, :]
+                else:
+                    gradient_threshold = (1 - ease_slope_segmentation) * np.min(covering_slopes)
+                    gradient_segmentation[:-self.lost_frames, :, :] = np.greater(derive, gradient_threshold)[
+                        self.lost_frames:, :, :]
             else:
-                gradient_threshold = (1 - ease_slope_segmentation) * np.min(covering_slopes)
-                gradient_segmentation[:-self.lost_frames, :, :] = np.greater(derive, gradient_threshold)[self.lost_frames:, :, :]
+                if self.vars['lighter_background']:
+                    gradient_segmentation[:-self.lost_frames, :, :] = (derive < (np.min(derive, (1, 2)) * 1.1)[:, None, None])[self.lost_frames:, :, :]
+                else:
+                    gradient_segmentation[:-self.lost_frames, :, :] = (derive > (np.max(derive, (1, 2)) * 0.1)[:, None, None])[self.lost_frames:, :, :]
         else:
             gradient_segmentation = None
         return gradient_segmentation
@@ -966,7 +961,6 @@ class MotionAnalysis:
         """
         ## Initialization
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
-
         self.binary = np.zeros(self.dims[:3], dtype=np.uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .npy videos and Data to run Cellects quickly.pkl and re-run")
@@ -981,28 +975,28 @@ class MotionAnalysis:
             self.binary[:self.start, :, :] = np.repeat(np.expand_dims(self.origin, 0), self.start, axis=0)
             if self.start < self.step:
                 frames_to_assess = self.step
-                self.segmentation[self.start - 1, ...] = self.binary[self.start - 1, :, :]
+                self.segmented[self.start - 1, ...] = self.binary[self.start - 1, :, :]
                 for t in np.arange(self.start, self.lost_frames):
                     # Only keep pixels that are always detected
-                    always_found = np.sum(self.segmentation[t:(t + frames_to_assess), ...], 0)
+                    always_found = np.sum(self.segmented[t:(t + frames_to_assess), ...], 0)
                     always_found = always_found == frames_to_assess
                     # Remove too small shapes
                     without_small, stats, centro = cc(always_found.astype(np.uint8))
                     large_enough = np.nonzero(stats[1:, 4] > ((self.vars['first_move_threshold'] + 1) // 2))[0]
                     if len(large_enough) > 0:
                         always_found *= np.isin(always_found, large_enough + 1)
-                        always_found = np.logical_or(always_found, self.segmentation[t - 1, ...])
-                        self.segmentation[t, ...] *= always_found
+                        always_found = np.logical_or(always_found, self.segmented[t - 1, ...])
+                        self.segmented[t, ...] *= always_found
                     else:
-                        self.segmentation[t, ...] = 0
-                    self.segmentation[t, ...] = np.logical_or(self.segmentation[t - 1, ...], self.segmentation[t, ...])
+                        self.segmented[t, ...] = 0
+                    self.segmented[t, ...] = np.logical_or(self.segmented[t - 1, ...], self.segmented[t, ...])
         self.mean_distance_per_frame = None
         self.surfarea = np.zeros(self.dims[0], dtype =np.uint64)
         self.surfarea[:self.start] = np.sum(self.binary[:self.start, :, :], (1, 2))
         self.gravity_field = inverted_distance_transform(self.binary[(self.start - 1), :, :],
                                            np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
         if self.vars['correct_errors_around_initial']:
-            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1.25)  # plt.imshow(sun)
+            self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1)  # plt.imshow(sun)
             self.holes = np.zeros(self.dims[1:], dtype=np.uint8)
             self.pixel_ring_depth += 2
             self.update_ring_width()
@@ -1048,12 +1042,12 @@ class MotionAnalysis:
 
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
         if self.dims[0] < 100:
-            new_potentials = self.segmentation[self.t, :, :]
+            new_potentials = self.segmented[self.t, :, :]
         else:
             if self.t > 1:
-                new_potentials = np.sum(self.segmentation[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
+                new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
             else:
-                new_potentials = np.sum(self.segmentation[: (self.t + 1), :, :], 0, dtype=np.uint8)
+                new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
             new_potentials[new_potentials == 1] = 0
             new_potentials[new_potentials > 1] = 1
 
@@ -1070,11 +1064,11 @@ class MotionAnalysis:
                 break
             else:
                 if frame_counter < 5:
-                    new_potentials = self.segmentation[self.t - frame_counter, :, :]
+                    new_potentials = self.segmented[self.t - frame_counter, :, :]
                 else:
                 # If taking only one image is not enough, use the inverse of the fadinged matrix as new_potentials
                 # Given it haven't been processed by any slope calculation, it should be less noisy
-                    new_potentials = np.sum(self.segmentation[(self.t - 5): (self.t + 1), :, :], 0, dtype=np.uint8)
+                    new_potentials = np.sum(self.segmented[(self.t - 5): (self.t + 1), :, :], 0, dtype=np.uint8)
                     new_potentials[new_potentials < 6] = 0
                     new_potentials[new_potentials == 6] = 1
 
@@ -1103,7 +1097,7 @@ class MotionAnalysis:
                         self.binary[self.t][np.nonzero(new_shape)] = 1
                         self.binary[(self.step):(self.t + 1), :, :] = \
                             pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
-                                                      self.segmentation[(self.step):(self.t + 1), :, :])
+                                                      self.segmented[(self.step):(self.t + 1), :, :])
                         new_shape = deepcopy(self.binary[self.t, :, :])
                 pads = None
 
@@ -1200,7 +1194,6 @@ class MotionAnalysis:
                     self.binary[self.t, ...] = shapes
 
         # Display
-
         if show_seg:
             if self.visu is not None:
                 im_to_display = deepcopy(self.visu[self.t, ...])
@@ -1276,7 +1269,7 @@ class MotionAnalysis:
         if release_memory:
             self.substantial_image = None
             self.covering_intensity = None
-            self.segmentation = None
+            self.segmented = None
             self.gravity_field = None
             self.sun = None
             self.rays = None
@@ -1325,7 +1318,6 @@ class MotionAnalysis:
                 SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
                 for descriptor in to_compute_from_sd:
                     self.one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
-
 
                 if self.compute_solidity_separately:
                     solidity = ShapeDescriptors(self.binary[t, :, :], ["solidity"])
@@ -1413,7 +1405,8 @@ class MotionAnalysis:
 
                     # Compute shape descriptors
                     SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
-                    descriptors = list(SD.descriptors.values())
+                    # descriptors = list(SD.descriptors.values())
+                    descriptors = SD.descriptors
                     # Adjust descriptors if output_in_mm is specified
                     if self.vars['output_in_mm']:
                         if 'area' in to_compute_from_sd:
@@ -1429,7 +1422,7 @@ class MotionAnalysis:
 
                     # Store descriptors in time_descriptor_colony
                     descriptor_index = (colony_names[0] - 1) * len(to_compute_from_sd)
-                    time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = descriptors
+                    time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = list(descriptors.values())
 
                     updated_colony_names = np.append(updated_colony_names, colony_names)
 
@@ -1542,19 +1535,30 @@ class MotionAnalysis:
                 pseudopod_vid = np.zeros_like(self.binary, dtype=bool)
             potential_network = np.zeros_like(self.binary, dtype=bool)
             self.network_dynamics = np.zeros_like(self.binary, dtype=np.uint8)
-            greyscale = self.visu[-1, ...].mean(axis=-1)
+            do_convert = True
+            if self.visu is None:
+                do_convert = False
+                self.visu = np.stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
+                greyscale = self.converted_video[-1, ...]
+            else:
+                greyscale = self.visu[-1, ...].mean(axis=-1)
             NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[-1, ...],
                                       origin_to_add=self.origin)
             NetDet.get_best_network_detection_method()
-            NetDet.change_greyscale(self.visu[-1, ...], c_space_dict=self.vars['convert_for_motion'])
+            if do_convert:
+                NetDet.greyscale_image = self.converted_video[-1, ...]
             lighter_background = NetDet.greyscale_image[self.binary[-1, ...] > 0].mean() < NetDet.greyscale_image[self.binary[-1, ...] == 0].mean()
 
 
             for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
-                greyscale = self.visu[t, ...].mean(axis=-1)
+                if do_convert:
+                    greyscale = self.visu[t, ...].mean(axis=-1)
+                else:
+                    greyscale = self.converted_video[t, ...]
                 NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.binary[t, ...],
                                           origin_to_add=self.origin, best_result=NetDet.best_result)
                 NetDet_fast.detect_network()
+                NetDet_fast.greyscale_image = self.converted_video[t, ...]
                 if detect_pseudopods:
                     NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
                     NetDet_fast.merge_network_with_pseudopods()
@@ -1661,7 +1665,6 @@ class MotionAnalysis:
         origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
         for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
 
-
             if self.origin is not None:
                 computed_network = self.network_dynamics[t, ...] * (1 - self.origin)
                 origin_contours = get_contours(self.origin)
@@ -1679,7 +1682,7 @@ class MotionAnalysis:
             if pad_origin_contours is not None:
                 origin_contours = remove_padding([pad_origin_contours])[0]
             edge_id.make_vertex_table(origin_contours, self.network_dynamics[t, ...] == 2)
-            edge_id.make_edge_table(self.converted_video[:, t])
+            edge_id.make_edge_table(self.converted_video[t, ...])
 
 
             edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
@@ -1700,7 +1703,6 @@ class MotionAnalysis:
         edge_table.to_csv(
             f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
 
-
     def memory_allocation_for_cytoscillations(self) -> NDArray:
         """
 
@@ -1719,36 +1721,30 @@ class MotionAnalysis:
             This method attempts to allocate memory for 10 minutes before
                 crashing if an exception occurs.
         """
-        try:
-            period_in_frame_nb = int(self.vars['expected_oscillation_period'] / self.time_interval)
-            if period_in_frame_nb < 2:
-                period_in_frame_nb = 2
-            necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \
-                               self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
-            available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-            if len(self.converted_video.shape) == 4:
-                self.converted_video = self.converted_video[:, :, :, 0]
-            average_intensities = np.mean(self.converted_video, (1, 2))
-            if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
-                oscillations_video = np.zeros(self.converted_video.shape, dtype=np.float16)
-                for cy in np.arange(self.converted_video.shape[1]):
-                    for cx in np.arange(self.converted_video.shape[2]):
-                        oscillations_video[:, cy, cx] = np.round(np.gradient(self.converted_video[:, cy, cx, ...]/average_intensities,
-                                                                      period_in_frame_nb), 3).astype(np.float16)
-            else:
-                oscillations_video = np.gradient(self.converted_video/average_intensities, period_in_frame_nb, axis=0)
-            # check if conv change here
-            self.check_converted_video_type()
-            if len(self.converted_video.shape) == 3:
-                self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
-            oscillations_video = np.sign(oscillations_video)
-            return oscillations_video
-        except Exception as exc:
-            logging.error(f"{exc}. Retrying to allocate for 10 minutes before crashing. ")
-            return None
+        period_in_frame_nb = int(self.vars['expected_oscillation_period'] / self.time_interval)
+        if period_in_frame_nb < 2:
+            period_in_frame_nb = 2
+        necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \
+                           self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
+        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        if len(self.converted_video.shape) == 4:
+            self.converted_video = self.converted_video[:, :, :, 0]
+        average_intensities = np.mean(self.converted_video, (1, 2))
+        if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
+            oscillations_video = np.zeros(self.converted_video.shape, dtype=np.float16)
+            for cy in np.arange(self.converted_video.shape[1]):
+                for cx in np.arange(self.converted_video.shape[2]):
+                    oscillations_video[:, cy, cx] = np.round(np.gradient(self.converted_video[:, cy, cx, ...]/average_intensities,
+                                                                  period_in_frame_nb), 3).astype(np.float16)
+        else:
+            oscillations_video = np.gradient(self.converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
+        self.check_converted_video_type()
+        if len(self.converted_video.shape) == 3:
+            self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
+        oscillations_video = np.sign(oscillations_video)
+        return oscillations_video
 
-
-    def study_cytoscillations(self, show_seg: bool):
+    def study_cytoscillations(self, show_seg: bool=False):
         """
 
             Study the cytoskeletal oscillations within a video frame by frame.
@@ -1770,15 +1766,7 @@ class MotionAnalysis:
         else:
             if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting oscillation analysis.")
-                oscillations_video = None
-                staring_time = default_timer()
-                current_time = staring_time
-                while oscillations_video is None and (current_time - staring_time) < 600:
-                    oscillations_video = self.memory_allocation_for_cytoscillations()
-                    if oscillations_video is None:
-                        sleep(30)
-                        current_time = default_timer()
-
+                oscillations_video = self.memory_allocation_for_cytoscillations()
                 within_range = (1 - self.binary[0, :, :]) * self.borders
                 within_range = self.binary * within_range
                 oscillations_video *= within_range
@@ -1946,7 +1934,7 @@ class MotionAnalysis:
                                     inner_network = current_cluster_img * network_at_t
                                     inner_network_area = inner_network.sum()
                                     zoomed_binary, side_lengths = prepare_box_counting(current_cluster_img,
-                                                                                       side_threshold=self.vars[
+                                                                                       min_mesh_side=self.vars[
                                                                                            'fractal_box_side_threshold'],
                                                                                        zoom_step=self.vars[
                                                                                            'fractal_zoom_step'],
@@ -1955,7 +1943,7 @@ class MotionAnalysis:
 
                                     if np.any(inner_network):
                                         zoomed_binary, side_lengths = prepare_box_counting(inner_network,
-                                                                                           side_threshold=self.vars[
+                                                                                           min_mesh_side=self.vars[
                                                                                                'fractal_box_side_threshold'],
                                                                                            zoom_step=self.vars[
                                                                                                'fractal_zoom_step'],
@@ -2031,12 +2019,12 @@ class MotionAnalysis:
             for t in np.arange(self.dims[0]):
                 if self.vars['network_analysis']:
                     box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
-                    zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], side_threshold=self.vars[
+                    zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], min_mesh_side=self.vars[
                         'fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
                         t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
                     zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...],
-                                                                       side_threshold=self.vars[
+                                                                       min_mesh_side=self.vars[
                                                                            'fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'],
                                                                        contours=False)
@@ -2044,7 +2032,7 @@ class MotionAnalysis:
                         t, 6] = box_counting_dimension(zoomed_binary, side_lengths)
                 else:
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...],
-                                                                       side_threshold=self.vars['fractal_box_side_threshold'],
+                                                                       min_mesh_side=self.vars['fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
 
@@ -2224,7 +2212,7 @@ class MotionAnalysis:
         if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
             os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")
 
-    def change_results_of_one_arena(self):
+    def change_results_of_one_arena(self, save_video: bool = True):
         """
         Manages the saving and updating of CSV files based on data extracted from analyzed
         one arena. Specifically handles three CSV files: "one_row_per_arena.csv",
@@ -2233,7 +2221,8 @@ class MotionAnalysis:
         The method ensures that each CSV file contains the relevant information for
         the given arena, frame, and oscillator cluster data.
         """
-        self.save_video()
+        if save_video:
+            self.save_video()
         # I/ Update/Create one_row_per_arena.csv
         create_new_csv: bool = False
         if os.path.isfile("one_row_per_arena.csv"):
@@ -2258,7 +2247,7 @@ class MotionAnalysis:
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
                                columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = np.array(list(self.one_descriptor_per_arena.values()), dtype=np.uint32)
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values() #  np.array(list(self.one_descriptor_per_arena.values()), dtype=np.uint32)
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
