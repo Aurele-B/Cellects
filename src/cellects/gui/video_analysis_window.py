@@ -549,7 +549,7 @@ class VideoAnalysisWindow(MainTabsType):
         if self.thread['VideoReader'].isRunning():  # VideoReaderThreadInThirdWidget
             self.thread['VideoReader'].wait()
         if self.parent().po.load_quick_full > 0:
-            image = self.parent().po.motion.segmentation[-1, ...]
+            image = self.parent().po.motion.segmented[-1, ...]
         if self.parent().po.motion.visu is None:
             image = self.parent().po.motion.converted_video[-1, ...] * (1 - image)
             image = np.round(image).astype(np.uint8)
@@ -589,7 +589,7 @@ class VideoAnalysisWindow(MainTabsType):
 
     def read_is_clicked(self):
         if self.parent().po.motion is not None:
-            if self.parent().po.motion.segmentation is not None:
+            if self.parent().po.motion.segmented is not None:
                 if not self.thread['OneArena'].isRunning() and not self.thread['VideoReader'].isRunning():
                     self.thread['VideoReader'].start()  # VideoReaderThreadInThirdWidget
                     self.thread['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
@@ -601,12 +601,6 @@ class VideoAnalysisWindow(MainTabsType):
                 self.message.setText("Run detection first")
         else:
             self.message.setText("Run detection first")
-    #
-    # def video_display(self, dictionary):
-    #     self.drawn_image = dictionary['image']
-    #     self.display_image.update_image(dictionary['image'], self.parent().po.vars['contour_color'])
-    #     self.message.setText(dictionary['message'])
-    #     # self.message.setText(f"Reading done, try to change parameters if necessary")
 
     def run_all_is_clicked(self):
         if self.thread['OneArena'].isRunning() or self.thread['ChangeOneRepResult'].isRunning():
