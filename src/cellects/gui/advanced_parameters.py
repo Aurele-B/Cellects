@@ -386,12 +386,12 @@ class AdvancedParameters(WindowType):
         self.network_detection_threshold_label = FixedText('Network detection threshold',
                                                   tip="To detect the network, Cellects segment small parts of the image using a sliding window.\nThis threshold is an intensity value [0, 255]\napplied to the sliding window to not consider homogeneous substes of the image\ni.e. This is the minimal variation in intensity to consider that some pixels are parts of the network.",
                                                   night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_side_length = Spinbox(min=2, max=1000000, val=self.parent().po.vars['network_mesh_side_length'], decimals=0,
+        # self.mesh_side_length = Spinbox(min=2, max=1000000, val=self.parent().po.vars['mesh_side_length'], decimals=0,
         #                                   night_mode=self.parent().po.all['night_mode'])
         # self.mesh_side_length_label = FixedText('Mesh side length',
         #                                           tip="This is the side length (in pixels) of the sliding window used to detect the network.\nHigh values are faster but less precise.\nWhen too high, straight vertical or horizontal lines appear in the detected network.",
         #                                           night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_step_length = Spinbox(min=1, max=100, val=self.parent().po.vars['network_mesh_step_length'], decimals=0,
+        # self.mesh_step_length = Spinbox(min=1, max=100, val=self.parent().po.vars['mesh_step_length'], decimals=0,
         #                                   night_mode=self.parent().po.all['night_mode'])
         # self.mesh_step_length_label = FixedText('Mesh step length',
         #                                           tip="This is the distance (in pixels) travelled by the sliding window\n(used to detect the network) at each stage.\nHigh values are faster but less precise.",
@@ -1204,7 +1204,6 @@ class AdvancedParameters(WindowType):
         self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
         self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
 
-        # if self.parent().po.vars['origin_state'] == "invisible":
         self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
         self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
         self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
