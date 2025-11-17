@@ -211,7 +211,7 @@ class TestReadAndRotate(CellectsUnitTest):
     def test_read_and_rotate_orientation_correction(self):
         """Test basic functionality."""
         image_1 = self.path_experiment / "image1.tif"
-        image_2 = self.path_experiment / "image25.tif"
+        image_2 = self.path_experiment / "image2.tif"
         raw_images = False
         is_landscape = True
 
