@@ -46,46 +46,6 @@ class TestProgramOrganizerLoading(CellectsUnitTest):
         self.assertEqual(len(self.po.data_list), 25)
         self.assertEqual(self.po.all['folder_number'], 1)
 
-    def test_save_and_load_data_to_run_cellects_quickly(self):
-        self.po.load_data_to_run_cellects_quickly()
-        crop_coord = np.array((0, 245, 0, 300))
-        coordinates = np.array((1, 298, 1, 243))
-        for k in self.po.all['descriptors'].keys():
-            self.po.all['descriptors'][k] = True
-        self.po.vars['oscilacyto_analysis'] = True
-        self.po.vars['keep_unaltered_videos'] = True
-        self.po.update_output_list()
-        self.po.instantiate_tables()
-        self.po.vars['maximal_growth_factor'] = 0.25
-        self.po.get_first_image()
-        backmask = np.zeros(self.po.first_im.shape[:2], np.uint8)
-        backmask[-30:, :] = 1
-        backmask = np.nonzero(backmask)
-        self.po.vars['convert_for_origin'] = {'PCA': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
-        self.po.vars['convert_for_motion'] = self.po.vars['convert_for_origin']
-        self.po.fast_image_segmentation(True, backmask=backmask)
-        self.po.all['automatically_crop'] = True
-        self.po.cropping(is_first_image=True)
-        self.assertTrue(np.array_equal(self.po.first_image.crop_coord, crop_coord))
-        self.po.all['scale_with_image_or_cells'] = 1
-        self.po.all['starting_blob_hsize_in_mm'] = 15
-        self.po.get_average_pixel_size()
-        self.po.delineate_each_arena()
-        self.assertTrue(np.array_equal(self.po.left[0], coordinates[0]))
-        self.assertTrue(np.array_equal(self.po.right[0], coordinates[1]))
-        self.assertTrue(np.array_equal(self.po.top[0], coordinates[2]))
-        self.assertTrue(np.array_equal(self.po.bot[0], coordinates[3]))
-        self.po.get_background_to_subtract()
-        self.po.get_origins_and_backgrounds_lists()
-        self.po.get_last_image()
-        self.po.fast_image_segmentation(is_first_image=False)
-        self.po.find_if_lighter_background()
-        self.assertEqual(self.po.vars['lighter_background'], False)
-        exif_t = self.po.extract_exif()
-        for k in self.po.data_to_save.keys():
-            self.po.data_to_save[k] = True
-        self.po.save_data_to_run_cellects_quickly()
-
     def tearDown(self):
         """Remove all written files."""
         if os.path.isfile(ALL_VARS_PKL_FILE):
@@ -151,12 +111,54 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.all['folder_list']), 2)
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
-        po.extract_exif()
+        po.get_first_image()
+        backmask = np.zeros(po.first_im.shape[:2], np.uint8)
+        backmask[-30:, :] = 1
+        backmask = np.nonzero(backmask)
+        po.vars['convert_for_origin'] = {'PCA': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
+        po.vars['convert_for_motion'] = po.vars['convert_for_origin']
+        po.all['automatically_crop'] = True
 
-    def test_save_and_load_data_to_run_cellects_quickly(self):
-        self.po.all['global_pathway'] = self.d / "experiment"
-        self.po.save_data_to_run_cellects_quickly()
-        self.po.load_data_to_run_cellects_quickly()
+        po.fast_image_segmentation(True, backmask=backmask)
+        po.cropping(is_first_image=True)
+
+        # crop_coord = np.array((0, 245, 0, 300))
+        crop_coord = np.array((32, 238, 0, 299))
+        coordinates = np.array((1, 297, 1, 204))
+        self.assertTrue(np.array_equal(po.first_image.crop_coord, crop_coord))
+        po.all['scale_with_image_or_cells'] = 1
+        po.all['starting_blob_hsize_in_mm'] = 15
+        po.get_average_pixel_size()
+        info = po.delineate_each_arena()
+
+        self.assertTrue(np.array_equal(po.left[0], coordinates[0]))
+        self.assertTrue(np.array_equal(po.right[0], coordinates[1]))
+        self.assertTrue(np.array_equal(po.top[0], coordinates[2]))
+        self.assertTrue(np.array_equal(po.bot[0], coordinates[3]))
+        po.get_background_to_subtract()
+        po.get_origins_and_backgrounds_lists()
+        po.get_last_image()
+        po.fast_image_segmentation(is_first_image=False)
+        po.cropping(is_first_image=False)
+        po.find_if_lighter_background()
+        self.assertEqual(po.vars['lighter_background'], False)
+        for k in po.all['descriptors'].keys():
+            po.all['descriptors'][k] = True
+        po.vars['oscilacyto_analysis'] = True
+        po.vars['keep_unaltered_videos'] = True
+        po.update_output_list()
+        po.instantiate_tables()
+        po.vars['maximal_growth_factor'] = 0.25
+        for k in po.data_to_save.keys():
+            po.data_to_save[k] = True
+        po.save_variable_dict()
+        po.save_data_to_run_cellects_quickly()
+        po.load_data_to_run_cellects_quickly()
+        po = ProgramOrganizer()
+        po.all['global_pathway'] = self.d / "experiments"
+        po.load_variable_dict()
+        po.update_folder_id(sample_number=1, folder_name="f1")
+        po.load_data_to_run_cellects_quickly()
 
     def test_simple_pipeline(self):
         # Simulate a drift correction:
