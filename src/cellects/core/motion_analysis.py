@@ -223,14 +223,13 @@ class MotionAnalysis:
             else:
                 self.visu = video2numpy(
                     vid_name, None, self.background, true_frame_width)
-                if not self.vars['already_greyscale']:
-                    logging.info(
-                        f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
-                    vids = convert_subtract_and_filter_video(self.visu, self.vars['convert_for_motion'],
-                                                             self.background, self.background2,
-                                                             self.vars['lose_accuracy_to_save_memory'],
-                                                             self.vars['filter_spec'])
-                    self.converted_video, self.converted_video2 = vids
+                logging.info(
+                    f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
+                vids = convert_subtract_and_filter_video(self.visu, self.vars['convert_for_motion'],
+                                                         self.background, self.background2,
+                                                         self.vars['lose_accuracy_to_save_memory'],
+                                                         self.vars['filter_spec'])
+                self.converted_video, self.converted_video2 = vids
         else:
             if self.vars['already_greyscale']:
                 self.converted_video = videos_already_in_ram
