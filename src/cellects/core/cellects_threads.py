@@ -439,12 +439,11 @@ class FirstImageAnalysisThread(QtCore.QThread):
             self.message_from_thread.emit("Image segmentation, wait")
             if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
                 self.parent().po.get_average_pixel_size()
-                spot_size = self.parent().po.starting_blob_hsize_in_pixels
             else:
-                spot_size = None
+                self.parent().po.starting_blob_hsize_in_pixels = None
             self.parent().po.all["bio_mask"] = biomask
             self.parent().po.all["back_mask"] = backmask
-            self.parent().po.fast_image_segmentation(is_first_image=True, biomask=biomask, backmask=backmask, spot_size=spot_size)
+            self.parent().po.fast_first_image_segmentation()
             if shape_nb == self.parent().po.sample_number and self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] != self.parent().po.sample_number:
                 self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] = shape_nb
                 self.parent().po.first_image.shape_number = shape_nb
@@ -510,7 +509,7 @@ class LastImageAnalysisThread(QtCore.QThread):
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
             self.message_from_thread.emit("Image segmentation, wait...")
-            self.parent().po.fast_image_segmentation(is_first_image=False, biomask=biomask, backmask=backmask)
+            self.parent().po.fast_last_image_segmentation(biomask=biomask, backmask=backmask)
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
             if self.parent().po.vars['several_blob_per_arena']:
@@ -636,7 +635,7 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
 
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
-            self.parent().po.fast_image_segmentation(False)
+            self.parent().po.fast_last_image_segmentation()
         self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
@@ -738,7 +737,7 @@ class OneArenaThread(QtCore.QThread):
         analysis_status = {"continue": True, "message": ""}
 
         self.parent().po.get_first_image()
-        self.parent().po.fast_image_segmentation(is_first_image=True)
+        self.parent().po.fast_first_image_segmentation()
         if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
             self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
             analysis_status["continue"] = False
@@ -760,7 +759,7 @@ class OneArenaThread(QtCore.QThread):
                 else:
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
-                    self.parent().po.fast_image_segmentation(False)
+                    self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
                     logging.info("The current (or the first) folder is ready to run")
                     self.parent().po.first_exp_ready_to_run = True
@@ -1131,7 +1130,6 @@ class RunAllThread(QtCore.QThread):
         message = self.set_current_folder(0)
 
         if self.parent().po.first_exp_ready_to_run:
-
             self.message_from_thread.emit(message + ": Write videos...")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
                 analysis_status["continue"] = False
@@ -1217,7 +1215,7 @@ class RunAllThread(QtCore.QThread):
         logging.info("Pre-processing has started")
         if len(self.parent().po.data_list) > 0:
             self.parent().po.get_first_image()
-            self.parent().po.fast_image_segmentation(True)
+            self.parent().po.fast_first_image_segmentation()
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
             try:
@@ -1242,7 +1240,7 @@ class RunAllThread(QtCore.QThread):
                 else:
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
-                    self.parent().po.fast_image_segmentation(is_first_image=False)
+                    self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
             return analysis_status
         else:

@@ -359,6 +359,180 @@ def cc(binary_img: NDArray[np.uint8]) -> Tuple[NDArray, NDArray, NDArray]:
     return new_order, stats, centers
 
 
+spot_size_coefficients = np.arange(0.75, 0.00, - 0.05)
+spot_shapes = np.tile(["circle", "rectangle"], len(spot_size_coefficients))
+spot_sizes = np.repeat(spot_size_coefficients, 2)
+
+
+def shape_selection(binary_image:NDArray, several_blob_per_arena: bool, true_shape_number: int=None,
+                    horizontal_size: int=None, spot_shape: str=None, bio_mask:NDArray=None, back_mask:NDArray=None):
+    """
+    binary_image=self.first_image.binary_image;true_shape_number=self.sample_number;horizontal_size=self.starting_blob_hsize_in_pixels
+    spot_shape=self.all['starting_blob_shape'];several_blob_per_arena=self.vars['several_blob_per_arena'];bio_mask=self.all["bio_mask"]; back_mask=self.all["back_mask"]
+    Process the binary image to identify and validate shapes.
+
+    This method processes a binary image to detect connected components,
+    validate their sizes, and handle bio and back masks if specified.
+    It ensures that the number of validated shapes matches the expected
+    sample number or applies additional filtering if necessary.
+
+    Args:
+        use_bio_and_back_masks (bool): Whether to use bio and back masks
+            during the processing. Default is False.
+
+    Selects and validates the shapes of stains based on their size and shape.
+
+    This method performs two main tasks:
+    1. Removes stains whose horizontal size varies too much from a reference value.
+    2. Determines the shape of each remaining stain and only keeps those that correspond to a reference shape.
+
+    The method first removes stains whose horizontal size is outside the specified confidence interval. Then, it identifies shapes that do not correspond to a predefined reference shape and removes them as well.
+
+    Args:
+        horizontal_size (int): The expected horizontal size of the stains to use as a reference.
+        shape (str): The shape type ('circle' or 'rectangle')
+            that the stains should match. Other shapes are not currently supported.
+        confint (float): The confidence interval as a decimal
+            representing the percentage within which the size of the stains should fall.
+        do_not_delete (NDArray, optional): An array of stain indices that should not be deleted.
+            Default is None.
+
+    """
+
+    shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
+    do_not_delete = None
+    if bio_mask is not None or back_mask is not None:
+        if back_mask is not None:
+            if np.any(shapes[back_mask]):
+                shapes[np.isin(shapes, np.unique(shapes[back_mask]))] = 0
+                shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(
+                    (shapes > 0).astype(np.uint8), connectivity=8)
+        if bio_mask is not None:
+            if np.any(shapes[bio_mask]):
+                do_not_delete = np.unique(shapes[bio_mask])
+                do_not_delete = do_not_delete[do_not_delete != 0]
+    shape_number -= 1
+
+    if not several_blob_per_arena and horizontal_size is not None:
+        ordered_shapes = shapes.copy()
+        if spot_shape is None:
+            c_spot_shapes = spot_shapes
+            c_spot_sizes = spot_sizes
+        else:
+            if spot_shape == 'circle':
+                c_spot_shapes = spot_shapes[::2]
+            else:
+                c_spot_shapes = spot_shapes[::-2]
+            c_spot_sizes = spot_sizes[::2]
+
+        # shape_number = stats.shape[0]
+        counter = 0
+        while shape_number != true_shape_number and counter < len(spot_size_coefficients):
+            shape = c_spot_shapes[counter]
+            confint = c_spot_sizes[counter]
+            # counter+=1;horizontal_size = self.spot_size; shape = self.parent.spot_shapes[counter];confint = self.parent.spot_size_confints[::-1][counter]
+            # stats columns contain in that order:
+            # - x leftmost coordinate of boundingbox
+            # - y topmost coordinate of boundingbox
+            # - The horizontal size of the bounding box.
+            # - The vertical size of the bounding box.
+            # - The total area (in pixels) of the connected component.
+
+            # First, remove each stain which horizontal size varies too much from reference
+            size_interval = [horizontal_size * (1 - confint), horizontal_size * (1 + confint)]
+            cc_to_remove = np.argwhere(np.logical_or(stats[:, 2] < size_interval[0], stats[:, 2] > size_interval[1]))
+
+            if do_not_delete is None:
+                ordered_shapes[np.isin(ordered_shapes, cc_to_remove)] = 0
+            else:
+                ordered_shapes[np.logical_and(np.isin(ordered_shapes, cc_to_remove),
+                                              np.logical_not(np.isin(ordered_shapes, do_not_delete)))] = 0
+
+            # Second, determine the shape of each stain to only keep the ones corresponding to the reference shape
+            validated_shapes = np.zeros(ordered_shapes.shape, dtype=np.uint8)
+            validated_shapes[ordered_shapes > 0] = 1
+            nb_components, ordered_shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes,
+                                                                                               connectivity=8)
+            if nb_components > 1:
+                if shape == 'circle':
+                    surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint),
+                                     np.pi * np.square(horizontal_size // 2) * (1 + confint)]
+                    cc_to_remove = np.argwhere(
+                        np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                elif shape == 'rectangle':
+                    # If the smaller side is the horizontal one, use the user provided horizontal side
+                    if np.argmin((np.mean(stats[1:, 2]), np.mean(stats[1:, 3]))) == 0:
+                        surf_interval = [np.square(horizontal_size) * (1 - confint),
+                                         np.square(horizontal_size) * (1 + confint)]
+                        cc_to_remove = np.argwhere(
+                            np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                    # If the smaller side is the vertical one, use the median vertical length shape
+                    else:
+                        surf_interval = [np.square(np.median(stats[1:, 3])) * (1 - confint),
+                                         np.square(np.median(stats[1:, 3])) * (1 + confint)]
+                        cc_to_remove = np.argwhere(
+                            np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                else:
+                    logging.info("Original blob shape not well written")
+
+                if do_not_delete is None:
+                    ordered_shapes[np.isin(ordered_shapes, cc_to_remove)] = 0
+                else:
+                    ordered_shapes[np.logical_and(np.isin(ordered_shapes, cc_to_remove),
+                                                  np.logical_not(np.isin(ordered_shapes, do_not_delete)))] = 0
+                # There was only that before:
+                validated_shapes = np.zeros(ordered_shapes.shape, dtype=np.uint8)
+                validated_shapes[np.nonzero(ordered_shapes)] = 1
+                nb_components, ordered_shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes,
+                                                                                                   connectivity=8)
+
+            shape_number = nb_components - 1
+            counter += 1
+        
+        if shape_number == true_shape_number:
+            shapes = ordered_shapes
+    if true_shape_number is None or shape_number == true_shape_number:
+        validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+        validated_shapes[shapes > 0] = 1
+    else:
+        max_size = binary_image.size * 0.75
+        min_size = 10
+        cc_to_remove = np.argwhere(np.logical_or(stats[1:, 4] < min_size, stats[1:, 4] > max_size)) + 1
+        shapes[np.isin(shapes, cc_to_remove)] = 0
+        validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+        validated_shapes[shapes > 0] = 1
+        shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes, connectivity=8)
+        if not several_blob_per_arena and true_shape_number is not None and shape_number > true_shape_number:
+            # Sort shapes by size and compare the largest with the second largest
+            # If the difference is too large, remove that largest shape.
+            cc_to_remove = np.array([], dtype=np.uint8)
+            to_remove = np.array([], dtype=np.uint8)
+            stats = stats[1:, :]
+            while stats.shape[0] > true_shape_number and to_remove is not None:
+                # 1) rank by height
+                sorted_height = np.argsort(stats[:, 2])
+                # and only consider the number of shapes we want to detect
+                standard_error = np.std(stats[sorted_height, 2][-true_shape_number:])
+                differences = np.diff(stats[sorted_height, 2])
+                # Look for very big changes from one height to the next
+                if differences.any() and np.max(differences) > 2 * standard_error:
+                    # Within these, remove shapes that are too large
+                    to_remove = sorted_height[np.argmax(differences)]
+                    cc_to_remove = np.append(cc_to_remove, to_remove + 1)
+                    stats = np.delete(stats, to_remove, 0)
+
+                else:
+                    to_remove = None
+            shapes[np.isin(shapes, cc_to_remove)] = 0
+            validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+            validated_shapes[shapes > 0] = 1
+            shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes, connectivity=8)
+
+        shape_number -= 1
+    return validated_shapes, shape_number, stats, centroids
+    
+    
+
 def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
     """
     Perform rounded inverted distance transform on a binary image.

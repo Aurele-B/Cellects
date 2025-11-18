@@ -32,7 +32,7 @@ def load_one_folder(pathway, sample_number):
 def run_image_analysis(po):
     if not po.first_exp_ready_to_run:
         po.get_first_image()
-        po.fast_image_segmentation(True)
+        po.fast_first_image_segmentation()
         # po.first_image.find_first_im_csc(sample_number=po.sample_number,
         #                                    several_blob_per_arena=None,
         #                                    spot_shape=None, spot_size=None,
@@ -46,7 +46,7 @@ def run_image_analysis(po):
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
         po.get_last_image()
-        po.fast_image_segmentation(is_first_image=False)
+        po.fast_last_image_segmentation()
         po.find_if_lighter_background()
         po.extract_exif()
     else:

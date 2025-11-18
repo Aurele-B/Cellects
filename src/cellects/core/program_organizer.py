@@ -35,6 +35,7 @@ from cellects.image_analysis.morphological_operations import Ellipse, rank_from_
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import read_and_rotate
+from cellects.image_analysis.morphological_operations import shape_selection
 
 class ProgramOrganizer:
     """
@@ -79,16 +80,6 @@ class ProgramOrganizer:
     update_folder_id(...) : Update folder-specific metadata based on file structure.
     ...
 
-    Examples
-    --------
-    >>> organizer = ProgramOrganizer()
-    >>> # Initialize configuration from default or existing file
-    >>> organizer.load_variable_dict()
-    >>> # Locate data files and process first image
-    >>> organizer.look_for_data()
-    >>> organizer.get_first_image()
-    >>> # Perform initial segmentation for analysis
-    >>> organizer.fast_image_segmentation(is_first_image=True)
     """
     def __init__(self):
         """
@@ -114,7 +105,7 @@ class ProgramOrganizer:
         self.vars = {}
         self.all = {}
         self.all['folder_list'] = []
-        self.vars['first_detection_frame'] = 1
+        self.vars['first_detection_frame'] = 0
         self.first_im = None
         self.last_im = None
         self.vars['background_list'] = []
@@ -476,50 +467,6 @@ class ProgramOrganizer:
         videos_coordinates = self.first_image.crop_coord + [self.left, self.right, self.top, self.bot]
         return videos_coordinates
 
-    def extract_exif(self):
-        """
-        Extract EXIF data from image or video files.
-
-        Notes
-        -----
-        If `extract_time_interval` is True and unsuccessful, arbitrary time steps will be used.
-        Timings are normalized to minutes for consistency across different files.
-        """
-        if self.all['im_or_vid'] == 1:
-            timings = np.arange(self.vars['dims'][0])
-        else:
-            if sys.platform.startswith('win'):
-                pathway = os.getcwd() + '\\'
-            else:
-                pathway = os.getcwd() + '/'
-            arbitrary_time_step: bool = True
-            if not 'extract_time_interval' in self.all:
-                self.all['extract_time_interval'] = True
-            if self.all['extract_time_interval']:
-                self.vars['time_step'] = 1
-                try:
-                    timings = extract_time(self.data_list, pathway, self.all['raw_images'])
-                    timings = timings - timings[0]
-                    timings = timings / 60
-                    time_step = np.mean(np.diff(timings))
-                    digit_nb = 0
-                    for i in str(time_step):
-                        if i in {'.'}:
-                            pass
-                        elif i in {'0'}:
-                            digit_nb += 1
-                        else:
-                            break
-                    self.vars['time_step'] = np.round(time_step, digit_nb + 1)
-                    arbitrary_time_step = False
-                except:
-                    pass
-            if arbitrary_time_step:
-                timings = np.arange(0, len(self.data_list) * self.vars['time_step'], self.vars['time_step'])
-                timings = timings - timings[0]
-                timings = timings / 60
-        return timings
-
     def get_first_image(self, first_im: NDArray=None, sample_number: int=None):
         """
         Load and process the first image or frame from a video.
@@ -627,7 +574,52 @@ class ProgramOrganizer:
                     self.last_im = self.last_im[:, :, 0]
         self.last_image = OneImageAnalysis(self.last_im)
 
-    def fast_image_segmentation(self, is_first_image: bool, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, spot_size=None):
+
+    def extract_exif(self):
+        """
+        Extract EXIF data from image or video files.
+
+        Notes
+        -----
+        If `extract_time_interval` is True and unsuccessful, arbitrary time steps will be used.
+        Timings are normalized to minutes for consistency across different files.
+        """
+        if self.all['im_or_vid'] == 1:
+            timings = np.arange(self.vars['dims'][0])
+        else:
+            if sys.platform.startswith('win'):
+                pathway = os.getcwd() + '\\'
+            else:
+                pathway = os.getcwd() + '/'
+            arbitrary_time_step: bool = True
+            if not 'extract_time_interval' in self.all:
+                self.all['extract_time_interval'] = True
+            if self.all['extract_time_interval']:
+                self.vars['time_step'] = 1
+                try:
+                    timings = extract_time(self.data_list, pathway, self.all['raw_images'])
+                    timings = timings - timings[0]
+                    timings = timings / 60
+                    time_step = np.mean(np.diff(timings))
+                    digit_nb = 0
+                    for i in str(time_step):
+                        if i in {'.'}:
+                            pass
+                        elif i in {'0'}:
+                            digit_nb += 1
+                        else:
+                            break
+                    self.vars['time_step'] = np.round(time_step, digit_nb + 1)
+                    arbitrary_time_step = False
+                except:
+                    pass
+            if arbitrary_time_step:
+                timings = np.arange(0, len(self.data_list) * self.vars['time_step'], self.vars['time_step'])
+                timings = timings - timings[0]
+                timings = timings / 60
+        return timings
+
+    def fast_first_image_segmentation(self):
         """
         Segment the first or subsequent image in a series for biological and background masks.
 
@@ -662,92 +654,120 @@ class ProgramOrganizer:
         """
         if not "color_number" in self.vars:
             self.update_variable_dict()
-        if is_first_image:
-            if self.vars['convert_for_origin'] is None:
-                self.vars['convert_for_origin'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-            self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                                 self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
-                                                 subtract_background2=None, grid_segmentation=self.vars["grid_segmentation"],
-                                                 filter_spec=self.vars["filter_spec"])
-            if not self.first_image.drift_correction_already_adjusted:
-                self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
-                if self.vars['drift_already_corrected']:
-                    logging.info("Cellects detected that the images have already been corrected for drift")
-                    self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                                         self.all["bio_mask"], self.all["back_mask"],
-                                                         subtract_background=None, subtract_background2=None,
-                                                         grid_segmentation=self.vars["grid_segmentation"],
-                                                         filter_spec=self.vars["filter_spec"],
-                                                         allowed_window=self.first_image.drift_mask_coord)
-                    # self.first_image.adjust_to_drift_correction(self.vars['convert_for_origin']['logical'])
-            # if self.vars["grid_segmentation"]:
-            #     self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-            #                                          self.all["bio_mask"], self.all["back_mask"],
-            #                                          subtract_background=None, subtract_background2=None,
-            #                                          grid_segmentation=True,
-            #                                          filter_spec=self.vars["filter_spec"])
+        if self.vars['convert_for_origin'] is None:
+            self.vars['convert_for_origin'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
+                                             self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
+                                             subtract_background2=None, grid_segmentation=self.vars["grid_segmentation"],
+                                             filter_spec=self.vars["filter_spec"])
+        if not self.first_image.drift_correction_already_adjusted:
+            self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
+            if self.vars['drift_already_corrected']:
+                logging.info("Cellects detected that the images have already been corrected for drift")
+                self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
+                                                     self.all["bio_mask"], self.all["back_mask"],
+                                                     subtract_background=None, subtract_background2=None,
+                                                     grid_segmentation=self.vars["grid_segmentation"],
+                                                     filter_spec=self.vars["filter_spec"],
+                                                     allowed_window=self.first_image.drift_mask_coord)
+                # self.first_image.adjust_to_drift_correction(self.vars['convert_for_origin']['logical'])
+        # if self.vars["grid_segmentation"]:
+        #     self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
+        #                                          self.all["bio_mask"], self.all["back_mask"],
+        #                                          subtract_background=None, subtract_background2=None,
+        #                                          grid_segmentation=True,
+        #                                          filter_spec=self.vars["filter_spec"])
 
-            # self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
-            # logging.info(self.sample_number)
-            # process_i = ProcessFirstImage(
-            #     [self.first_image, False, False, None, self.vars['several_blob_per_arena'],
-            #      self.sample_number, spot_size, self.vars["color_number"], self.all["bio_mask"], self.all["back_mask"], None])
-            # process_i.binary_image = self.first_image.binary_image
-            # process_i.process_binary_image(use_bio_and_back_masks=True)
-            # if self.all["back_mask"] is not None:
-            #     if np.any(process_i.shapes[self.all["back_mask"]]):
-            #         process_i.shapes[np.isin(process_i.shapes, np.unique(process_i.shapes[self.all["back_mask"]]))] = 0
-            #         process_i.validated_shapes = (process_i.shapes > 0).astype(np.uint8)
-            # if self.all["bio_mask"] is not None:
-            #     process_i.validated_shapes[self.all["bio_mask"]] = 1
-            # if self.all["back_mask"] is not None or self.all["bio_mask"] is not None:
-            #     process_i.shape_number, process_i.shapes = cv2.connectedComponents(process_i.validated_shapes, connectivity=8)
-            #     process_i.shape_number -= 1
-            # self.first_image.validated_shapes = process_i.validated_shapes
-            # self.first_image.shape_number = process_i.shape_number
+        # self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
+        # logging.info(self.sample_number)
+        # process_i = ProcessFirstImage(
+        #     [self.first_image, False, False, None, self.vars['several_blob_per_arena'],
+        #      self.sample_number, spot_size, self.vars["color_number"], self.all["bio_mask"], self.all["back_mask"], None])
+        # process_i.binary_image = self.first_image.binary_image
+        # process_i.process_binary_image(use_bio_and_back_masks=True)
+        # if self.all["back_mask"] is not None:
+        #     if np.any(process_i.shapes[self.all["back_mask"]]):
+        #         process_i.shapes[np.isin(process_i.shapes, np.unique(process_i.shapes[self.all["back_mask"]]))] = 0
+        #         process_i.validated_shapes = (process_i.shapes > 0).astype(np.uint8)
+        # if self.all["bio_mask"] is not None:
+        #     process_i.validated_shapes[self.all["bio_mask"]] = 1
+        # if self.all["back_mask"] is not None or self.all["bio_mask"] is not None:
+        #     process_i.shape_number, process_i.shapes = cv2.connectedComponents(process_i.validated_shapes, connectivity=8)
+        #     process_i.shape_number -= 1
+        # self.first_image.validated_shapes = process_i.validated_shapes
+        # self.first_image.shape_number = process_i.shape_number
+        shapes_features = shape_selection(self.first_image.binary_image, true_shape_number=self.sample_number,
+                                          horizontal_size=self.starting_blob_hsize_in_pixels,
+                                          spot_shape=self.all['starting_blob_shape'],
+                                          several_blob_per_arena=self.vars['several_blob_per_arena'],
+                                          bio_mask=self.all["bio_mask"], back_mask=self.all["back_mask"])
+        self.first_image.validated_shapes, shape_number, stats, centroids = shapes_features
+        self.first_image.shape_number = shape_number
+        if self.first_image.im_combinations is None:
+            self.first_image.im_combinations = []
+            self.first_image.im_combinations.append({})
+        self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
+        self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+        self.first_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.first_image.image).astype(np.uint8)
+        self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
 
-            self.first_image.validated_shapes = self.first_image.binary_image.copy()
-            if self.all["back_mask"] is not None:
-                if np.any(self.first_image.binary_image[self.all["back_mask"]]):
-                    self.first_image.validated_shapes[self.all["back_mask"]] = 0
-            if self.all["bio_mask"] is not None:
-                self.first_image.validated_shapes[self.all["bio_mask"]] = 1
-            shape_number, shapes = cv2.connectedComponents(self.first_image.validated_shapes, connectivity=8)
-            shape_number -= 1
-            self.first_image.shape_number = shape_number
-            if self.first_image.im_combinations is None:
-                self.first_image.im_combinations = []
-                self.first_image.im_combinations.append({})
-            self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
-            self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
-            self.first_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.first_image.image).astype(np.uint8)
-            self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
+    def fast_last_image_segmentation(self, biomask: NDArray[np.uint8] = None, backmask: NDArray[np.uint8] = None):
+        """
+        Segment the first or subsequent image in a series for biological and background masks.
 
-        else:
-            if self.vars['convert_for_motion'] is None:
-                self.vars['convert_for_motion'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-            self.cropping(is_first_image=False)
+        Parameters
+        ----------
+        is_first_image : bool
+            A flag indicating whether the current image is the first in a sequence.
+        biomask : NDArray[np.uint8], optional
+            The biological mask to be applied to the image.
+        backmask : NDArray[np.uint8], optional
+            The background mask to be applied to the image.
+        spot_size : Any, optional
+            The size of the spots to be detected. Defaults to `None`.
+
+        Other Parameters
+        ----------------
+        **vars : dict
+            A dictionary containing various parameters and settings for image processing.
+        **all : dict
+            A dictionary containing masks and other relevant data structures.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function processes the first or subsequent image in a sequence, applying biological and background masks,
+        segmenting the image, and updating internal data structures accordingly. The function is specific to handling
+        image sequences for biological analysis
+
+        """
+        if self.vars['convert_for_motion'] is None:
+            self.vars['convert_for_motion'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        self.cropping(is_first_image=False)
+        self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
+                                            biomask, backmask, self.first_image.subtract_background,
+                                            self.first_image.subtract_background2,
+                                            grid_segmentation=self.vars["grid_segmentation"],
+                                            filter_spec=self.vars["filter_spec"])
+        if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
+            # self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
+            self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
                                                 grid_segmentation=self.vars["grid_segmentation"],
+                                                allowed_window=self.last_image.drift_mask_coord,
                                                 filter_spec=self.vars["filter_spec"])
-            if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
-                # self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
-                self.last_image.check_if_image_border_attest_drift_correction()
-                self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                                    biomask, backmask, self.first_image.subtract_background,
-                                                    self.first_image.subtract_background2,
-                                                    grid_segmentation=self.vars["grid_segmentation"],
-                                                    allowed_window=self.last_image.drift_mask_coord,
-                                                    filter_spec=self.vars["filter_spec"])
-            
-            if self.last_image.im_combinations is None:
-                self.last_image.im_combinations = []
-                self.last_image.im_combinations.append({})
-            self.last_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_motion']
-            self.last_image.im_combinations[self.current_combination_id]['binary_image'] = self.last_image.binary_image
-            self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(self.last_image.image)
+        
+        if self.last_image.im_combinations is None:
+            self.last_image.im_combinations = []
+            self.last_image.im_combinations.append({})
+        self.last_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_motion']
+        self.last_image.im_combinations[self.current_combination_id]['binary_image'] = self.last_image.binary_image
+        self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(self.last_image.image)
 
     def cropping(self, is_first_image: bool):
         """
@@ -883,7 +903,7 @@ class ProgramOrganizer:
         if are_dicts_equal:
             if self.first_im is None:
                 self.get_first_image()
-                self.fast_image_segmentation(True)
+                self.fast_first_image_segmentation()
                 self.cropping(is_first_image=True)
             among = np.nonzero(self.first_image.validated_shapes)
             not_among = np.nonzero(1 - self.first_image.validated_shapes)
@@ -897,9 +917,9 @@ class ProgramOrganizer:
             if self.last_im is None:
                 self.get_last_image()
                 # self.cropping(is_first_image=False)
-                self.fast_image_segmentation(is_first_image=False)
+                self.fast_last_image_segmentation()
             if self.last_image.binary_image.sum() == 0:
-                self.fast_image_segmentation(is_first_image=False)
+                self.fast_last_image_segmentation()
             among = np.nonzero(self.last_image.binary_image)
             not_among = np.nonzero(1 - self.last_image.binary_image)
             # Use the converted image to tell if the background is lighter, for analysis purposes
@@ -1088,7 +1108,7 @@ class ProgramOrganizer:
             self.first_image.get_crop_coordinates()
 
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
-        if self.first_image.validated_shapes.any():
+        if self.first_image.validated_shapes.any() and self.first_image.shape_number > 0:
             self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                 self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
             self.unchanged_ordered_fimg = deepcopy(self.ordered_first_image)
