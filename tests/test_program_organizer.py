@@ -106,8 +106,12 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.all['radical'] = "im"
         po.all['extension'] = "tif"
         po.all['sample_number_per_folder'] = 1
+        po.all['im_or_vid'] = 1
+        po.look_for_data()
+        po.update_folder_id(sample_number=1, folder_name="f1")
         po.all['im_or_vid'] = 0
         po.look_for_data()
+        po.update_folder_id(sample_number=1, folder_name="f1")
         self.assertEqual(len(po.all['folder_list']), 2)
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
