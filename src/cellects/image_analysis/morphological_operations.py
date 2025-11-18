@@ -1406,7 +1406,14 @@ class Ellipse:
         hr : int
             Half of the vertical size.
         """
-        self.vsize = sizes[0]
+        if sizes[0] == 0:
+            self.vsize = 3
+        else:
+            self.vsize = sizes[0]
+        if sizes[1] == 0:
+            self.hsize = 3
+        else:
+            self.hsize = sizes[1]
         self.hsize = sizes[1]
         self.vr = self.hsize // 2
         self.hr = self.vsize // 2
