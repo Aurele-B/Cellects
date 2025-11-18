@@ -144,8 +144,8 @@ import numpy as np
 import pandas as pd
 from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
-from cellects.utils.load_display_save import read_and_rotate
+from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
+from cellects.utils.load_display_save import read_and_rotate, video2numpy
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.utils.load_display_save import write_video
 from cellects.core.motion_analysis import MotionAnalysis
@@ -775,72 +775,82 @@ class OneArenaThread(QtCore.QThread):
             add_to_c = 1
             self.parent().po.one_arenate_done = True
             i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
-            if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                self.parent().po.converted_video = np.zeros(
-                    (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                    dtype=np.uint8)
-            else:
-                self.parent().po.converted_video = np.zeros(
-                    (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                    dtype=float)
-            if not self.parent().po.vars['already_greyscale']:
-                self.parent().po.visu = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                   self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=np.uint8)
-                if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=np.uint8)
-                    else:
-                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
-                first_dict, second_dict, c_spaces = split_dict(self.parent().po.vars['convert_for_motion'])
-            prev_img = None
-            background = None
-            background2 = None
-            pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
-            for image_i, image_name in enumerate(self.parent().po.data_list):
-                current_percentage, eta = pat_tracker.get_progress()
-                is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
-                img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
-                prev_img = deepcopy(img)
-                if self.parent().po.first_image.cropped:
-                    img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
-                          self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3], :]
-                img = img[self.parent().po.top[arena - 1]: (self.parent().po.bot[arena - 1] + add_to_c),
-                      self.parent().po.left[arena - 1]: (self.parent().po.right[arena - 1] + add_to_c), :]
-
-                self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
+            if self.parent().po.all['im_or_vid'] == 1:
+                vid_name = self.parent().po.vars['video_list'][i]
+                true_frame_width = self.parent().po.vars['origin_list'][i].shape[1]
                 if self.parent().po.vars['already_greyscale']:
-                    if self.parent().po.reduce_image_dim:
-                        self.parent().po.converted_video[image_i, ...] = img[:, :, 0]
-                    else:
-                        self.parent().po.converted_video[image_i, ...] = img
+                    self.parent().po.converted_video = video2numpy(
+                        vid_name, None, self.parent().po.background, true_frame_width)
+                    if len(self.parent().po.converted_video.shape) == 4:
+                        self.parent().po.converted_video = self.parent().po.converted_video[:, :, :, 0]
+                    img = self.parent().po.converted_video[-1, ...]
                 else:
-                    self.parent().po.visu[image_i, ...] = img
+                    self.parent().po.visu = video2numpy(
+                        vid_name, None, self.parent().po.background, true_frame_width)
+                    img = self.parent().po.visu[-1, ...]
 
-                    if self.parent().po.vars['subtract_background']:
-                        background = self.parent().po.vars['background_list'][i]
-                        if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                            background2 = self.parent().po.vars['background_list2'][i]
-                    greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces,
-                                                                                         first_dict,
-                                                                                         second_dict,background,background2,
-                                                                                         self.parent().po.vars[
-                                                                                             'lose_accuracy_to_save_memory'])
-
-                    if self.parent().po.vars['filter_spec'] is not None and self.parent().po.vars['filter_spec']['filter1_type'] != "":
-                        greyscale_image = apply_filter(greyscale_image,
-                                                       self.parent().po.vars['filter_spec']['filter1_type'],
-                                                       self.parent().po.vars['filter_spec']['filter1_param'],
-                                                       self.parent().po.vars['lose_accuracy_to_save_memory'])
-                        if greyscale_image2 is not None and self.parent().po.vars['filter_spec']['filter2_type'] != "":
-                            greyscale_image2 = apply_filter(greyscale_image2,
-                                                            self.parent().po.vars['filter_spec']['filter2_type'],
-                                                            self.parent().po.vars['filter_spec']['filter2_param'],
-                                                            self.parent().po.vars['lose_accuracy_to_save_memory'])
-                    self.parent().po.converted_video[image_i, ...] = greyscale_image
+            else:
+                if self.parent().po.vars['lose_accuracy_to_save_memory']:
+                    self.parent().po.converted_video = np.zeros(
+                        (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
+                        dtype=np.uint8)
+                else:
+                    self.parent().po.converted_video = np.zeros(
+                        (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
+                        dtype=float)
+                if not self.parent().po.vars['already_greyscale']:
+                    self.parent().po.visu = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=np.uint8)
                     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                        self.parent().po.converted_video2[image_i, ...] = greyscale_image2
+                        if self.parent().po.vars['lose_accuracy_to_save_memory']:
+                            self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                                                           self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=np.uint8)
+                        else:
+                            self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
+                                                           self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
+                prev_img = None
+                pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
+                for image_i, image_name in enumerate(self.parent().po.data_list):
+                    current_percentage, eta = pat_tracker.get_progress()
+                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
+                    img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
+                    prev_img = deepcopy(img)
+                    if self.parent().po.first_image.cropped:
+                        img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
+                              self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3], :]
+                    img = img[self.parent().po.top[arena - 1]: (self.parent().po.bot[arena - 1] + add_to_c),
+                          self.parent().po.left[arena - 1]: (self.parent().po.right[arena - 1] + add_to_c), :]
+
+                    self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
+                    if self.parent().po.vars['already_greyscale']:
+                        if self.parent().po.reduce_image_dim:
+                            self.parent().po.converted_video[image_i, ...] = img[:, :, 0]
+                        else:
+                            self.parent().po.converted_video[image_i, ...] = img
+                    else:
+                        self.parent().po.visu[image_i, ...] = img
+
+
+            if not self.parent().po.vars['already_greyscale']:
+                background = None
+                background2 = None
+                if self.parent().po.vars['subtract_background']:
+                    background = self.parent().po.vars['background_list'][i]
+                    if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
+                        background2 = self.parent().po.vars['background_list2'][i]
+                msg = "Video conversion"
+                if background is not None :
+                    msg += ", background subtraction"
+                if self.parent().po.vars['filter_spec'] is not None:
+                    msg += ", filtering"
+                msg += ", wait..."
+                self.image_from_thread.emit({"message": msg, "current_image": img})
+                converted_videos = convert_subtract_and_filter_video(self.parent().po.visu,
+                                                                        self.parent().po.vars['convert_for_motion'],
+                                                                        background, background2,
+                                                                        self.parent().po.vars['lose_accuracy_to_save_memory'],
+                                                                        self.parent().po.vars['filter_spec'])
+                self.parent().po.converted_video, self.parent().po.converted_video2 = converted_videos
 
             save_loaded_video = True
             if self.parent().po.vars['already_greyscale']:
@@ -1245,8 +1255,7 @@ class RunAllThread(QtCore.QThread):
         look_for_existing_videos = glob('ind_' + '*' + '.npy')
         there_already_are_videos = len(look_for_existing_videos) == len(self.parent().po.vars['analyzed_individuals'])
         logging.info(f"{len(look_for_existing_videos)} .npy video files found for {len(self.parent().po.vars['analyzed_individuals'])} arenas to analyze")
-        do_write_videos = not there_already_are_videos or (
-                there_already_are_videos and self.parent().po.all['overwrite_unaltered_videos'])
+        do_write_videos = not self.parent().po.all['im_or_vid'] and (not there_already_are_videos or (there_already_are_videos and self.parent().po.all['overwrite_unaltered_videos']))
         if do_write_videos:
             logging.info(f"Starting video writing")
             # self.videos.write_videos_as_np_arrays(self.data_list, self.vars['convert_for_motion'], in_colors=self.vars['save_in_colors'])

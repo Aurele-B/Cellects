@@ -355,12 +355,58 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
             os.remove(self.path_experiment / f"ind_2.npy")
 
 
-# class TestProgramOrganizerWithVideo(CellectsUnitTest):
-#     """Test suite for analyzing videos using ProgramOrganizer class"""
-#     @classmethod
-#     def setUpClass(cls):
-#         """Initialize data set for testing"""
-#         super().setUpClass()
+class TestProgramOrganizerWithVideo(CellectsUnitTest):
+    """Test suite for analyzing videos using ProgramOrganizer class"""
+    @classmethod
+    def setUpClass(cls):
+        """Initialize data set for testing"""
+        super().setUpClass()
+        cls.po = ProgramOrganizer()
+        cls.po.all['global_pathway'] = cls.d / "experiment"
+        cls.po.all['radical'] = "vid"
+        cls.po.all['extension'] = "mp4"
+        cls.po.all['sample_number_per_folder'] = 1
+        cls.po.all['im_or_vid'] = 1
+
+    def test_with_video(self):
+        self.po.update_variable_dict()
+        self.po.look_for_data()
+        self.po.get_first_image()
+        self.assertTrue(self.po.first_image.image.any())
+        self.po.get_last_image()
+        self.assertTrue(self.po.last_image.image.any())
+        timings = self.po.extract_exif()
+        self.assertTrue(timings.any())
+        self.po.fast_first_image_segmentation()
+        self.po.fast_last_image_segmentation()
+        self.po.cropping(True)
+        self.po.cropping(False)
+        self.po.get_average_pixel_size()
+        self.po.get_background_to_subtract()
+        self.po.find_if_lighter_background()
+        info = self.po.delineate_each_arena()
+        self.assertTrue(info['continue'])
+        self.assertEqual(len(self.po.left), 1)
+        self.assertEqual(len(self.po.right), 1)
+        self.assertEqual(len(self.po.top), 1)
+        self.assertEqual(len(self.po.bot), 1)
+
+
+
+
+# pathway = "/Users/Directory/Scripts/python/Cellects/data/experiment/"
+# from glob import glob
+# from natsort import natsorted
+# import cv2
+# import numpy as np
+# from cellects.utils.load_display_save import write_video
+# data_list = glob(pathway + "*tif")
+# data_list = natsorted(data_list)
+# im1 = cv2.imread(data_list[0])
+# vid = np.zeros((len(data_list), im1.shape[0], im1.shape[1], 3), dtype=np.uint8)
+# for t, im in enumerate(data_list):
+#     vid[t, ...] = cv2.imread(im)
+# write_video(vid, pathway + "video.mp4", is_color=True, fps=40)
 
 
 if __name__ == '__main__':

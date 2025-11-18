@@ -67,6 +67,7 @@ class DefaultDicts:
         }
 
         self.vars = {
+            'video_list': None,
             'analyzed_individuals': np.array([1], dtype=np.uint16),
             'arena_shape': 'rectangle', # 'circle',
             'bio_label': 1,

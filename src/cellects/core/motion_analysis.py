@@ -45,15 +45,14 @@ import pandas as pd
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
-from cellects.image_analysis.image_segmentation import segment_with_lum_value, apply_filter
+from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
-                                                              box_counting_dimension, prepare_box_counting,
-                                                              keep_one_connected_component, cc)
+                                                              box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array, split_dict, greater_along_first_axis, less_along_first_axis
+from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
 
 
 class MotionAnalysis:
@@ -203,7 +202,10 @@ class MotionAnalysis:
         self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
         if videos_already_in_ram is None:
             true_frame_width = self.origin.shape[1]
-            vid_name = f"ind_{self.one_descriptor_per_arena['arena']}.npy"
+            if self.vars['video_list'] is None:
+                vid_name = f"ind_{self.one_descriptor_per_arena['arena']}.npy"
+            else:
+                vid_name = self.vars['video_list'][i]
             if len(self.vars['background_list']) == 0:
                 self.background = None
             else:
@@ -221,7 +223,14 @@ class MotionAnalysis:
             else:
                 self.visu = video2numpy(
                     vid_name, None, self.background, true_frame_width)
-                self.get_converted_video()
+                if not self.vars['already_greyscale']:
+                    logging.info(
+                        f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
+                    vids = convert_subtract_and_filter_video(self.visu, self.vars['convert_for_motion'],
+                                                             self.background, self.background2,
+                                                             self.vars['lose_accuracy_to_save_memory'],
+                                                             self.vars['filter_spec'])
+                    self.converted_video, self.converted_video2 = vids
         else:
             if self.vars['already_greyscale']:
                 self.converted_video = videos_already_in_ram
@@ -231,75 +240,6 @@ class MotionAnalysis:
                 else:
                     self.visu, self.converted_video, self.converted_video2 = videos_already_in_ram
 
-    def get_converted_video(self):
-        """
-        Get the converted video in grayscale format.
-
-        This method processes the RGB visual video and converts it into a
-        grayscale image using specified color space combinations. It handles
-        background subtraction and optional filters for further processing.
-
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing this method.
-            Must have attributes:
-                - vars: Dictionary with processing parameters
-                - visu: Array of RGB video frames
-                - background, background2: Background images for subtraction
-                - one_descriptor_per_arena: Arena descriptor
-
-        Returns
-        -------
-        None
-            The method modifies the `converted_video` and optionally
-            `converted_video2` attributes of the `self` object directly.
-
-        Notes
-        -----
-        This function modifies the state of the instance, i.e., updates its
-        `converted_video` and potentially `converted_video2` attributes.
-        There is no need to return these values as they are stored
-        in the instance itself.
-        This method modifies the instance's `converted_video` and potentially
-        `converted_video2` attributes as a side effect.
-        """
-        if not self.vars['already_greyscale']:
-            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
-            first_dict, second_dict, c_spaces = split_dict(self.vars['convert_for_motion'])
-            if self.vars['lose_accuracy_to_save_memory']:
-                self.converted_video = np.zeros(self.visu.shape[:3], dtype=np.uint8)
-            else:
-                self.converted_video = np.zeros(self.visu.shape[:3], dtype=np.float64)
-            if self.vars['convert_for_motion']['logical'] != 'None':
-                if self.vars['lose_accuracy_to_save_memory']:
-                    self.converted_video2 = np.zeros(self.visu.shape[:3], dtype=np.uint8)
-                else:
-                    self.converted_video2 = np.zeros(self.visu.shape[:3], dtype=np.float64)
-
-            # Trying to subtract the first image to the first image is a nonsense so,
-            # when doing background subtraction, the first and the second image are equal
-            for counter in np.arange(self.visu.shape[0]):
-                if self.vars['subtract_background'] and counter == 0:
-                    img = self.visu[1, ...]
-                else:
-                    img = self.visu[counter, ...]
-                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces, first_dict,
-                                                                                     second_dict, self.background,
-                                                                                     self.background2,
-                                                                                     self.vars['lose_accuracy_to_save_memory'])
-                if self.vars['filter_spec'] is not None and self.vars['filter_spec']['filter1_type'] != "":
-                    greyscale_image = apply_filter(greyscale_image, self.vars['filter_spec']['filter1_type'],
-                                                   self.vars['filter_spec']['filter1_param'],
-                                                   self.vars['lose_accuracy_to_save_memory'])
-                    if greyscale_image2 is not None and self.vars['filter_spec']['filter2_type'] != "":
-                        greyscale_image2 = apply_filter(greyscale_image2, self.vars['filter_spec']['filter2_type'],
-                                                        self.vars['filter_spec']['filter2_param'],
-                                                        self.vars['lose_accuracy_to_save_memory'])
-
-                self.converted_video[counter, ...] = greyscale_image
-                if self.vars['convert_for_motion']['logical'] != 'None':
-                    self.converted_video2[counter, ...] = greyscale_image2
 
     def get_origin_shape(self):
         """

@@ -254,7 +254,6 @@ class ProgramOrganizer:
         self.all['folder_number'] = 1
         if len(self.data_list) > 0:
             self._sort_data_list()
-            self.data_list = natsort.natsorted(self.data_list)
             self.sample_number = self.all['first_folder_sample_number']
         else:
             content = os.listdir()
@@ -283,6 +282,10 @@ class ProgramOrganizer:
         if len(lengths) > 1 and np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
             logging.error(f"File names present strong variations and cannot be correctly sorted.")
         self.data_list = natsort.natsorted(self.data_list)
+        if self.all['im_or_vid'] == 1:
+            self.vars['video_list'] = self.data_list
+        else:
+            self.vars['video_list'] = None
 
     def update_folder_id(self, sample_number: int, folder_name: str=""):
         """
@@ -309,7 +312,7 @@ class ProgramOrganizer:
         # Sorting is necessary when some modifications (like rotation) modified the last modification date
         self._sort_data_list()
         if self.all['im_or_vid'] == 1:
-            self.sample_number = len(self.data_list)
+            self.sample_number = sample_number
         else:
             self.vars['img_number'] = len(self.data_list)
             self.sample_number = sample_number
