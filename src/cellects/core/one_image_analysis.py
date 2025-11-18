@@ -26,7 +26,7 @@ from numba.typed import Dict as TDict
 from numpy.typing import NDArray
 from typing import Tuple
 from skimage.measure import perimeter
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse, spot_size_coefficients
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 from cellects.utils.utilitarian import split_dict
@@ -339,22 +339,6 @@ class OneImageAnalysis:
                     self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
                 self.binary_image = self.binary_image.astype(np.uint8)
 
-    def set_spot_shapes_and_size_confint(self, spot_shape: str):
-        """
-        Set spot shapes and their associated size confidence intervals based on the given
-        spot shape.
-
-        Parameters:
-            spot_shape (str): The shape to set for all spots. If None, alternating
-                shapes 'circle' and 'rectangle' will be used.
-        """
-        self.spot_size_confints = np.arange(0.75, 0.00, - 0.05)
-        if spot_shape is None:
-            self.spot_shapes = np.tile(["circle", "rectangle"], len(self.spot_size_confints))
-            self.spot_size_confints = np.repeat(self.spot_size_confints, 2)
-        else:
-            self.spot_shapes = np.repeat(spot_shape, len(self.spot_size_confints))
-
     def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
                           spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
                           backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, carefully: bool=False):
@@ -410,7 +394,7 @@ class OneImageAnalysis:
             for csc_dict in color_space_dictionaries:
                 logging.info(f"Try detection with each color space channel, one by one. Currently analyzing {csc_dict}")
                 list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,
-                             sample_number, spot_size, kmeans_clust_nb, biomask, backmask, None]
+                             sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
                 ProcessFirstImage(list_args)
 
             if sample_number is not None and carefully:
@@ -434,7 +418,7 @@ class OneImageAnalysis:
                 get_one_channel_result = False
                 combine_channels = True
                 list_args = [[self, get_one_channel_result, combine_channels, i, several_blob_per_arena, sample_number,
-                              spot_size, kmeans_clust_nb, biomask, backmask, possibilities] for i in possibilities]
+                              spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, possibilities] for i in possibilities]
                 for process_i in pool.imap_unordered(ProcessFirstImage, list_args):
                     pass
 
@@ -460,7 +444,7 @@ class OneImageAnalysis:
                 # Try a logical And between the most covered images
                 # Should only need one instanciation
                 process_i = ProcessFirstImage(
-                    [self, False, False, None, several_blob_per_arena, sample_number, spot_size, kmeans_clust_nb, biomask, backmask, None])
+                    [self, False, False, None, several_blob_per_arena, sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None])
                 process_i.binary_image = np.logical_and(self.saved_images_list[most1], self.saved_images_list[most2]).astype(np.uint8)
                 process_i.image = self.converted_images_list[most1]
                 process_i.process_binary_image()

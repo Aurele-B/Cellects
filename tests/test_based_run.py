@@ -36,7 +36,7 @@ def run_image_analysis_for_testing(po):
         po.get_first_image()
         po.vars['convert_for_motion'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'Or',
                                          'luv2': np.array([0, 0, 1], dtype=np.int8)}
-        po.fast_image_segmentation(True)
+        po.fast_first_image_segmentation()
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         analysis_status = po.delineate_each_arena()
@@ -44,7 +44,7 @@ def run_image_analysis_for_testing(po):
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
         po.get_last_image()
-        po.fast_image_segmentation(is_first_image=False)
+        po.fast_last_image_segmentation()
         po.find_if_lighter_background()
         timing = po.extract_exif()
     else:
