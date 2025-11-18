@@ -59,10 +59,6 @@ class TestOneImageAnalysisBasicOperations(CellectsUnitTest):
         self.oia.adjust_to_drift_correction("Xor")
         self.assertIsInstance(self.oia.binary_image, np.ndarray)
 
-    def test_set_spot_shapes_and_size_confint(self):
-        self.oia.set_spot_shapes_and_size_confint("circle")
-        self.assertIsInstance(self.oia.spot_shapes, np.ndarray)
-
     def test_get_crop_coordinates(self):
         self.oia.validated_shapes = np.vstack((np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18), np.tile([1, 0, 0], 6), np.repeat(0, 18), np.tile([0, 0, 1], 6), np.repeat(0, 18)))
         self.oia.get_crop_coordinates()

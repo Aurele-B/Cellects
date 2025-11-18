@@ -383,9 +383,6 @@ class OneImageAnalysis:
                         csc_dict[c_space] = channels
                         color_space_dictionaries.append(csc_dict)
 
-            # if not several_blob_per_arena:
-            self.set_spot_shapes_and_size_confint(spot_shape)
-
             self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 11), dtype=np.uint32)
             unaltered_cc_nb, cc_nb, area, width_std, height_std, area_std, biosum, backsum = 3, 4, 5, 6, 7, 8, 9, 10
             self.save_combination_thread = SaveCombinationThread(self)
