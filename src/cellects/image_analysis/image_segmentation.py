@@ -24,7 +24,7 @@ from numba.typed import Dict
 from cellects.utils.decorators import njit
 from numpy.typing import NDArray
 from typing import Tuple
-from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict
+from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict, split_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image_analysis.morphological_operations import get_largest_connected_component
 from skimage.measure import perimeter
@@ -1053,3 +1053,71 @@ def extract_first_pc(bgr_image: np.ndarray, standardize: bool=True) -> Tuple[np.
     # first_pc_thresholded = np.maximum(first_pc_image, 0)
 
     return first_pc_image, explained_variance_ratio[0], first_pc_vector
+
+
+def convert_subtract_and_filter_video(video: NDArray, color_space_combination: dict, background: NDArray,
+                                      background2: NDArray, lose_accuracy_to_save_memory:bool, filter_spec: dict) -> Tuple[NDArray, NDArray]:
+    """
+    Convert a video to grayscale, subtract the background, and apply filters.
+
+    Parameters
+    ----------
+    video : NDArray
+        The input video as a 4D NumPy array.
+    color_space_combination : dict
+        A dictionary containing the combinations of color space transformations.
+    background : NDArray, optional
+        The first background image for subtraction. If `None`, no subtraction is performed.
+    background2 : NDArray, optional
+        The second background image for subtraction. If `None`, no subtraction is performed.
+    lose_accuracy_to_save_memory : bool
+        Flag to reduce accuracy and save memory by using `uint8` instead of `float64`.
+    filter_spec : dict
+        A dictionary containing the specifications for filters to apply.
+
+    Returns
+    -------
+    Tuple[NDArray, NDArray]
+        A tuple containing:
+        - `converted_video`: The converted grayscale video.
+        - `converted_video2`: The second converted grayscale video if logical operation is not 'None'.
+
+    Notes
+    -----
+        - The function reduces accuracy of the converted video when `lose_accuracy_to_save_memory` is set to True.
+        - If `color_space_combination['logical']` is not 'None', a second converted video will be created.
+        - This function uses the `generate_color_space_combination` and `apply_filter` functions internally.
+    """
+
+    converted_video2 = None
+    if len(video.shape) == 3:
+        converted_video = video
+    else:
+        if lose_accuracy_to_save_memory:
+            array_type = np.uint8
+        else:
+            array_type = np.float64
+        first_dict, second_dict, c_spaces = split_dict(color_space_combination)
+        converted_video = np.zeros(video.shape[:3], dtype=array_type)
+        if color_space_combination['logical'] != 'None':
+            converted_video2 = converted_video.copy()
+        for im_i in range(video.shape[0]):
+            if im_i == 0 and background is not None:
+                # when doing background subtraction, the first and the second image are equal
+                image_i = video[1, ...]
+            else:
+                image_i = video[im_i, ...]
+            results = generate_color_space_combination(image_i, c_spaces, first_dict, second_dict, background,
+                                                       background2, lose_accuracy_to_save_memory)
+            greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = results
+            if filter_spec is not None and filter_spec['filter1_type'] != "":
+                greyscale_image = apply_filter(greyscale_image, filter_spec['filter1_type'],
+                                               filter_spec['filter1_param'],lose_accuracy_to_save_memory)
+                if greyscale_image2 is not None and filter_spec['filter2_type'] != "":
+                    greyscale_image2 = apply_filter(greyscale_image2,
+                                                    filter_spec['filter2_type'], filter_spec['filter2_param'],
+                                                    lose_accuracy_to_save_memory)
+            converted_video[im_i, ...] = greyscale_image
+            if color_space_combination['logical'] != 'None':
+                converted_video2[im_i, ...] = greyscale_image2
+    return converted_video, converted_video2
