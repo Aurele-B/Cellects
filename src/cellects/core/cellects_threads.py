@@ -1,133 +1,25 @@
 #!/usr/bin/env python3
 """
-Cellects graphical user interface interacts with computational scripts through threads.
-Especially, each thread calls one or several methods of the class named "program_organizer",
-which regroup all available computation of the software.
-These threads are started from a children of WindowType, run methods from program_organizer and send messages and
-results to the corresponding children of WindowType, allowing, for instance, to display a result in the interface.
+Cellects GUI module implementing threaded image/video analysis workflows.
 
+This module provides a Qt-based interface for analyzing biological motion and growth through color space combinations,
+segmentation strategies, arena delineation, and video processing. Uses QThreaded workers to maintain UI responsiveness
+during computationally intensive tasks like segmentation, motion tracking, network detection, oscillation and fractal
+analysis.
 
+Main Components
+LoadDataToRunCellectsQuicklyThread : Loads necessary data asynchronously for quick Cellects execution.
+FirstImageAnalysisThread : Analyzes first image with automatic color space selection and segmentation.
+LastImageAnalysisThread : Processes last frame analysis for optimized color space combinations.
+CropScaleSubtractDelineateThread : Handles cropping, scaling, and arena boundary detection.
+OneArenaThread : Performs complete motion analysis on a single arena with post-processing.
+RunAllThread : Executes full batch analysis across multiple arenas/experiments.
 
-An image can be coded in different color spaces, such as RGB, HSV, etc. These color spaces code the color of each pixel as three numbers, ranging from 0 to 255. Our aim is to find a combination of these three numbers that provides a single intensity value for each pixel, and which maximizes the contrast between the organism and the background. To increase the flexibility of our algorithm, we use more than one color space to look for these combinations. In particular, we use the RGB, LAB, HSV, LUV, HLS and YUV color spaces. What we call a color space combination is a transformation combining several channels of one or more color spaces.
-To find the optimal color space combination, Cellects uses one image (which we will call “seed image”). The software selects by default the first image of the sequence as seed image, but the user can select a different image where the cells are more visible.
-Cellects has a fully automatic algorithm to select a good color space combination, which proceeds in four steps:
-
-First, it screens every channel of every color space. For instance, it converts the image into grayscale using the second channel of the color space HSV, and segments that grayscale image using Otsu thresholding. Once a binary image is computed from every channel, Cellects only keep the channels for which the number of connected components is lower than 10000, and the total area detected is higher than 100 pixels but lower than 0.75 times the total size of the image. By doing so, we eliminate the channels that produce the most noise.
-
-In the second step, Cellects uses all the channels that pass the first filter and tests all possible pairwise combinations. Cellects combines channels by summing their intensities and re-scaling the result between 0 and 255. It then performs the segmentation on these combinations, and filters them with the same criteria as in the first step.
-
-The third step uses the previously selected channels and combinations that produce the highest and lowest detected surface to make logical operations between them. It applies the AND operator between the two results having the highest surface, and the OR operator between the two results having the lowest surface. It thus generates another two candidate segmentations, which are added to the ones obtained in the previous steps.
-
-In the fourth step, Cellects works under the assumption that the image contains multiple similar arenas containing a collection of objects with similar size and shape, and keeps the segmentations whose standard error of the area is smaller than ten times the smallest area standard error across all segmentations. To account for cases in which the experimental setup induces segmentation errors in one particular direction, Cellects also keeps the segmentation with minimal width standard error across all segmentations, and the one with minimal height standard error across all segmentations. All retained segmentations are shown to the user, who can then select the best one.
-
-As an optional step, Cellects can refine the choice of color space combination, using the last image of the sequence instead of the seed image. In order to increase the diversity of combinations explored, this optional analysis is performed in a different way than for the seed image. Also, this refining can use information from the segmentation of the seed frame and from the geometry of the arenas to rank the quality of the segmentation emerging from each color space combination. To generate these combinations, Cellects follows four steps.
-The first step is identical to the first step of the previously described automatic algorithm (in section 1) and starts by screening every possible channel and color space.
-
-The second step aims to find combinations that consider many channels, rather than those with only one or two. To do that, it creates combinations that consist of the sum of all channels except one. It then filters these combinations in the same way as for the previous step. Then, all surviving combinations are retained, and also undergo the same process in which one more channel is excluded, and the process continues until reaching single-channel combinations. This process thus creates new combinations that include any number of channels.
-
-The third step filters these segmentations, keeping those that fulfill the following criteria: (1) The number of connected components is higher than the number of arenas and lower than 10000. (2) The detected area covers less than 99% of the image. (2) Less than 1% of the detected area falls outside the arenas. (4) Each connected component of the detected area covers less than 75% of the image.
-
-Finally, the fourth step ranks the remaining segmentations using the following criteria: If the user labeled any areas as “cell”, the ranking will reflect the amount of cell pixels in common between the segmentation and the user labels. If the user did not label any areas as cells but labeled areas as background, the ranking will reflect the number of background pixels in common. Otherwise, the ranking will reflect the number of pixels in common with the segmentation of the first image.
-
-
-Arenas can be delimited automatically or manually. Cellects includes two automatic algorithms: A fast one to be used when arenas are symmetric around the initial position of the specimens or sufficiently far from each other, and a slower one to be used otherwise. These automatic algorithms work even if the arenas are not detectable in the images, but only work when there is a single individual in each arena. In the case of manual delimitation, the user draws each arena by holding down the mouse button. The following paragraphs describe the two automatic algorithms.
-The fast algorithm computes each arena coordinate using the distances between the components detected in the seed image after step 1. For each component, Cellects finds its nearest neighbor and uses its distance as the side of the square, centered on the component, giving the x and y limits of the arena.
-If the initial position of the cells do not provide good estimates of the center of each arena, Cellects can use the slower algorithm to find them. Because Cellects is intended to be very general, it cannot use specific characteristics of a particular arena to find its edges. Instead, it uses the motion and/or growth of the cell to infer the position of each arena. To do so, Cellects segments a sample of 5 images (equally spaced in time) using the same algorithm as for the seed image. Even if this segmentation is not accurate, the following algorithm finds the arenas robustly. First, it finds a rough estimate of the expected position of the cell. To do this, it dilates the cell in the first frame, until the edge of the dilated image is closer to the nearest centroid of other cells than to its own centroid. Then, it moves to the second image, and also dilates it in order to link together different disconnected components that may result from an inaccurate segmentation. Then, it performs an AND operation between these two dilated images and dilates the result so that it remains one component per arena. By doing this to all cells, we get an estimate of their shape in the second frame, and we can compute their centroids. We then repeat this procedure, for each pair of consecutive frames. Finally, Cellects computes the bounding boxes that contain the cells detected in the 5 frames for each arena, and uses them to estimate each arena coordinate.
-In some experiments, all cells are located at one edge of the arena and move roughly in the same direction. Cellects includes an option to take advantage of this regularity and improve the accuracy of arena detection: Once the centroids of a frame have been estimated (as described above), Cellects finds the centroid with highest displacement with respect to the previous frame, and applies the same displacement to all centroids.
-
-It also contains methods to write videos (as np arrays .npy files) corresponding to the pixels delimited by these arenas.
-
-1. load_images_and_videos: It starts by loading a video in .npy (which must have been written before, thanks to the one_video_per_blob file)
- and if it exists, the background used for background subtraction. Then, it uses a particular color space combination
- to convert the rgb video into greyscale.
- At this point, arenas have been delimited and each can be analyzed separately. The following describes what happens during the analysis of one arena. Also, while Cellects can work with either one or several cells in each arena, we will describe the algorithm for a single cell, making clarifications whenever anything changes for multiple cells.
-Cellects starts by reading and converting the video of each arena into grayscale, using the selected color space combination. Then, it processes it through the following steps.
-3. It validates the presence/absence of the specimen(s) in the first image of the video, named origin.
-Cellects finds the frame in which the cell is visible for the first time in each arena. When the seed image is the first image, then all cells are visible from the beginning. Otherwise, it will apply the same segmentation as for the seed image to the first, second, third images, etc. until the cell appears in one of them.
-4. It browses the first frames of the video to find the average covering duration of a pixel.
-It does so using a very conservative method, to make sure that only pixels that really are covered by the specimen(s)
-are used to do compute that covering duration.
-5. It performs the main segmentation algorithm on the whole video.
-This segmentation will consist in transforming the grayscale video resulting from the color space combination conversion
- into a binary video of presence/absence. To do this, Cellects provides several different options to detect specimen
- motion and growth throughout the video. The video segmentation transforms a grayscale video into a binary one.
- In simple datasets with strong contrast between specimens and background, Cellects can simply segment each image by
- thresholding. In more challenging conditions, the algorithm tracks the intensity of each pixel over time,
- using this dynamical information to determine when a pixel has been covered. This is done through an automatically
- determined threshold on the intensity or on its derivative. Additionally, Cellects can apply the logical operators
- AND or OR to these intensity and derivative thresholds. The default option is the dynamical intensity threshold and it
- works in many cases, but the user interface lets the user quickly check the results of different options and choose
- the best one by visual inspection of the segmentation result in different frames.
- For Cellects to be as versatile as possible, the user can select across five segmentation strategies.
-The first option is the simplest: It starts at the frame in which the cell is visible for the first time and segments the video frame by frame, using the same method as when analyzing only one image (as described in sections 1 and 2). The only difference is an optional background subtraction algorithm, which subtracts the first image to all others.
-The second option segments each frame by intensity thresholding. The threshold changes over time to adapt to changes in the background over time. To estimate the optimal threshold for each frame, Cellects proceeds as follows: It first estimates the typical background intensity of each frame as an intensity higher than the first decile of all pixels in the frame. Then, it defines an initial threshold for each frame at a fixed distance above this decile. This fixed distance is initially low, so that the initial segmentation is an overestimation of the actual area covered by the specimen. Then, it performs segmentation of all frames. If any frame presents a growth greater than a user_set threshold (whose default value is 5% of the area), all thresholds are diminished by 10%. Then the segmentation is performed again, and this process continues until no frame presents excessive growth. This description refers to cases in which the background is darker than the specimen. Cellects automatically detects if contrast is reversed, and adapts the method accordingly. Finally, Cellects segments the whole video with these adjusted intensity thresholds.
-The third option uses the change in intensity over time: For each pixel, it considers the evolution in time of its intensity, and considers that the cell covers the pixel when the slope of this intensity over time exceeds a threshold (Fig 3d in the main text).  For each frame, Cellects computes each frame’s threshold with the similar procedure as in the second option, except for the following. As the value of the slope of a derivative is highly sensitive to noise, Cellects first smooths the intensity curves using a moving average with a window length adapted to the typical time it takes for the cell to cover each pixel. Cellects tries to compute this typical time using the dynamics of a subset of pixels whose intensity varies strongly at the beginning of the growth (see the code for further details), and uses a default value of 10 frames when this computation fails. Cellects also uses this subset of pixels to get the reference slope threshold. Finally, it progressively modifies this reference until the video segmentation matches the required growth ratio, as in the second step.
-The two next options are combinations of the two first ones.
-The fourth is a logical OR between the intensity value and the intensity slope segmentations. It provides a very permissive segmentation, which is useful when parts of the cells are very hard to detect.
-The fifth is the logical AND between the intensity value and the intensity slope segmentations. It provides a more restrictive segmentation that can be useful when both the value and the slope segmentations detect areas that are not covered by the cell.
-6. Video post-processing improves the resulting binary video obtained through segmentation.
-The final step consists in improving the segmentation (see section S3.5 of the Supplementary Materials for more information). Cellects will first apply several filters that consistently improve the results, such as checking that each detected pixel was also detected at least twice in the three previous frames, omitting images containing too many detected pixels, and performing morphological opening and closing. Optionally, the user can activate the detection of areas left by the cell (See section S3.5.B of the Supplementary Materials for details).
-
-Additionally, optional algorithms correct particular types of errors. The first algorithm is useful when the substrate on which the cells are at the first image is of a different color than the substrate on which they will grow, expand or move. This color difference may produce holes in the segmentation and we developed an optional algorithm to correct this kind of error around the initial shape. The second algorithm should be used when each arena contains a single specimen, which should generate a single connected component. We can use this information to correct mistakes in models such as P. polycephalum, whose strong heterogeneity produces large variations of opacity. In these cases, segmentation may fail in the most transparent parts of the specimens and identify two disconnected components. The correction algorithm merges these disconnecting components by finding the most likely pixels connecting them and the most likely times at which those pixels were covered during growth.
-6.A Basic post-processing
-This process improves the raw segmentation. It includes algorithms to filter out aberrant frames, remove small artifacts and holes, and to detect when the specimens leave pixels. First, it checks that every pixel was detected at least twice in the three previous frames. Second, it excludes frames containing too many newly detected pixels, according to the maximal growth ratio per frame (as defined in section 3B). For these frames, the previous segmentation is kept, making the analysis robust to events producing a sharp variation in the brightness of a few images in the video (for example, when an enclosed device is temporarily opened or a light is switched on or off). Third, it removes potential small artifacts and holes by performing morphological opening followed by morphological closing.
-
-6.B Cell leaving detection
-This optional algorithm detects when areas are left by the specimens. It is useful when the cells not only grow but also move, so they can leave pixels that were covered before. When a pixel is covered, Cellects saves the intensity it had before being covered, computed as the median of the pixel’s intensity over a time window before it was covered. The length of this time window matches the typical time it takes for the cell to cover each pixel (computed as described in section 4.B, third segmentation strategy). Then, pixels at the border of the cell whose intensity fall below the saved intensity, rescaled by a user-defined multiplier (set by default at 1) are considered to be left by the cell. When there should be only one cell in the arena, Cellects tries to remove each component one by one, accepting this removal only when it does not break the connectivity of all parts of the cell.
-
-6.C Special error correction algorithms
-At the time of writing, Cellects contains two post-processing algorithms adapted to two specific situations. The first one is useful when there should be only one specimen per arena and when Cellects fails to detect its distant parts because their connections are not sufficiently visible. The second one is useful when Cellects fails to detect small areas around the initial shape, for example due to reflections near the edges. The following explains how these optional algorithms work.
-
-6.D Connect distant components:
-This algorithm automatically and progressively adds distant shapes to the main one. This correcting process occurs in three steps. First, it selects which distant component should get connected to the main one. The user can adjust this selection process according to the distance of the distant components with the main shape, and the minimal and maximal size of these components. Second, for each distant component, it computes and creates the shortest connection with the main shape. The width of that connection depends on the size of the distant shape where the connection occurs. Third, it uses an algorithm similar to the one used to correct errors around initial shape to estimate how quickly the gaps should be filled. This algorithm uses distance and timing vectors to create a dynamic connection between these two shapes (Figure 3f-h in the main text).
-
-6.E Correct errors around initial shape:
-This correcting process occurs in two steps. The first one scans the formation of holes around the initial segmentation during the beginning of the growth. The second one finds out when and how these holes are to be filled. To determine how the holes should be covered, Cellects uses the same algorithm as the one used to connect distant components. Computing the speed at which growth occurs from the initial position allows Cellects to fill the holes at the same speed, and therefore to correct these errors.
-
-7. Special algorithms for Physarum polycephalum
-Although done for this organism, these methods can be used with other biological models, such as mycelia.
-7.A. Oscillatory activity detection:
-This algorithm analyzes grayscale video frames to detect whether pixel intensities increase or decrease over time. To prevent artifacts from arena-scale illumination fluctuations, pixel intensities are first standardized by the average intensity of the entire image. A pixel is considered to have increased (or decreased) in intensity if at least four of its eight neighboring pixels have also shown an increase (or decrease). Then, regions with adjacent pixels whose intensity is changing in the same direction are detected, keeping only those larger than a user-selected threshold. Each region is tracked throughout the video, recording its oscillatory period, phase, and coordinates until it dissipates or reaches the video’s end.
-
-7.B. Network detection:
-P. polycephalum cells are composed of two types of compartments: A tubular network that transports cytoplasmic materials, and a thinner compartment that covers the rest of the space. Cellects’ initial segmentation does not distinguish between these two compartments, detecting all pixels that have been covered by any of them. This step distinguishes them, in order to segment the tubular network, whose intensity is further from that of the background.
-Cellects detects such a network using an algorithm that scores the segmentation results after using filters of
-vesselness detection: sato and frangi. On top of testing these filters with around 10 variations of their parameters,
-Cellects tries to segment the images adaptatively: segmenting each part of the image using a 2D rolling window.
-Once the best segmentation strategy is found for the last image of the video, it is used to segment the network in all
-other frames
-
-8. Graph extraction:
-Cellects can extract the graph of the specimen, or if detected, of its internal network.
-To do so, Cellects does the following:
-- Get the skeleton of the binary matrix of presence/absence of the specimen, as well as the specimen/network
- width at avery pixel of the skeleton.
-If the original position from which the specimen started has not the same color as the rest of the arena, apply
-a special algorithm to draw the skeleton at the border of that origin.
-- Smooth the skeleton using an algorithm removing small loops of 3 pixels widths
-- Keep only the largest connected component of the skeleton
-- Use pixel connectivity and their neighborhood connectivity to detect all tips and branching vertices of the graph
-summarizing the skeleton.
-- Find and label all edges connecting tips and remove those that are shorter than the width of the skeleton arm it is connected to
-- Find and label all edges connecting touching vertices
-- Find and label all edges connected to the two previoussly mentioned vertices
-- Find and label all edges forming loops and connected to only one vertex
-- Remove all shapes of 1 or two pixels that are neither detected as vertices nor edges,
-if and only if they do not break the skeleton into more than one connected component.
-- Remove edge duplicates
-- Remove vertices connectiong 2 edges
-- Finally, create and save the tables storing edge and vertex coordinates and properties
-
-9. Save
-Once the image analysis is finished, the software determines the value of each morphological descriptor at each time frame (SI - Table 1). Finally, Cellects saves a new video for each arena with the original video next to the converted video displaying the segmentation result, so that the user can easily validate the result. If an arena shows a poor segmentation result, the user can re-analyze it, tuning all parameters for that specific arena.
-- the final results of the segmentation and its contour (if applicable)
-- descriptors summarizing the whole video
-- validation images (efficiency tests) and videos
-
-10. If this class has been used in the video_analysis_window only on one arena, the method
-change_results_of_one_arena will open (or create if not existing) tables in the focal folder
-and adjust every row corresponding to that particular arena to the current analysis results.
-
+Notes
+Uses QThread for background operations to maintain UI responsiveness. Key workflows include automated color space
+optimization, adaptive segmentation algorithms, multithreaded video processing, and arena delineation via geometric
+analysis or manual drawing. Implements special post-processing for Physarum polycephalum network detection and oscillatory
+activity tracking.
 """
 
 import logging
