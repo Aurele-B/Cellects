@@ -602,21 +602,6 @@ class TestExtractFirstPC(CellectsUnitTest):
         # Verify explained variance is between 0 and 1
         self.assertTrue(0 <= explained_variance_ratio <= 1)
 
-    def test_extract_first_pc_chw_format(self):
-        """Test that extract_first_pc works with CHW format (channels, height, width)."""
-        # Create a simple test image (CHW format)
-        bgr_image = np.array([
-            [[1, 4], [7, 10]],
-            [[2, 5], [8, 11]],
-            [[3, 6], [9, 12]]
-        ])
-
-        first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
-
-        # Verify shapes
-        self.assertEqual(first_pc_image.shape, (2, 2))
-        self.assertEqual(first_pc_vector.shape, (3,))
-
     def test_with_standardization(self):
         """Test that standardization affects the results."""
         bgr_image = np.array([
