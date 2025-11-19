@@ -130,6 +130,8 @@ class MotionAnalysis:
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
+        if not 'contour_color' in self.vars:
+            self.vars['contour_color']: np.uint8 = 0
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
         self.dims = self.converted_video.shape
