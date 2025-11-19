@@ -205,7 +205,6 @@ class TestReadImage(CellectsUnitTest):
         self.assertTrue(np.array_equal(ref_size, result.shape))
 
 
-
 class TestReadAndRotate(CellectsUnitTest):
     """Test suite for read_and_rotate function."""
     def test_read_and_rotate_orientation_correction(self):

@@ -6,35 +6,9 @@ import unittest
 
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.motion_analysis import *
-from tests.test_based_run import load_test_folder, run_image_analysis_for_testing, run_write_videos_for_testing
 from tests._base import CellectsUnitTest, video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 
-# color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-# visu = several_arenas_vid
-# videos_already_in_ram = [several_arenas_vid, several_arenas_vid[:, :, :, 0]]
-# origin_list = [several_arenas_bin_vid[0]]
-# i = 0
-# dd = DefaultDicts()
-# vars = dd.vars
-# for k in vars['descriptors'].keys():
-#     vars['descriptors'][k] = True
-# vars['origin_list'] = origin_list
-# vars['first_move_threshold'] = 1
-# vars['lighter_background'] = False
-# vars['several_blob_per_arena'] = True
-# l = [i, i + 1, vars, False, False, False, videos_already_in_ram]
-# ma = MotionAnalysis(l)
-# ma.get_origin_shape()
-# ma.get_covering_duration(1)
-# ma.origin
-# ma.substantial_growth
-# ma.substantial_image
-# ma.substantial_time
-# self = ma
-# ma.detection(compute_all_possibilities=True)
-# ma.segmented.sum((1, 2))
-# ma.surfarea
 
 
 class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
