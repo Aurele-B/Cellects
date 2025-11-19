@@ -695,7 +695,10 @@ class ShapeDescriptors:
             if self.min_bounding_rectangle is None:
                 self.get_min_bounding_rectangle()
             bounding_rectangle_area = self.min_bounding_rectangle[1][0] * self.min_bounding_rectangle[1][1]
-            self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
+            if bounding_rectangle_area == 0:
+                self.rectangularity = 0.
+            else:
+                self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
 
     def get_total_hole_area(self):
         """
