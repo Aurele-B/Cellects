@@ -5,7 +5,7 @@ This script contains all unit tests of the one_video_per_blob script
 import unittest
 import psutil
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import rhombus_55
 from cellects.utils.load_display_save import write_video_sets, PickleRick
@@ -339,6 +339,9 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
                          remaining, self.po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, self.po.reduce_image_dim,
                          pathway="")
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
+        self.po.get_origins_and_backgrounds_lists()
+        self.l = [0, 1, self.po.vars, False, False, False, None]
+        self.ma = MotionAnalysis(self.l)
 
     def test_prepare_video_writing_using_too_much_memory(self):
         """Test prepare_video_writing when writing all videos at the same time is not possible with current memory"""
@@ -395,6 +398,21 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.assertEqual(len(self.po.right), 1)
         self.assertEqual(len(self.po.top), 1)
         self.assertEqual(len(self.po.bot), 1)
+        self.po.get_origins_and_backgrounds_lists()
+        self.po.vars['network_analysis'] = True
+        self.po.vars['save_coord_network'] = True
+        self.po.vars['graph_extraction'] = True
+        self.po.vars['study_cytoscillations'] = True
+        self.po.vars['save_coord_thickening_slimming'] = True
+        self.po.vars['fractal_analysis'] = True
+        self.l = [0, 1, self.po.vars, True, True, False, None]
+        self.ma = MotionAnalysis(self.l)
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_experiment / f"ind_1.mp4"):
+            os.remove(self.path_experiment / f"ind_1.mp4")
+
 
 
 
