@@ -209,7 +209,7 @@ class RequiredOutput(WindowType):
 
     def cancel_is_clicked(self):
         """
-        Set the checkboxes and navigate to the appropriate widget based on saved states.
+        Instead of saving the widgets values to the saved states, use the saved states to fill in the widgets.
 
         This function updates the state of several checkboxes based on saved variables
         and descriptors. It also changes the active widget to either the first or third
