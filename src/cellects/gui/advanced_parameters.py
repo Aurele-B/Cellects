@@ -1,6 +1,17 @@
 #!/usr/bin/env python3
-"""This module creates the Advanced Parameters window of the user interface of Cellects
-This windows contains most parameters
+"""GUI module implementing the Advanced Parameters configuration window for Cellects.
+
+This module provides an interactive dialog allowing users to configure advanced image
+analysis and processing settings. The UI organizes parameter controls into categorized boxes:
+general parameters, cell detection rules, spatiotemporal scaling, computer resources,
+video saving options, and color space conversion (CSC) settings. It maintains user preferences
+in both RAM and persistent storage via "Ok" button click.
+
+Main Components
+AdvancedParameters : QWidget subclass for advanced parameter configuration window
+
+Notes
+Uses QThread for background operations to maintain UI responsiveness during parameter saving.
 """
 
 
@@ -25,9 +36,32 @@ class AdvancedParameters(WindowType):
         Clicking "Ok" save the directory in RAM and in ROM.
     """
     def __init__(self, parent, night_mode):
+        """
+        Initialize the AdvancedParameters window with a parent widget and night mode setting.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget to which this window will be attached.
+        night_mode : bool
+            A boolean indicating whether the night mode should be enabled.
+
+        Examples
+        --------
+        >>> from PySide6 import QtWidgets
+        >>> from cellects.gui.cellects import CellectsMainWidget
+        >>> from cellects.gui.advanced_parameters import AdvancedParameters
+        >>> import sys
+        >>> app = QtWidgets.QApplication([])
+        >>> parent = CellectsMainWidget()
+        >>> session = AdvancedParameters(parent, False)
+        >>> session.true_init()
+        >>> parent.insertWidget(0, session)
+        >>> parent.show()
+        >>> sys.exit(app.exec())
+        """
         super().__init__(parent, night_mode)
 
-        logging.info("Initialize AdvancedParameters window")
         self.setParent(parent)
         try:
             self.true_init()
@@ -38,11 +72,23 @@ class AdvancedParameters(WindowType):
             self.true_init()
 
     def true_init(self):
+        """
+        Initialize the AdvancedParameters window.
+
+        This method sets up the layout and widgets for the AdvancedParameters window,
+        including scroll areas, layouts, and various UI components for configuring
+        advanced parameters, including 'Cancel' and 'Ok' buttons.
+
+        Notes
+        -----
+        This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
+        """
+        logging.info("Initialize AdvancedParameters window")
         self.layout = QtWidgets.QVBoxLayout()
 
-        self.left_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
+        self.left_scroll_table = QtWidgets.QScrollArea()  #   # Scroll Area which contains the widgets, set as the centralWidget
         self.left_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.left_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
+        self.left_scroll_table.setMinimumHeight(150)
         self.left_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.left_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.left_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -51,19 +97,11 @@ class AdvancedParameters(WindowType):
         self.right_col_layout = QtWidgets.QVBoxLayout()
         self.left_col_widget = QtWidgets.QWidget()
         self.right_col_widget = QtWidgets.QWidget()
-        # curr_row_1st_col = 0
-        ncol = 11
         # Create the main Title
         self.title = FixedText('Advanced parameters', police=30, night_mode=self.parent().po.all['night_mode'])
         self.title.setAlignment(QtCore.Qt.AlignHCenter)
         # Create the main layout
         self.layout.addWidget(self.title)
-        # self.layout.addItem(self.vertical_space)
-        # self.layout.addWidget(self.title, curr_row_1st_col, 0, 2, ncol)
-        # curr_row_1st_col += 2
-        # horzspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.layout.addItem(horzspaceItem, 2, 0, 1, 5)
-        # curr_row_1st_col += 1
         # Create the stylesheet for the boxes allowing to categorize advanced parameters.
         boxstylesheet = \
             ".QWidget {\n" \
@@ -77,8 +115,6 @@ class AdvancedParameters(WindowType):
         self.general_param_box_label = FixedText('General parameters:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
         self.left_col_layout.addWidget(self.general_param_box_label)
-        # self.layout.addWidget(self.general_param_box_label, curr_row_1st_col, 1)
-        # curr_row_1st_col += 1
         # I/B/ Create the box
         self.general_param_box_layout = QtWidgets.QGridLayout()
         self.general_param_box_widget = QtWidgets.QWidget()
@@ -137,8 +173,6 @@ class AdvancedParameters(WindowType):
         self.general_param_box_layout.addWidget(self.max_periphery_growth_label, 6, 1)
         self.general_param_box_widget.setLayout(self.general_param_box_layout)
         self.left_col_layout.addWidget(self.general_param_box_widget)
-        # self.layout.addWidget(self.general_param_box_widget, curr_row_1st_col, 1, 2, 2)
-        # curr_row_1st_col += 2
 
         # II/ Second box: One cell/colony per arena
         # II/A/ Title
@@ -201,18 +235,6 @@ class AdvancedParameters(WindowType):
         else:
             self.min_size_for_connection = Spinbox(min=0, max=1000000, val=0,
                                                   night_mode=self.parent().po.all['night_mode'])
-        # set things visible or invisible:
-        # self.detection_range_factor.setVisible(connect_distant_shape)
-        # self.detection_range_factor_label.setVisible(connect_distant_shape)
-        # self.use_max_size.setVisible(connect_distant_shape)
-        # self.use_min_size.setVisible(connect_distant_shape)
-        # self.use_max_size_label.setVisible(connect_distant_shape)
-        # self.use_min_size_label.setVisible(connect_distant_shape)
-        #
-        # self.max_size_for_connection.setVisible(do_use_max_size)
-        # self.max_size_for_connection_label.setVisible(do_use_max_size)
-        # self.min_size_for_connection.setVisible(do_use_min_size)
-        # self.min_size_for_connection_label.setVisible(do_use_min_size)
 
         self.use_min_size.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
@@ -259,8 +281,6 @@ class AdvancedParameters(WindowType):
 
         self.one_per_arena_box_widget.setLayout(self.one_per_arena_box_layout)
         self.left_col_layout.addWidget(self.one_per_arena_box_widget)
-        # self.layout.addWidget(self.one_per_arena_box_widget, curr_row_1st_col, 1, 3, 2)
-        # curr_row_1st_col += 2# curr_box_row
 
         # III/ Third box: Appearing cell/colony
         # III/A/ Title
@@ -268,8 +288,6 @@ class AdvancedParameters(WindowType):
                                               night_mode=self.parent().po.all['night_mode'])
 
         self.left_col_layout.addWidget(self.appearing_cell_label)
-        # self.layout.addWidget(self.appearing_cell_label, curr_row_1st_col, 1)
-        # curr_row_1st_col += 1
         # III/B/ Create the box
         self.appearing_cell_box_layout = QtWidgets.QGridLayout()
         self.appearing_cell_box_widget = QtWidgets.QWidget()
@@ -281,8 +299,6 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold_label = FixedText('Minimal size to detect a cell/colony',
                                                     tip="In mm². All appearing cell/colony lesser than this value will be considered as noise",
                                                     night_mode=self.parent().po.all['night_mode'])
-        # self.first_move_threshold.setVisible(not self.parent().po.all['automatic_size_thresholding'])
-        # self.first_move_threshold_label.setVisible(not self.parent().po.all['automatic_size_thresholding'])
         self.do_automatic_size_thresholding = Checkbox(self.parent().po.all['automatic_size_thresholding'])
         self.do_automatic_size_thresholding_label = FixedText('Automatic size threshold for appearance/motion',
                                                               night_mode=self.parent().po.all['night_mode'])
@@ -308,10 +324,8 @@ class AdvancedParameters(WindowType):
 
         self.appearing_cell_box_widget.setLayout(self.appearing_cell_box_layout)
         self.left_col_layout.addWidget(self.appearing_cell_box_widget)
-        # self.layout.addWidget(self.appearing_cell_box_widget, curr_row_1st_col, 1, 2, 2)
-        # curr_row_1st_col += curr_box_row
 
-        # IV/ Fourth box: Oscillation period:#
+        # IV/ Fourth box: Oscillation period:
         # IV/A/ Title
         self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
                                               night_mode=self.parent().po.all['night_mode'])
@@ -341,109 +355,45 @@ class AdvancedParameters(WindowType):
         self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
         self.left_col_layout.addWidget(self.oscillation_period_widget)
 
-
-        # V/ Fifth box: Fractal parameters:#
-        # IV/A/ Title
-        # self.fractal_label = FixedText('Fractal parameters:', tip="",
-        #                                       night_mode=self.parent().po.all['night_mode'])
-        # self.left_col_layout.addWidget(self.fractal_label)
-        #
-        # self.fractal_layout = QtWidgets.QGridLayout()
-        # self.fractal_widget = QtWidgets.QWidget()
-        # self.fractal_widget.setStyleSheet(boxstylesheet)
-        #
-        # self.fractal_box_side_threshold = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_box_side_threshold'], decimals=0,
-        #                                   night_mode=self.parent().po.all['night_mode'])
-        # self.fractal_box_side_threshold_label = FixedText('Fractal box side threshold',
-        #                                           tip="Increase/decrease to adjust the minimal side length (pixels) of an image\nto compute the Minkowski dimension using the box counting method.",
-        #                                           night_mode=self.parent().po.all['night_mode'])
-        # self.fractal_layout.addWidget(self.fractal_box_side_threshold, 3, 0)
-        # self.fractal_layout.addWidget(self.fractal_box_side_threshold_label, 3, 1)
-        # self.fractal_zoom_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['fractal_zoom_step'], decimals=0,
-        #                                   night_mode=self.parent().po.all['night_mode'])
-        # self.fractal_zoom_step_label = FixedText('Fractal zoom step',
-        #                                           tip="When using the box counting method to compute the Minkowski dimension\nThe zoom step is the side length (pixels) difference between each zoom level.\nWhen set to 0, the default zoom step is all possible powers of two.",
-        #                                           night_mode=self.parent().po.all['night_mode'])
-        # self.fractal_layout.addWidget(self.fractal_zoom_step, 4, 0)
-        # self.fractal_layout.addWidget(self.fractal_zoom_step_label, 4, 1)
-        #
-        # self.fractal_widget.setLayout(self.fractal_layout)
-        # self.left_col_layout.addWidget(self.fractal_widget)
-
         # V/ Fifth box: Network detection parameters:#
         # IV/A/ Title
         self.network_label = FixedText('Network parameters:', tip="",
                                               night_mode=self.parent().po.all['night_mode'])
         self.left_col_layout.addWidget(self.network_label)
-
         self.network_layout = QtWidgets.QGridLayout()
         self.network_widget = QtWidgets.QWidget()
         self.network_widget.setStyleSheet(boxstylesheet)
-
-
         self.network_detection_threshold = Spinbox(min=0, max=255, val=self.parent().po.vars['network_detection_threshold'], decimals=0,
                                           night_mode=self.parent().po.all['night_mode'])
         self.network_detection_threshold_label = FixedText('Network detection threshold',
                                                   tip="To detect the network, Cellects segment small parts of the image using a sliding window.\nThis threshold is an intensity value [0, 255]\napplied to the sliding window to not consider homogeneous substes of the image\ni.e. This is the minimal variation in intensity to consider that some pixels are parts of the network.",
                                                   night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_side_length = Spinbox(min=2, max=1000000, val=self.parent().po.vars['mesh_side_length'], decimals=0,
-        #                                   night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_side_length_label = FixedText('Mesh side length',
-        #                                           tip="This is the side length (in pixels) of the sliding window used to detect the network.\nHigh values are faster but less precise.\nWhen too high, straight vertical or horizontal lines appear in the detected network.",
-        #                                           night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_step_length = Spinbox(min=1, max=100, val=self.parent().po.vars['mesh_step_length'], decimals=0,
-        #                                   night_mode=self.parent().po.all['night_mode'])
-        # self.mesh_step_length_label = FixedText('Mesh step length',
-        #                                           tip="This is the distance (in pixels) travelled by the sliding window\n(used to detect the network) at each stage.\nHigh values are faster but less precise.",
-        #                                           night_mode=self.parent().po.all['night_mode'])
 
         self.network_layout.addWidget(self.network_detection_threshold, 0, 0)
         self.network_layout.addWidget(self.network_detection_threshold_label, 0, 1)
-        # self.network_layout.addWidget(self.mesh_side_length, 1, 0)
-        # self.network_layout.addWidget(self.mesh_side_length_label, 1, 1)
-        # self.network_layout.addWidget(self.mesh_step_length, 2, 0)
-        # self.network_layout.addWidget(self.mesh_step_length_label, 2, 1)
-
         self.network_widget.setLayout(self.network_layout)
         self.left_col_layout.addWidget(self.network_widget)
 
-
-        # self.layout.addWidget(self.oscillation_period_widget, curr_row_1st_col, 1)
-        # curr_row_1st_col + 1
-
-
-        # From here start the 2nd column of boxes in the advanced parameters window
-        # vertspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-        #                                       QtWidgets.QSizePolicy.Maximum)
-        # self.layout.addItem(vertspaceItem, 0, 3, 10, 1)
-        # curr_row_2nd_col = 3
-
-
         # I/ First box: Scales
         # I/A/ Title
-
-        self.right_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
+        self.right_scroll_table = QtWidgets.QScrollArea()   # Scroll Area which contains the widgets, set as the centralWidget
         self.right_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         self.right_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
         self.right_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.right_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.right_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-
-
         self.scale_box_label = FixedText('Spatio-temporal scaling:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
         self.right_col_layout.addWidget(self.scale_box_label)
-        # self.layout.addWidget(self.scale_box_label, curr_row_2nd_col, 4)
-        # curr_row_2nd_col += 1
+
         # I/B/ Create the box
         self.scale_box_layout = QtWidgets.QGridLayout()
         self.scale_box_widget = QtWidgets.QWidget()
         self.scale_box_widget.setStyleSheet(boxstylesheet)
-        # I/C/ Create widgets
 
+        # I/C/ Create widgets
         self.extract_time = Checkbox(self.parent().po.all['extract_time_interval'])
         self.extract_time.clicked.connect(self.extract_time_is_clicked)
-
         self.time_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['time_step'], decimals=3,
                                  night_mode=self.parent().po.all['night_mode'])
         self.time_step.setFixedWidth(60)
@@ -456,35 +406,25 @@ class AdvancedParameters(WindowType):
             self.time_step_label = FixedText('Set the time interval between images',
                                          tip="In minutes",
                                          night_mode=self.parent().po.all['night_mode'])
-        # self.overwrite_cellects_data = Checkbox(self.parent().po.all['overwrite_cellects_data'],
-        #                                night_mode=self.parent().po.all['night_mode'])
-        # self.overwrite_cellects_data_label = FixedText('Do overwrite cellects data',
-        #                                       tip="The file Data to run Cellects quickly.pkl allow to run\na complete analysis from the first and the video anaysis window",
-        #                                       night_mode=self.parent().po.all['night_mode'])
         self.pixels_to_mm = Checkbox(self.parent().po.vars['output_in_mm'])
         self.pixels_to_mm_label = FixedText('Convert areas and distances from pixels to mm',
                                             tip="Check if you want output variables to be in mm\nUncheck if you want output variables to be in pixels",
                                             night_mode=self.parent().po.all['night_mode'])
+
         # I/D/ Arrange widgets in the box
         self.scale_box_layout.addWidget(self.extract_time, 0, 0)
         self.scale_box_layout.addWidget(self.time_step_label, 0, 1)
         self.scale_box_layout.addWidget(self.time_step, 0, 2)
-        # self.scale_box_layout.addWidget(self.overwrite_cellects_data, 1, 0)
-        # self.scale_box_layout.addWidget(self.overwrite_cellects_data_label, 1, 1)
         self.scale_box_layout.addWidget(self.pixels_to_mm, 2, 0)
         self.scale_box_layout.addWidget(self.pixels_to_mm_label, 2, 1)
         self.scale_box_widget.setLayout(self.scale_box_layout)
         self.right_col_layout.addWidget(self.scale_box_widget)
-        # self.layout.addWidget(self.scale_box_widget, curr_row_2nd_col, 4, 2, 2)
-        # curr_row_2nd_col += 3
 
         # IV/ Fourth box: Computer resources
         # IV/A/ Title
         self.resources_label = FixedText('Computer resources:', tip="",
                                             night_mode=self.parent().po.all['night_mode'])
         self.right_col_layout.addWidget(self.resources_label)
-        # self.layout.addWidget(self.resources_label, curr_row_2nd_col, 4)
-        # curr_row_2nd_col += 1
 
         # IV/B/ Create the box
         self.resources_box_layout = QtWidgets.QGridLayout()
@@ -498,9 +438,6 @@ class AdvancedParameters(WindowType):
         self.max_core_nb = Spinbox(min=0, max=256, val=self.parent().po.all['cores'],
                                    night_mode=self.parent().po.all['night_mode'])
         self.max_core_nb_label = FixedText('Proc max core number', night_mode=self.parent().po.all['night_mode'])
-        # self.max_core_nb.setVisible(self.parent().po.all['do_multiprocessing'])
-        # self.max_core_nb_label.setVisible(self.parent().po.all['do_multiprocessing'])
-
         self.min_memory_left = Spinbox(min=0, max=1024, val=self.parent().po.vars['min_ram_free'], decimals=1,
                                        night_mode=self.parent().po.all['night_mode'])
         self.min_memory_left_label = FixedText('Minimal RAM let free (Go)', night_mode=self.parent().po.all['night_mode'])
@@ -521,16 +458,13 @@ class AdvancedParameters(WindowType):
         self.resources_box_layout.addWidget(self.lose_accuracy_to_save_memory_label, 3, 1)
         self.resources_box_widget.setLayout(self.resources_box_layout)
         self.right_col_layout.addWidget(self.resources_box_widget)
-        # self.layout.addWidget(self.resources_box_widget, curr_row_2nd_col, 4, 2, 2)
-        # curr_row_2nd_col += 3
 
         # V/ Fifth box: Video saving
         # V/A/ Title
         self.video_saving_label = FixedText('Video saving:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
         self.right_col_layout.addWidget(self.video_saving_label)
-        # self.layout.addWidget(self.video_saving_label, curr_row_2nd_col, 4)
-        # curr_row_2nd_col += 1
+
         # V/B/ Create the box
         self.video_saving_layout = QtWidgets.QGridLayout()
         self.video_saving_widget = QtWidgets.QWidget()
@@ -540,8 +474,6 @@ class AdvancedParameters(WindowType):
         self.video_fps = Spinbox(min=0, max=10000, val=self.parent().po.vars['video_fps'], decimals=2,
                                  night_mode=self.parent().po.all['night_mode'])
         self.video_fps_label = FixedText('Video fps', night_mode=self.parent().po.all['night_mode'])
-        # self.overwrite_unaltered_videos = Checkbox(self.parent().po.all['overwrite_unaltered_videos'])
-        # self.overwrite_unaltered_videos_label = FixedText('Do overwrite unaltered videos (.npy)', tip="If the analysis fails because of a bad detection of arenas\nChecking this may resolve failures during image analysis", night_mode=self.parent().po.all['night_mode'])
         self.keep_unaltered_videos = Checkbox(self.parent().po.vars['keep_unaltered_videos'])
         self.keep_unaltered_videos_label = FixedText('Keep unaltered videos', tip="Unaltered videos (.npy) takes a lot of hard drive space\nUsers should only keep these videos\nif they plan to redo the analysis soon and faster", night_mode=self.parent().po.all['night_mode'])
         self.save_processed_videos = Checkbox(self.parent().po.vars['save_processed_videos'])
@@ -552,62 +484,42 @@ class AdvancedParameters(WindowType):
         self.video_saving_layout.addWidget(self.video_fps, curr_box_row, 0)
         self.video_saving_layout.addWidget(self.video_fps_label, curr_box_row, 1)
         curr_box_row += 1
-        # self.video_saving_layout.addWidget(self.overwrite_unaltered_videos, curr_box_row, 0)
-        # self.video_saving_layout.addWidget(self.overwrite_unaltered_videos_label, curr_box_row, 1)
-        # curr_box_row += 1
         self.video_saving_layout.addWidget(self.keep_unaltered_videos, curr_box_row, 0)
         self.video_saving_layout.addWidget(self.keep_unaltered_videos_label, curr_box_row, 1)
         curr_box_row += 1
         self.video_saving_layout.addWidget(self.save_processed_videos, curr_box_row, 0)
         self.video_saving_layout.addWidget(self.save_processed_videos_label, curr_box_row, 1)
         curr_box_row += 1
-
         self.video_saving_widget.setLayout(self.video_saving_layout)
         self.right_col_layout.addWidget(self.video_saving_widget)
-        # self.layout.addWidget(self.video_saving_widget, curr_row_2nd_col, 4, 2, 2)
-        # curr_row_2nd_col += 2
 
         # VII/ Seventh box: csc
         # VII/A/ Title
-        # self.video_csc_label = FixedText('Color space combination for video analysis:', tip="",
-        #                                     night_mode=self.parent().po.all['night_mode'])
-        # self.right_col_layout.addWidget(self.video_csc_label)
-        # self.layout.addWidget(self.video_csc_label, curr_row_2nd_col, 4)
-        # curr_row_2nd_col += 1
-
         # VII/C/ Create widgets
         self.generate_csc_editing()
         # VII/D/ Arrange widgets in the box
         self.right_col_layout.addWidget(self.edit_widget)
-        # self.layout.addWidget(self.edit_widget, curr_row_2nd_col, 4, 2, 2)
-        # curr_row_2nd_col += 3
 
         # VIII/ Finalize layout and add the night mode option and the ok button
         self.left_col_layout.addItem(self.vertical_space)
         self.right_col_layout.addItem(self.vertical_space)
         self.left_col_widget.setLayout(self.left_col_layout)
-
-
         self.right_col_widget.setLayout(self.right_col_layout)
         self.central_layout = QtWidgets.QHBoxLayout()
         self.central_layout.addItem(self.horizontal_space)
-        #self.central_layout.addWidget(self.left_col_widget)
-
         self.left_scroll_table.setWidget(self.left_col_widget)
         self.left_scroll_table.setWidgetResizable(True)
         self.central_layout.addWidget(self.left_scroll_table)
-
-
         self.central_layout.addItem(self.horizontal_space)
         self.right_scroll_table.setWidget(self.right_col_widget)
         self.right_scroll_table.setWidgetResizable(True)
         self.central_layout.addWidget(self.right_scroll_table)
-        # self.central_layout.addWidget(self.right_col_widget)
         self.central_layout.addItem(self.horizontal_space)
         self.central_widget = QtWidgets.QWidget()
         self.central_widget.setLayout(self.central_layout)
         self.layout.addWidget(self.central_widget)
         self.layout.addItem(self.vertical_space)
+
         # Last row
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_widget = QtWidgets.QWidget()
@@ -634,6 +546,13 @@ class AdvancedParameters(WindowType):
         self.setLayout(self.layout)
 
     def display_conditionally_visible_widgets(self):
+        """
+        Conditionally displays widgets based on various settings within the parent object.
+
+        This function controls the visibility of several UI elements based on the
+        values in the parent object's `all` dictionary and `vars` dictionary. It ensures
+        that only relevant widgets are shown to the user, depending on the current settings.
+        """
         self.max_core_nb.setVisible(self.parent().po.all['do_multiprocessing'])
         self.max_core_nb_label.setVisible(self.parent().po.all['do_multiprocessing'])
         self.first_move_threshold.setVisible(not self.parent().po.all['automatic_size_thresholding'])
@@ -663,11 +582,17 @@ class AdvancedParameters(WindowType):
             self.row21[3].setValue(0)
 
     def subtract_background_check(self):
+        """
+        Handles the logic for using background subtraction or not during image segmentation.
+        """
         self.parent().po.motion = None
         if self.subtract_background.isChecked():
             self.parent().po.first_exp_ready_to_run = False
 
     def prevent_fast_growth_near_periphery_check(self):
+        """
+        Handles the logic for using a special algorithm on growth near the periphery during video segmentation.
+        """
         checked_status = self.prevent_fast_growth_near_periphery.isChecked()
         self.periphery_width.setVisible(checked_status)
         self.periphery_width_label.setVisible(checked_status)
@@ -675,11 +600,19 @@ class AdvancedParameters(WindowType):
         self.max_periphery_growth_label.setVisible(checked_status)
 
     def do_automatic_size_thresholding_changed(self):
-        """ Triggered when do_automatic_size_thresholding check status changes"""
+        """
+        This function toggles the visibility of `first_move_threshold` and
+        `first_move_threshold_label` UI elements based on whether the
+        `do_automatic_size_thresholding` checkbox is checked or not.
+        """
         self.first_move_threshold.setVisible(not self.do_automatic_size_thresholding.isChecked())
         self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
     def extract_time_is_clicked(self):
+        """
+        Toggle the visibility of time_step_label and update its text/tooltip based on
+        whether extract_time is checked.
+        """
         self.time_step.setVisible(not self.extract_time.isChecked())
         if self.extract_time.isChecked():
             self.time_step_label.setText("Automatically extract time interval between images")
@@ -689,15 +622,17 @@ class AdvancedParameters(WindowType):
             self.time_step_label.setToolTip("In minutes")
 
     def do_multiprocessing_is_clicked(self):
+        """
+        Update the visibility of `max_core_nb` and `max_core_nb_label` based on the checkbox state of `do_multiprocessing`.
+        """
         self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
         self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
 
-    # def all_specimens_have_same_direction_changed(self):
-    #     """ Triggered when all_specimens_have_same_direction check status changes"""
-    #     self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
-
     def do_distant_shape_int_changed(self):
-        """ Triggered when connect_distant_shape_during_segmentation check status changes"""
+        """
+        Toggles the visibility of widgets based the use of an algorithm allowing to connect distant shapes
+        during segmentation.
+        """
         do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
         self.detection_range_factor.setVisible(do_distant_shape_int)
         if do_distant_shape_int:
@@ -715,7 +650,9 @@ class AdvancedParameters(WindowType):
         self.min_size_for_connection_label.setVisible(do_use_min_size)
 
     def use_max_size_changed(self):
-        """ Triggered when use_max_size check status changes"""
+        """
+        Toggles the visibility of max size input fields based on checkbox state.
+        """
         do_use_max_size = self.use_max_size.isChecked()
         self.max_size_for_connection.setVisible(do_use_max_size)
         self.max_size_for_connection_label.setVisible(do_use_max_size)
@@ -723,7 +660,9 @@ class AdvancedParameters(WindowType):
             self.max_size_for_connection.setValue(300)
 
     def use_min_size_changed(self):
-        """ Triggered when use_min_size check status changes"""
+        """
+        Updates the visibility and value of UI elements based on whether a checkbox is checked.
+        """
         do_use_min_size = self.use_min_size.isChecked()
         self.min_size_for_connection.setVisible(do_use_min_size)
         self.min_size_for_connection_label.setVisible(do_use_min_size)
@@ -731,50 +670,25 @@ class AdvancedParameters(WindowType):
             self.min_size_for_connection.setValue(30)
 
     def generate_csc_editing(self):
-        # self.edit_layout = QtWidgets.QGridLayout()
-        self.edit_widget = QtWidgets.QWidget()
-        # self.edit_widget.setVisible(False)
-        # self.edit_widget.setStyleSheet(boxstylesheet)
-        self.edit_layout = QtWidgets.QVBoxLayout()
+        """
+        Generate CSC Editing Layout
 
-        # self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
-        # # self.csc_scroll_table.setVisible(False)
-        # # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.csc_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
-        # # self.csc_scroll_table.setMinimumWidth(300)
-        # self.csc_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
-        # self.csc_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        # self.csc_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        Creates and configures the layout for Color Space Combination (CSC) editing in the video analysis window,
+        initializing widgets and connecting signals to slots for dynamic UI handling.
+        """
+        self.edit_widget = QtWidgets.QWidget()
+        self.edit_layout = QtWidgets.QVBoxLayout()
         self.csc_table_widget = QtWidgets.QWidget()
         self.csc_table_layout = QtWidgets.QVBoxLayout()
 
         # 2) Titles
-        # self.edit_labels_widget = QtWidgets.QWidget()
-        # self.edit_labels_widget.setFixedHeight(50)
-        # self.edit_labels_layout = QtWidgets.QHBoxLayout()
-        # self.space_label = FixedText('Space', align='c',
-        #                             tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
-        #                             night_mode=self.parent().po.all['night_mode'])
-        # self.c1 = FixedText('  C1', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        # self.c2 = FixedText('  C2', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        # self.c3 = FixedText('  C3', align='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        #
-        # self.edit_labels_layout.addWidget(self.space_label)
-        # self.edit_labels_layout.addWidget(self.c1)
-        # self.edit_labels_layout.addWidget(self.c2)
-        # self.edit_labels_layout.addWidget(self.c3)
-        # self.edit_labels_layout.addItem(self.horizontal_space)
-        # self.edit_labels_widget.setLayout(self.edit_labels_layout)
-        # # self.edit_layout.addWidget(self.edit_labels_widget)
-        # self.csc_table_layout.addWidget(self.edit_labels_widget)
         self.video_csc_label = FixedText('Color space combination for video analysis:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
         self.video_csc_label.setFixedHeight(30)
         self.csc_table_layout.addWidget(self.video_csc_label)
-
         self.both_csc_widget = QtWidgets.QWidget()
         self.both_csc_layout = QtWidgets.QHBoxLayout()
+
         # 3) First CSC
         self.first_csc_widget = QtWidgets.QWidget()
         self.first_csc_layout = QtWidgets.QGridLayout()
@@ -788,17 +702,13 @@ class AdvancedParameters(WindowType):
         self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
-        # self.logical_operator_between_combination_result.cha
         self.logical_operator_label = FixedText("Logical operator", halign='c', tip="Between selected color space combinations",
                                                 night_mode=self.parent().po.all['night_mode'])
-
         self.row21 = self.one_csc_editing()
         self.row21[4].clicked.connect(self.display_row22)
         self.row22 = self.one_csc_editing()
         self.row22[4].clicked.connect(self.display_row23)
         self.row23 = self.one_csc_editing()
-
-
         for i in range(5):
             self.first_csc_layout.addWidget(self.row1[i], 0, i, 1, 1)
             self.first_csc_layout.addWidget(self.row2[i], 1, i, 1, 1)
@@ -810,9 +720,6 @@ class AdvancedParameters(WindowType):
         self.first_csc_layout.addItem(self.horizontal_space, 0, 5, 3, 1)
         self.first_csc_widget.setLayout(self.first_csc_layout)
         self.both_csc_layout.addWidget(self.first_csc_widget)
-        # self.csc_table_layout.addWidget(self.first_csc_widget)
-        # self.edit_layout.addWidget(self.first_csc_widget)
-
 
         # 5) Second CSC
         self.second_csc_widget = QtWidgets.QWidget()
@@ -831,8 +738,6 @@ class AdvancedParameters(WindowType):
         self.both_csc_layout.addWidget(self.second_csc_widget)
         self.both_csc_widget.setLayout(self.both_csc_layout)
         self.csc_table_layout.addWidget(self.both_csc_widget)
-        # self.csc_table_layout.addWidget(self.second_csc_widget)
-
 
         # 4) logical_operator
         self.logical_op_widget = QtWidgets.QWidget()
@@ -846,7 +751,6 @@ class AdvancedParameters(WindowType):
         self.logical_op_widget.setLayout(self.logical_op_layout)
         self.logical_op_widget.setFixedHeight(50)
         self.csc_table_layout.addWidget(self.logical_op_widget)
-        # self.edit_layout.addWidget(self.logical_op_widget)
 
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
@@ -865,14 +769,8 @@ class AdvancedParameters(WindowType):
         self.more_than_two_colors_label = FixedText("Heterogeneous back",
                                                     tip="The program will split the image into categories", night_mode=self.parent().po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.more_than_two_colors_label.setFixedWidth(300)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
         self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
-        # self.distinct_colors_number.valueChanged.connect(self.distinct_colors_number_changed)
-        # self.display_more_than_two_colors_option()
-        # self.more_than_two_colors.setVisible(False)
-        # self.more_than_two_colors_label.setVisible(False)
-        # self.distinct_colors_number.setVisible(False)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
         self.more_than_2_colors_layout.addWidget(self.distinct_colors_number)
@@ -884,20 +782,24 @@ class AdvancedParameters(WindowType):
         self.csc_table_widget.setLayout(self.csc_table_layout)
 
         self.edit_layout.addWidget(self.csc_table_widget)
-        # self.csc_scroll_table.setWidget(self.csc_table_widget)
-        # self.csc_scroll_table.setWidgetResizable(True)
-        # self.edit_layout.addWidget(self.csc_scroll_table)
-
-        # self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
-        # self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
-        # self.more_than_2_colors_layout.addWidget(self.distinct_colors_number)
-        # self.more_than_2_colors_layout.addItem(self.horizontal_space)
-        # self.more_than_2_colors_widget.setLayout(self.more_than_2_colors_layout)
-        # self.edit_layout.addWidget(self.more_than_2_colors_widget)
 
         self.edit_widget.setLayout(self.edit_layout)
 
     def one_csc_editing(self):
+        """
+        Creates a list of widgets for color space editing.
+
+        Returns
+        -------
+        widget_list : List[QtWidgets.QWidget]
+            A list containing a Combobox, three Spinboxes, and a PButton.
+
+        Notes
+        -----
+        The Combobox widget allows selection from predefined color spaces,
+        the Spinboxes are for editing numerical values, and the PButton is
+        for adding new entries.
+        """
         widget_list = []
         widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
                                        night_mode=self.parent().po.all['night_mode']))
@@ -911,6 +813,9 @@ class AdvancedParameters(WindowType):
         return widget_list
 
     def logical_op_changed(self):
+        """
+        Update the visibility and values of UI components based on the logical operator selection.
+        """
         # show = self.logical_operator_between_combination_result.currentText() != 'None'
         if self.logical_operator_between_combination_result.currentText() == 'None':
             self.row21[0].setVisible(False)
@@ -940,34 +845,57 @@ class AdvancedParameters(WindowType):
             self.row21[i1 + 1].setVisible(True)
 
     def display_logical_operator(self):
+        """
+        Display logical operator components in the user interface.
+        """
         self.logical_operator_between_combination_result.setVisible(True)
         self.logical_operator_label.setVisible(True)
 
     def display_row2(self):
+        """
+        Display or hide the second row of the csc editing widgets.
+        """
         self.row1[4].setVisible(False)
         for i in range(5):
             self.row2[i].setVisible(True)
         self.display_logical_operator()
 
     def display_row3(self):
+        """
+        Display or hide the third row of the csc editing widgets.
+        """
         self.row2[4].setVisible(False)
         for i in range(4):
             self.row3[i].setVisible(True)
         self.display_logical_operator()
 
     def display_row22(self):
+        """
+        Display or hide the second row (for the second image segmentation pipeline) of the csc editing widgets.
+        """
         self.row21[4].setVisible(False)
         for i in range(5):
             self.row22[i].setVisible(True)
         self.display_logical_operator()
 
     def display_row23(self):
+        """
+        Display or hide the third row (for the second image segmentation pipeline) of the csc editing widgets.
+        """
         self.row22[4].setVisible(False)
         for i in range(4):
             self.row23[i].setVisible(True)
         self.display_logical_operator()
 
     def update_csc_editing_display(self):
+        """
+        Update the color space conversion (CSC) editing display.
+
+        This method updates the visibility and values of UI elements related to color
+        space conversions based on the current state of `self.csc_dict`. It handles
+        the display logic for different color spaces and their combinations, ensuring
+        that the UI reflects the current configuration accurately.
+        """
         c_space_order = ["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"]
         remaining_c_spaces = []
         row_number1 = 0
@@ -1058,6 +986,9 @@ class AdvancedParameters(WindowType):
                 self.row22[i1 + 1].setVisible(False)
 
     def save_user_defined_csc(self):
+        """
+        Save user-defined combination of color spaces and channels.
+        """
         self.parent().po.vars['convert_for_motion'] = {}
         spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
         channels = np.array(
@@ -1097,6 +1028,12 @@ class AdvancedParameters(WindowType):
             self.parent().videoanalysiswindow.select_option_label.setVisible(True)
 
     def display_more_than_two_colors_option(self):
+        """
+        Display the More Than Two Colors Options
+
+        This method manages the visibility and state of UI elements related to selecting
+        more than two colors for displaying biological masks in advanced mode.
+        """
         if self.more_than_two_colors.isChecked():
             self.distinct_colors_number.setVisible(True)
             self.more_than_two_colors_label.setText("How many distinct colors?")
@@ -1106,12 +1043,6 @@ class AdvancedParameters(WindowType):
             self.distinct_colors_number.setVisible(False)
             self.distinct_colors_number.setValue(2)
 
-
-            # self.parent().po.vars["color_number"] = 2
-
-    # def distinct_colors_number_changed(self):
-    #     self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
-
     def night_mode_is_clicked(self):
         """ Triggered when night_mode_cb check status changes"""
         self.parent().po.all['night_mode'] = self.night_mode_cb.isChecked()
@@ -1119,6 +1050,16 @@ class AdvancedParameters(WindowType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
     def reset_all_settings_is_clicked(self):
+        """
+        Reset All Settings on Click
+
+        Resets the application settings to their default state by removing specific pickle files and saving new default dictionaries.
+
+        Notes
+        -----
+        - This function removes specific pickle files to reset settings.
+        - The function changes the current working directory temporarily.
+        """
         if os.path.isfile('Data to run Cellects quickly.pkl'):
             os.remove('Data to run Cellects quickly.pkl')
         if os.path.isfile('PickleRick.pkl'):
@@ -1139,6 +1080,13 @@ class AdvancedParameters(WindowType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
     def cancel_is_clicked(self):
+        """
+        Instead of saving the widgets values to the saved states, use the saved states to fill in the widgets.
+
+        This function updates the state of several checkboxes based on saved variables
+        and descriptors. It also changes the active widget to either the first or third
+        widget depending on a condition.
+        """
         self.automatically_crop.setChecked(self.parent().po.all['automatically_crop'])
         self.subtract_background.setChecked(self.parent().po.vars['subtract_background'])
         self.keep_cell_and_back_for_all_folders.setChecked(self.parent().po.all['keep_cell_and_back_for_all_folders'])
@@ -1191,11 +1139,20 @@ class AdvancedParameters(WindowType):
             self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
 
     def ok_is_clicked(self):
-        """ Triggered when ok is clicked, save the directory all_vars.pkl and go back to the previous window"""
-        # if self.mesh_side_length.value() <= self.mesh_step_length.value():
-        #     self.message.setText('The mesh side has to be inferior to the mesh step')
-        #     self.message.setStyleSheet("color: rgb(230, 145, 18)")
-        # else:
+        """
+        Updates the parent object's processing options with the current state of various UI elements.
+
+        Summary
+        -------
+        Saves the current state of UI components to the parent object's processing options dictionary.
+
+        Extended Description
+        --------------------
+        This method iterates through various UI components such as checkboxes, sliders,
+        and dropdowns to save their current state into the parent object's processing
+        options variables. This allows the software to retain user preferences across
+        sessions and ensures that all settings are correctly applied before processing.
+        """
         self.parent().po.all['automatically_crop'] = self.automatically_crop.isChecked()
         self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
         self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
@@ -1243,7 +1200,6 @@ class AdvancedParameters(WindowType):
 
         previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
         self.save_user_defined_csc()
-        print(self.parent().po.vars['convert_for_motion'])
         if self.parent().po.first_exp_ready_to_run:
             are_dicts_equal: bool = True
             for key in previous_csc.keys():
@@ -1266,15 +1222,7 @@ class AdvancedParameters(WindowType):
             self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
     
     def closeEvent(self, event):
+        """
+        Handle the close event for a QWidget.
+        """
         event.accept
-
-
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = AdvancedParameters(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())
