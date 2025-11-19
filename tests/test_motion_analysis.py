@@ -10,9 +10,29 @@ from tests._base import CellectsUnitTest, video_test, binary_video_test, several
 import numpy as np
 
 
+class TestFullMotionAnalysis(CellectsUnitTest):
+    """Test the full pipeline of the MotionAnalysis class"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.chdir(cls.path_output)
+        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        cls.videos_already_in_ram = [video_test[:, :, :, :], video_test[:, :, :, 0]]
+        cls.i = 0
+        cls.vars = DefaultDicts().vars
+        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['lighter_background'] = False
+        cls.vars['first_move_threshold'] = 1
+        cls.vars['average_pixel_size'] = 1.
+        cls.l = [cls.i, cls.i + 1, cls.vars, True, True, False, cls.videos_already_in_ram]
+
+    def test_simple_motion_analysis(self):
+        self.ma = MotionAnalysis(self.l)
+
 
 class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
-    """Parent for testing the OneImageAnalysis class"""
+    """Parent for testing the MotionAnalysis class with one blob"""
 
     @classmethod
     def setUpClass(cls):
@@ -53,8 +73,6 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['contour_color']: np.uint8 = 0
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
         cls.ma = MotionAnalysis(cls.l)
-        cls.ma.get_origin_shape()
-        cls.ma.vars["appearance_detection_method"] = 'most_central'
         cls.ma.get_origin_shape()
         cls.ma.get_covering_duration(1) # Put this in init
 
@@ -179,9 +197,13 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.vars['save_coord_specimen'] = True
         cls.vars['save_coord_contour'] = True
         cls.vars['average_pixel_size'] = 1
+        cls.vars['study_cytoscillations'] = True
+        cls.vars['fractal_analysis'] = True
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
         cls.ma = MotionAnalysis(cls.l)
         cls.ma.get_origin_shape()
+        print(cls.ma.vars['origin_list'][0].shape)
+        print(cls.ma.dims)
         cls.ma.get_covering_duration(1)
         cls.ma.detection(True)
         cls.ma.initialize_post_processing()
@@ -209,11 +231,13 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         self.assertTrue(self.ma.binary.sum((1, 2)).all())
         self.ma.get_descriptors_from_binary(False)
         self.assertTrue(np.all(self.ma.surfarea.sum() > 0))
-        # self.ma.detect_growth_transitions()
-        # self.ma.networks_detection(False)
-        # self.ma.study_cytoscillations(False)
+        self.ma.detect_growth_transitions() # Do nothing when several blob
+        self.ma.networks_detection(False) # Do nothing when several blob
+        self.ma.graph_extraction() # Do nothing when several blob
+        self.ma.study_cytoscillations(False)
+        self.ma.fractal_descriptions()
         # self.ma.fractal_descriptions()
-        # self.ma.save_results()
+        self.ma.save_results()
     def tearDown(self):
         """Remove all written files."""
         file_names = os.listdir(self.path_output)
