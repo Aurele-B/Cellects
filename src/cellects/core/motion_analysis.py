@@ -1600,49 +1600,50 @@ class MotionAnalysis:
             - The CSV files are named according to the arena, time steps, and dimensions.
 
         """
-        if self.vars['graph_extraction'] and not self.vars['network_analysis'] and not self.vars['save_coord_network']:
-            self.network_dynamics = self.binary
-        _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
-        origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
-        for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
+        if self.vars['graph_extraction'] and not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
+            if not self.vars['network_analysis'] and not self.vars['save_coord_network']:
+                self.network_dynamics = self.binary
+            _, _, _, origin_centroid = cv2.connectedComponentsWithStats(self.origin)
+            origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.uint64)
+            for t in np.arange(self.one_descriptor_per_arena["first_move"], self.dims[0]):  # 20):#
 
-            if self.origin is not None:
-                computed_network = self.network_dynamics[t, ...] * (1 - self.origin)
-                origin_contours = get_contours(self.origin)
-                computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-            else:
-                origin_contours = None
-                computed_network = self.network_dynamics[t, ...].astype(np.uint8)
-            computed_network = keep_one_connected_component(computed_network)
-            pad_network, pad_origin = add_padding([computed_network, self.origin])
-            pad_origin_centroid = origin_centroid + 1
-            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
-                                                                                       pad_origin_centroid)
-            edge_id = EdgeIdentification(pad_skeleton, pad_distances)
-            edge_id.run_edge_identification()
-            if pad_origin_contours is not None:
-                origin_contours = remove_padding([pad_origin_contours])[0]
-            edge_id.make_vertex_table(origin_contours, self.network_dynamics[t, ...] == 2)
-            edge_id.make_edge_table(self.converted_video[t, ...])
+                if self.origin is not None:
+                    computed_network = self.network_dynamics[t, ...] * (1 - self.origin)
+                    origin_contours = get_contours(self.origin)
+                    computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+                else:
+                    origin_contours = None
+                    computed_network = self.network_dynamics[t, ...].astype(np.uint8)
+                computed_network = keep_one_connected_component(computed_network)
+                pad_network, pad_origin = add_padding([computed_network, self.origin])
+                pad_origin_centroid = origin_centroid + 1
+                pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
+                                                                                           pad_origin_centroid)
+                edge_id = EdgeIdentification(pad_skeleton, pad_distances)
+                edge_id.run_edge_identification()
+                if pad_origin_contours is not None:
+                    origin_contours = remove_padding([pad_origin_contours])[0]
+                edge_id.make_vertex_table(origin_contours, self.network_dynamics[t, ...] == 2)
+                edge_id.make_edge_table(self.converted_video[t, ...])
 
 
-            edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-            edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-            if t == self.one_descriptor_per_arena["first_move"]:
-                vertex_table = edge_id.vertex_table.copy()
-                edge_table = edge_id.edge_table.copy()
-            else:
-                vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
-                edge_table = np.vstack((edge_table, edge_id.edge_table))
+                edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+                edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+                if t == self.one_descriptor_per_arena["first_move"]:
+                    vertex_table = edge_id.vertex_table.copy()
+                    edge_table = edge_id.edge_table.copy()
+                else:
+                    vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
+                    edge_table = np.vstack((edge_table, edge_id.edge_table))
 
-        vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
-                                                 "vertex_connected"])
-        edge_table = pd.DataFrame(edge_table,
-                        columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity", "betweenness_centrality"])
-        vertex_table.to_csv(
-            f"vertex_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
-        edge_table.to_csv(
-            f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+            vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
+                                                     "vertex_connected"])
+            edge_table = pd.DataFrame(edge_table,
+                            columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity", "betweenness_centrality"])
+            vertex_table.to_csv(
+                f"vertex_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+            edge_table.to_csv(
+                f"edge_table{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
 
     def memory_allocation_for_cytoscillations(self) -> NDArray:
         """
