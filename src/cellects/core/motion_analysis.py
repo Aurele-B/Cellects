@@ -142,7 +142,7 @@ class MotionAnalysis:
 
         self.borders = image_borders(self.dims[1:], shape=self.vars['arena_shape'])
         self.pixel_ring_depth = 9
-        self.step = 10
+        self.step: int = 10
         self.lost_frames = 10
         self.update_ring_width()
 
@@ -390,17 +390,17 @@ class MotionAnalysis:
                     cover_lengths[index] = len(vector[left:-right])
             # If this analysis fails put a deterministic step
             if len(cover_lengths[cover_lengths > 0]) > 0:
-                self.step = (np.round(np.mean(cover_lengths[cover_lengths > 0])).astype(np.uint32) // 2) + 1
+                self.step = (np.round(np.mean(cover_lengths[cover_lengths > 0])).astype(int) // 2) + 1
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
             else:
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value is 1 for video length < 40 and 10 otherwise")
 
             # Make sure to avoid a step overestimation
             if self.step > self.dims[0] // 20:
-                self.step = self.dims[0] // 20
+                self.step: int = self.dims[0] // 20
 
             if self.step == 0:
-                self.step = 1
+                self.step: int = 1
         # When the first_move_threshold is not stringent enough the program may detect a movement due to noise
         # In that case, the substantial_image is empty and there is no reason to proceed further
         else:
@@ -712,7 +712,7 @@ class MotionAnalysis:
         try:
             if self.vars['lose_accuracy_to_save_memory']:
                 smoothed_video = np.zeros(self.dims, dtype=np.float16)
-                smooth_kernel = np.ones(self.step) / self.step
+                smooth_kernel = np.ones(self.step, dtype=np.float64) / self.step
                 for i in np.arange(converted_video.shape[1]):
                     for j in np.arange(converted_video.shape[2]):
                         padded = np.pad(converted_video[:, i, j] / self.mean_intensity_per_frame,
