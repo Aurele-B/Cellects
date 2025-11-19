@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
+"""Widget for configuring Cellects analysis variables and descriptors.
+
+This GUI module provides checkboxes to select raw data outputs (presence/absence coordinates,
+contours, tubular networks) and dynamic descriptors calculated per time frame. User selections are saved via parent
+object's background thread when 'Ok' is clicked. Includes categorized sections with grouped options for clarity of
+specimen tracking parameters.
+
+Main Components
+---------------
+RequiredOutput : QWidget for configuring required output variables
+
+Notes
+-----
+Saves user selections using parent object's SaveAllVars QThread.
 """
-This module contains the widget allowing the user to set which variables Cellects will compute during analysis.
-A first kind of variable is raw data: presence/absence coordinates of the specimens, network, oscillating pixels
-A second kind of variable describe the specimen at each time frame and for each arena of the image stack or video
-"""
+
 import numpy as np
 from PySide6 import QtWidgets, QtCore
 import logging
@@ -14,13 +25,47 @@ from cellects.image_analysis.shape_descriptors import descriptors_names_to_displ
 
 class RequiredOutput(WindowType):
     def __init__(self, parent, night_mode):
+        """
+        Initialize the RequiredOutput window with a parent widget and night mode setting.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget to which this window will be attached.
+        night_mode : bool
+            A boolean indicating whether the night mode should be enabled.
+
+        Examples
+        --------
+        >>> from PySide6 import QtWidgets
+        >>> from cellects.gui.cellects import CellectsMainWidget
+        >>> from cellects.gui.required_output import RequiredOutput
+        >>> import sys
+        >>> app = QtWidgets.QApplication([])
+        >>> parent = CellectsMainWidget()
+        >>> session = RequiredOutput(parent, False)
+        >>> session.true_init()
+        >>> parent.insertWidget(0, session)
+        >>> parent.show()
+        >>> sys.exit(app.exec())
+        """
         super().__init__(parent, night_mode)
         self.setParent(parent)
         # Create the main Title
-        self.true_init(night_mode)
+        self.true_init()
 
-    def true_init(self, night_mode):
+    def true_init(self):
+        """
+        Initialize the RequiredOutput window with various checkboxes and buttons.
 
+        This method sets up the entire UI layout for the RequiredOutput window,
+        including a title, checkboxes for saving different types of coordinates and
+        descriptors, and 'Cancel' and 'Ok' buttons.
+
+        Notes
+        -----
+        This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
+        """
         logging.info("Initialize RequiredOutput window")
         self.title = FixedText('Required Output', police=30, night_mode=self.parent().po.all['night_mode'])
         self.title.setAlignment(QtCore.Qt.AlignHCenter)
@@ -50,20 +95,16 @@ class RequiredOutput(WindowType):
 
         # I/C/ Create widgets
         self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
-        # self.save_coord_specimen.stateChanged.connect(self.save_coord_specimen_saving)
         self.save_coord_specimen_label = FixedText('All pixels covered by the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
 
         self.save_coord_contour = Checkbox(self.parent().po.vars['save_coord_contour'])
-        # self.save_coord_contour.stateChanged.connect(self.save_coord_contour_saving)
         self.save_coord_contour_label = FixedText('Contours of the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
-        # self.save_coord_thickening_slimming.stateChanged.connect(self.save_coord_thickening_slimming_saving)
         self.save_coord_thickening_slimming_label = FixedText('Thickening and slimming areas in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
-        # self.save_coord_network.stateChanged.connect(self.save_coord_network_saving)
         self.save_coord_network_label = FixedText('Tubular network in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
 
@@ -132,9 +173,15 @@ class RequiredOutput(WindowType):
 
     def create_check_boxes_table(self):
         """
-            Loop over all main outputs. An output is a variable allowing to describe the binary image
-            showing the presence/absence of the cell/colony at one time frame.
-            This function
+        Create and populate a table of checkboxes for descriptors in the parent object.
+
+        This function initializes or updates the descriptors and iterates through
+        them to create a table of checkboxes, arranging them in a grid layout. The
+        arrangement depends on the total number of descriptors and their visibility.
+
+        Notes
+        -----
+        The layout of checkboxes changes based on the number of descriptors.
         """
         if not np.array_equal(self.parent().po.all['descriptors'], list(descriptors_categories.keys())):
             self.parent().po.all['descriptors'] = descriptors_categories
@@ -154,13 +201,20 @@ class RequiredOutput(WindowType):
             self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name]))
             cb_index = label_index + 1
 
-            if name == 'fractal_analysis':# or name == 'network_analysis':
+            if name == 'fractal_analysis':
                 self.descriptor_widgets_list[label_index].setVisible(False)
                 self.descriptor_widgets_list[cb_index].setVisible(False)
 
             self.save_descriptors_layout.addWidget(self.descriptor_widgets_list[cb_index], row, col + 1)
 
     def cancel_is_clicked(self):
+        """
+        Set the checkboxes and navigate to the appropriate widget based on saved states.
+
+        This function updates the state of several checkboxes based on saved variables
+        and descriptors. It also changes the active widget to either the first or third
+        widget depending on a condition.
+        """
         self.save_coord_specimen.setChecked(self.parent().po.vars['save_coord_specimen'])
         self.save_coord_contour.setChecked(self.parent().po.vars['save_coord_contour'])
         self.save_coord_thickening_slimming.setChecked(self.parent().po.vars['save_coord_thickening_slimming'])
@@ -188,6 +242,18 @@ class RequiredOutput(WindowType):
             self.parent().change_widget(3) # ThirdWidget
 
     def ok_is_clicked(self):
+        """
+        Updates the parent object's variables and descriptor states based on UI checkboxes.
+
+        This method updates various variables and descriptor states in the parent
+        object based on the current state of checkboxes in the UI. It also starts a
+        thread to save all variables and updates the output list accordingly.
+
+        Notes
+        -----
+        This method does not return any value. It updates the internal state of the
+        parent object, which saves all user defined parameters.
+        """
         self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
         self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
         self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
@@ -207,10 +273,6 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['network_analysis'] = checked_status
             if name == 'graph_extraction':
                 self.parent().po.vars['graph_extraction'] = checked_status
-
-            # for j in [0, 1, 2]:
-            #     k = i * 4 + j + 1
-            #     self.parent().po.all['descriptors'][name][j] = self.descriptor_widgets_list[k].isChecked()
         if not self.parent().thread['SaveAllVars'].isRunning():
             self.parent().thread['SaveAllVars'].start()
         self.parent().po.update_output_list()
@@ -220,16 +282,7 @@ class RequiredOutput(WindowType):
             self.parent().change_widget(3) # ThirdWidget
 
     def closeEvent(self, event):
+        """
+        Handle the close event for a QWidget.
+        """
         event.accept
-
-
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = RequiredOutput(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())
