@@ -1016,7 +1016,7 @@ class ProgramOrganizer:
             self.left, self.right, self.top, self.bot = self.videos.left, self.videos.right, self.videos.top, self.videos.bot
 
         else:
-            self.left, self.right, self.top, self.bot = np.array([1]), np.array([self.first_image.image.shape[1] - 2]), np.array([1]), np.array([self.first_image.image.shape[0] - 2])
+            self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1]]), np.array([0]), np.array([self.first_image.image.shape[0]])
 
         self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
         if self.not_analyzed_individuals is not None:
@@ -1308,10 +1308,10 @@ class ProgramOrganizer:
         """
         logging.info("Create origins and background lists")
         if self.top is None:
-            self.top = np.array([1])
-            self.bot = np.array([self.first_im.shape[0] - 2])
-            self.left = np.array([1])
-            self.right = np.array([self.first_im.shape[1] - 2])
+            self.top = np.array([0])
+            self.bot = np.array([self.first_im.shape[0]])
+            self.left = np.array([0])
+            self.right = np.array([self.first_im.shape[1]])
 
         add_to_c = 1
         first_im = self.first_image.validated_shapes
