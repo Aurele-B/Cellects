@@ -433,16 +433,13 @@ class FirstWindow(MainTabsType):
 
     def video_analysis_window_is_clicked(self):
         """
-        Video analysis window click handler.
-
-        Determines the appropriate action when the video analysis window is clicked, considering
-        the current state and running threads.
+        Handles the logic for when the "Video analysis" button is clicked in the interface,
+        leading to the video analysis window.
 
         Notes
         -----
-        - This function checks the state of various threads before proceeding.
-        - If any analysis-related thread is running, it prompts the user to wait or restart Cellects.
-        - Otherwise, it updates the last tab and changes the widget to VideoAnalysis.
+        This function displays an error message when a thread relative to the current window is running.
+        This function also save the id of the following window for later use.
         """
         if self.video_tab.state != "not_usable":
             if self.thread["LookForData"].isRunning() or self.thread["LoadDataToRunCellectsQuickly"].isRunning() or self.thread["GetFirstIm"].isRunning() or self.thread["RunAll"].isRunning():
