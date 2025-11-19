@@ -1327,7 +1327,7 @@ class OneArenaThread(QtCore.QThread):
         args = [self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
                 False, False, False, self.videos_in_ram]
         if self.parent().po.vars['do_fading']:
-            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.unp.int64)
+            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             r = weakref.ref(analysis_i)
