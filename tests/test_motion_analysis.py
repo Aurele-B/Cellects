@@ -161,7 +161,8 @@ class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
         """Remove all written files."""
         file_names = os.listdir(self.path_output)
         for file_name in file_names:
-            os.remove(file_name)
+            if os.path.isfile(file_name):
+                os.remove(file_name)
 
 
 class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
@@ -243,7 +244,8 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         """Remove all written files."""
         file_names = os.listdir(self.path_output)
         for file_name in file_names:
-            os.remove(file_name)
+            if os.path.isfile(file_name):
+                os.remove(file_name)
 
     # def test_invisible(self):
     #     self.assertTrue(self.ma.start is not None)
