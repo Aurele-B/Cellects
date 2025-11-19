@@ -289,7 +289,17 @@ def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) 
     Kurtosis: nan
 
     """
-    return mnx / sx ** n, mny / sy ** n
+    if sx == 0:
+        fx = 0
+    else:
+        fx = mnx / sx ** n
+
+    if sy == 0:
+        fy = 0
+    else:
+        fy = mny / sy ** n
+
+    return fx, fy
 
 
 def get_standard_deviations(mo: dict, binary_image: NDArray, cx: float, cy: float) -> Tuple[float, float]:
