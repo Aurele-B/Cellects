@@ -241,8 +241,11 @@ def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[
     -----
     Performance considerations: This function uses Numba's `@njit` decorator for performance.
     """
-    vx = np.sum(binary_image * Xn) / mo["m00"]
-    vy = np.sum(binary_image * Yn) / mo["m00"]
+    if mo['m00'] == 0:
+        vx, vy = 0., 0.
+    else:
+        vx = np.sum(binary_image * Xn) / mo["m00"]
+        vy = np.sum(binary_image * Yn) / mo["m00"]
     return vx, vy
 
 

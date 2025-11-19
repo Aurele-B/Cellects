@@ -383,7 +383,10 @@ class ShapeDescriptors:
         else:
             if self.contours is None:
                 self.get_contours()
-            self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
+            if len(self.contours) == 0:
+                self.min_bounding_rectangle = np.array([], np.uint8)
+            else:
+                self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
 
     def get_inertia_axes(self):
         """
@@ -605,7 +608,10 @@ class ShapeDescriptors:
         else:
             if self.contours is None:
                 self.get_contours()
-            self.perimeter = cv2.arcLength(self.contours, True)
+            if len(self.contours) == 0:
+                self.perimeter = 0.
+            else:
+                self.perimeter = cv2.arcLength(self.contours, True)
 
     def get_circularity(self):
         """
@@ -798,12 +804,14 @@ class ShapeDescriptors:
         else:
             if self.convex_hull is None:
                 self.get_convex_hull()
-            conv_h_cont_area = cv2.contourArea(self.convex_hull)
-            hull_area = cv2.contourArea(self.convex_hull)
-            if hull_area == 0:
+            if len(self.convex_hull) == 0:
                 self.solidity = 0.
             else:
-                self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
+                hull_area = cv2.contourArea(self.convex_hull)
+                if hull_area == 0:
+                    self.solidity = 0.
+                else:
+                    self.solidity = cv2.contourArea(self.contours) / hull_area
 
     def get_convexity(self):
         """
@@ -841,7 +849,10 @@ class ShapeDescriptors:
             self.get_perimeter()
         if self.convex_hull is None:
             self.get_convex_hull()
-        self.convexity = cv2.arcLength(self.convex_hull, True) / self.perimeter
+        if self.perimeter == 0 or len(self.convex_hull) == 0:
+            self.convexity = 0.
+        else:
+            self.convexity = cv2.arcLength(self.convex_hull, True) / self.perimeter
 
     def get_eccentricity(self):
         """
@@ -883,7 +894,10 @@ class ShapeDescriptors:
         0.0
         """
         self.get_inertia_axes()
-        self.eccentricity = np.sqrt(1 - np.square(self.minor_axis_len / self.major_axis_len))
+        if self.major_axis_len == 0:
+            self.eccentricity = 0.
+        else:
+            self.eccentricity = np.sqrt(1 - np.square(self.minor_axis_len / self.major_axis_len))
 
     def get_euler_number(self):
         """
