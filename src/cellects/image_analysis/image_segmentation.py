@@ -1021,8 +1021,6 @@ def extract_first_pc(bgr_image: np.ndarray, standardize: bool=True) -> Tuple[np.
     >>> print(first_pc_vector.shape)
     (3,)
     """
-    if bgr_image.shape[0] == 3:
-        bgr_image = np.transpose(bgr_image, (1, 2, 0))
     height, width, channels = bgr_image.shape
     pixels = bgr_image.reshape(-1, channels)  # Flatten to Nx3 matrix
 
