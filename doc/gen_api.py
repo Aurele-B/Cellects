@@ -4,7 +4,7 @@ import pathlib
 import mkdocs_gen_files
 
 # Excluded packages
-EXCLUDED_PACKAGES = ["cellects.icons", "cellects.config"]
+EXCLUDED_PACKAGES = ["cellects.icons", "cellects.config", "cellects.paper_illustrations"]
 
 # Root directory
 SRC_ROOT = pathlib.Path("src")
