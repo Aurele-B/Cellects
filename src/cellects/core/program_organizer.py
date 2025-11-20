@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""This file contains the class constituting the link between the graphical interface and the computations
+"""This file contains the class constituting the link between the graphical interface and the computations.
  First, Cellects analyze one image in order to get a color space combination maximizing the contrast between the specimens
  and the background.
  Second, Cellects automatically delineate each arena.
