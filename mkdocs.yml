@@ -31,6 +31,18 @@ theme:
 
 plugins:
   - search
+  - autorefs
+  - gen-files:
+      scripts:
+        - doc/gen_api.py
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [ "src" ]      # <-- là où se trouve le code
+          options:
+            docstring_style: "numpy"
+            show_source: true
 
 extra_css:
   - static/extra.css
@@ -48,6 +60,9 @@ markdown_extensions:
   - toc:
       toc_depth: 2
 
+validation:
+  omitted_files: ignore # avoid warning about auto-generated API files
+
 nav:
   - Home: index.md
   - Foreword: foreword.md
@@ -61,3 +76,5 @@ nav:
       - Advanced parameters: advanced/parameters.md
       - Required outputs: advanced/outputs.md
       - Multiple folders: advanced/multiple-folders.md
+  - API Reference:
+      - Overview: api/index.md
