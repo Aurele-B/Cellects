@@ -124,9 +124,8 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
         Parameters
         ----------
-        severalfolder_included: bool, optional
-            A flag to determine whether the `IfSeveralFoldersWindow`
-            should be instantiated. Default is `True`.
+        several_folder_included: bool, optional
+            A flag to determine whether the `IfSeveralFoldersWindow` should be instantiated. Default is `True`.
         """
         logging.info("Widgets are instantiating")
         if several_folder_included:

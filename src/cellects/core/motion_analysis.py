@@ -515,8 +515,6 @@ class MotionAnalysis:
             ----------
             t : int
                 The frame index to process.
-            mask_coord : numpy.ndarray, optional
-                Coordinates for the mask valid around a number of images.
 
             Returns
             -------

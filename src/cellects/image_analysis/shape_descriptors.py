@@ -228,35 +228,18 @@ class ShapeDescriptors:
         `cv2.moments` function and then translate these moments into a formatted
         dictionary.
 
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing this method.
-        binary_image : numpy.ndarray
-            A binary image (2D array) where pixels are 0 or 255.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        dict
-            A dictionary containing the translated moments of the binary image.
-
-        Raises
-        ------
-        TypeError
-            If `binary_image` is not a NumPy array.
-
         Notes
         -----
         This function assumes the binary image has already been processed and is in a
         suitable format for moment calculation.
 
+        Returns
+        -------
+        None
+
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["mo"])
+       >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["mo"])
         >>> print(SD.mo["m00"])
         9.0
         """
@@ -269,20 +252,13 @@ class ShapeDescriptors:
         This function computes the area covered by white pixels (value 1) in a binary image,
         which is equivalent to counting the number of 'on' pixels.
 
-        Parameters
-        ----------
-        self : object
-            The instance of a class containing the binary_image attribute.
+        Notes
+        -----
+        Sums values in `self.binary_image` and stores the result in `self.area`.
 
         Returns
         -------
-        int
-            The total number of white pixels in the binary image, representing its area.
-
-        Notes
-        -----
-        This function assumes the binary_image attribute is a NumPy array containing only 0s and 1s.
-        If the image contains other values, this function might not produce accurate results.
+        None
 
         Examples
         --------
@@ -299,27 +275,14 @@ class ShapeDescriptors:
         Retrieves contours from a binary image, calculates the Euler number,
         and identifies the largest contour based on its length.
 
-        Parameters
-        ----------
-        self : ImageProcessingObject
-            The image processing object containing the binary image.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        None
-
         Notes
         -----
         This function modifies the internal state of the `self` object to store
         the largest contour and Euler number.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -349,17 +312,10 @@ class ShapeDescriptors:
         the object outlines present in the image, which is useful for
         object detection and analysis tasks.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        tuple
-            A tuple containing the following elements:
-                - (cx, cy): The center point of the rectangle.
-                - (width, height): Width and height of the bounding rectangle.
-                - angle: Angle in degrees describing how much the ellipse is rotated.
+        Notes
+        -----
+        - The bounding rectangle is calculated only if contours are available.
+          If not, they will be retrieved first before calculating the rectangle.
 
         Raises
         ------
@@ -367,10 +323,9 @@ class ShapeDescriptors:
             If the contours are not available and cannot be retrieved,
             indicating a problem with the image or preprocessing steps.
 
-        Notes
-        -----
-        - The bounding rectangle is calculated only if contours are available.
-          If not, they will be retrieved first before calculating the rectangle.
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -437,31 +392,19 @@ class ShapeDescriptors:
 
     def get_standard_deviations(self):
         """
-        Calculate the standard deviations along x and y.
-
-        Parameters
-        ----------
-        moment_order : int
-            The order of moments to consider in calculations.
-        binary_image : numpy.ndarray
-            A 2D binary image where the shape corresponds to `[height, width]`.
-        center_x : float
-            The x-coordinate of the centroid of the object in the image.
-        center_y : float
-            The y-coordinate of the centroid of the object in the image.
-
-        Returns
-        -------
-        tuple[float, float]
-            A tuple containing the standard deviations along x and y (sx, sy).
+        Calculate and store standard deviations along x and y (sx, sy).
 
         Notes
         -----
-        The function calculates the standard deviations of a binary image about its centroid.
+        Requires centroid and moments; values are stored in `self.sx` and `self.sy`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["standard_deviation_x", "standard_deviation_y"])
+       >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["standard_deviation_x", "standard_deviation_y"])
         >>> print(SD.sx, SD.sy)
         0.816496580927726 0.816496580927726
         """
@@ -472,37 +415,19 @@ class ShapeDescriptors:
 
     def get_skewness(self):
         """
-        Calculate the skewness of an image.
+        Calculate and store skewness along x and y (skx, sky).
 
         This function computes the skewness about the x-axis and y-axis of
         an image. Skewness is a measure of the asymmetry of the probability
         distribution of values in an image.
 
-        Parameters
-        ----------
-        binary_image : numpy.ndarray
-            A binary image represented as a 2D array of integers, where 0 represents
-            background and other values represent foreground.
-        mo : dict
-            Moments of the image.
-        cx, cy : float
-            The x and y coordinates of the centroid of the object in the image.
-        sx, sy : float
-            The standard deviations along the x and y axes.
-
-        Other Parameters
-        ----------------
-        None
+        Notes
+        -----
+        Requires standard deviations; values are stored in `self.skx` and `self.sky`.
 
         Returns
         -------
-        skx, sky : tuple of float
-            The skewness about the x-axis and y-axis.
-
-        Notes
-        -----
-        This method internally calls `get_standard_deviations` if the standard deviation
-        values are not already computed.
+        None
 
         Examples
         --------
@@ -543,24 +468,15 @@ class ShapeDescriptors:
 
     def get_convex_hull(self):
         """
-        Compute the convex hull of an object's contours.
+        Compute and store the convex hull of the object's contour.
 
-        This method calculates the convex hull for the object represented by its
-        contours. If the contours are not already computed, it will first compute them.
-
-        Parameters
-        ----------
-        self : Object
-            The object containing the contours and convex hull attributes.
+        Notes
+        -----
+        Stores the result in `self.convex_hull`. Computes contours if needed.
 
         Returns
         -------
         None
-
-        Notes
-        -----
-        This method modifies the object in place by setting its `convex_hull`
-        attribute to the result of the convex hull computation.
 
         Examples
         --------
@@ -577,25 +493,15 @@ class ShapeDescriptors:
 
     def get_perimeter(self):
         """
-        Get the perimeter of a contour.
-
-        Calculates the perimeter length of the contours present in
-        the image after determining them if they are not already available.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        float
-            The perimeter length of the contours in the image.
+        Compute and store the contour perimeter length.
 
         Notes
         -----
-        This function retrieves the contours if they have not been determined
-        yet using `self.get_contours()`. This is crucial for accurate perimeter
-        measurement.
+        Computes contours if needed and stores the length in `self.perimeter`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -615,33 +521,19 @@ class ShapeDescriptors:
 
     def get_circularity(self):
         """
-        Calculate and set the circularity of a binary image object.
+        Compute and store circularity: 4πA / P².
 
-        Circularity is defined as (4 * pi * area) / perimeter^2.
-        If the perimeter has not been calculated yet, it will be computed first.
-
-        Parameters
-        ----------
-        self : ShapeObject
-            The object which contains the binary image and its properties.
-
-        Attributes
-        ----------
-        circularity : float
-            The calculated circularity value, set as an attribute of the object.
+        Notes
+        -----
+        Uses `self.area` and `self.perimeter`; stores result in `self.circularity`.
 
         Returns
         -------
         None
 
-        Notes
-        -----
-        Circularity is a measure of how closely the shape of an object approximates a circle.
-        A perfect circle has a circularity of 1.0.
-
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["circularity"])
+         >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["circularity"])
         >>> print(SD.circularity)
         1.7671458676442586
         """
@@ -654,39 +546,14 @@ class ShapeDescriptors:
 
     def get_rectangularity(self):
         """
-        Calculates the rectangularity of a binary image.
-
-        Rectangularity is defined as the ratio of the number of pixels in
-        the shape to the area of its bounding rectangle. This function
-        computes this value by considering the binary image stored in
-        `self.binary_image`.
-
-        Parameters
-        ----------
-        None
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        float
-            The rectangularity of the binary image.
-
-        Raises
-        ------
-        None
+        Compute and store rectangularity: area / bounding-rectangle-area.
 
         Notes
         -----
-        This function uses `self.binary_image` to determine the number of pixels in
-        the shape and `self.min_bounding_rectangle` to determine the bounding rectangle area.
-        If the minimum bounding rectangle has not been computed yet, it will be calculated
-        through `self.get_min_bounding_rectangle()`.
+        Uses `self.binary_image` and `self.min_bounding_rectangle`. Computes the MBR if needed.
 
-        Attributes
-        ----------
+        Returns
+        -------
         None
 
         Examples
@@ -730,23 +597,6 @@ class ShapeDescriptors:
         >>> print(SD.total_hole_area)
         0
         """
-        # FIRST VERSION
-        # nb, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
-        # if stats.shape[0] > 2:
-        #     self.total_hole_area = stats[2:, 4].sum()
-        # else:
-        #     self.total_hole_area = 0
-        # tic = default_timer()
-        # SECOND VERSION
-        # nb, new_order = cv2.connectedComponents(1 - self.binary_image)
-        # if nb <= 1:
-        #     self.total_hole_area = 0
-        # else:
-        #     label_counts = np.bincount(new_order.flatten())
-        #     self.total_hole_area = label_counts[2:].sum()
-        # tac = default_timer()
-        # print( tac-tic)
-        # THIDS VERSION
         nb, new_order = cv2.connectedComponents(1 - self.binary_image)
         if nb > 2:
             self.total_hole_area = (new_order > 1).sum()
@@ -755,8 +605,7 @@ class ShapeDescriptors:
 
     def get_solidity(self):
         """
-        Calculate the solidity of a contour, which is the ratio of the area
-        of the contour to the area of its convex hull.
+        Compute and store solidity: contour area / convex hull area.
 
         Extended Summary
         ----------------
@@ -764,34 +613,13 @@ class ShapeDescriptors:
         its convex hull. A solidity of 1 means the contour is fully convex, while a
         value less than 1 indicates concavities.
 
-        Parameters
-        ----------
-        None
-
-        Other Parameters
-        -----------------
-        None
+        Notes
+        -----
+        If the convex hull area is 0 or absent, solidity is set to 0.
 
         Returns
         -------
-        float
-            The solidity of the contour.
-
-        Raises
-        ------
         None
-
-        Notes
-        -----
-        The solidity is computed by dividing the area of the contour by the area of its
-        convex hull. If the convex hull is empty, solidity defaults to 1.
-
-        Attributes
-        ----------
-            self.convex_hull : array-like or None
-                The convex hull of the contour.
-            self.solidity : float
-                The calculated solidity value of the contour.
 
         Examples
         --------
@@ -815,29 +643,15 @@ class ShapeDescriptors:
 
     def get_convexity(self):
         """
-        Calculate the convexity of a shape.
-
-        Convexity is defined as the ratio of the length of
-        the contour to the perimeter of the convex hull.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        float
-            The convexity ratio of the shape.
-
-        Raises
-        ------
-        None
+        Compute and store convexity: convex hull perimeter / contour perimeter.
 
         Notes
         -----
-        This method requires that both `perimeter` and `convex_hull`
-        attributes are computed before calling this method.
-        Convexity is a dimensionless quantity and should always be in the range [0, 1].
+        Requires `self.perimeter` and `self.convex_hull`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -856,36 +670,15 @@ class ShapeDescriptors:
 
     def get_eccentricity(self):
         """
-        Calculate the eccentricity of an ellipsoid based on its major and minor axis lengths.
-
-        This function computes the eccentricity of an ellipsoid using its major
-        and minor axis lengths. The eccentricity is a measure of how much the
-        ellipsoid deviates from being circular.
-
-        Parameters
-        ----------
-        self : Ellipsoid
-            The ellipsoid object containing the major and minor axis lengths.
-            These values are assumed to be already set.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        float
-            The calculated eccentricity of the ellipsoid.
-
-        Raises
-        ------
-        None
+        Compute and store eccentricity from major and minor axis lengths.
 
         Notes
         -----
-        - This function assumes that the major and minor axis lengths are already set.
-          If not, you must call `self.get_inertia_axes()` to update these values before
-          calling this function.
+        Calls `get_inertia_axes()` if needed and stores result in `self.eccentricity`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -901,68 +694,30 @@ class ShapeDescriptors:
 
     def get_euler_number(self):
         """
-        Get Euler number from the contour data.
-
-        Calculate and return the Euler characteristic of the current contour or
-        contours, which is a topological invariant that describes the shape.
-
-        Parameters
-        ----------
-        None
+        Ensure contours are computed; stores Euler number in `self.euler_number` via `get_contours()`.
 
         Returns
         -------
-        int or None
-            The Euler number of the contour(s). Returns `None` if no contours exist.
-
-        Raises
-        ------
-        ValueError
-            If the Euler number cannot be calculated due to invalid contour data.
+        None
 
         Notes
         -----
-        The Euler characteristic is computed as: ``vertices - edges + faces``.
-        This method handles both single contour and multiple contours cases.
-
-        Examples
-        --------
-        >>> contour_object.get_euler_number()
-        1
-
-        >>> no_contours = Contour()  # Object with no contours
-        >>> no_contours.get_euler_number()
-        None
+        Euler number is computed in `get_contours()` as `(components - 1) - len(contours)`.
         """
         if self.contours is None:
             self.get_contours()
 
     def get_major_axis_len(self):
         """
-        Get the length of the major axis.
-
-        Calculate or retrieve the length of the major axis, ensuring it is
-        computed if not already available.
-
-        Parameters
-        ----------
-        None
+        Ensure the major axis length is computed and stored in `self.major_axis_len`.
 
         Returns
         -------
-        float or None
-            The length of the major axis. If the major_axis_len could not be
-            computed, returns `None`.
-
-        Raises
-        ------
-        AttributeError
-           If the major axis length is not available and cannot be computed.
+        None
 
         Notes
         -----
-        - This method may trigger computation of inertia axes if they haven't been
-          precomputed to determine the major axis length.
+        Triggers `get_inertia_axes()` if needed.
 
         Examples
         --------
@@ -975,29 +730,15 @@ class ShapeDescriptors:
 
     def get_minor_axis_len(self):
         """
-        Get the length of the minor axis.
-
-        This method returns the calculated length of the minor axis. If
-        `self.minor_axis_len` is `None`, it will first compute the inertia axes.
-
-        Parameters
-        ----------
-        none
+        Ensure the minor axis length is computed and stored in `self.minor_axis_len`.
 
         Returns
         -------
-        float:
-            The length of the minor axis.
-
-        Raises
-        ------
-        RuntimeError:
-            If the minor axis cannot be calculated. This might happen if there are not enough data points
-            to determine the inertia axes.
+        None
 
         Notes
         -----
-        This method will compute the inertia axes if `self.minor_axis_len` is not cached.
+        Triggers `get_inertia_axes()` if needed.
 
         Examples
         --------
@@ -1010,33 +751,15 @@ class ShapeDescriptors:
 
     def get_axes_orientation(self):
         """
-
-        Get the orientation of the axes.
-
-        Extended summary
-        ----------------
-
-        This method retrieves the current orientation of the axes. If the orientation is not already computed, it will compute and store it by calling `get_inertia_axes()`.
-
-        Parameters
-        ----------
-        None
+        Ensure the axes orientation angle is computed and stored in `self.axes_orientation`.
 
         Returns
         -------
-        `np.ndarray`
-            A 3x3 matrix representing the orientation of the axes.
-
-        Raises
-        ------
         None
 
         Notes
         -----
-        This method may trigger a computation of inertia axes if they haven't been computed yet.
-
-        Examples
-        --------
+        Calls `get_inertia_axes()` if orientation is not yet computed.
 
         Examples
         --------

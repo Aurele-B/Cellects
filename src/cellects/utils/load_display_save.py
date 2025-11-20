@@ -314,8 +314,6 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
     ----------
     img_list : list
         List of image file names to process.
-    min_ram_free : float
-        Minimum amount of RAM that should be free in MB to start processing.
     in_colors : bool, optional
         Whether to keep images in color. Default is False.
     reduce_image_dim : bool, optional
