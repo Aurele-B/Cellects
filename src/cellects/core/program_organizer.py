@@ -544,14 +544,9 @@ class ProgramOrganizer:
 
         Parameters
         ----------
-        reduce_image_dim : bool
-            Flag indicating whether to reduce image dimensions.
-        data_list : list[str]
-            List of file paths for images or videos.
-        vars : dict
-            Dictionary containing video/image parameters (e.g., 'img_number').
-        all : dict
-            Dictionary containing global image or video flags (e.g"""
+        last_im : NDArray, optional
+            The last image to be loaded. If not provided, the last image will be loaded from the data list.
+        """
         logging.info("Load last image")
         if last_im is not None:
             self.last_im = last_im
@@ -623,28 +618,6 @@ class ProgramOrganizer:
         """
         Segment the first or subsequent image in a series for biological and background masks.
 
-        Parameters
-        ----------
-        is_first_image : bool
-            A flag indicating whether the current image is the first in a sequence.
-        biomask : NDArray[np.uint8], optional
-            The biological mask to be applied to the image.
-        backmask : NDArray[np.uint8], optional
-            The background mask to be applied to the image.
-        spot_size : Any, optional
-            The size of the spots to be detected. Defaults to `None`.
-
-        Other Parameters
-        ----------------
-        **vars : dict
-            A dictionary containing various parameters and settings for image processing.
-        **all : dict
-            A dictionary containing masks and other relevant data structures.
-
-        Returns
-        -------
-        None
-
         Notes
         -----
         This function processes the first or subsequent image in a sequence, applying biological and background masks,
@@ -670,32 +643,7 @@ class ProgramOrganizer:
                                                      grid_segmentation=self.vars["grid_segmentation"],
                                                      filter_spec=self.vars["filter_spec"],
                                                      allowed_window=self.first_image.drift_mask_coord)
-                # self.first_image.adjust_to_drift_correction(self.vars['convert_for_origin']['logical'])
-        # if self.vars["grid_segmentation"]:
-        #     self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-        #                                          self.all["bio_mask"], self.all["back_mask"],
-        #                                          subtract_background=None, subtract_background2=None,
-        #                                          grid_segmentation=True,
-        #                                          filter_spec=self.vars["filter_spec"])
 
-        # self.first_image.set_spot_shapes_and_size_confint(self.all['starting_blob_shape'])
-        # logging.info(self.sample_number)
-        # process_i = ProcessFirstImage(
-        #     [self.first_image, False, False, None, self.vars['several_blob_per_arena'],
-        #      self.sample_number, spot_size, self.vars["color_number"], self.all["bio_mask"], self.all["back_mask"], None])
-        # process_i.binary_image = self.first_image.binary_image
-        # process_i.process_binary_image(use_bio_and_back_masks=True)
-        # if self.all["back_mask"] is not None:
-        #     if np.any(process_i.shapes[self.all["back_mask"]]):
-        #         process_i.shapes[np.isin(process_i.shapes, np.unique(process_i.shapes[self.all["back_mask"]]))] = 0
-        #         process_i.validated_shapes = (process_i.shapes > 0).astype(np.uint8)
-        # if self.all["bio_mask"] is not None:
-        #     process_i.validated_shapes[self.all["bio_mask"]] = 1
-        # if self.all["back_mask"] is not None or self.all["bio_mask"] is not None:
-        #     process_i.shape_number, process_i.shapes = cv2.connectedComponents(process_i.validated_shapes, connectivity=8)
-        #     process_i.shape_number -= 1
-        # self.first_image.validated_shapes = process_i.validated_shapes
-        # self.first_image.shape_number = process_i.shape_number
         shapes_features = shape_selection(self.first_image.binary_image, true_shape_number=self.sample_number,
                                           horizontal_size=self.starting_blob_hsize_in_pixels,
                                           spot_shape=self.all['starting_blob_shape'],
@@ -717,21 +665,10 @@ class ProgramOrganizer:
 
         Parameters
         ----------
-        is_first_image : bool
-            A flag indicating whether the current image is the first in a sequence.
         biomask : NDArray[np.uint8], optional
             The biological mask to be applied to the image.
         backmask : NDArray[np.uint8], optional
             The background mask to be applied to the image.
-        spot_size : Any, optional
-            The size of the spots to be detected. Defaults to `None`.
-
-        Other Parameters
-        ----------------
-        **vars : dict
-            A dictionary containing various parameters and settings for image processing.
-        **all : dict
-            A dictionary containing masks and other relevant data structures.
 
         Returns
         -------
@@ -953,10 +890,6 @@ class ProgramOrganizer:
         specimens and determines valid arenas for analysis. In case of existing data,
         it uses previously computed coordinates if available and valid.
 
-        Parameters
-        ----------
-        None
-
         Returns
         -------
         analysis_status : dict
@@ -1174,12 +1107,6 @@ class ProgramOrganizer:
         It ensures that all bounding boxes are within the frame's boundaries and
         standardizes their sizes to avoid issues with odd dimensions during video writing.
 
-        Parameters
-        ----------
-        distance_threshold_to_consider_an_arena_out_of_the_picture : int, optional
-            Threshold in pixels to consider a bounding box out of the picture.
-            If `None`, defaults to the minimum value in `out_of_pic`.
-
         Returns
         -------
         None
@@ -1279,21 +1206,6 @@ class ProgramOrganizer:
         and its background subtraction based on predefined boundaries. It handles cases where
         the top, bottom, left, and right boundaries are not yet initialized.
 
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing the method.
-        add_to_c : int, optional
-            Additional value to add to the boundaries for slicing. Default is 1.
-        rep : int
-            The index of the current repetition in traversal.
-
-        Other Parameters
-        ----------------
-        subtract_background : bool
-            Flag indicating whether to subtract background.
-        convert_for_motion : dict
-            Configuration for motion conversion.
         Notes
         -----
         This method directly modifies the input image data. The `self.vars` dictionary is populated

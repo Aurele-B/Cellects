@@ -307,10 +307,6 @@ class  NetworkDetection:
         ----------
         img : ndarray of uint8
             The input image to be converted to greyscale.
-        c_space_dict : dict
-            A dictionary where keys are color space names and values
-            are parameters for those color spaces.
-
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
@@ -881,11 +877,6 @@ class EdgeIdentification:
         smaller than the width of the nearest network branch (an information included in pad_distances).
         This method also updates internal data structures (skeleton, edge coordinates, vertex/tip positions)
         accordingly through pixel-wise analysis and connectivity checks.
-
-        Parameters
-        ----------
-        pad_distances : ndarray of float64
-            2D array containing the network width (in pixels) at each position occupied by the skeleton
         """
         # Identify edges that are smaller than the width of the branch it is attached to
         tipped_edges_to_remove = np.zeros(self.edge_lengths.shape[0], dtype=bool)

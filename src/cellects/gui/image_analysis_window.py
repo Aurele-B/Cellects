@@ -441,19 +441,6 @@ class ImageAnalysisWindow(MainTabsType):
         This method resets various flags and variables related to image analysis
         to their initial state. It is called when the "Previous" button is clicked,
         preparing the application for new input and reinitialization.
-
-        Other Parameters
-        ----------------
-        is_image_analysis_running : bool, optional
-            Indicates whether image analysis is currently running.
-        message : object with setText method, optional
-            An object that can display messages to the user.
-        parent : object with firstwindow and po attributes, optional
-            The parent widget that contains the current instance.
-        parent.firstwindow.instantiate : bool, optional
-            A flag to instantiate a new window or process.
-        parent.po.current_combination_id : int, optional
-            The current combination ID in the parent object.
         """
         if self.is_image_analysis_running:
             self.message.setText("Wait for the analysis to end, or restart Cellects")
