@@ -1616,12 +1616,15 @@ class MotionAnalysis:
 
             for t in np.arange(self.dims[0]):
                 if self.vars['network_analysis']:
-                    box_counting_dimensions[t, 0] = self.network_dynamics[t, ...].sum()
+                    current_network = np.zeros(self.dims[1:], dtype=np.uint8)
+                    net_t = self.network_dynamics[1:, self.network_dynamics[0, :] == t]
+                    current_network[net_t[0], net_t[1]] = 1
+                    box_counting_dimensions[t, 0] = current_network.sum()
                     zoomed_binary, side_lengths = prepare_box_counting(self.binary[t, ...], min_mesh_side=self.vars[
                         'fractal_box_side_threshold'], zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
                         t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
-                    zoomed_binary, side_lengths = prepare_box_counting(self.network_dynamics[t, ...],
+                    zoomed_binary, side_lengths = prepare_box_counting(current_network,
                                                                        min_mesh_side=self.vars[
                                                                            'fractal_box_side_threshold'],
                                                                        zoom_step=self.vars['fractal_zoom_step'],
