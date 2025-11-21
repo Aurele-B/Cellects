@@ -22,6 +22,7 @@ class TestFullMotionAnalysis(CellectsUnitTest):
         cls.i = 0
         cls.vars = DefaultDicts().vars
         cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['background_list'] = []
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
         cls.vars['average_pixel_size'] = 1.

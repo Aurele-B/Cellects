@@ -69,7 +69,7 @@ class ProgramOrganizer:
         List of video/image file paths in the working directory.
     computed_video_options : np.ndarray of bool
         Flags indicating which video processing options have been applied.
-    one_row_per_arena, one_row_per_frame, one_row_per_oscillating_cluster : pd.DataFrame or None
+    one_row_per_arena, one_row_per_frame : pd.DataFrame or None
         Result tables for different levels of analysis (per arena, per frame, and oscillating clusters).
 
     Methods:
@@ -117,7 +117,6 @@ class ProgramOrganizer:
         self.data_list = []
         self.one_row_per_arena = None
         self.one_row_per_frame = None
-        self.one_row_per_oscillating_cluster = None
         self.not_analyzed_individuals = None
 
     def update_variable_dict(self):
@@ -1373,10 +1372,6 @@ class ProgramOrganizer:
                 if np.isin(descriptor, list(from_shape_descriptors_class.keys())):
                 
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
-        self.vars['descriptors']['cluster_number'] = self.vars['oscilacyto_analysis']
-        self.vars['descriptors']['mean_cluster_area'] = self.vars['oscilacyto_analysis']
-        self.vars['descriptors']['vertices_number'] = self.vars['network_analysis']
-        self.vars['descriptors']['edges_number'] = self.vars['network_analysis']
         self.vars['descriptors']['newly_explored_area'] = self.vars['do_fading']
 
     def update_available_core_nb(self, image_bit_number=256, video_bit_number=140):# video_bit_number=176
@@ -1515,7 +1510,6 @@ class ProgramOrganizer:
         """
         self.update_output_list()
         logging.info("Instantiate results tables and validation images")
-        self.one_row_per_oscillating_cluster = None
         self.fractal_box_sizes = None
         if self.vars['already_greyscale']:
             if len(self.first_image.bgr.shape) == 2:
@@ -1598,32 +1592,6 @@ class ProgramOrganizer:
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
                 self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
-        if self.vars['oscilacyto_analysis']:
-            try:
-                if self.one_row_per_oscillating_cluster is None:
-                    self.one_row_per_oscillating_cluster = pd.DataFrame(columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size',
-                                                                       'edge_distance'])
-                self.one_row_per_oscillating_cluster.to_csv("one_row_per_oscillating_cluster.csv", sep=";", index=False,
-                                                            lineterminator='\n')
-                del self.one_row_per_oscillating_cluster
-            except PermissionError:
-                logging.error("Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_oscillating_cluster.csv open when Cellects runs")
-
-            if self.vars['fractal_analysis']:
-                if os.path.isfile(f"oscillating_clusters_temporal_dynamics.h5"):
-                    array_names = get_h5_keys(f"oscillating_clusters_temporal_dynamics.h5")
-                    arena_fractal_dynamics = read_h5_array(f"oscillating_clusters_temporal_dynamics.h5", key=array_names[0])
-                    arena_fractal_dynamics = np.hstack((np.repeat(np.uint32(array_names[0][-1]), arena_fractal_dynamics.shape[0]), arena_fractal_dynamics))
-                    for array_name in array_names[1:]:
-                        fractal_dynamics = read_h5_array(f"oscillating_clusters_temporal_dynamics.h5", key=array_name)
-                        fractal_dynamics = np.hstack((np.repeat(np.uint32(array_name[-1]), fractal_dynamics.shape[0]), fractal_dynamics))
-                        arena_fractal_dynamics = np.vstack((arena_fractal_dynamics, fractal_dynamics))
-                    arena_fractal_dynamics = pd.DataFrame(arena_fractal_dynamics, columns=["arena", "time", "cluster_id", "flow", "centroid_y", "centroid_x", "area", "inner_network_area", "box_count_dim", "inner_network_box_count_dim"])
-                    arena_fractal_dynamics.to_csv(f"oscillating_clusters_temporal_dynamics.csv", sep=";", index=False,
-                                                                lineterminator='\n')
-                    del arena_fractal_dynamics
-                    os.remove(f"oscillating_clusters_temporal_dynamics.h5")
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:

@@ -52,8 +52,7 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
                                }
 
 descriptors = deepcopy(from_shape_descriptors_class)
-descriptors.update({'cluster_number': False, 'mean_cluster_area': False, 'minkowski_dimension': False,
-                    'vertices_number': False, 'edges_number': False})
+descriptors.update({'minkowski_dimension': False})
 
 
 

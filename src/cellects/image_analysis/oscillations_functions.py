@@ -18,122 +18,109 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple
-from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes
+import logging
+from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes, cc, get_contours, CompareNeighborsWithValue
+from cellects.utils.utilitarian import smallest_memory_array, PercentAndTimeTracker
+from psutil import virtual_memory
 
 
-# def detect_oscillations_dynamics():
-
-
-
-class ClusterFluxStudy:
+def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int,
+                                 starting_time: int, expected_oscillation_period: int,
+                                 time_interval: int, minimal_oscillating_cluster_size:int,
+                                 min_ram_free: float=1., lose_accuracy_to_save_memory: bool=False,
+                                 save_coord_thickening_slimming: bool=True):
     """
-    This class updates the flux information and tracking of oscillating clusters.
+    Detects oscillatory dynamics in a labeled arena from processed video data
+
+    Parameters
+    ----------
+    converted_video : NDArray
+        Processed intensity values of the input video as 3D/4D array (t,y,x[,c])
+    binary : NDArray[np.uint8]
+        Binary segmentation mask with 1 for active region and 0 otherwise
+    arena_label : int
+        Label identifier for the specific arena being analyzed in binary mask
+    starting_time : int
+        Timepoint index to start oscillation analysis from (earlier frames are ignored)
+    expected_oscillation_period : int
+        Expected average period of oscillations in seconds
+    time_interval : int
+        Sampling interval between consecutive video frames in seconds
+    minimal_oscillating_cluster_size : int
+        Minimum number of pixels required for a cluster to be considered an oscillation feature
+    min_ram_free : float, optional (default=1.0)
+        Minimum free RAM in GB that must remain available during processing
+    lose_accuracy_to_save_memory : bool, optional (default=False)
+        If True, uses low-precision calculations to reduce memory usage at the cost of accuracy
+    save_coord_thickening_slimming : bool, optional (default=True)
+        If True, saves detected cluster coordinates as .npy files
+
+    Returns
+    -------
+    NDArray[np.int8]
+        3D array where each pixel is labeled with 1=influx region, 2=efflux region, or 0=no oscillation
+
+    Notes
+    -----
+    - Processes video data by calculating intensity gradients to detect directional oscillations
+    - Memory-intensive operations use float16 when available RAM would otherwise be exceeded
+    - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
     """
-    def __init__(self, dims: Tuple):
-        """
-        This initializes with dimensions and manages
-        pixel data, cluster IDs, and the total number of clusters.
+    dims = converted_video.shape
+    period_in_frame_nb = int(expected_oscillation_period / time_interval)
+    if period_in_frame_nb < 2:
+        period_in_frame_nb = 2
+    necessary_memory = dims[0] * dims[1] * dims[2] * 64 * 4 * 1.16415e-10
+    available_memory = (virtual_memory().available >> 30) - min_ram_free
+    if len(dims) == 4:
+        converted_video = converted_video[:, :, :, 0]
+    average_intensities = np.mean(converted_video, (1, 2))
+    if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
+        oscillations_video = np.zeros(dims, dtype=np.float16)
+        for cy in np.arange(dims[1]):
+            for cx in np.arange(dims[2]):
+                oscillations_video[:, cy, cx] = np.round(
+                    np.gradient(converted_video[:, cy, cx, ...] / average_intensities, period_in_frame_nb), 3).astype(np.float16)
+    else:
+        oscillations_video = np.gradient(converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
+    oscillations_video = np.sign(oscillations_video)
+    oscillations_video = oscillations_video.astype(np.int8)
 
-        """
-        self.dims = dims
-        self.pixels_data = np.empty((4, 0), dtype=np.uint32)
-        self.clusters_id = np.zeros(self.dims[1:], dtype=np.uint32)
-        # self.alive_clusters_in_flux = np.empty(0, dtype=np.uint32)#list()
-        self.cluster_total_number = 0
+    for t in np.arange(starting_time, dims[0]):
+        oscillations_image = np.zeros(dims[1:], np.uint8)
+        # Add in or ef if a pixel has at least 4 neighbor in or ef
+        neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :] * binary[t, :, :], connectivity=8, data_type=np.int8)
+        neigh_comp.is_inf(1, and_itself=False)
+        neigh_comp.is_sup(1, and_itself=False)
+        # Not verified if influx is really influx (resp efflux)
+        influx = neigh_comp.sup_neighbor_nb
+        efflux = neigh_comp.inf_neighbor_nb
 
-    def update_flux(self, t, contours: NDArray[np.uint8], current_flux: NDArray, period_tracking: NDArray[np.uint32], clusters_final_data: NDArray[np.float32]) -> Tuple[NDArray[np.uint32], NDArray[np.float32]]:
-        """
-
-        Update the flux information and track periods for cluster data.
-
-        This function updates the tracking of clusters based on their flux, handles lost pixels,
-        and archives data for clusters that are no longer active.
-
-        Args:
-            t: Time point at which the update is being performed.
-            contours (NDArray[np.uint8]): Contour data representing the boundaries of clusters.
-            current_flux (NDArray): Array containing the current flux information for each pixel.
-            period_tracking (NDArray[np.uint32]): Array used to track the periods of clusters.
-            clusters_final_data (NDArray[np.float32]): Array storing final data for archived clusters.
-
-        Returns:
-            Tuple containing updated period_tracking and clusters_final_data arrays.
-                    - period_tracking (NDArray[np.uint32]): Updated tracking of periods for clusters.
-                    - clusters_final_data (NDArray[np.float32]): Updated final data of archived clusters.
-
-        """
-        # Save the data from pixels that are not anymore in efflux
-        lost = np.greater(self.clusters_id > 0, current_flux > 0)
-        # Some pixels of that cluster faded, save their data
-        lost_data = np.nonzero(lost)
-        lost_data = np.array((period_tracking[lost],  # lost_coord[0], lost_coord[1],
-                      self.clusters_id[lost], lost_data[0], lost_data[1]), dtype=np.uint32)
-        # Add this to the array containing the data of each cluster that are still alive
-        self.pixels_data = np.append(self.pixels_data, lost_data, axis=1)
-        # Stop considering these pixels in period_tracking because they switched
-        period_tracking[lost] = 0
-        current_period_tracking = np.zeros(self.dims[1:], dtype=bool)
-        for curr_clust_id in np.unique(current_flux)[1:]:
-            # Get all pixels that were in the same flux previously
-            curr_clust = current_flux == curr_clust_id
-            already = self.clusters_id * curr_clust
-            new = np.greater(curr_clust, self.clusters_id > 0)
-
-            if not np.any(already):
-                # It is an entirely new cluster:
-                cluster_pixels = new
-                self.cluster_total_number += 1
-                cluster_name = self.cluster_total_number
-            else:
-                # Check whether parts of that cluster correspond to several clusters in clusters_id
-                cluster_names = np.unique(already)[1:]
-                # keep only one cluster name to gather clusters that just became connected
-                cluster_name = np.min(cluster_names)
-                # Put the same cluster name for new ones and every pixels that were
-                # a part of a cluster touching the current cluster
-                cluster_pixels = np.logical_or(np.isin(self.clusters_id, cluster_names), new)
-                # If they are more than one,
-                if len(cluster_names) > 1:
-                    # Update these cluster names in pixels_data
-                    self.pixels_data[1, np.isin(self.pixels_data[1, :], cluster_names)] = cluster_name
-            # Update clusters_id
-            self.clusters_id[cluster_pixels] = cluster_name
-            # Update period_tracking
-            current_period_tracking[curr_clust] = True
-
-        period_tracking[current_period_tracking] += 1
-        # Remove lost pixels from clusters_id
-        self.clusters_id[lost] = 0
-        # Find out which clusters are still alive or not
-        still_alive_clusters = np.isin(self.pixels_data[1, :], np.unique(self.clusters_id))
-        clusters_to_archive = np.unique(self.pixels_data[1, np.logical_not(still_alive_clusters)])
-        # store their data in clusters_final_data
-        clusters_data = np.zeros((len(clusters_to_archive), 6), dtype=np.float32)
-        for clust_i, cluster in enumerate(clusters_to_archive):
-            cluster_bool = self.pixels_data[1, :] == cluster
-            cluster_size = np.sum(cluster_bool)
-            cluster_img = np.zeros(self.dims[1:], dtype=np.uint8)
-            cluster_img[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 1
-            nb, im, stats, centro = cv2.connectedComponentsWithStats(cluster_img)
-            if np.any(cv2.dilate(cluster_img, kernel=cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0) * contours):
-                minimal_distance = 1
-            else:
-                if cluster_size > 200:
-                    eroded_cluster_img = cv2.erode(cluster_img, cross_33)
-                    cluster_img = np.nonzero(cluster_img - eroded_cluster_img)
-                    contours[cluster_img] = 2
-                else:
-                    contours[self.pixels_data[2, cluster_bool], self.pixels_data[3, cluster_bool]] = 2
-                # Get the minimal distance between the border of the cell(s) (noted 1 in contours)
-                # and the border of the cluster in the cell(s) (now noted 2 in contours)
-                minimal_distance = get_minimal_distance_between_2_shapes(contours)
-            data_to_save = np.array([[np.mean(self.pixels_data[0, cluster_bool]), t,
-                                   cluster_size, minimal_distance, centro[1, 0], centro[1, 1]]], dtype=np.float32)
-            clusters_data[clust_i,:] = data_to_save
-        # and remove their data from pixels_data
-        clusters_final_data = np.append(clusters_final_data, clusters_data, axis=0)
-        self.pixels_data = self.pixels_data[:, still_alive_clusters]
-
-        return period_tracking, clusters_final_data
+        # Only keep pixels having at least 4 positive (resp. negative) neighbors
+        influx[influx <= 4] = 0
+        efflux[efflux <= 4] = 0
+        influx[influx > 4] = 1
+        efflux[efflux > 4] = 1
+        if np.any(influx) or np.any(efflux):
+            influx, in_stats, in_centroids = cc(influx)
+            efflux, ef_stats, ef_centroids = cc(efflux)
+            # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
+            in_smalls = np.nonzero(in_stats[:, 4] < minimal_oscillating_cluster_size)[0]
+            if len(in_smalls) > 0:
+                influx[np.isin(influx, in_smalls)] = 0
+            ef_smalls = np.nonzero(ef_stats[:, 4] < minimal_oscillating_cluster_size)[0]
+            if len(ef_smalls) > 0:
+                efflux[np.isin(efflux, ef_smalls)] = 0
+            oscillations_image[influx > 0] = 1
+            oscillations_image[efflux > 0] = 2
+        oscillations_video[t, :, :] = oscillations_image
+    if save_coord_thickening_slimming:
+        np.save(
+            f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+            smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
+        np.save(
+            f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+            smallest_memory_array(np.nonzero(oscillations_video == 2), "uint"))
+    return oscillations_video
 
 
