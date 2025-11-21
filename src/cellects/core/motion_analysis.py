@@ -44,7 +44,7 @@ from psutil import virtual_memory
 import pandas as pd
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
-from cellects.image_analysis.oscillations_functions import ClusterFluxStudy
+from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
 from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
 from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
