@@ -115,7 +115,6 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
         binary[-1, ...] == 0].mean()
 
     for t in np.arange(starting_time, dims[0]):  # 20):#
-        print("Step1:", np.round((t - starting_time)/(dims[0] - starting_time), 2))
         if do_convert:
             greyscale = visu[t, ...].mean(axis=-1)
         else:
@@ -1676,6 +1675,8 @@ class EdgeIdentification:
         greyscale : ndarray of uint8
             Grayscale image.
         """
+        if self.vertices is None:
+            self._remove_padding()
         self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
         self.edge_table[:, :3] = self.edges_labels[:, :]
         self.edge_table[:, 3] = self.edge_lengths
