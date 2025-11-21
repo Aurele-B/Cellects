@@ -1386,7 +1386,7 @@ class EdgeIdentification:
                 new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None])) # np.arange(1, new_edge_pix_coord.shape[0] + 1)[:, None]))
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
-                logging.error(f"Other long edges cannot be identified: i={loop_i} of len={edge_i.sum()}")
+                logging.error(f"One long edge is not identified: i={loop_i} of length={edge_i.sum()}")
         self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
 
     def clear_areas_of_1_or_2_unidentified_pixels(self):
@@ -1716,7 +1716,7 @@ class EdgeIdentification:
                     full_coord = np.concatenate((full_coord, edge_coord))
                     self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
                     if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
-                        print(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking v={v}")
+                        logging.error(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking vertices {v}")
                         break
 
 
