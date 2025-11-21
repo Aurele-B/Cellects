@@ -1053,8 +1053,9 @@ def extract_first_pc(bgr_image: np.ndarray, standardize: bool=True) -> Tuple[np.
     return first_pc_image, explained_variance_ratio[0], first_pc_vector
 
 
-def convert_subtract_and_filter_video(video: NDArray, color_space_combination: dict, background: NDArray,
-                                      background2: NDArray, lose_accuracy_to_save_memory:bool, filter_spec: dict) -> Tuple[NDArray, NDArray]:
+def convert_subtract_and_filter_video(video: NDArray, color_space_combination: dict, background: NDArray=None,
+                                      background2: NDArray=None, lose_accuracy_to_save_memory:bool=False,
+                                      filter_spec: dict=None) -> Tuple[NDArray, NDArray]:
     """
     Convert a video to grayscale, subtract the background, and apply filters.
 
