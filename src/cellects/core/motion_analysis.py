@@ -435,7 +435,10 @@ class MotionAnalysis:
             the instance variables accordingly.
 
         """
-        self.start = np.max((self.start, 1))
+        if self.start is None:
+            self.start = 1
+        else:
+            self.start = np.max((self.start, 1))
         self.lost_frames = self.step
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
