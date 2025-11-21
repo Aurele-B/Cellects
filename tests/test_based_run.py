@@ -100,18 +100,6 @@ def run_all_arenas_for_testing(po):
             po.update_one_row_per_frame(i * po.vars['img_number'],
                                                       arena * po.vars['img_number'],
                                                       analysis_i.one_row_per_frame)
-            # Save cytosol_oscillations
-        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-            if po.vars['oscilacyto_analysis']:
-                oscil_i = pd.DataFrame(
-                    np.c_[np.repeat(arena,
-                                    analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y',
-                             'coord_x'])
-                if po.one_row_per_oscillating_cluster is None:
-                    po.one_row_per_oscillating_cluster = oscil_i
-                else:
-                    po.one_row_per_oscillating_cluster = pd.concat((po.one_row_per_oscillating_cluster, oscil_i))
     po.save_tables()
     cv2.imwrite(f"Analysis efficiency, last image.jpg", po.last_image.bgr)
     cv2.imwrite(f"Analysis efficiency, {np.ceil(po.vars['img_number'] / 10).astype(np.uint64)}th image.jpg",

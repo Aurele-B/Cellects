@@ -1999,19 +1999,7 @@ class RunAllThread(QtCore.QThread):
 
                             # Save descriptors in long_format
                             self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
-                            
-                            # Save cytosol_oscillations
-                        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-                            if self.parent().po.vars['oscilacyto_analysis']:
-                                oscil_i = pd.DataFrame(
-                                    np.c_[np.repeat(arena,
-                                              analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
-                                if self.parent().po.one_row_per_oscillating_cluster is None:
-                                    self.parent().po.one_row_per_oscillating_cluster = oscil_i
-                                else:
-                                    self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
-                                
+
                         # Save efficiency visualization
                         self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                                  analysis_i.efficiency_test_2)
@@ -2067,14 +2055,6 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
                                                                               results_i['arena'] * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
-                                if not pd.isna(results_i['first_move']):
-                                    # Save cytosol_oscillations
-                                    if self.parent().po.vars['oscilacyto_analysis']:
-                                        if self.parent().po.one_row_per_oscillating_cluster is None:
-                                            self.parent().po.one_row_per_oscillating_cluster = results_i['one_row_per_oscillating_cluster']
-                                        else:
-                                            self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
-                                        
 
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])
@@ -2137,15 +2117,9 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena
             # Save descriptors in long_format
             results_i['one_row_per_frame'] = analysis_i.one_row_per_frame
-            # Save cytosol_oscillations
 
         results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
         if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-            if vars['oscilacyto_analysis']:
-                results_i['clusters_final_data'] = analysis_i.clusters_final_data
-                results_i['one_row_per_oscillating_cluster'] = pd.DataFrame(
-                    np.c_[np.repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
             if vars['fractal_analysis']:
                 results_i['fractal_box_sizes'] = pd.DataFrame(analysis_i.fractal_boxes,
                                columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
