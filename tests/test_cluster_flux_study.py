@@ -3,7 +3,7 @@
 This script contains tests for ClusterFluxStudy class.
 """
 from tests._base import CellectsUnitTest, patches_video
-from cellects.image_analysis.cluster_flux_study import ClusterFluxStudy
+from cellects.image_analysis.oscillations_functions import ClusterFluxStudy
 from cellects.image_analysis.morphological_operations import image_borders
 import numpy as np
 import cv2
