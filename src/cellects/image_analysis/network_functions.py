@@ -1651,7 +1651,7 @@ class EdgeIdentification:
             growing = np.unique(self.vertices[growing_areas[0], growing_areas[1]])
             growing = growing[growing > 0]
             if len(growing) > 0:
-                growing = self.vertex_table[:, 2] == growing
+                growing = np.isin(self.vertex_table[:, 2], growing)
                 self.vertex_table[growing, 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.vertices > 0).astype(np.uint8))
