@@ -1747,7 +1747,10 @@ class MotionAnalysis:
                     self.background = None
                 else:
                     self.background = self.vars['background_list'][self.one_descriptor_per_arena['arena'] - 1]
-                self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy", None, self.background, true_frame_width)
+                if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
+                    self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy", None, self.background, true_frame_width)
+                else:
+                    self.visu = self.converted_video
                 if len(self.visu.shape) == 3:
                     self.visu = np.stack((self.visu, self.visu, self.visu), axis=3)
             self.converted_video = np.concatenate((self.visu, self.converted_video), axis=2)
