@@ -132,6 +132,8 @@ class MotionAnalysis:
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
+        if not 'background_list' in self.vars:
+            self.vars['background_list'] = []
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
         self.dims = self.converted_video.shape
