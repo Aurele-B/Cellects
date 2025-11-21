@@ -114,6 +114,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
             oscillations_image[influx > 0] = 1
             oscillations_image[efflux > 0] = 2
         oscillations_video[t, :, :] = oscillations_image
+    oscillations_video[:starting_time, :, :] = 0
     if save_coord_thickening_slimming:
         np.save(
             f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
