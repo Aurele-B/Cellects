@@ -484,7 +484,7 @@ def video2numpy(vid_name: str, conversion_dict=None, background=None, true_frame
         return video, converted_video
     
 
-def movie(video, keyboard=1, increase_contrast: bool=True):
+def movie(video, increase_contrast: bool=True):
     """
     Summary
     -------
@@ -537,7 +537,8 @@ def movie(video, keyboard=1, increase_contrast: bool=True):
                 image = bracket_to_uint8_image_contrast(image)
             final_img = cv2.resize(image, (500, 500))
             cv2.imshow('Motion analysis', final_img)
-            cv2.waitKey(keyboard)
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
     cv2.destroyAllWindows()
 
 
