@@ -538,7 +538,7 @@ class  NetworkDetection:
 
 
 def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, arena_label: int,
-                            starting_time: int=0, origin: NDArray[np.uint8]=None, pseudopods: NDArray=None):
+                            starting_time: int=0, origin: NDArray[np.uint8]=None, coord_pseudopods: NDArray=None):
     """
     Extracts dynamic graph data from video frames based on network dynamics.
 
