@@ -532,17 +532,36 @@ def remove_coordinates(arr1: NDArray, arr2: NDArray) -> NDArray:
 
     Examples
     --------
+    >>> arr1 = np.array([[1, 2], [3, 4]])
+    >>> arr2 = np.array([[3, 4]])
+    >>> remove_coordinates(arr1, arr2)
+    array([[1, 2],
+           [3, 4]])
+
+    >>> arr1 = np.array([[1, 2], [3, 4]])
+    >>> arr2 = np.array([[3, 2], [1, 4]])
+    >>> remove_coordinates(arr1, arr2)
+    array([[1, 2],
+           [3, 4]])
+
+    >>> arr1 = np.array([[1, 2], [3, 4]])
+    >>> arr2 = np.array([[3, 2], [1, 2]])
+    >>> remove_coordinates(arr1, arr2)
+    array([[3, 4]])
+
     >>> arr1 = np.arange(200).reshape(100, 2)
     >>> arr2 = np.array([[196, 197], [198, 199]])
-    >>> remove_coordinates(arr1, arr2)
-    array([[0, 0],
-           [3, 4]])
+    >>> new_arr1 = remove_coordinates(arr1, arr2)
+    >>> new_arr1.shape
+    (98, 2)
     """
-    if arr1.shape[1] != 2 or arr2.shape[1] != 2:
-        raise ValueError("Both arrays must have shape (n, 2)")
-    mask = ~np.isin(arr1, arr2).all(axis=1)
-    return arr1[mask]
-
-
-
+    if arr2.shape[0] == 0:
+        return arr1
+    else:
+        if arr1.shape[1] != 2 or arr2.shape[1] != 2:
+            raise ValueError("Both arrays must have shape (n, 2)")
+        c_to_keep = ~np.all(arr1 == arr2[0], axis=1)
+        for row in arr2[1:]:
+            c_to_keep *= ~np.all(arr1 == row, axis=1)
+        return arr1[c_to_keep]
 
