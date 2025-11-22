@@ -117,7 +117,7 @@ class DefaultDicts:
             'maximal_growth_factor': 0.05,
             'min_ram_free': 0.87,
             'expected_oscillation_period': 2,  # (min)
-            'minimal_oscillating_cluster_size': 20,  # (pixels)
+            'minimal_oscillating_cluster_size': 50,  # (pixels)
             'output_in_mm': True,
             'save_processed_videos': True,
             'several_blob_per_arena': False,
