@@ -172,7 +172,7 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             cv2.destroyAllWindows()
 
     network_coord = smallest_memory_array(np.nonzero(network_dynamics), "uint")
-
+    pseudopod_coord = None
     if detect_pseudopods:
         network_dynamics[pseudopod_vid > 0] = 2
         pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
@@ -180,7 +180,7 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             np.save(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", pseudopod_coord)
     if save_coord_network:
         np.save(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", network_coord)
-    return network_dynamics
+    return network_coord, pseudopod_coord
 
 
 class  NetworkDetection:
