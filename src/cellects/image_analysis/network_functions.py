@@ -574,7 +574,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
     dims = converted_video.shape[:3]
     _, _, _, origin_centroid = cv2.connectedComponentsWithStats(origin)
     origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.int64)
-    for t in np.arange(starting_time, dims[0]):  # 20):#
+    for t in np.arange(starting_time, dims[0]):
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
         computed_network[net_t[0], net_t[1]] = 1
@@ -595,8 +595,8 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
         if pad_origin_contours is not None:
             origin_contours = remove_padding([pad_origin_contours])[0]
         growing_areas = None
-        if pseudopods is not None:
-            growing_areas = pseudopods[1:, pseudopods[0, :] == t]
+        if coord_pseudopods is not None:
+            growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
         edge_id.make_vertex_table(origin_contours, growing_areas)
         edge_id.make_edge_table(converted_video[t, ...])
 
@@ -1383,7 +1383,7 @@ class EdgeIdentification:
                 start, end = unique_vertices[0], unique_vertices[0]
                 new_edge_lengths = edge_i.sum()
                 new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
-                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None])) # np.arange(1, new_edge_pix_coord.shape[0] + 1)[:, None]))
+                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
                 logging.error(f"One long edge is not identified: i={loop_i} of length={edge_i.sum()}")
@@ -1487,6 +1487,7 @@ class EdgeIdentification:
                     self.new_level_vertices = ending_vertices_coord[found_connexion, :].copy()
                 else:
                     self.new_level_vertices = np.vstack((self.new_level_vertices, ending_vertices_coord[found_connexion, :]))
+
         return cropped_skeleton, cropped_non_tip_vertices
 
     def _update_edge_data(self, start, end, new_edge_lengths: NDArray, new_edge_pix_coord: NDArray):
@@ -1590,7 +1591,6 @@ class EdgeIdentification:
                 self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
                 # Remove the removed edge from the edges_labels array
                 self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
-
                 vY, vX = np.nonzero(self.numbered_vertices == vertex2)
                 v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
                 self.non_tip_vertices = np.delete(self.non_tip_vertices, v_idx, axis=0)
