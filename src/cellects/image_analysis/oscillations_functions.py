@@ -85,13 +85,14 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
         oscillations_video = np.gradient(converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
     oscillations_video = np.sign(oscillations_video)
     oscillations_video = oscillations_video.astype(np.int8)
+    oscillations_video[binary == 0] = 0
 
     for t in np.arange(starting_time, dims[0]):
         oscillations_image = np.zeros(dims[1:], np.uint8)
         # Add in or ef if a pixel has at least 4 neighbor in or ef
-        neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :] * binary[t, :, :], connectivity=8, data_type=np.int8)
-        neigh_comp.is_inf(1, and_itself=False)
-        neigh_comp.is_sup(1, and_itself=False)
+        neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=np.int8)
+        neigh_comp.is_inf(0, and_itself=False)
+        neigh_comp.is_sup(0, and_itself=False)
         # Not verified if influx is really influx (resp efflux)
         influx = neigh_comp.sup_neighbor_nb
         efflux = neigh_comp.inf_neighbor_nb
