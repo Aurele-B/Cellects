@@ -1556,7 +1556,7 @@ class EdgeIdentification:
                     edge_j_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[edge_j], :2]
                     if np.array_equal(edge_i_coord, edge_j_coord):
                         edges_to_remove.append(edge_labs[edge_j])
-
+        edges_to_remove = np.unique(edges_to_remove)
         for edge in edges_to_remove:
             edge_bool = self.edges_labels[:, 0] != edge
             self.edges_labels = self.edges_labels[edge_bool, :]
