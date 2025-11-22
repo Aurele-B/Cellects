@@ -1603,6 +1603,8 @@ class EdgeIdentification:
                 vY, vX = np.nonzero(self.numbered_vertices == vertex2)
                 v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
                 self.non_tip_vertices = np.delete(self.non_tip_vertices, v_idx, axis=0)
+        # Sometines, clearing vertices connecting 2 edges can create edge duplicates, so:
+        self.clear_edge_duplicates()
 
     def _remove_padding(self):
         """
