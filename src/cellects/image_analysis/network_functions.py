@@ -129,7 +129,6 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         potential_network[t, ...] = NetDet_fast.complete_network
     for t in np.arange(starting_time, dims[0]):  # 20):#
-        print("Step2:", np.round((t - starting_time)/(dims[0] - starting_time), 2))
         if smooth_segmentation_over_time:
             if 2 <= t <= (dims[0] - 2):
                 computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
