@@ -1592,8 +1592,8 @@ class EdgeIdentification:
                 kept_edge = int(self.edge_lengths[edge_indices[1]] >= self.edge_lengths[edge_indices[0]])
                 # Rename the removed edge by the kept edge name in pix_coord:
                 self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_names[1 - kept_edge], 2] = edge_names[kept_edge]
-                # Add the removed edge length to the kept edge length
-                self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]]
+                # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
+                self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]] - 1
                 # Remove the corresponding edge length from the list
                 self.edge_lengths = self.edge_lengths[self.edges_labels[:, 0] != edge_names[1 - kept_edge]]
                 # Rename the vertex of the kept edge in edges_labels
