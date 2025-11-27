@@ -402,8 +402,8 @@ class UpdateImageThread(QtCore.QThread):
                         ellipse = cv2.morphologyEx(ellipse, cv2.MORPH_GRADIENT, cross_33)
                         mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
                     else:
-                        mask[(min_cy, max_cy), min_cx:max_cx] = 1
-                        mask[min_cy:max_cy, (min_cx, max_cx)] = 1
+                        mask[(min_cy, max_cy - 1), min_cx:max_cx] = 1
+                        mask[min_cy:max_cy, (min_cx, max_cx - 1)] = 1
                     mask = cv2.dilate(mask, kernel=cross_33, iterations=contour_width)
 
                     mask = np.nonzero(mask)
