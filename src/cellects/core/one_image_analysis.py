@@ -421,10 +421,19 @@ class OneImageAnalysis:
 
             # Get the most and the least covered images and the 2 best biomask and backmask scores
             # To try combinations of those
-            # self.converted_images_list.append(self.bgr.mean(axis=-1))
-            # self.saved_images_list.append(otsu_thresholding(self.converted_images_list[0]))
-            # self.saved_csc_nb += 1
-            if self.saved_csc_nb == 1:
+            if self.saved_csc_nb <= 1:
+                if self.saved_csc_nb == 0:
+                    csc_dict = {'bgr': np.array((1, 1, 1))}
+                    list_args = [self, False, False, csc_dict, several_blob_per_arena,
+                                 sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
+                    process_i = ProcessFirstImage(list_args)
+                    process_i.image = self.bgr.mean(axis=-1)
+                    process_i.binary_image = otsu_thresholding(process_i.image)
+                    process_i.csc_dict = csc_dict
+                    process_i.total_area = process_i.binary_image.sum()
+                    process_i.process_binary_image()
+                    process_i.unaltered_concomp_nb, shapes = cv2.connectedComponents(process_i.validated_shapes)
+                    self.save_combination_features(process_i)
                 self.combination_features = self.combination_features[:self.saved_csc_nb, :]
                 fit = np.array([True])
             else:
