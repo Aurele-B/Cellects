@@ -1342,7 +1342,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 - 'save_coord_network': Boolean indicating if the coordinate network should be saved.
 
             one_descriptor_per_arena (dict): Dictionary containing descriptors for each arena.
-                - 'first_move': Integer representing the first move in the sequence.
 
             dims (tuple): Tuple containing dimension information.
                 - [0]: Integer representing the number of time steps.
