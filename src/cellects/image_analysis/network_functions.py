@@ -1724,42 +1724,50 @@ class EdgeIdentification:
         self.edge_table[:, 3] = self.edge_lengths
         for idx, edge_lab in enumerate(self.edges_labels[:, 0]):
             edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :]
+            pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
             v_id = self.edges_labels[self.edges_labels[:, 0] == edge_lab, 1:][0]
-            v1_width, v2_width = self.distances[self.vertices == v_id[0]], self.distances[self.vertices == v_id[1]]
-            pix_widths = np.concatenate((v1_width, v2_width))
-            v1_int, v2_int = greyscale[self.vertices == v_id[0]], greyscale[self.vertices == v_id[1]]
-            pix_ints = np.concatenate((v1_int, v2_int))
-            if len(edge_coord) > 0:
-                pix_widths = np.append(pix_widths, self.distances[edge_coord[:, 0], edge_coord[:, 1]])
-                pix_ints = np.append(pix_widths, greyscale[edge_coord[:, 0], edge_coord[:, 1]])
-            self.edge_table[idx, 4] = pix_widths.mean()
+            v1_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[0], :2][0]#
+            v2_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[1], :2][0]#
+            v1_width, v2_width = self.distances[v1_coord[0], v1_coord[1]], self.distances[v2_coord[0], v2_coord[1]]
+            if not np.isnan(v1_width):
+                pix_widths = np.append(pix_widths, v1_width)
+            if not np.isnan(v2_width):
+                pix_widths = np.append(pix_widths, v2_width)
+            if pix_widths.size > 0:
+                self.edge_table[idx, 4] = pix_widths.mean()
+            else:
+                self.edge_table[idx, 4] = np.nan
+            pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
+            v1_int, v2_int = greyscale[v1_coord[0], v1_coord[1]], greyscale[v2_coord[0], v2_coord[1]]
+            pix_ints = np.append(pix_ints, (v1_int, v2_int))
             self.edge_table[idx, 5] = pix_ints.mean()
 
-        G = nx.from_edgelist(self.edges_labels[:, 1:])
-        e_BC = nx.edge_betweenness_centrality(G, seed=0)
-        self.BC_net = np.zeros_like(self.distances)
-        for v, k in e_BC.items(): # v=(81, 80)
-            v1_coord = self.vertex_table[self.vertex_table[:, 2] == v[0], :2]
-            v2_coord = self.vertex_table[self.vertex_table[:, 2] == v[1], :2]
-            full_coord = np.concatenate((v1_coord, v2_coord))
-            edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
-            edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
-            edge_lab = np.unique(np.concatenate((edge_lab1, edge_lab2)))
-            if len(edge_lab) == 1:
-                edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :2]
-                full_coord = np.concatenate((full_coord, edge_coord))
-                self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                self.edge_table[self.edge_table[:, 0] == edge_lab, 6] = k
-            elif len(edge_lab) > 1:
-                edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[0], :2]
-                for edge_i in range(len(edge_lab)): #  edge_i=1
-                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[edge_i], :2]
-                    self.edge_table[self.edge_table[:, 0] == edge_lab[edge_i], 6] = k
+        if compute_BC:
+            G = nx.from_edgelist(self.edges_labels[:, 1:])
+            e_BC = nx.edge_betweenness_centrality(G, seed=0)
+            self.BC_net = np.zeros_like(self.distances)
+            for v, k in e_BC.items(): # v=(81, 80)
+                v1_coord = self.vertex_table[self.vertex_table[:, 2] == v[0], :2]
+                v2_coord = self.vertex_table[self.vertex_table[:, 2] == v[1], :2]
+                full_coord = np.concatenate((v1_coord, v2_coord))
+                edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
+                edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
+                edge_lab = np.unique(np.concatenate((edge_lab1, edge_lab2)))
+                if len(edge_lab) == 1:
+                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :2]
                     full_coord = np.concatenate((full_coord, edge_coord))
                     self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                    if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
-                        logging.error(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking vertices {v}")
-                        break
+                    self.edge_table[self.edge_table[:, 0] == edge_lab, 6] = k
+                elif len(edge_lab) > 1:
+                    edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[0], :2]
+                    for edge_i in range(len(edge_lab)): #  edge_i=1
+                        edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[edge_i], :2]
+                        self.edge_table[self.edge_table[:, 0] == edge_lab[edge_i], 6] = k
+                        full_coord = np.concatenate((full_coord, edge_coord))
+                        self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
+                        if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
+                            logging.error(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking vertices {v}")
+                            break
 
 
 def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: NDArray, starting_vertices_coord: NDArray) -> Tuple[NDArray, NDArray[np.float64], NDArray[np.uint32]]:
