@@ -2055,7 +2055,10 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
 
     # show(dil_origin * with_central_contour)
     # Capture only the new contour and its neighborhood, get its skeleton and update the final skeleton
-    new_contour = cv2.morphologyEx(dil_origin * with_central_contour, cv2.MORPH_CLOSE, square_33)
+    new_contour = dil_origin * with_central_contour
+    dil_im_border = cv2.dilate(im_border, cross_33, iterations=1)
+    if not np.any(new_contour * dil_im_border):
+        new_contour = cv2.morphologyEx(new_contour, cv2.MORPH_CLOSE, square_33)
     new_contour = morphology.medial_axis(new_contour, rng=0).astype(np.uint8)
     new_skeleton = with_central_contour * (1 - dil_origin)
     new_skeleton += new_contour
