@@ -67,62 +67,64 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
     - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
     """
     dims = converted_video.shape
-    period_in_frame_nb = int(expected_oscillation_period / time_interval)
-    if period_in_frame_nb < 2:
-        period_in_frame_nb = 2
-    necessary_memory = dims[0] * dims[1] * dims[2] * 64 * 4 * 1.16415e-10
-    available_memory = (virtual_memory().available >> 30) - min_ram_free
+    oscillations_video = None
+    if dims[0] > 1:
+        period_in_frame_nb = int(expected_oscillation_period / time_interval)
+        if period_in_frame_nb < 2:
+            period_in_frame_nb = 2
+        necessary_memory = dims[0] * dims[1] * dims[2] * 64 * 4 * 1.16415e-10
+        available_memory = (virtual_memory().available >> 30) - min_ram_free
     if len(dims) == 4:
         converted_video = converted_video[:, :, :, 0]
-    average_intensities = np.mean(converted_video, (1, 2))
-    if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
-        oscillations_video = np.zeros(dims, dtype=np.float16)
-        for cy in np.arange(dims[1]):
-            for cx in np.arange(dims[2]):
-                oscillations_video[:, cy, cx] = np.round(
-                    np.gradient(converted_video[:, cy, cx, ...] / average_intensities, period_in_frame_nb), 3).astype(np.float16)
-    else:
-        oscillations_video = np.gradient(converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
-    oscillations_video = np.sign(oscillations_video)
-    oscillations_video = oscillations_video.astype(np.int8)
-    oscillations_video[binary == 0] = 0
+        average_intensities = np.mean(converted_video, (1, 2))
+        if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
+            oscillations_video = np.zeros(dims, dtype=np.float16)
+            for cy in np.arange(dims[1]):
+                for cx in np.arange(dims[2]):
+                    oscillations_video[:, cy, cx] = np.round(
+                        np.gradient(converted_video[:, cy, cx, ...] / average_intensities, period_in_frame_nb), 3).astype(np.float16)
+        else:
+            oscillations_video = np.gradient(converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
+        oscillations_video = np.sign(oscillations_video)
+        oscillations_video = oscillations_video.astype(np.int8)
+        oscillations_video[binary == 0] = 0
 
-    for t in np.arange(starting_time, dims[0]):
-        oscillations_image = np.zeros(dims[1:], np.uint8)
-        # Add in or ef if a pixel has at least 4 neighbor in or ef
-        neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=np.int8)
-        neigh_comp.is_inf(0, and_itself=False)
-        neigh_comp.is_sup(0, and_itself=False)
-        # Not verified if influx is really influx (resp efflux)
-        influx = neigh_comp.sup_neighbor_nb
-        efflux = neigh_comp.inf_neighbor_nb
+        for t in np.arange(starting_time, dims[0]):
+            oscillations_image = np.zeros(dims[1:], np.uint8)
+            # Add in or ef if a pixel has at least 4 neighbor in or ef
+            neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=np.int8)
+            neigh_comp.is_inf(0, and_itself=False)
+            neigh_comp.is_sup(0, and_itself=False)
+            # Not verified if influx is really influx (resp efflux)
+            influx = neigh_comp.sup_neighbor_nb
+            efflux = neigh_comp.inf_neighbor_nb
 
-        # Only keep pixels having at least 4 positive (resp. negative) neighbors
-        influx[influx <= 4] = 0
-        efflux[efflux <= 4] = 0
-        influx[influx > 4] = 1
-        efflux[efflux > 4] = 1
-        if np.any(influx) or np.any(efflux):
-            influx, in_stats, in_centroids = cc(influx)
-            efflux, ef_stats, ef_centroids = cc(efflux)
-            # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
-            in_smalls = np.nonzero(in_stats[:, 4] < minimal_oscillating_cluster_size)[0]
-            if len(in_smalls) > 0:
-                influx[np.isin(influx, in_smalls)] = 0
-            ef_smalls = np.nonzero(ef_stats[:, 4] < minimal_oscillating_cluster_size)[0]
-            if len(ef_smalls) > 0:
-                efflux[np.isin(efflux, ef_smalls)] = 0
-            oscillations_image[influx > 0] = 1
-            oscillations_image[efflux > 0] = 2
-        oscillations_video[t, :, :] = oscillations_image
-    oscillations_video[:starting_time, :, :] = 0
-    if save_coord_thickening_slimming:
-        np.save(
-            f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
-            smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
-        np.save(
-            f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
-            smallest_memory_array(np.nonzero(oscillations_video == 2), "uint"))
+            # Only keep pixels having at least 4 positive (resp. negative) neighbors
+            influx[influx <= 4] = 0
+            efflux[efflux <= 4] = 0
+            influx[influx > 4] = 1
+            efflux[efflux > 4] = 1
+            if np.any(influx) or np.any(efflux):
+                influx, in_stats, in_centroids = cc(influx)
+                efflux, ef_stats, ef_centroids = cc(efflux)
+                # Only keep clusters larger than 'minimal_oscillating_cluster_size' pixels (smaller are considered as noise
+                in_smalls = np.nonzero(in_stats[:, 4] < minimal_oscillating_cluster_size)[0]
+                if len(in_smalls) > 0:
+                    influx[np.isin(influx, in_smalls)] = 0
+                ef_smalls = np.nonzero(ef_stats[:, 4] < minimal_oscillating_cluster_size)[0]
+                if len(ef_smalls) > 0:
+                    efflux[np.isin(efflux, ef_smalls)] = 0
+                oscillations_image[influx > 0] = 1
+                oscillations_image[efflux > 0] = 2
+            oscillations_video[t, :, :] = oscillations_image
+        oscillations_video[:starting_time, :, :] = 0
+        if save_coord_thickening_slimming:
+            np.save(
+                f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+                smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
+            np.save(
+                f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+                smallest_memory_array(np.nonzero(oscillations_video == 2), "uint"))
     return oscillations_video
 
 
