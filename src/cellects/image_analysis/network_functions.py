@@ -1416,17 +1416,17 @@ class EdgeIdentification:
                 new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
                 new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+            elif len(unique_vertices) == 2:
+                # The edge loops around a group of connected vertices
+                start, end = unique_vertices[0], unique_vertices[1]
+                new_edge_lengths = edge_i.sum()
+                new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
+                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
+                self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+                # conn_v_nb, conn_v = cv2.connectedComponents((unique_vertices_im > 0).astype(np.uint8))
+                # if len(unique_vertices) == 2 and conn_v_nb == 2:
             else:
-                conn_v_nb, conn_v = cv2.connectedComponents((unique_vertices_im > 0).astype(np.uint8))
-                if len(unique_vertices) == 2 and conn_v_nb == 2:
-                    # The edge loops around a group of connected vertices
-                    start, end = unique_vertices[0], unique_vertices[1]
-                    new_edge_lengths = edge_i.sum()
-                    new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
-                    new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
-                    self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
-                else:
-                    logging.error(f"One long edge is not identified: i={loop_i} of length={edge_i.sum()}")
+                logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
         self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
 
     def clear_areas_of_1_or_2_unidentified_pixels(self):
