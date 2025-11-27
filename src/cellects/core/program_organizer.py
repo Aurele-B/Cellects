@@ -1564,7 +1564,7 @@ class ProgramOrganizer:
                 self.last_image.bgr = np.stack((self.last_image.bgr, self.last_image.bgr, self.last_image.bgr), axis=2).astype(np.uint8)
             self.vars["convert_for_motion"] = {"bgr": np.array((1, 1, 1), dtype=np.uint8), "logical": "None"}
 
-    def add_analysis_visualization_to_first_and_last_images(self, i: int, first_visualization: NDArray, last_visualization: NDArray):
+    def add_analysis_visualization_to_first_and_last_images(self, i: int, first_visualization: NDArray, last_visualization: NDArray=None):
         """
         Adds analysis visualizations to the first and last images of a sequence.
 
