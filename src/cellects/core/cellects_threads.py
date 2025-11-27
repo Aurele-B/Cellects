@@ -833,9 +833,9 @@ class GetExifDataThread(QtCore.QThread):
         self.parent().po.extract_exif()
 
 
-class FinalizeImageAnalysisThread(QtCore.QThread):
+class CompleteImageAnalysisThread(QtCore.QThread):
     """
-    Thread for analyzing the last image.
+    Thread for completing the last image analysis.
 
     Notes
     -----
@@ -844,14 +844,44 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
 
     def __init__(self, parent=None):
         """
-        Initialize the worker thread for ending up the last image analysis
+        Initialize the worker thread for completing the last image analysis
 
         Parameters
         ----------
         parent : QObject, optional
             The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
         """
-        super(FinalizeImageAnalysisThread, self).__init__(parent)
+        super(CompleteImageAnalysisThread, self).__init__(parent)
+        self.setParent(parent)
+
+    def run(self):
+        self.parent().po.get_background_to_subtract()
+        self.parent().po.get_origins_and_backgrounds_lists()
+        self.parent().po.data_to_save['coordinates'] = True
+        self.parent().po.data_to_save['exif'] = True
+        self.parent().po.save_data_to_run_cellects_quickly()
+        self.parent().po.complete_image_analysis()
+
+
+class PrepareVideoAnalysisThread(QtCore.QThread):
+    """
+    Thread for preparing video analysis.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the worker thread for ending up the last image analysis and preparing video analysis.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+        super(PrepareVideoAnalysisThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
@@ -1543,7 +1573,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
         self.parent().po.motion.max_distance = 9 * self.parent().po.vars['detection_range_factor']
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         self.parent().po.motion.detect_growth_transitions()
-        self.parent().po.motion.networks_detection(False)
+        self.parent().po.motion.networks_analysis(False)
         self.parent().po.motion.study_cytoscillations(False)
         self.parent().po.motion.fractal_descriptions()
         self.parent().po.motion.change_results_of_one_arena()
@@ -2053,7 +2083,7 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.update_one_row_per_arena(results_i['i'], results_i['one_row_per_arena'])
                                     # Save descriptors in long_format
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
-                                                                              results_i['arena'] * self.parent().po.vars['img_number'],
+                                                                              (results_i['i'] + 1) * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
 
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
