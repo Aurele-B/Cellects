@@ -1484,7 +1484,7 @@ class MotionAnalysis:
         If 'output_in_mm' is True, then values in mm can be obtained.
 
         """
-        if not pd.isna(self.one_descriptor_per_arena["first_move"]) and self.vars['fractal_analysis']:
+        if self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
 
             if self.vars['network_analysis']:
