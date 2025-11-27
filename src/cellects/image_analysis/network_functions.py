@@ -1268,6 +1268,19 @@ class EdgeIdentification:
         # Remove duplicates in vertices_branching_tips
         self.vertices_branching_tips = np.unique(self.vertices_branching_tips[:, :2], axis=0)
 
+    def check_vertex_existence(self):
+        if self.tips_coord.shape[0] == 0 and self.non_tip_vertices.shape[0] == 0:
+            loop_coord = np.nonzero(self.pad_skeleton)
+            start = 1
+            end = 1
+            vertex_coord = loop_coord[0][0], loop_coord[1][0]
+            self.numbered_vertices[vertex_coord[0], vertex_coord[1]] = 1
+            self.non_tip_vertices = np.array(vertex_coord)[None, :]
+            new_edge_lengths = len(loop_coord[0]) - 1
+            new_edge_pix_coord = np.transpose(np.vstack(((loop_coord[0][1:], loop_coord[1][1:], np.zeros(new_edge_lengths, dtype=np.int32)))))
+            self.edge_pix_coord = np.zeros((0, 3), dtype=np.int32)
+            self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+
     def label_edges_connected_with_vertex_clusters(self):
         """
         Identify edges connected to touching vertices by processing vertex clusters.
