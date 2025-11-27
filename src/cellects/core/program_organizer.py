@@ -1543,8 +1543,8 @@ class ProgramOrganizer:
         If `arena_shape` is 'circle', the visualization will be masked by an ellipse.
 
         """
-        cr = ((self.top[i], self.bot[i] + 1),
-              (self.left[i], self.right[i] + 1))
+        cr = ((self.top[i], self.bot[i]),
+              (self.left[i], self.right[i]))
         if self.vars['arena_shape'] == 'circle':
             ellipse = Ellipse((cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])).create()
             ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
