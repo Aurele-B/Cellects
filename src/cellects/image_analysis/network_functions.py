@@ -1079,6 +1079,7 @@ class EdgeIdentification:
         self.get_tipped_edges()
         self.remove_tipped_edge_smaller_than_branch_width()
         self.label_tipped_edges_and_their_vertices()
+        self.check_vertex_existence()
         self.label_edges_connected_with_vertex_clusters()
         self.label_edges_connecting_vertex_clusters()
         self.label_edges_from_known_vertices_iteratively()
