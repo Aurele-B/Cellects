@@ -278,7 +278,6 @@ class MotionAnalysis:
                 self.vars['drift_already_corrected'] = False
         if self.vars['origin_state'] == "constant":
             self.start = 1
-            self.origin_idx = np.nonzero(self.origin)
             if self.vars['lighter_background']:
                 # Initialize the covering_intensity matrix as a reference for pixel fading
                 self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
@@ -306,7 +305,7 @@ class MotionAnalysis:
                 elif self.vars['appearance_detection_method'] == 'largest':
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == np.argmax(stats[1:, 4])] = 1
-            self.origin_idx = np.nonzero(self.origin)
+        self.origin_idx = np.nonzero(self.origin)
         self.substantial_growth = np.min((1.2 * self.origin.sum(), self.origin.sum() + 250))
 
     def get_covering_duration(self, step: int):
