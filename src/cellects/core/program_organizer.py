@@ -273,6 +273,9 @@ class ProgramOrganizer:
         lengths = vectorized_len(self.data_list)
         if len(lengths) > 1 and np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
             logging.error(f"File names present strong variations and cannot be correctly sorted.")
+        wrong_images = np.nonzero(np.char.startswith(self.data_list, "Analysis efficiency, ", ))[0]
+        for w_im in wrong_images[::-1]:
+            self.data_list.pop(w_im)
         self.data_list = natsort.natsorted(self.data_list)
         if self.all['im_or_vid'] == 1:
             self.vars['video_list'] = self.data_list
