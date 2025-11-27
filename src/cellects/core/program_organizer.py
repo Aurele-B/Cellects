@@ -239,8 +239,6 @@ class ProgramOrganizer:
         """
         os.chdir(Path(self.all['global_pathway']))
         logging.info(f"Dir: {self.all['global_pathway']}")
-        self.data_list = insensitive_glob(
-            self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
