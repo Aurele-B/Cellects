@@ -28,6 +28,7 @@ Notes:
 - Image processing functions expect binary (boolean/int8) input matrices
 """
 from copy import deepcopy
+import pandas as pd
 from cellects.utils.decorators import njit
 import numpy as np
 from numpy.typing import NDArray
@@ -660,3 +661,72 @@ def find_duplicates_coord(array1: NDArray[int]) -> NDArray[bool]:
     counts = np.bincount(inverse_indices)
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
+
+def detect_first_move(size_dynamics: NDArray, growth_threshold)-> int:
+    """
+    Detects the first move in a time series where the value exceeds the initial value by a given threshold.
+
+    Parameters
+    ----------
+    size_dynamics : numpy.ndarray
+        The time series data of dynamics.
+    growth_threshold: int or float
+        The threshold value for detecting the first move.
+
+    Returns
+    -------
+    int or pandas.NA
+        The index of the first move where the condition is met.
+        Returns `pandas.NA` if no such index exists.
+
+    Examples
+    --------
+    >>> size_dynamics = np.array([10, 12, 15, 18])
+    >>> growth_threshold = 5
+    >>> detect_first_move(size_dynamics, growth_threshold)
+    2
+    """
+    first_move = pd.NA
+    thresh_reached = np.nonzero(size_dynamics >= (size_dynamics[0] + growth_threshold))[0]
+    if len(thresh_reached) > 0:
+        first_move = thresh_reached[0]
+    return first_move
+
+@njit()
+def get_newly_explored_area(binary_vid: NDArray[np.uint8]) -> NDArray:
+    """
+    Get newly explored area in a binary video.
+
+    Calculate the number of new pixels that have become active (==1) from
+    the previous frame in a binary video representation.
+
+    Parameters
+    ----------
+    binary_vid : np.ndarray
+        The current frame of the binary video.
+
+    Returns
+    -------
+    np.ndarray
+        An array containing the number of new active pixels for each row.
+
+    Notes
+    -----
+    This function uses Numba's @njit decorator for performance.
+
+    Examples
+    --------
+    >>> binary_vid=np.zeros((4, 5, 5), dtype=np.uint8)
+    >>> binary_vid[:2, 3, 3] = 1
+    >>> binary_vid[1, 4, 3] = 1
+    >>> binary_vid[2, 3, 4] = 1
+    >>> binary_vid[3, 2, 3] = 1
+    >>> get_newly_explored_area(binary_vid)
+    array([0, 1, 1, 1])
+
+    >>> binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]
+    >>> get_newly_explored_area(binary_vid)
+    array([0])
+    """
+    return ((binary_vid - binary_vid[0, ...]) == 1).reshape(binary_vid.shape[0], - 1).sum(1)
+binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]

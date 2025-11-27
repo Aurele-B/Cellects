@@ -25,9 +25,13 @@ If you want to allow the software to compute another variable:
 """
 import cv2
 import numpy as np
+from typing import Tuple
+from numpy.typing import NDArray
 from copy import deepcopy
-from cellects.utils.utilitarian import translate_dict
-from cellects.utils.formulas import get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis
+import pandas as pd
+from cellects.utils.utilitarian import translate_dict, smallest_memory_array
+from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
+                                     get_newly_explored_area)
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
@@ -51,9 +55,237 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
                'major_axis_len': True, 'minor_axis_len': True, 'axes_orientation': True
                                }
 
+length_descriptors = ['perimeter', 'major_axis_len', 'minor_axis_len']
+area_descriptors = ['area', 'area_total', 'total_hole_area', 'newly_explored_area', 'final_area']
+
 descriptors = deepcopy(from_shape_descriptors_class)
 descriptors.update({'minkowski_dimension': False})
 
+def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,
+                                     descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
+                                     do_fading: bool, save_coord_specimen:bool):
+    dims = binary_vid.shape
+    all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(descriptors_dict)
+    one_row_per_frame = pd.DataFrame(np.zeros((dims[0], 2 + len(all_descriptors))),
+                                          columns=['arena', 'time'] + all_descriptors)
+    one_row_per_frame['arena'] = [arena_label] * dims[0]
+    one_row_per_frame['time'] = timings
+    for t in np.arange(dims[0]):
+        SD = ShapeDescriptors(binary_vid[t, :, :], to_compute_from_sd)
+        for descriptor in to_compute_from_sd:
+            one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
+    if save_coord_specimen:
+        np.save(f"coord_specimen{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+                smallest_memory_array(np.nonzero(binary_vid), "uint"))
+    # Adjust descriptors scale if output_in_mm is specified
+    if do_fading:
+        one_row_per_frame['newly_explored_area'] = get_newly_explored_area(binary_vid)
+    if output_in_mm:
+        one_row_per_frame = scale_descriptors(one_row_per_frame, pixel_size,
+                                                   length_measures, area_measures)
+    return one_row_per_frame
+
+
+def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,
+                                      descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
+                                      do_fading: bool, min_colony_size: int, save_coord_specimen: bool):
+    dims = binary_vid.shape
+    all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(
+        descriptors_dict)
+    # Objective: create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies
+    # against time
+    max_colonies = 0
+    for t in np.arange(dims[0]):
+        nb, shapes = cv2.connectedComponents(binary_vid[t, :, :])
+        max_colonies = np.max((max_colonies, nb))
+
+    time_descriptor_colony = np.zeros((dims[0], len(to_compute_from_sd) * max_colonies * dims[0]),
+                                      dtype=np.float32)  # Adjust max_colonies
+    colony_number = 0
+    colony_id_matrix = np.zeros(dims[1:], dtype=np.uint64)
+    coord_colonies = []
+    centroids = []
+
+    # pat_tracker = PercentAndTimeTracker(dims[0], compute_with_elements_number=True)
+    for t in np.arange(dims[0]):
+        # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
+        # keeps the previous colony name.
+        # shapes, stats, centers = cc(binary_vid[t, :, :])
+        nb, shapes, stats, centers = cv2.connectedComponentsWithStats(binary_vid[t, :, :])
+        true_colonies = np.nonzero(stats[:, 4] >= min_colony_size)[1:]
+        # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
+
+        # current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
+        # logging.info(f"Arena n°{arena_label}, Colony descriptors computation: {current_percentage}%{eta}")
+
+        updated_colony_names = np.zeros(1, dtype=np.uint32)
+        for colon_i in true_colonies:  # 120)):# #92
+            current_colony_img = shapes == colon_i
+            if current_colony_img.sum() >= 4:
+                current_colony_img = current_colony_img.astype(np.uint8)
+
+                # I/ Find out which names the current colony had at t-1
+                colony_previous_names = np.unique(current_colony_img * colony_id_matrix)
+                colony_previous_names = colony_previous_names[colony_previous_names != 0]
+                # II/ Find out if the current colony name had already been analyzed at t
+                # If there no match with the saved colony_id_matrix, assign colony ID
+                if t == 0 or len(colony_previous_names) == 0:
+                    # logging.info("New colony")
+                    colony_number += 1
+                    colony_names = [colony_number]
+                # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_name(s)
+                else:
+                    colony_names = colony_previous_names.tolist()
+                # Handle colony division if necessary
+                if np.any(np.isin(updated_colony_names, colony_names)):
+                    colony_number += 1
+                    colony_names = [colony_number]
+
+                # Update colony ID matrix for the current frame
+                coords = np.nonzero(current_colony_img)
+                colony_id_matrix[coords[0], coords[1]] = colony_names[0]
+
+                # Add coordinates to coord_colonies
+                time_column = np.full(coords[0].shape, t, dtype=np.uint32)
+                colony_column = np.full(coords[0].shape, colony_names[0], dtype=np.uint32)
+                coord_colonies.append(np.column_stack((time_column, colony_column, coords[0], coords[1])))
+
+                # Calculate centroid and add to centroids list
+                centroid_x, centroid_y = centers[colon_i, :]
+                centroids.append((t, colony_names[0], centroid_y, centroid_x))
+
+                # Compute shape descriptors
+                SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
+                # descriptors = list(SD.descriptors.values())
+                descriptors = SD.descriptors
+                # Adjust descriptors if output_in_mm is specified
+                if output_in_mm:
+                    descriptors = scale_descriptors(descriptors, pixel_size, length_measures, area_measures)
+                # Store descriptors in time_descriptor_colony
+                descriptor_index = (colony_names[0] - 1) * len(to_compute_from_sd)
+                time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = list(
+                    descriptors.values())
+
+                updated_colony_names = np.append(updated_colony_names, colony_names)
+
+        # Reset colony_id_matrix for the next frame
+        colony_id_matrix *= binary_vid[t, :, :]
+    if len(centroids) > 0:
+        centroids = np.array(centroids, dtype=np.float32)
+    else:
+        centroids = np.zeros((0, 4), dtype=np.float32)
+    time_descriptor_colony = time_descriptor_colony[:, :(colony_number * len(to_compute_from_sd))]
+    if len(coord_colonies) > 0:
+        coord_colonies = np.vstack(coord_colonies)
+        if save_coord_specimen:
+            coord_colonies = pd.DataFrame(coord_colonies, columns=["time", "colony", "y", "x"])
+            coord_colonies.to_csv(
+                f"coord_colonies{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+                sep=';', index=False, lineterminator='\n')
+
+    centroids = pd.DataFrame(centroids, columns=["time", "colony", "y", "x"])
+    centroids.to_csv(
+        f"colony_centroids{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+        sep=';', index=False, lineterminator='\n')
+
+    # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
+    one_row_per_frame = pd.DataFrame({'arena': arena_label, 'time': timings,
+                                      'area_total': binary_vid.sum((1, 2)).astype(np.float64)})
+
+    if do_fading:
+        one_row_per_frame['newly_explored_area'] = get_newly_explored_area(binary_vid)
+    if output_in_mm:
+        one_row_per_frame = scale_descriptors(one_row_per_frame, pixel_size)
+
+    column_names = np.char.add(np.repeat(to_compute_from_sd, colony_number),
+                               np.tile((np.arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
+    time_descriptor_colony = pd.DataFrame(time_descriptor_colony, columns=column_names)
+    one_row_per_frame = pd.concat([one_row_per_frame, time_descriptor_colony], axis=1)
+
+    return one_row_per_frame
+
+def initialize_descriptor_computation(descriptors_dict: dict) -> Tuple[list, list, list, list]:
+    """
+
+    Initialize descriptor computation based on available and requested descriptors.
+
+    Parameters
+    ----------
+    descriptors_dict : dict
+        A dictionary where keys are descriptor names and values are booleans indicating whether
+        to compute the corresponding descriptor.
+
+    Returns
+    -------
+    tuple
+        A tuple containing four lists:
+        - all_descriptors: List of all requested descriptor names.
+        - to_compute_from_sd: Array of descriptor names that need to be computed from the shape descriptors class.
+        - length_measures: Array of descriptor names that are length measures and need to be computed.
+        - area_measures: Array of descriptor names that are area measures and need to be computed.
+
+    Examples
+    --------
+    >>> descriptors_dict = {'perimeter': True, 'area': False}
+    >>> all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(descriptors_dict)
+    >>> print(all_descriptors, to_compute_from_sd, length_measures, area_measures)
+    ['length'] ['length'] ['length'] []
+
+    """
+    available_descriptors_in_sd = list(from_shape_descriptors_class.keys())
+    all_descriptors = []
+    to_compute_from_sd = []
+    for name, do_compute in descriptors_dict.items():
+        if do_compute:
+            all_descriptors.append(name)
+            if np.isin(name, available_descriptors_in_sd):
+                to_compute_from_sd.append(name)
+    to_compute_from_sd = np.array(to_compute_from_sd)
+    length_measures = to_compute_from_sd[np.isin(to_compute_from_sd, length_descriptors)]
+    area_measures = to_compute_from_sd[np.isin(to_compute_from_sd, area_descriptors)]
+
+    return all_descriptors, to_compute_from_sd, length_measures, area_measures
+
+def scale_descriptors(descriptors_dict, pixel_size: float, length_measures: NDArray[str]=None, area_measures: NDArray[str]=None):
+    """
+    Scale the spatial descriptors in a dictionary based on pixel size.
+
+    Parameters
+    ----------
+    descriptors_dict : dict
+        Dictionary containing spatial descriptors.
+    pixel_size : float
+        Pixel size used for scaling.
+    length_measures : numpy.ndarray, optional
+        Array of descriptors that represent lengths. If not provided,
+        they will be initialized.
+    area_measures : numpy.ndarray, optional
+        Array of descriptors that represent areas. If not provided,
+        they will be initialized.
+
+    Returns
+    -------
+    dict
+        Dictionary with scaled spatial descriptors.
+
+    Examples
+    --------
+    >>> from numpy import array as ndarray
+    >>> descriptors_dict = {'length': ndarray([1, 2]), 'area': ndarray([3, 4])}
+    >>> pixel_size = 0.5
+    >>> scaled_dict = scale_descriptors(descriptors_dict, pixel_size)
+    >>> print(scaled_dict)
+    {'length': array([0.5, 1.]), 'area': array([1.58421369, 2.])}
+    """
+    if length_measures is None or area_measures is None:
+        to_compute_from_sd = np.array(list(descriptors_dict.keys()))
+        length_measures = to_compute_from_sd[np.isin(to_compute_from_sd, length_descriptors)]
+        area_measures = to_compute_from_sd[np.isin(to_compute_from_sd, area_descriptors)]
+    for descr in length_measures:
+        descriptors_dict[descr] *= pixel_size
+    for descr in area_measures:
+        descriptors_dict[descr] *= np.sqrt(pixel_size)
+    return descriptors_dict
 
 
 class ShapeDescriptors:
