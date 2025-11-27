@@ -95,14 +95,13 @@ class RequiredOutput(WindowType):
 
         # I/C/ Create widgets
         self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
-        self.save_coord_specimen_label = FixedText('All pixels covered by the specimen(s)', tip="",
+        self.save_coord_specimen_label = FixedText('Pixels covered by the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
-
         self.save_coord_contour = Checkbox(self.parent().po.vars['save_coord_contour'])
         self.save_coord_contour_label = FixedText('Contours of the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
-        self.save_coord_thickening_slimming_label = FixedText('Thickening and slimming areas in the specimen(s)', tip="",
+        self.save_coord_thickening_slimming_label = FixedText('Oscillating areas in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
         self.save_coord_network_label = FixedText('Tubular network in the specimen(s)', tip="",
