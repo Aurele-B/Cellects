@@ -463,53 +463,64 @@ class MotionAnalysis:
         if self.vars['color_number'] == 2:
             luminosity_segmentation, l_threshold_over_time = self.lum_value_segmentation(self.converted_video, do_threshold_segmentation=self.vars['do_threshold_segmentation'] or compute_all_possibilities)
             self.converted_video = self.smooth_pixel_slopes(self.converted_video)
+            gradient_segmentation = None
             if self.vars['do_slope_segmentation'] or compute_all_possibilities:
                 gradient_segmentation = self.lum_slope_segmentation(self.converted_video)
-                gradient_segmentation[-self.lost_frames:, ...] = np.repeat(gradient_segmentation[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
+                if gradient_segmentation is not None:
+                    gradient_segmentation[-self.lost_frames:, ...] = np.repeat(gradient_segmentation[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
             if self.vars['convert_for_motion']['logical'] != 'None':
                 if self.vars['do_threshold_segmentation'] or compute_all_possibilities:
                     luminosity_segmentation2, l_threshold_over_time2 = self.lum_value_segmentation(self.converted_video2, do_threshold_segmentation=True)
-                    if self.vars['convert_for_motion']['logical'] == 'Or':
-                        luminosity_segmentation = np.logical_or(luminosity_segmentation, luminosity_segmentation2)
-                    elif self.vars['convert_for_motion']['logical'] == 'And':
-                        luminosity_segmentation = np.logical_and(luminosity_segmentation, luminosity_segmentation2)
-                    elif self.vars['convert_for_motion']['logical'] == 'Xor':
-                        luminosity_segmentation = np.logical_xor(luminosity_segmentation, luminosity_segmentation2)
+                    if luminosity_segmentation is None:
+                        luminosity_segmentation = luminosity_segmentation2
+                    if luminosity_segmentation is not None:
+                        if self.vars['convert_for_motion']['logical'] == 'Or':
+                            luminosity_segmentation = np.logical_or(luminosity_segmentation, luminosity_segmentation2)
+                        elif self.vars['convert_for_motion']['logical'] == 'And':
+                            luminosity_segmentation = np.logical_and(luminosity_segmentation, luminosity_segmentation2)
+                        elif self.vars['convert_for_motion']['logical'] == 'Xor':
+                            luminosity_segmentation = np.logical_xor(luminosity_segmentation, luminosity_segmentation2)
                 self.converted_video2 = self.smooth_pixel_slopes(self.converted_video2)
                 if self.vars['do_slope_segmentation'] or compute_all_possibilities:
                     gradient_segmentation2 = self.lum_slope_segmentation(self.converted_video2)
-                    gradient_segmentation2[-self.lost_frames:, ...] = np.repeat(gradient_segmentation2[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
-                    if self.vars['convert_for_motion']['logical'] == 'Or':
-                        gradient_segmentation = np.logical_or(gradient_segmentation, gradient_segmentation2)
-                    elif self.vars['convert_for_motion']['logical'] == 'And':
-                        gradient_segmentation = np.logical_and(gradient_segmentation, gradient_segmentation2)
-                    elif self.vars['convert_for_motion']['logical'] == 'Xor':
-                        gradient_segmentation = np.logical_xor(gradient_segmentation, gradient_segmentation2)
+                    if gradient_segmentation2 is not None:
+                        gradient_segmentation2[-self.lost_frames:, ...] = np.repeat(gradient_segmentation2[-self.lost_frames, :, :][np.newaxis, :, :], self.lost_frames, axis=0)
+                    if gradient_segmentation is None:
+                        gradient_segmentation = gradient_segmentation2
+                    if gradient_segmentation is not None:
+                        if self.vars['convert_for_motion']['logical'] == 'Or':
+                            gradient_segmentation = np.logical_or(gradient_segmentation, gradient_segmentation2)
+                        elif self.vars['convert_for_motion']['logical'] == 'And':
+                            gradient_segmentation = np.logical_and(gradient_segmentation, gradient_segmentation2)
+                        elif self.vars['convert_for_motion']['logical'] == 'Xor':
+                            gradient_segmentation = np.logical_xor(gradient_segmentation, gradient_segmentation2)
 
             if compute_all_possibilities:
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Compute all options to detect cell motion and growth. Maximal growth per frame: {self.vars['maximal_growth_factor']}")
-                self.luminosity_segmentation = np.nonzero(luminosity_segmentation)
-                self.gradient_segmentation = np.nonzero(gradient_segmentation)
-                self.logical_and = np.nonzero(np.logical_and(luminosity_segmentation, gradient_segmentation))
-                self.logical_or = np.nonzero(np.logical_or(luminosity_segmentation, gradient_segmentation))
+                if luminosity_segmentation is not None:
+                    self.luminosity_segmentation = np.nonzero(luminosity_segmentation)
+                if gradient_segmentation is not None:
+                    self.gradient_segmentation = np.nonzero(gradient_segmentation)
+                if luminosity_segmentation is not None and gradient_segmentation is not None:
+                    self.logical_and = np.nonzero(np.logical_and(luminosity_segmentation, gradient_segmentation))
+                    self.logical_or = np.nonzero(np.logical_or(luminosity_segmentation, gradient_segmentation))
             elif not self.vars['frame_by_frame_segmentation']:
                 if self.vars['do_threshold_segmentation'] and not self.vars['do_slope_segmentation']:
                     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity threshold segmentation algorithm")
                     self.segmented = luminosity_segmentation
-                if self.vars['do_slope_segmentation']:# and not self.vars['do_threshold_segmentation']: NEW
+                if self.vars['do_slope_segmentation']:
                     logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect with luminosity slope segmentation algorithm")
-                    # gradient_segmentation[:(self.lost_frames + 1), ...] = luminosity_segmentation[:(self.lost_frames + 1), ...]
-                    if not self.vars['do_threshold_segmentation']:# NEW
-                        self.segmented = gradient_segmentation
+                    self.segmented = gradient_segmentation
                 if np.logical_and(self.vars['do_threshold_segmentation'], self.vars['do_slope_segmentation']):
                     if self.vars['true_if_use_light_AND_slope_else_OR']:
                         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold AND slope segmentation algorithms")
-                        self.segmented = np.logical_and(luminosity_segmentation, gradient_segmentation)
+                        if luminosity_segmentation is not None and gradient_segmentation is not None:
+                            self.segmented = np.logical_and(luminosity_segmentation, gradient_segmentation)
                     else:
                         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detection resuts from threshold OR slope segmentation algorithms")
-                        self.segmented = np.logical_or(luminosity_segmentation, gradient_segmentation)
+                        if luminosity_segmentation is not None and gradient_segmentation is not None:
+                            self.segmented = np.logical_or(luminosity_segmentation, gradient_segmentation)
                 self.segmented = self.segmented.astype(np.uint8)
-        # self.converted_video2 = None
 
 
     def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray[np.uint8]=None):
