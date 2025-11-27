@@ -595,7 +595,8 @@ class OneImageAnalysis:
                 processed image object
                     validated_shapes (array-like): The validated shapes of the processed image.
                     image (array-like): The image data.
-                    csc_dict (dict): Color space conversion dictionary"""
+                    csc_dict (dict): Color space conversion dictionary
+        """
         if process_i.validated_shapes.any():
             self.saved_images_list.append(process_i.validated_shapes)
             self.converted_images_list.append(np.round(process_i.image).astype(np.uint8))

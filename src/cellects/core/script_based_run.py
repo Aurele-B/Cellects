@@ -89,7 +89,7 @@ def run_one_video_analysis(po):
     MA = MotionAnalysis(l)
     MA.get_descriptors_from_binary()
     MA.detect_growth_transitions()
-    MA.networks_detection(show_seg)
+    MA.networks_analysis(show_seg)
     MA.study_cytoscillations(show_seg)
     return MA
 
