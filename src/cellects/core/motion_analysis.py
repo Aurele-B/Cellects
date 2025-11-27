@@ -1481,7 +1481,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
 
             if self.vars['network_analysis'] or self.vars['save_coord_network']:
-                del self.network_dynamics
+                del self.coord_network
 
     def save_efficiency_tests(self):
         """
