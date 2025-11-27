@@ -1877,6 +1877,64 @@ def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: NDAr
         edges_coords = np.zeros((0, 3), dtype=np.uint32)
     return ending_vertices_coord, edge_lengths, edges_coords
 
+def ad_pad(arr: NDArray) -> NDArray:
+    """
+    Pad the input array with a single layer of zeros around its edges.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The input array to pad. Must be at least 2-dimensional.
+
+    Returns
+    -------
+    padded_arr : ndarray
+        The output array with a single 0-padded layer around its edges.
+
+    Notes
+    -----
+    This function uses NumPy's `pad` with mode='constant' to add a single layer
+    of zeros around the edges of the input array.
+
+    Examples
+    --------
+    >>> arr = np.array([[1, 2], [3, 4]])
+    >>> ad_pad(arr)
+    array([[0, 0, 0, 0],
+       [0, 1, 2, 0],
+       [0, 3, 4, 0],
+       [0, 0, 0, 0]])
+    """
+    return np.pad(arr, [(1, ), (1, )], mode='constant')
+
+def un_pad(arr: NDArray) -> NDArray:
+    """
+    Unpads a 2D NumPy array by removing the first and last row/column.
+
+    Extended Description
+    --------------------
+    Reduces the size of a 2D array by removing the outermost rows and columns.
+    Useful for trimming boundaries added during padding operations.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input 2D array to be unpadded. Shape (n,m) is expected.
+
+    Returns
+    -------
+    ndarray
+        Unpadded 2D array with shape (n-2, m-2).
+
+    Examples
+    --------
+    >>> arr = np.array([[0, 0, 0],
+    >>>                 [0, 4, 0],
+    >>>                 [0, 0, 0]])
+    >>> un_pad(arr)
+    array([[4]])
+    """
+    return arr[1:-1, 1:-1]
 
 def add_padding(array_list: list) -> list:
     """
@@ -1904,7 +1962,7 @@ def add_padding(array_list: list) -> list:
     """
     new_array_list = []
     for arr in array_list:
-        new_array_list.append(np.pad(arr, [(1, ), (1, )], mode='constant'))
+        new_array_list.append(ad_pad(arr))
     return new_array_list
 
 
@@ -1931,7 +1989,7 @@ def remove_padding(array_list: list) -> list:
     """
     new_array_list = []
     for arr in array_list:
-        new_array_list.append(arr[1:-1, 1:-1])
+        new_array_list.append(un_pad(arr))
     return new_array_list
 
 
