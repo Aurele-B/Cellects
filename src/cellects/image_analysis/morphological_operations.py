@@ -1497,7 +1497,7 @@ def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
     if np.all(binary_image):
         contours = 1 - image_borders(binary_image.shape)
     elif np.any(binary_image):
-        eroded_binary = cv2.erode(binary_image, cross_33)
+        eroded_binary = cv2.erode(binary_image, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
         contours = binary_image - eroded_binary
     else:
         contours = binary_image
