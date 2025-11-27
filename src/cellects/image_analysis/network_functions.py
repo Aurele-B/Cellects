@@ -1871,8 +1871,10 @@ def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: NDAr
         else:
             edge_lengths[i] = np.nan
         i += 1
-
-    edges_coords = np.array(all_path_pixels, dtype=np.uint32)
+    if len(all_path_pixels) > 0:
+        edges_coords = np.array(all_path_pixels, dtype=np.uint32)
+    else:
+        edges_coords = np.zeros((0, 3), dtype=np.uint32)
     return ending_vertices_coord, edge_lengths, edges_coords
 
 
