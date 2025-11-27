@@ -26,8 +26,7 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
@@ -128,47 +127,52 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             NetDet_fast.merge_network_with_pseudopods()
             pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         potential_network[t, ...] = NetDet_fast.complete_network
-    for t in np.arange(starting_time, dims[0]):  # 20):#
-        if smooth_segmentation_over_time:
-            if 2 <= t <= (dims[0] - 2):
-                computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
-                computed_network[computed_network == 1] = 0
-                computed_network[computed_network > 1] = 1
-            else:
-                if t < 2:
-                    computed_network = potential_network[:2, :, :].sum(axis=0)
+    if dims[0] == 1:
+        network_dynamics = potential_network
+    else:
+        for t in np.arange(starting_time, dims[0]):  # 20):#
+            if smooth_segmentation_over_time:
+                if 2 <= t <= (dims[0] - 2):
+                    computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
+                    computed_network[computed_network == 1] = 0
+                    computed_network[computed_network > 1] = 1
                 else:
-                    computed_network = potential_network[-2:, :, :].sum(axis=0)
-                computed_network[computed_network > 0] = 1
-        else:
-            computed_network = computed_network[t, :, :].copy()
+                    if t < 2:
+                        computed_network = potential_network[:2, :, :].sum(axis=0)
+                    else:
+                        computed_network = potential_network[-2:, :, :].sum(axis=0)
+                    computed_network[computed_network > 0] = 1
+            else:
+                computed_network = computed_network[t, :, :].copy()
 
-        if origin is not None:
-            computed_network = computed_network * (1 - origin)
-            origin_contours = get_contours(origin)
-            complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-        complete_network = keep_one_connected_component(complete_network)
+            if origin is not None:
+                computed_network = computed_network * (1 - origin)
+                origin_contours = get_contours(origin)
+                complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+            else:
+                complete_network = computed_network
+            complete_network = keep_one_connected_component(complete_network)
 
-        if detect_pseudopods:
-            # Make sure that removing pseudopods do not cut the network:
-            without_pseudopods = complete_network * (1 - pseudopod_vid[t])
-            only_connected_network = keep_one_connected_component(without_pseudopods)
-            # # Option A: To add these cutting regions to the pseudopods do:
-            pseudopods = (1 - only_connected_network) * complete_network
-            pseudopod_vid[t] = pseudopods
-        network_dynamics[t] = complete_network
+            if detect_pseudopods:
+                # Make sure that removing pseudopods do not cut the network:
+                without_pseudopods = complete_network * (1 - pseudopod_vid[t])
+                only_connected_network = keep_one_connected_component(without_pseudopods)
+                # # Option A: To add these cutting regions to the pseudopods do:
+                pseudopods = (1 - only_connected_network) * complete_network
+                pseudopod_vid[t] = pseudopods
+            network_dynamics[t] = complete_network
 
-        imtoshow = visu[t, ...]
-        eroded_binary = cv2.erode(network_dynamics[t, ...], cross_33)
-        net_coord = np.nonzero(network_dynamics[t, ...] - eroded_binary)
-        imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
-        if show_seg:
-            cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
-            cv2.waitKey(1)
-        else:
-            visu[t, ...] = imtoshow
-        if show_seg:
-            cv2.destroyAllWindows()
+            imtoshow = visu[t, ...]
+            eroded_binary = cv2.erode(network_dynamics[t, ...], cross_33)
+            net_coord = np.nonzero(network_dynamics[t, ...] - eroded_binary)
+            imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+            if show_seg:
+                cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
+                cv2.waitKey(1)
+            else:
+                visu[t, ...] = imtoshow
+            if show_seg:
+                cv2.destroyAllWindows()
 
     network_coord = smallest_memory_array(np.nonzero(network_dynamics), "uint")
     pseudopod_coord = None
@@ -570,43 +574,55 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
     - Edge table contains betweenness centrality calculated during skeleton processing.
     Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
     """
+    # converted_video = self.converted_video; coord_network=self.coord_network; arena_label=1; starting_time=0; origin=self.origin
     dims = converted_video.shape[:3]
-    _, _, _, origin_centroid = cv2.connectedComponentsWithStats(origin)
-    origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.int64)
-    for t in np.arange(starting_time, dims[0]):
+    if origin is not None:
+        _, _, _, origin_centroid = cv2.connectedComponentsWithStats(origin)
+        origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.int64)
+        pad_origin_centroid = origin_centroid + 1
+        origin_contours = get_contours(origin)
+        pad_origin = add_padding([origin])[0]
+    else:
+        pad_origin_centroid = None
+        pad_origin = None
+        origin_contours = None
+    vertex_table = None
+    tic = timer()
+    for t in np.arange(starting_time, dims[0]): # t=306    Y, X = 729, 554
+        print(f"{t-1} took: {timer() - tic} seconds")
+        tic = timer()
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
         computed_network[net_t[0], net_t[1]] = 1
         if origin is not None:
             computed_network = computed_network * (1 - origin)
-            origin_contours = get_contours(origin)
             computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
         else:
-            origin_contours = None
             computed_network = computed_network.astype(np.uint8)
-        computed_network = keep_one_connected_component(computed_network)
-        pad_network, pad_origin = add_padding([computed_network, origin])
-        pad_origin_centroid = origin_centroid + 1
-        pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
-                                                                                   pad_origin_centroid)
-        edge_id = EdgeIdentification(pad_skeleton, pad_distances)
-        edge_id.run_edge_identification()
-        if pad_origin_contours is not None:
-            origin_contours = remove_padding([pad_origin_contours])[0]
-        growing_areas = None
-        if coord_pseudopods is not None:
-            growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
-        edge_id.make_vertex_table(origin_contours, growing_areas)
-        edge_id.make_edge_table(converted_video[t, ...])
+        if computed_network.any():
+            computed_network = keep_one_connected_component(computed_network)
+            pad_network = add_padding([computed_network])[0]
+            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
+                                                                                           pad_origin_centroid)
 
-        edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-        edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-        if t == starting_time:
-            vertex_table = edge_id.vertex_table.copy()
-            edge_table = edge_id.edge_table.copy()
-        else:
-            vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
-            edge_table = np.vstack((edge_table, edge_id.edge_table))
+            edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
+            edge_id.run_edge_identification()
+            if pad_origin_contours is not None:
+                origin_contours = remove_padding([pad_origin_contours])[0]
+            growing_areas = None
+            if coord_pseudopods is not None:
+                growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
+            edge_id.make_vertex_table(origin_contours, growing_areas)
+            edge_id.make_edge_table(converted_video[t, ...])
+
+            edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+            edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+            if vertex_table is None:
+                vertex_table = edge_id.vertex_table.copy()
+                edge_table = edge_id.edge_table.copy()
+            else:
+                vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
+                edge_table = np.vstack((edge_table, edge_id.edge_table))
 
     vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                        "vertex_connected"])
