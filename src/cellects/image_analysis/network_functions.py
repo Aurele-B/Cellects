@@ -1144,73 +1144,48 @@ class EdgeIdentification:
         branches_to_remove = np.zeros(self.non_tip_vertices.shape[0], dtype=bool)
         new_edge_pix_coord = []
         remaining_tipped_edges_nb = 0
-        if self.edge_pix_coord.shape[0] == 0:
-            for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
-                Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
-                if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
-                    tipped_edges_to_remove[i] = True
-                    # Remove the tip
-                    self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
-                    # check whether the connecting vertex remains a vertex of not
-                    pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
-                                              mode='constant')
-                    sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
-                    # If the vertex does not connect at least 3 edges anymore, remove its vertex label
-                    if sub_vertices[3, 3] == 0:
+        for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
+            Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
+            edge_bool = self.edge_pix_coord[:, 2] == i + 1
+            eY, eX = self.edge_pix_coord[edge_bool, 0], self.edge_pix_coord[edge_bool, 1]
+            if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
+                tipped_edges_to_remove[i] = True
+                # Remove the edge
+                self.pad_skeleton[eY, eX] = 0
+                # Remove the tip
+                self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
+
+                # Remove the coordinates corresponding to that edge
+                self.edge_pix_coord = np.delete(self.edge_pix_coord, edge_bool, 0)
+
+                # check whether the connecting vertex remains a vertex of not
+                pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
+                                          mode='constant')
+                sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
+                # If the vertex does not connect at least 3 edges anymore, remove its vertex label
+                if sub_vertices[3, 3] == 0:
+                    vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
+                    branches_to_remove[vertex_to_remove] = True
+                # If that pixel became a tip connected to another vertex remove it from the skeleton
+                if sub_tips[3, 3]:
+                    if sub_vertices[2:5, 2:5].sum() > 1:
+                        self.pad_skeleton[Y, X] = 0
+                        self.edge_pix_coord = np.delete(self.edge_pix_coord, np.all(self.edge_pix_coord[:, :2] == [Y, X], axis=1), 0)
                         vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
                         branches_to_remove[vertex_to_remove] = True
-                    # If that pixel became a tip connected to another vertex remove it from the skeleton
-                    if sub_tips[3, 3]:
-                        if sub_vertices[2:5, 2:5].sum() > 1:
-                            self.pad_skeleton[Y, X] = 0
-                            vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                            branches_to_remove[vertex_to_remove] = True
-                else:
-                    remaining_tipped_edges_nb += 1
-        else:
-            for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
-                Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
-                edge_bool = self.edge_pix_coord[:, 2] == i + 1
-                eY, eX = self.edge_pix_coord[edge_bool, 0], self.edge_pix_coord[edge_bool, 1]
-                if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
-                    tipped_edges_to_remove[i] = True
-                    # Remove the edge
-                    self.pad_skeleton[eY, eX] = 0
-                    # Remove the tip
-                    self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
-
-                    # Remove the coordinates corresponding to that edge
-                    self.edge_pix_coord = np.delete(self.edge_pix_coord, edge_bool, 0)
-
-                    # check whether the connecting vertex remains a vertex of not
-                    pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
-                                              mode='constant')
-                    sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
-                    # If the vertex does not connect at least 3 edges anymore, remove its vertex label
-                    if sub_vertices[3, 3] == 0:
-                        vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                        branches_to_remove[vertex_to_remove] = True
-                    # If that pixel became a tip connected to another vertex remove it from the skeleton
-                    if sub_tips[3, 3]:
-                        if sub_vertices[2:5, 2:5].sum() > 1:
-                            self.pad_skeleton[Y, X] = 0
-                            self.edge_pix_coord = np.delete(self.edge_pix_coord, np.all(self.edge_pix_coord[:, :2] == [Y, X], axis=1), 0)
-                            vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                            branches_to_remove[vertex_to_remove] = True
-                else:
-                    remaining_tipped_edges_nb += 1
-                    new_edge_pix_coord.append(np.stack((eY, eX, np.repeat(remaining_tipped_edges_nb, len(eY))), axis=1))
+            else:
+                remaining_tipped_edges_nb += 1
+                new_edge_pix_coord.append(np.stack((eY, eX, np.repeat(remaining_tipped_edges_nb, len(eY))), axis=1))
 
         # Check that excedent connected components are 1 pixel size, if so:
         # It means that they were neighbors to removed tips and not necessary for the skeleton
         nb, sh = cv2.connectedComponents(self.pad_skeleton)
         if nb > 2:
-            for i in range(2, nb):
-                excedent = sh == i
-                if (excedent).sum() == 1:
-                    self.pad_skeleton[excedent] = 0
-                # else:
-                #     print("More than one pixel area excedent components exists")
+            logging.error("Removing small tipped edges split the skeleton")
+            # for i in range(2, nb):
+            #     excedent = sh == i
+            #     if (excedent).sum() == 1:
+            #         self.pad_skeleton[excedent] = 0
 
         # Remove in distances the pixels removed in skeleton:
         self.pad_distances *= self.pad_skeleton
@@ -1219,21 +1194,21 @@ class EdgeIdentification:
         if len(new_edge_pix_coord) > 0:
             self.edge_pix_coord = np.vstack(new_edge_pix_coord)
 
-        # Remove tips connected to very small edges
-        self.tips_coord = np.delete(self.tips_coord, tipped_edges_to_remove, 0)
-        # Add corresponding edge names
-        self.tips_coord = np.hstack((self.tips_coord, np.arange(1, len(self.tips_coord) + 1)[:, None]))
+        # # Remove tips connected to very small edges
+        # self.tips_coord = np.delete(self.tips_coord, tipped_edges_to_remove, 0)
+        # # Add corresponding edge names
+        # self.tips_coord = np.hstack((self.tips_coord, np.arange(1, len(self.tips_coord) + 1)[:, None]))
 
-        # Within all branching (non-tip) vertices, keep those that did not lose their vertex status because of the edge removal
-        self.non_tip_vertices = np.delete(self.non_tip_vertices, branches_to_remove, 0)
+        # # Within all branching (non-tip) vertices, keep those that did not lose their vertex status because of the edge removal
+        # self.non_tip_vertices = np.delete(self.non_tip_vertices, branches_to_remove, 0)
 
-        # Get the branching vertices who kept their typped edge
-        self.vertices_branching_tips = np.delete(self.vertices_branching_tips, tipped_edges_to_remove, 0)
+        # # Get the branching vertices who kept their typped edge
+        # self.vertices_branching_tips = np.delete(self.vertices_branching_tips, tipped_edges_to_remove, 0)
 
         # Within all branching (non-tip) vertices, keep those that do not connect a tipped edge.
-        v_branching_tips_in_branching_v = find_common_coord(self.non_tip_vertices, self.vertices_branching_tips[:, :2])
-        self.remaining_vertices = np.delete(self.non_tip_vertices, v_branching_tips_in_branching_v, 0)
-        ordered_v_coord = np.vstack((self.tips_coord[:, :2], self.vertices_branching_tips[:, :2], self.remaining_vertices))
+        # v_branching_tips_in_branching_v = find_common_coord(self.non_tip_vertices, self.vertices_branching_tips[:, :2])
+        # self.remaining_vertices = np.delete(self.non_tip_vertices, v_branching_tips_in_branching_v, 0)
+        # ordered_v_coord = np.vstack((self.tips_coord[:, :2], self.vertices_branching_tips[:, :2], self.remaining_vertices))
 
         # tips = self.tips_coord
         # branching_any_edge = self.non_tip_vertices
