@@ -1456,21 +1456,17 @@ class MotionAnalysis:
             Args:
                 show_seg (bool): If True, display the segmentation results.
         """
-        if pd.isna(self.one_descriptor_per_arena["first_move"]):
-            if not self.vars['lose_accuracy_to_save_memory']:
-                self.check_converted_video_type()
-        else:
-            if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
-                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting oscillation analysis.")
-                oscillations_video = detect_oscillations_dynamics(self.converted_video, self.binary,
-                                                                  self.one_descriptor_per_arena['arena'], self.start,
-                                                                  self.vars['expected_oscillation_period'],
-                                                                  self.time_interval,
-                                                                  self.vars['minimal_oscillating_cluster_size'],
-                                                                  self.vars['min_ram_free'],
-                                                                  self.vars['lose_accuracy_to_save_memory'],
-                                                                  self.vars['save_coord_thickening_slimming'])
-                del oscillations_video
+        if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting oscillation analysis.")
+            oscillations_video = detect_oscillations_dynamics(self.converted_video, self.binary,
+                                                              self.one_descriptor_per_arena['arena'], self.start,
+                                                              self.vars['expected_oscillation_period'],
+                                                              self.time_interval,
+                                                              self.vars['minimal_oscillating_cluster_size'],
+                                                              self.vars['min_ram_free'],
+                                                              self.vars['lose_accuracy_to_save_memory'],
+                                                              self.vars['save_coord_thickening_slimming'])
+            del oscillations_video
 
 
     def fractal_descriptions(self):
