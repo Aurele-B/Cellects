@@ -1309,28 +1309,29 @@ class EdgeIdentification:
         # Find every vertex_to_vertex_connexion
         v_cluster_nb, self.v_cluster_lab, self.v_cluster_stats, vgc = cv2.connectedComponentsWithStats(
             (self.numbered_vertices > 0).astype(np.uint8), connectivity=8)
-        max_v_nb = np.max(self.v_cluster_stats[1:, 4])
-        cropped_skeleton_list = []
-        starting_vertices_list = []
-        for v_nb in range(2, max_v_nb + 1):
-            labels = np.nonzero(self.v_cluster_stats[:, 4] == v_nb)[0]
-            coord_list = []
-            for lab in labels:  # lab=labels[0]
-                coord_list.append(np.nonzero(self.v_cluster_lab == lab))
-            for iter in range(v_nb):
-                for lab_ in range(labels.shape[0]): # lab=labels[0]
-                    cs = cropped_skeleton.copy()
-                    sv = []
-                    v_c = coord_list[lab_]
-                    # Save the current coordinate in the starting vertices array of this iteration
-                    sv.append([v_c[0][iter], v_c[1][iter]])
-                    # Remove one vertex coordinate to keep it from cs
-                    v_y, v_x = np.delete(v_c[0], iter), np.delete(v_c[1], iter)
-                    cs[v_y, v_x] = 0
-                    cropped_skeleton_list.append(cs)
-                    starting_vertices_list.append(np.array(sv))
-        for cropped_skeleton, starting_vertices in zip(cropped_skeleton_list, starting_vertices_list):
-            _, _ = self._identify_edges_connecting_a_vertex_list(cropped_skeleton, cropped_non_tip_vertices, starting_vertices)
+        if v_cluster_nb > 0:
+            max_v_nb = np.max(self.v_cluster_stats[1:, 4])
+            cropped_skeleton_list = []
+            starting_vertices_list = []
+            for v_nb in range(2, max_v_nb + 1):
+                labels = np.nonzero(self.v_cluster_stats[:, 4] == v_nb)[0]
+                coord_list = []
+                for lab in labels:  # lab=labels[0]
+                    coord_list.append(np.nonzero(self.v_cluster_lab == lab))
+                for iter in range(v_nb):
+                    for lab_ in range(labels.shape[0]): # lab=labels[0]
+                        cs = cropped_skeleton.copy()
+                        sv = []
+                        v_c = coord_list[lab_]
+                        # Save the current coordinate in the starting vertices array of this iteration
+                        sv.append([v_c[0][iter], v_c[1][iter]])
+                        # Remove one vertex coordinate to keep it from cs
+                        v_y, v_x = np.delete(v_c[0], iter), np.delete(v_c[1], iter)
+                        cs[v_y, v_x] = 0
+                        cropped_skeleton_list.append(cs)
+                        starting_vertices_list.append(np.array(sv))
+            for cropped_skeleton, starting_vertices in zip(cropped_skeleton_list, starting_vertices_list):
+                _, _ = self._identify_edges_connecting_a_vertex_list(cropped_skeleton, cropped_non_tip_vertices, starting_vertices)
 
     def label_edges_connecting_vertex_clusters(self):
         """
