@@ -933,6 +933,49 @@ def show(img, interactive: bool=True, cmap=None, show: bool=True):
 
     return fig, ax
 
+def zoom_on_nonzero(binary_image:NDArray, padding: int = 2, return_coord: bool=True):
+    """
+    Crops a binary image around non-zero elements with optional padding and returns either coordinates or cropped region.
+
+    Parameters
+    ----------
+    binary_image : NDArray
+        2D NumPy array containing binary values (0/1)
+    padding : int, default=2
+        Amount of zero-padding to add around the minimum bounding box
+    return_coord : bool, default=True
+        If True, return slice coordinates instead of cropped image
+
+    Returns
+    -------
+        If `return_coord` is True: [y_min, y_max, x_min, x_max] as 4-element Tuple.
+        If False: 2D binary array representing the cropped region defined by non-zero elements plus padding.
+
+    Examples
+    --------
+    >>> img = np.zeros((10,10))
+    >>> img[3:7,4:6] = 1
+    >>> result = zoom_on_nonzero(img)
+    >>> print(result)
+    [1 8 2 7]
+    >>> cropped = zoom_on_nonzero(img, return_coord=False)
+    >>> print(cropped.shape)
+    (6, 5)
+
+    Notes
+    -----
+    - Returns empty slice coordinates if input contains no non-zero elements.
+    - Coordinate indices are 0-based and compatible with NumPy array slicing syntax.
+    """
+    y, x = np.nonzero(binary_image)
+    cy_min = np.max((0, y.min() - padding))
+    cy_max = np.min((binary_image.shape[0], y.max() + padding + 1))
+    cx_min = np.max((0, x.min() - padding))
+    cx_max = np.min((binary_image.shape[1], x.max() + padding + 1))
+    if return_coord:
+        return cy_min, cy_max, cx_min, cx_max
+    else:
+        return binary_image[cy_min:cy_max, cx_min:cx_max]
 
 def save_fig(img: NDArray, full_path, cmap=None):
     """
