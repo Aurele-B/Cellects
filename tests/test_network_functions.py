@@ -877,8 +877,18 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,1,0,0,1,0],
             [1,1,0,0,0,0,1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [1, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_false_tip_misc_2(self):
         skeleton = np.array([

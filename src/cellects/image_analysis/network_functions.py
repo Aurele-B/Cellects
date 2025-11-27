@@ -908,24 +908,47 @@ def get_inner_vertices(pad_skeleton: NDArray[np.uint8], potential_tips: NDArray[
             potential_tips[wrong_tip] = 0
         else:
             #  otherwise do:
-            # Find the most 4-connected one, and check whether
-            # its 4 connected neighbors have 1 or more other connexions
-            # 1. # Find the most 4-connected one:
-            vertices_group_4 = cnv4.equal_neighbor_nb * vertices_group
-            max_con = vertices_group_4.max()
-            most_con = np.nonzero(vertices_group_4 == max_con)
-            # 2. Check its 4-connected neighbors and remove those having only 1 other 8-connexion
-            skel_copy = pad_skeleton.copy()
-            skel_copy[most_con] = 0
-            skel_copy[most_con[0] - 1, most_con[1]] = 0
-            skel_copy[most_con[0] + 1, most_con[1]] = 0
-            skel_copy[most_con[0], most_con[1] - 1] = 0
-            skel_copy[most_con[0], most_con[1] + 1] = 0
-            sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
-            sub_cnv8.is_equal(1, and_itself=False)
-            # Remove those having
-            v_to_remove = ((vertices_group_4 > 0) * sub_cnv8.equal_neighbor_nb) == 1
-            pad_vertices[v_to_remove] = 0
+            # Find the most 8-connected one, if its 4-connected neighbors have no more 8-connexions than 4-connexions + 1, they can be removed
+            # Otherwise,
+            # Find the most 4-connected one, and remove its 4 connected neighbors having only 1 or other 8-connexion
+
+            c = zoom_on_nonzero(vertices_group)
+            # 1. Find the most 8-connected one:
+            sub_v_grp = vertices_group[c[0]:c[1], c[2]:c[3]]
+            c8 = cnv8.equal_neighbor_nb[c[0]:c[1], c[2]:c[3]]
+            vertices_group_8 = c8 * sub_v_grp
+            max_8_con = vertices_group_8.max()
+            most_8_con = np.nonzero(vertices_group_8 == max_8_con)
+            # c4[(most_8_con[0][0] - 1):(most_8_con[0][0] + 2), (most_8_con[1][0] - 1):(most_8_con[1][0] + 2)]
+            if len(most_8_con[0]) == 1:
+                skel_copy = pad_skeleton[c[0]:c[1], c[2]:c[3]].copy()
+                skel_copy[most_8_con] = 0
+                sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
+                sub_cnv8.is_equal(1, and_itself=False)
+                sub_cnv4 = CompareNeighborsWithValue(skel_copy, 4)
+                sub_cnv4.is_equal(1, and_itself=False)
+                v_to_remove = sub_v_grp * (sub_cnv8.equal_neighbor_nb <= sub_cnv4.equal_neighbor_nb + 1)
+            else:
+                c4 = cnv4.equal_neighbor_nb[c[0]:c[1], c[2]:c[3]]
+                # 1. # Find the most 4-connected one:
+                vertices_group_4 = c4 * sub_v_grp
+                max_con = vertices_group_4.max()
+                most_con = np.nonzero(vertices_group_4 == max_con)
+                if len(most_con[0]) < sub_v_grp.sum():
+                    # 2. Check its 4-connected neighbors and remove those having only 1 other 8-connexion
+                    skel_copy = pad_skeleton[c[0]:c[1], c[2]:c[3]].copy()
+                    skel_copy[most_con] = 0
+                    skel_copy[most_con[0] - 1, most_con[1]] = 0
+                    skel_copy[most_con[0] + 1, most_con[1]] = 0
+                    skel_copy[most_con[0], most_con[1] - 1] = 0
+                    skel_copy[most_con[0], most_con[1] + 1] = 0
+                    sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
+                    sub_cnv8.is_equal(1, and_itself=False)
+                    # There are:
+                    v_to_remove = ((vertices_group_4 > 0) * sub_cnv8.equal_neighbor_nb) == 1
+                else:
+                    v_to_remove = np.zeros(sub_v_grp.shape, dtype=bool)
+            pad_vertices[c[0]:c[1], c[2]:c[3]][v_to_remove] = 0
 
     # Other vertices to remove:
     # - Those that are forming a cross with 0 at the center while the skeleton contains 1
