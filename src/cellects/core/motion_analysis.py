@@ -439,7 +439,7 @@ class MotionAnalysis:
             self.start = 1
         else:
             self.start = np.max((self.start, 1))
-        self.lost_frames = self.step
+        self.lost_frames = np.min((self.step, self.dims[0] // 4))
         # I/ Image by image segmentation algorithms
         # If images contain a drift correction (zeros at borders of the image,
         # Replace these 0 by normal background values before segmenting
