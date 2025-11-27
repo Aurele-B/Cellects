@@ -1703,7 +1703,7 @@ class EdgeIdentification:
                 self.vertex_table[self.vertex_table[:, 2] == v_lab, 5] = 1
 
 
-    def make_edge_table(self, greyscale: NDArray[np.uint8]):
+    def make_edge_table(self, greyscale: NDArray[np.uint8], compute_BC: bool=False):
         """
         Generate edge table with length and average intensity information.
 
