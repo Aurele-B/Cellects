@@ -1450,9 +1450,9 @@ class EdgeIdentification:
             else:
                 self.pad_skeleton[y1:y2, x1:x2][self.unidentified_shapes[y1:y2, x1:x2] == pix_i] = 0
         if len(cutting_removal) > 0:
-            logging.error(f"These pixels break the skeleton when removed: {cutting_removal}")
+            logging.error(f"t={self.t}, These pixels break the skeleton when removed: {cutting_removal}")
         if (self.identified > 0).sum() != self.pad_skeleton.sum():
-            logging.error(f"Proportion of identified pixels in the skeleton: {(self.identified > 0).sum() / self.pad_skeleton.sum()}")
+            logging.error(f"t={self.t}, Proportion of identified pixels in the skeleton: {(self.identified > 0).sum() / self.pad_skeleton.sum()}")
         self.pad_distances *= self.pad_skeleton
         del self.identified
         del self.unidentified_stats
