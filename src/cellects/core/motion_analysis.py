@@ -160,7 +160,7 @@ class MotionAnalysis:
                 step = self.dims[0] // 20
             else:
                 step = 1
-            if self.start >= (self.dims[0] - step - 1):
+            if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
                 self.start = None
             else:
                 self.get_covering_duration(step)
