@@ -690,9 +690,6 @@ class MotionAnalysis:
                 luminosity_segmentation, l_threshold_over_time = segment_with_lum_value(converted_video[:(self.lost_frames + 1), ...],
                                                                basic_bckgrnd_values, l_threshold,
                                                                self.vars['lighter_background'])
-        else:
-            luminosity_segmentation = None
-
         return luminosity_segmentation, l_threshold_over_time
 
     def smooth_pixel_slopes(self, converted_video: NDArray) -> NDArray:
@@ -787,7 +784,6 @@ class MotionAnalysis:
         >>> result = lum_slope_segmentation(converted_video)
         """
         shape_motion_failed : bool = False
-        gradient_segmentation = np.zeros(self.dims, np.uint8)
         # 2) Contrast increase
         oridx = np.nonzero(self.origin)
         notoridx = np.nonzero(1 - self.origin)
@@ -830,7 +826,9 @@ class MotionAnalysis:
         if len(covering_slopes) == 0:
             shape_motion_failed = True
 
+        gradient_segmentation = None
         if not shape_motion_failed:
+            gradient_segmentation = np.zeros(self.dims, np.uint8)
             ####
             # ease_slope_segmentation = 0.8
             value_segmentation_thresholds = np.arange(0.8, -0.7, -0.1)
@@ -879,8 +877,6 @@ class MotionAnalysis:
                     gradient_segmentation[:-self.lost_frames, :, :] = (derive < (np.min(derive, (1, 2)) * 1.1)[:, None, None])[self.lost_frames:, :, :]
                 else:
                     gradient_segmentation[:-self.lost_frames, :, :] = (derive > (np.max(derive, (1, 2)) * 0.1)[:, None, None])[self.lost_frames:, :, :]
-        else:
-            gradient_segmentation = None
         return gradient_segmentation
 
     def update_ring_width(self):
