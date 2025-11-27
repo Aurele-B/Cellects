@@ -1394,48 +1394,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
                                        0, None, coord_pseudopods)
 
-
-    def memory_allocation_for_cytoscillations(self) -> NDArray:
-        """
-
-        Calculate and return the oscillations video based on the converted video shape and available memory.
-
-        This method calculates the necessary memory for storing the oscillations
-        video, checks if the available memory is sufficient, and adjusts the video
-        to save memory if needed. It then calculates the gradient of the converted
-        video with respect to the average intensities and returns the oscillations
-        video.
-        Returns:
-            oscillations_video (ndarray): The calculated oscillations video. If
-                memory allocation fails, returns None.
-
-        Notes:
-            This method attempts to allocate memory for 10 minutes before
-                crashing if an exception occurs.
-        """
-        period_in_frame_nb = int(self.vars['expected_oscillation_period'] / self.time_interval)
-        if period_in_frame_nb < 2:
-            period_in_frame_nb = 2
-        necessary_memory = self.converted_video.shape[0] * self.converted_video.shape[1] * \
-                           self.converted_video.shape[2] * 64 * 4 * 1.16415e-10
-        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-        if len(self.converted_video.shape) == 4:
-            self.converted_video = self.converted_video[:, :, :, 0]
-        average_intensities = np.mean(self.converted_video, (1, 2))
-        if self.vars['lose_accuracy_to_save_memory'] or (necessary_memory > available_memory):
-            oscillations_video = np.zeros(self.converted_video.shape, dtype=np.float16)
-            for cy in np.arange(self.converted_video.shape[1]):
-                for cx in np.arange(self.converted_video.shape[2]):
-                    oscillations_video[:, cy, cx] = np.round(np.gradient(self.converted_video[:, cy, cx, ...]/average_intensities,
-                                                                  period_in_frame_nb), 3).astype(np.float16)
-        else:
-            oscillations_video = np.gradient(self.converted_video / average_intensities[:, None, None], period_in_frame_nb, axis=0)
-        self.check_converted_video_type()
-        if len(self.converted_video.shape) == 3:
-            self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video), axis=3)
-        oscillations_video = np.sign(oscillations_video)
-        return oscillations_video
-
     def study_cytoscillations(self, show_seg: bool=False):
         """
 
