@@ -1400,7 +1400,7 @@ class EdgeIdentification:
 
         # Find out the remaining non-identified pixels
         nb, self.unidentified_shapes, self.unidentified_stats, ce = cv2.connectedComponentsWithStats(unidentified.astype(np.uint8))
-        # Handle the cases were edges are loops over only one vertex
+        # Handle the cases where edges are loops over only one vertex
         looping_edges = np.nonzero(self.unidentified_stats[:, 4 ] > 2)[0][1:]
         for loop_i in looping_edges: # loop_i = looping_edges[0]
             edge_i = (self.unidentified_shapes == loop_i).astype(np.uint8)
