@@ -630,6 +630,9 @@ class MotionAnalysis:
         covering_l_values = covering_l_values[covering_l_values != 0]
         if len(covering_l_values) == 0:
             shape_motion_failed = True
+
+        luminosity_segmentation = None
+        l_threshold_over_time = None
         if not shape_motion_failed:
             value_segmentation_thresholds = np.arange(0.8, -0.7, -0.1)
             validated_thresholds = np.zeros(value_segmentation_thresholds.shape, dtype=bool)
