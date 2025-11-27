@@ -106,7 +106,7 @@ class MotionAnalysis:
             update_shape(show_seg): Updates the shape based on segmentation and visualization flags.
             get_descriptors_from_binary(): Extracts descriptors from binary data.
             detect_growth_transitions(): Detects growth transitions in the data.
-            networks_detection(show_seg): Detected networks within the arena based on segmentation
+            networks_analysis(show_seg): Detected networks within the arena based on segmentation
                 visualization.
             study_cytoscillations(show_seg): Studies cytoscillations within the arena with
                 segmentation visualization.
@@ -127,6 +127,7 @@ class MotionAnalysis:
         self.origin_idx = None
         self.smoothing_flag: bool = False
         self.drift_mask_coord = None
+        self.coord_network = None
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
@@ -167,7 +168,7 @@ class MotionAnalysis:
                     self.detection()
                     self.initialize_post_processing()
                     self.t = self.start
-                    while self.t < self.binary.shape[0]:  #200: 
+                    while self.t < self.dims[0]:  #200:
                         self.update_shape(show_seg)
                 #
             if self.start is None:
