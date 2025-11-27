@@ -2025,7 +2025,12 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
     # Make a hole at the skeleton center and find the vertices connecting it
     holed_skeleton = pad_skeleton * (1 - pad_origin)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
-    dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=20)
+    ite = 20
+    dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=ite)
+    im_border = 1 - image_borders(pad_network.shape)
+    while np.any(dil_origin * im_border):
+        ite -= 1
+        dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=ite)
     pad_vertices *= dil_origin
     connecting_pixels = np.transpose(np.array(np.nonzero(pad_vertices)))
 
