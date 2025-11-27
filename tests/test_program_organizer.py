@@ -182,6 +182,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.get_average_pixel_size()
         po.vars['subtract_background'] = True
         po.get_background_to_subtract()
+        po.vars['output_in_mm'] = True
 
     def tearDown(self):
         """Remove all written files."""

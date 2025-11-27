@@ -31,6 +31,33 @@ class TestFullMotionAnalysis(CellectsUnitTest):
     def test_simple_motion_analysis(self):
         self.ma = MotionAnalysis(self.l)
 
+class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
+    """Test the full pipeline of the MotionAnalysis class"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.chdir(cls.path_output)
+        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        cls.videos_already_in_ram = [video_test[0, :, :, :][None, :, :, :], video_test[0, :, :, 0][None, :, :]]
+        cls.i = 0
+        cls.vars = DefaultDicts().vars
+        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['background_list'] = []
+        cls.vars['lighter_background'] = False
+        cls.vars['first_move_threshold'] = 1
+        cls.vars['average_pixel_size'] = 1.
+        cls.vars['network_analysis'] = True
+        cls.vars['save_coord_network'] = True
+        cls.vars['graph_extraction'] = True
+        cls.vars['oscilacyto_analysis'] = True
+        cls.vars['save_coord_thickening_slimming'] = True
+        cls.vars['fractal_analysis'] = True
+        cls.l = [cls.i, cls.i + 1, cls.vars, True, True, False, cls.videos_already_in_ram]
+
+    def test_simple_motion_analysis(self):
+        self.ma = MotionAnalysis(self.l)
+
 
 class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
     """Parent for testing the MotionAnalysis class with one blob"""
@@ -143,8 +170,7 @@ class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
         self.ma.get_descriptors_from_binary()
         self.ma.detect_growth_transitions()
         self.ma.check_converted_video_type()
-        self.ma.networks_detection()
-        self.ma.graph_extraction()
+        self.ma.networks_analysis()
         self.ma.study_cytoscillations()
         self.ma.fractal_descriptions()
         self.ma.change_results_of_one_arena(False)
@@ -233,8 +259,7 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         self.ma.get_descriptors_from_binary(False)
         self.assertTrue(np.all(self.ma.surfarea.sum() > 0))
         self.ma.detect_growth_transitions() # Do nothing when several blob
-        self.ma.networks_detection(False) # Do nothing when several blob
-        self.ma.graph_extraction() # Do nothing when several blob
+        self.ma.networks_analysis(False) # Do nothing when several blob
         self.ma.study_cytoscillations(False)
         self.ma.fractal_descriptions()
         # self.ma.fractal_descriptions()
