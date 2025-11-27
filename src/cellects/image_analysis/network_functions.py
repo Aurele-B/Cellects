@@ -1688,7 +1688,7 @@ class EdgeIdentification:
             food_vertices = food_vertices[food_vertices > 0]
             self.vertex_table[np.isin(self.vertex_table[:, 2], food_vertices), 4] = 1
 
-        if growing_areas is not None:
+        if growing_areas is not None and growing_areas.shape[1] > 0:
             # growing = np.unique(self.vertices * growing_areas)[1:]
             growing = np.unique(self.vertices[growing_areas[0], growing_areas[1]])
             growing = growing[growing > 0]
