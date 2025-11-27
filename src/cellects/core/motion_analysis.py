@@ -1517,8 +1517,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
         position = (25, self.dims[1] // 2)
         text = str(self.one_descriptor_per_arena['arena'])
-        eroded_binary = cv2.erode(self.binary[after_one_tenth_of_time, :, :], cross_33)
-        contours = np.nonzero(self.binary[after_one_tenth_of_time, :, :] - eroded_binary)
+        contours = np.nonzero(get_contours(self.binary[after_one_tenth_of_time, :, :]))
         self.efficiency_test_1[contours[0], contours[1], :] = self.vars['contour_color']
         self.efficiency_test_1 = cv2.putText(self.efficiency_test_1, text, position, cv2.FONT_HERSHEY_SIMPLEX, 1,
                                         (self.vars["contour_color"], self.vars["contour_color"],
