@@ -39,6 +39,7 @@ from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
 import networkx as nx
 import pandas as pd
+from timeit import default_timer as timer
 
 # 8-connectivity neighbors
 neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
@@ -92,6 +93,7 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
     - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
     - Pseudopod detection requires sufficient contrast with the background in grayscale images.
     """
+    # converted_video = self.converted_video; binary=self.binary; arena_label=1; starting_time=0; visu=self.visu; origin=None; smooth_segmentation_over_time=True; detect_pseudopods=True;save_coord_network=True; show_seg=False
     dims = binary.shape
     pseudopod_min_size = 50
     if detect_pseudopods:
@@ -1022,7 +1024,7 @@ class EdgeIdentification:
     provided skeleton and distance arrays. It performs various operations to
     refine and label edges, ultimately producing a fully identified network.
     """
-    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64]):
+    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], t: int=0):
         """
         Initialize the class with skeleton and distance arrays.
 
@@ -1046,6 +1048,7 @@ class EdgeIdentification:
         """
         self.pad_skeleton = pad_skeleton
         self.pad_distances = pad_distances
+        self.t = t
         self.remaining_vertices = None
         self.vertices = None
         self.growing_vertices = None

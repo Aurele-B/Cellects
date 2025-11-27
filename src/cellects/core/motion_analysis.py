@@ -1557,7 +1557,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
                 if "iso_digi_transi" in self.one_descriptor_per_arena.keys():
                     if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not pd.isna(self.one_descriptor_per_arena["iso_digi_transi"]):
-                        if self.one_descriptor_per_arena["is_growth_isotropic"] == 1:
+                        if self.one_descriptor_per_arena['is_growth_isotropic'] == 1:
                             if t < self.one_descriptor_per_arena["iso_digi_transi"]:
                                 self.converted_video[t, contours[0], contours[1], :] = 0, 0, 255
             del self.binary
