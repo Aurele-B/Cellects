@@ -1329,23 +1329,7 @@ class MotionAnalysis:
         based on several parameters and variables. It involves checking video
         type, performing network detection over time, potentially detecting
         pseudopods, and smoothing segmentation. The results can be visualized or saved.
-
-        Args:
-            show_seg: bool = False
-                A flag that determines whether to display the segmentation visually.
-        """
-        if not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
-            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
-            self.check_converted_video_type()
-            self.network_dynamics = detect_network_dynamics(self.converted_video, self.binary,
-                                                       self.one_descriptor_per_arena['arena'],
-                                                       self.one_descriptor_per_arena["first_move"],
-                                                       self.visu, self.origin, True, True,
-                                                       self.vars['save_coord_network'], show_seg)
-
-    def graph_extraction(self):
-        """
-        Extract and analyze graphs from a binary representation of network dynamics, producing vertex
+Extract and analyze graphs from a binary representation of network dynamics, producing vertex
         and edge tables that represent the graph structure over time.
 
         Args:
