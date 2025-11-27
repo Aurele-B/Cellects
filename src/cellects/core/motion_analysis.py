@@ -177,7 +177,7 @@ class MotionAnalysis:
             if analyse_shape:
                 self.get_descriptors_from_binary()
                 self.detect_growth_transitions()
-                self.networks_detection(show_seg)
+                self.networks_analysis(show_seg)
                 self.study_cytoscillations(show_seg)
                 self.fractal_descriptions()
                 if videos_already_in_ram is None:
