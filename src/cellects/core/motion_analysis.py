@@ -1311,7 +1311,7 @@ class MotionAnalysis:
             self.converted_video = np.round((255 * (self.converted_video / np.max(self.converted_video)))).astype(np.uint8)
 
 
-    def networks_detection(self, show_seg: bool=False):
+    def networks_analysis(self, show_seg: bool=False):
         """
         Perform network detection within a given arena.
 
@@ -1370,12 +1370,37 @@ class MotionAnalysis:
             - This method performs graph extraction and saves the vertex and edge tables to CSV files.
             - The CSV files are named according to the arena, time steps, and dimensions.
 
+        Args:
+            show_seg: bool = False
+                A flag that determines whether to display the segmentation visually.
         """
-        if self.vars['graph_extraction'] and not pd.isna(self.one_descriptor_per_arena["first_move"]) and not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
-            if not self.vars['network_analysis'] and not self.vars['save_coord_network']:
-                self.network_dynamics = self.binary
-            extract_graph_dynamics(self.converted_video, self.network_dynamics, self.one_descriptor_per_arena['arena'],
-                                   self.one_descriptor_per_arena["first_move"], self.origin)
+        coord_pseudopods = None
+        if not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
+            self.check_converted_video_type()
+
+            if self.vars['origin_state'] == "constant":
+                self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
+                                                           self.one_descriptor_per_arena['arena'], 0,
+                                                           self.visu, self.origin, True, True,
+                                                           self.vars['save_coord_network'], show_seg)
+            else:
+                self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
+                                                           self.one_descriptor_per_arena['arena'], 0,
+                                                           self.visu, None, True, True,
+                                                           self.vars['save_coord_network'], show_seg)
+
+        if self.vars['graph_extraction']:
+            if self.coord_network is None:
+                self.coord_network = np.array(np.nonzero(self.binary))
+            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting graph extraction.")
+            if self.vars['origin_state'] == "constant":
+                extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
+                                       0, self.origin, coord_pseudopods)
+            else:
+                extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
+                                       0, None, coord_pseudopods)
+
 
     def memory_allocation_for_cytoscillations(self) -> NDArray:
         """
