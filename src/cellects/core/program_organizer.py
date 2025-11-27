@@ -30,12 +30,14 @@ from cellects.utils.load_display_save import PickleRick, readim, is_raw_image, r
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class
-from cellects.image_analysis.morphological_operations import Ellipse, rank_from_top_to_bottom_from_left_to_right, get_quick_bounding_boxes, get_bb_with_moving_centers
+from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame, compute_one_descriptor_per_colony
+from cellects.image_analysis.morphological_operations import Ellipse, rank_from_top_to_bottom_from_left_to_right, \
+    get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import read_and_rotate
 from cellects.image_analysis.morphological_operations import shape_selection
+
 
 class ProgramOrganizer:
     """
@@ -1241,6 +1243,49 @@ class ProgramOrganizer:
                         self.first_image.subtract_background2[self.top[rep]:(self.bot[rep] + add_to_c),
                         self.left[rep]:(self.right[rep] + add_to_c)])
 
+    def complete_image_analysis(self):
+        self.instantiate_tables()
+        if len(self.vars['exif']) > 1:
+            self.vars['exif'] = self.vars['exif'][0]
+        if len(self.last_image.all_c_spaces) == 0:
+            self.last_image.all_c_spaces['bgr'] = self.last_image.bgr.copy()
+        for i, arena in enumerate(self.vars['analyzed_individuals']):
+            arena_im = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
+            arena_im = keep_one_connected_component(arena_im)
+            one_descriptor_per_arena = {}
+            binary = arena_im[None, :, :]
+            one_descriptor_per_arena["arena"] = arena
+            one_descriptor_per_arena["first_move"] = pd.NA
+            one_descriptor_per_arena["final_area"] = binary.sum()
+            one_descriptor_per_arena["iso_digi_transi"] = pd.NA
+            one_descriptor_per_arena["is_growth_isotropic"] = pd.NA
+            if not self.vars['several_blob_per_arena']:
+                one_row_per_frame = compute_one_descriptor_per_frame(binary,
+                                                                     arena,
+                                                                     self.vars['exif'],
+                                                                     self.vars['descriptors'],
+                                                                     self.vars['output_in_mm'],
+                                                                     self.vars['average_pixel_size'],
+                                                                     self.vars['do_fading'],
+                                                                      self.vars['save_coord_specimen'])
+            else:
+                one_row_per_frame = compute_one_descriptor_per_colony(binary,
+                                                                      arena,
+                                                                      self.vars['exif'],
+                                                                      self.vars['descriptors'],
+                                                                      self.vars['output_in_mm'],
+                                                                      self.vars['average_pixel_size'],
+                                                                      self.vars['do_fading'],
+                                                                      self.vars['first_move_threshold'],
+                                                                      self.vars['save_coord_specimen'])
+
+            self.update_one_row_per_arena(i, one_descriptor_per_arena)
+            self.update_one_row_per_frame(i * binary.shape[0], (i + 1) * binary.shape[0], one_row_per_frame)
+            efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i]]
+            contours = np.nonzero(get_contours(arena_im))
+            efficiency_test[contours[0], contours[1], :] = np.array((94, 0, 213), dtype=np.uint8)
+            self.add_analysis_visualization_to_first_and_last_images(i, efficiency_test, None)
+        self.save_tables(with_last_image=False)
 
     def prepare_video_writing(self, img_list: list, min_ram_free: float, in_colors: bool=False, pathway: str=""):
         """
@@ -1551,15 +1596,17 @@ class ProgramOrganizer:
             first_visualization *= ellipse
             self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
             self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
-            last_visualization *= ellipse
-            self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-            self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
+            if last_visualization is not None:
+                last_visualization *= ellipse
+                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
+                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
         else:
             self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
-            self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
+            if last_visualization is not None:
+                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
 
 
-    def save_tables(self):
+    def save_tables(self, with_last_image: bool=True):
         """
         Exports analysis results to CSV files and saves visualization outputs.
 
@@ -1596,7 +1643,8 @@ class ProgramOrganizer:
             extension = '.PNG'
         else:
             extension = '.JPG'
-        cv2.imwrite(f"Analysis efficiency, last image{extension}", self.last_image.bgr)
+        if with_last_image:
+            cv2.imwrite(f"Analysis efficiency, last image{extension}", self.last_image.bgr)
         cv2.imwrite(
             f"Analysis efficiency, {np.ceil(self.vars['img_number'] / 10).astype(np.uint64)}th image{extension}",
             self.first_image.bgr)

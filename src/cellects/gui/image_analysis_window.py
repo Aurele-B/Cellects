@@ -24,8 +24,8 @@ import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetLastImThread, FirstImageAnalysisThread,
-    CropScaleSubtractDelineateThread, UpdateImageThread,
-    LastImageAnalysisThread, SaveManualDelineationThread, FinalizeImageAnalysisThread)
+    CropScaleSubtractDelineateThread, UpdateImageThread, CompleteImageAnalysisThread,
+    LastImageAnalysisThread, SaveManualDelineationThread, PrepareVideoAnalysisThread)
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
@@ -124,6 +124,11 @@ class ImageAnalysisWindow(MainTabsType):
         self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'], val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
         self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
+        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+            # If there is only one image in the folder
+            self.image_number.setVisible(False)
+            self.image_number_label.setVisible(False)
+            self.read.setVisible(False)
 
         self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
         self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
@@ -407,12 +412,16 @@ class ImageAnalysisWindow(MainTabsType):
         self.previous.clicked.connect(self.previous_is_clicked)
         self.data_tab.clicked.connect(self.data_is_clicked)
         self.video_tab.clicked.connect(self.video_is_clicked)
+        self.complete_image_analysis = PButton("Save image analysis", night_mode=self.parent().po.all['night_mode'])
+        self.complete_image_analysis.setVisible(False)
+        self.complete_image_analysis.clicked.connect(self.complete_image_analysis_is_clicked)
         self.next = PButton("Next", night_mode=self.parent().po.all['night_mode'])
         self.next.setVisible(False)
         self.next.clicked.connect(self.go_to_next_widget)
         self.last_row_layout.addWidget(self.previous)
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addWidget(self.complete_image_analysis)
         self.last_row_layout.addWidget(self.next)
         self.last_row_widget.setLayout(self.last_row_layout)
         self.Vlayout.addWidget(self.last_row_widget)
@@ -432,7 +441,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread['UpdateImage'] = UpdateImageThread(self.parent())
         self.thread['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.parent())
         self.thread['SaveManualDelineation'] = SaveManualDelineationThread(self.parent())
-        self.thread['FinalizeImageAnalysis'] = FinalizeImageAnalysisThread(self.parent())
+        self.thread['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.parent())
+        self.thread['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.parent())
 
     def previous_is_clicked(self):
         """
@@ -1206,11 +1216,14 @@ class ImageAnalysisWindow(MainTabsType):
             self.carefully.setVisible(color_analysis)
             self.visualize.setVisible(True)
 
-            self.decision_label.setText("Click next when color delimits the cell(s) correctly")
+            self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
             self.yes.setVisible(False)
             self.no.setVisible(False)
             self.message.setText('When the resulting segmentation of the last image seems good, click next.')
-            self.next.setVisible(True)
+
+            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+                self.next.setVisible(True)
+            self.complete_image_analysis.setVisible(True)
 
         try:
             self.thread["UpdateImage"].message_when_thread_finished.disconnect()
@@ -2051,7 +2064,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_shape_label.setVisible(True)
         self.arena_shape.setVisible(True)
 
-        self.decision_label.setText('Is video delineation correct?')
+        self.decision_label.setText('Is arena delineation correct?')
         self.decision_label.setVisible(True)
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
@@ -2304,7 +2317,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText("Draw each arena")
         self.user_drawn_lines_label.setVisible(True)
         self.decision_label.setText(
-            f"Hold click to draw {self.parent().po.sample_number} arenas on the image")
+            f"Hold click to draw {self.parent().po.sample_number} arena(s) on the image")
         self.message.setText('Click Yes when it is done')
 
     def last_image_question(self):
@@ -2314,19 +2327,22 @@ class ImageAnalysisWindow(MainTabsType):
         Queries the user if they want to check parameters for the last image,
         informing them that the best segmentation pipeline may change during analysis.
         """
-        self.decision_label.setText(
-            'Do you want to check if the current parameters work for the last image:')
-        self.message.setText('Click Yes if the cell color may change during the analysis.')
-        self.yes.setVisible(True)
-        self.no.setVisible(True)
-        self.starting_differs_from_growing_cb.setVisible(True)
-        self.starting_differs_from_growing_label.setVisible(True)
+
         self.image_number.setVisible(False)
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
         self.asking_last_image_flag = True
         self.step = 2
-
+        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+            self.starting_differs_from_growing_cb.setChecked(False)
+            self.decision_label.setText('Click yes to improve the segmentation')
+        else:
+            self.decision_label.setText('Click yes to improve the segmentation using the last image')
+            self.message.setText('This is useful when the specimen(s) is more visible.')
+            self.starting_differs_from_growing_cb.setVisible(True)
+            self.starting_differs_from_growing_label.setVisible(True)
+        self.yes.setVisible(True)
+        self.no.setVisible(True)
     def start_last_image(self):
         """
         Start the process of analyzing the last image in the time-lapse or the video.
@@ -2361,6 +2377,18 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize.setVisible(True)
         self.row1_widget.setVisible(False)
 
+    def complete_image_analysis_is_clicked(self):
+        """
+        Completes the image analysis process if no listed threads are running.
+        """
+        if (not self.thread['SaveManualDelineation'].isRunning() or not self.thread[
+            'PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning() or not
+        self.thread['CompleteImageAnalysisThread'].isRunning()):
+            self.message.setText(f"Analyzing and saving the segmentation result, wait... ")
+            self.thread['CompleteImageAnalysisThread'].start()
+            self.thread['CompleteImageAnalysisThread'].wait()
+            self.message.setText(f"")
+
     def go_to_next_widget(self):
         """
         Advances the user interface to the next widget after performing final checks.
@@ -2372,7 +2400,7 @@ class ImageAnalysisWindow(MainTabsType):
             - Waits for some background threads to complete their execution.
             - Advances the UI to the video analysis window if certain conditions are met.
         """
-        if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['FinalizeImageAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():
+        if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():
 
             self.popup = QtWidgets.QMessageBox()
             self.popup.setWindowTitle("Info")
@@ -2388,14 +2416,14 @@ class ImageAnalysisWindow(MainTabsType):
 
             self.message.setText(f"Final checks, wait... ")
             self.parent().last_tab = "image_analysis"
-            self.thread['FinalizeImageAnalysis'].start()
+            self.thread['PrepareVideoAnalysis'].start()
             if self.parent().po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
                 self.parent().videoanalysiswindow.select_option.addItem(f"1) Kmeans")
                 self.parent().videoanalysiswindow.select_option.setCurrentIndex(0)
                 self.parent().po.all['video_option'] = 0
             time.sleep(1 / 10)
-            self.thread['FinalizeImageAnalysis'].wait()
+            self.thread['PrepareVideoAnalysis'].wait()
             self.message.setText(f"")
 
             self.video_tab.set_not_in_use()

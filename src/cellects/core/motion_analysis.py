@@ -38,10 +38,9 @@ The features of this module include:
 
 import weakref
 from gc import collect
-from time import sleep
+import numpy as np
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
-import pandas as pd
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
@@ -51,8 +50,9 @@ from cellects.image_analysis.morphological_operations import (find_major_incline
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.image_analysis.shape_descriptors import ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import PercentAndTimeTracker, smallest_memory_array
+from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors, from_shape_descriptors_class
+from cellects.utils.utilitarian import smallest_memory_array
+from cellects.utils.formulas import detect_first_move
 
 
 class MotionAnalysis:
@@ -1153,17 +1153,13 @@ class MotionAnalysis:
             cv2.waitKey(1)
         self.t += 1
 
-    def save_coord_specimen_and_contour(self):
-        if self.vars['save_coord_specimen']:
-             np.save(f"coord_specimen{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                 smallest_memory_array(np.nonzero(self.binary), "uint"))
+    def save_contour_coord(self):
         if self.vars['save_coord_contour']:
             contours = np.zeros(self.dims[:3], np.uint8)
             for frame in range(self.dims[0]):
-                eroded_binary = cv2.erode(self.binary[frame, ...], cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
-                contours[frame, ...] = self.binary[frame, ...] - eroded_binary
-                np.save(f"coord_contour{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-                 smallest_memory_array(np.nonzero(contours), "uint"))
+                contours[frame, ...] = get_contours(self.binary[frame, ...])
+            np.save(f"coord_contour{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
+             smallest_memory_array(np.nonzero(contours), "uint"))
 
     def get_descriptors_from_binary(self, release_memory: bool=True):
         """
@@ -1219,188 +1215,48 @@ class MotionAnalysis:
             self.rays = None
             self.holes = None
             collect()
-        self.save_coord_specimen_and_contour()
-        if self.vars['do_fading']:
-            self.newly_explored_area = np.zeros(self.dims[0], dtype =np.uint64)
-            self.already_explored_area = deepcopy(self.origin)
-            for self.t in range(self.dims[0]):
-                self.newly_explored_area[self.t] = ((self.binary[self.t, :, :] - self.already_explored_area) == 1).sum()
-                self.already_explored_area = np.logical_or(self.already_explored_area, self.binary[self.t, :, :])
-
+        self.save_contour_coord()
         self.surfarea = self.binary.sum((1, 2))
         timings = self.vars['exif']
         if len(timings) < self.dims[0]:
             timings = np.arange(self.dims[0])
         if np.any(timings > 0):
             self.time_interval = np.mean(np.diff(timings))
+        else:
+            self.time_interval = 1.
         timings = timings[:self.dims[0]]
-        available_descriptors_in_sd = list(from_shape_descriptors_class.keys())
-        # ["area", "perimeter", "circularity", "rectangularity", "total_hole_area", "solidity",
-        #                          "convexity", "eccentricity", "euler_number", "standard_deviation_y",
-        #                          "standard_deviation_x", "skewness_y", "skewness_x", "kurtosis_y", "kurtosis_x",
-        #                          "major_axis_len", "minor_axis_len", "axes_orientation"]
-        all_descriptors = []
-        to_compute_from_sd = []
-        for name, do_compute in self.vars['descriptors'].items():
-            if do_compute:# and
-                all_descriptors.append(name)
-                if np.isin(name, available_descriptors_in_sd):
-                    to_compute_from_sd.append(name)
-        self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not np.isin("solidity", to_compute_from_sd)
+
+        # Detect first motion
+        self.one_descriptor_per_arena['first_move'] = detect_first_move(self.surfarea, self.vars['first_move_threshold'])
+
+        self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not np.isin("solidity", list(self.vars['descriptors'].keys()))
         if self.compute_solidity_separately:
             self.solidity = np.zeros(self.dims[0], dtype=np.float64)
         if not self.vars['several_blob_per_arena']:
-            self.one_row_per_frame = pd.DataFrame(np.zeros((self.dims[0], 2 + len(all_descriptors))),
-                                              columns=['arena', 'time'] + all_descriptors)
-            self.one_row_per_frame['arena'] = [self.one_descriptor_per_arena['arena']] * self.dims[0]
-            self.one_row_per_frame['time'] = timings
             # solidity must be added if detect growth transition is computed
-            origin = self.binary[0, :, :]
-            self.one_descriptor_per_arena["first_move"] = pd.NA
-
-            for t in np.arange(self.dims[0]):
-                SD = ShapeDescriptors(self.binary[t, :, :], to_compute_from_sd)
-                for descriptor in to_compute_from_sd:
-                    self.one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
-
-                if self.compute_solidity_separately:
+            if self.compute_solidity_separately:
+                for t in np.arange(self.dims[0]):
                     solidity = ShapeDescriptors(self.binary[t, :, :], ["solidity"])
                     self.solidity[t] = solidity.descriptors["solidity"]
-                # I) Find a first pseudopod [aim: time]
-                if pd.isna(self.one_descriptor_per_arena["first_move"]):
-                    if self.surfarea[t] >= (origin.sum() + self.vars['first_move_threshold']):
-                        self.one_descriptor_per_arena["first_move"] = t
-
-            # Apply the scale to the variables
-            if self.vars['output_in_mm']:
-                if np.isin('area', to_compute_from_sd):
-                    self.one_row_per_frame['area'] *= self.vars['average_pixel_size']
-                if np.isin('total_hole_area', to_compute_from_sd):
-                    self.one_row_per_frame['total_hole_area'] *= self.vars['average_pixel_size']
-                if np.isin('perimeter', to_compute_from_sd):
-                    self.one_row_per_frame['perimeter'] *= np.sqrt(self.vars['average_pixel_size'])
-                if np.isin('major_axis_len', to_compute_from_sd):
-                    self.one_row_per_frame['major_axis_len'] *= np.sqrt(self.vars['average_pixel_size'])
-                if np.isin('minor_axis_len', to_compute_from_sd):
-                    self.one_row_per_frame['minor_axis_len'] *= np.sqrt(self.vars['average_pixel_size'])
+            self.one_row_per_frame = compute_one_descriptor_per_frame(self.binary,
+                                                                      self.one_descriptor_per_arena['arena'], timings,
+                                                                      self.vars['descriptors'],
+                                                                      self.vars['output_in_mm'],
+                                                                      self.vars['average_pixel_size'],
+                                                                      self.vars['do_fading'],
+                                                                       self.vars['save_coord_specimen'])
         else:
-            # Objective: create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies
-            # against time
-            self.one_descriptor_per_arena["first_move"] = 1
-            max_colonies = 0
-            for t in np.arange(self.dims[0]):
-                nb, shapes = cv2.connectedComponents(self.binary[t, :, :])
-                max_colonies = np.max((max_colonies, nb))
-
-            time_descriptor_colony = np.zeros((self.dims[0], len(to_compute_from_sd) * max_colonies * self.dims[0]),
-                                              dtype=np.float32)  # Adjust max_colonies
-            colony_number = 0
-            colony_id_matrix = np.zeros(self.dims[1:], dtype =np.uint64)
-            coord_colonies = []
-            centroids = []
-
-            pat_tracker = PercentAndTimeTracker(self.dims[0], compute_with_elements_number=True)
-            for t in np.arange(self.dims[0]):
-                # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
-                # keeps the previous colony name.
-                shapes, stats, centers = cc(self.binary[t, :, :])
-
-                # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
-                nb = stats[stats[:, 4] >= 4].shape[0]
-
-                # nb = stats.shape[0]
-                current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
-                logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}, Colony descriptors computation: {current_percentage}%{eta}")
-
-                updated_colony_names = np.zeros(1, dtype=np.uint32)
-                for colony in (np.arange(nb - 1) + 1):  # 120)):# #92
-                    # logging.info(f'Colony number {colony}')
-                    current_colony_img = (shapes == colony).astype(np.uint8)
-
-                    # I/ Find out which names the current colony had at t-1
-                    colony_previous_names = np.unique(current_colony_img * colony_id_matrix)
-                    colony_previous_names = colony_previous_names[colony_previous_names != 0]
-                    # II/ Find out if the current colony name had already been analyzed at t
-                    # If there no match with the saved colony_id_matrix, assign colony ID
-                    if t == 0 or len(colony_previous_names) == 0:
-                        # logging.info("New colony")
-                        colony_number += 1
-                        colony_names = [colony_number]
-                    # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_name(s)
-                    else:
-                        colony_names = colony_previous_names.tolist()
-                    # Handle colony division if necessary
-                    if np.any(np.isin(updated_colony_names, colony_names)):
-                        colony_number += 1
-                        colony_names = [colony_number]
-
-                    # Update colony ID matrix for the current frame
-                    coords = np.nonzero(current_colony_img)
-                    colony_id_matrix[coords[0], coords[1]] = colony_names[0]
-
-                    # Add coordinates to coord_colonies
-                    time_column = np.full(coords[0].shape, t, dtype=np.uint32)
-                    colony_column = np.full(coords[0].shape, colony_names[0], dtype=np.uint32)
-                    coord_colonies.append(np.column_stack((time_column, colony_column, coords[0], coords[1])))
-
-                    # Calculate centroid and add to centroids list
-                    centroid_x, centroid_y = centers[colony, :]
-                    centroids.append((t, colony_names[0], centroid_y, centroid_x))
-
-                    # Compute shape descriptors
-                    SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
-                    # descriptors = list(SD.descriptors.values())
-                    descriptors = SD.descriptors
-                    # Adjust descriptors if output_in_mm is specified
-                    if self.vars['output_in_mm']:
-                        if 'area' in to_compute_from_sd:
-                            descriptors['area'] *= self.vars['average_pixel_size']
-                        if 'total_hole_area' in to_compute_from_sd:
-                            descriptors['total_hole_area'] *= self.vars['average_pixel_size']
-                        if 'perimeter' in to_compute_from_sd:
-                            descriptors['perimeter'] *= np.sqrt(self.vars['average_pixel_size'])
-                        if 'major_axis_len' in to_compute_from_sd:
-                            descriptors['major_axis_len'] *= np.sqrt(self.vars['average_pixel_size'])
-                        if 'minor_axis_len' in to_compute_from_sd:
-                            descriptors['minor_axis_len'] *= np.sqrt(self.vars['average_pixel_size'])
-
-                    # Store descriptors in time_descriptor_colony
-                    descriptor_index = (colony_names[0] - 1) * len(to_compute_from_sd)
-                    time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = list(descriptors.values())
-
-                    updated_colony_names = np.append(updated_colony_names, colony_names)
-
-                # Reset colony_id_matrix for the next frame
-                colony_id_matrix *= self.binary[t, :, :]
-
-            coord_colonies = np.vstack(coord_colonies)
-            centroids = np.array(centroids, dtype=np.float32)
-            time_descriptor_colony = time_descriptor_colony[:, :(colony_number*len(to_compute_from_sd))]
-
-            if self.vars['save_coord_specimen']:
-                coord_colonies = pd.DataFrame(coord_colonies, columns=["time", "colony", "y", "x"])
-                coord_colonies.to_csv(f"coord_colonies{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
-                
-            centroids = pd.DataFrame(centroids, columns=["time", "colony", "y", "x"])
-            centroids.to_csv(f"colony_centroids{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_col{colony_number}_y{self.dims[1]}_x{self.dims[2]}.csv", sep=';', index=False, lineterminator='\n')
-
-            # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
-            self.one_row_per_frame = pd.DataFrame({'arena': self.one_descriptor_per_arena['arena'], 'time': timings, 'area_total': self.surfarea.astype(np.float64)})
-            if self.vars['output_in_mm']:
-                self.one_row_per_frame['area_total'] *= self.vars['average_pixel_size']
-            column_names = np.char.add(np.repeat(to_compute_from_sd, colony_number),
-                                    np.tile((np.arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
-            time_descriptor_colony = pd.DataFrame(time_descriptor_colony, columns=column_names)
-            self.one_row_per_frame = pd.concat([self.one_row_per_frame, time_descriptor_colony], axis=1)
-
-
+            self.one_row_per_frame = compute_one_descriptor_per_colony(self.binary,
+                                                                       self.one_descriptor_per_arena['arena'], timings,
+                                                                       self.vars['descriptors'],
+                                                                       self.vars['output_in_mm'],
+                                                                       self.vars['average_pixel_size'],
+                                                                       self.vars['do_fading'],
+                                                                       self.vars['first_move_threshold'],
+                                                                       self.vars['save_coord_specimen'])
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
         if self.vars['output_in_mm']:
-            self.one_descriptor_per_arena["final_area"] *= self.vars['average_pixel_size']
-        if self.vars['do_fading']:
-            self.one_row_per_frame['newly_explored_area'] = self.newly_explored_area
-            if self.vars['output_in_mm']:
-                self.one_row_per_frame['newly_explored_area'] *= self.vars['average_pixel_size']
+            self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
 
     def detect_growth_transitions(self):
         """
@@ -1415,35 +1271,35 @@ class MotionAnalysis:
 
         """
         if self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena']:
-            self.one_descriptor_per_arena["iso_digi_transi"] = pd.NA
-            if not pd.isna(self.one_descriptor_per_arena["first_move"]):
+            self.one_descriptor_per_arena['iso_digi_transi'] = pd.NA
+            if not pd.isna(self.one_descriptor_per_arena['first_move']):
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting growth transition analysis.")
 
                 # II) Once a pseudopod is deployed, look for a disk/ around the original shape
                 growth_begining = self.surfarea < ((self.surfarea[0] * 1.2) + ((self.dims[1] / 4) * (self.dims[2] / 4)))
-                dilated_origin = cv2.dilate(self.binary[self.one_descriptor_per_arena["first_move"], :, :], kernel=cross_33, iterations=10, borderType=cv2.BORDER_CONSTANT, borderValue=0)
+                dilated_origin = cv2.dilate(self.binary[self.one_descriptor_per_arena['first_move'], :, :], kernel=cross_33, iterations=10, borderType=cv2.BORDER_CONSTANT, borderValue=0)
                 isisotropic = np.sum(self.binary[:, :, :] * dilated_origin, (1, 2))
                 isisotropic *= growth_begining
                 # Ask if the dilated origin area is 90% covered during the growth beginning
                 isisotropic = isisotropic > 0.9 * dilated_origin.sum()
                 if np.any(isisotropic):
-                    self.one_descriptor_per_arena["is_growth_isotropic"] = 1
+                    self.one_descriptor_per_arena['is_growth_isotropic'] = 1
                     # Determine a solidity reference to look for a potential breaking of the isotropic growth
                     if self.compute_solidity_separately:
-                        solidity_reference = np.mean(self.solidity[:self.one_descriptor_per_arena["first_move"]])
+                        solidity_reference = np.mean(self.solidity[:self.one_descriptor_per_arena['first_move']])
                         different_solidity = self.solidity < (0.9 * solidity_reference)
                         del self.solidity
                     else:
                         solidity_reference = np.mean(
-                            self.one_row_per_frame.iloc[:(self.one_descriptor_per_arena["first_move"]), :]["solidity"])
+                            self.one_row_per_frame.iloc[:(self.one_descriptor_per_arena['first_move']), :]["solidity"])
                         different_solidity = self.one_row_per_frame["solidity"].values < (0.9 * solidity_reference)
                     # Make sure that isotropic breaking not occur before isotropic growth
                     if np.any(different_solidity):
                         self.one_descriptor_per_arena["iso_digi_transi"] = np.nonzero(different_solidity)[0][0] * self.time_interval
                 else:
-                    self.one_descriptor_per_arena["is_growth_isotropic"] = 0
+                    self.one_descriptor_per_arena['is_growth_isotropic'] = 0
             else:
-                self.one_descriptor_per_arena["is_growth_isotropic"] = pd.NA
+                self.one_descriptor_per_arena['is_growth_isotropic'] = pd.NA
                 
 
     def check_converted_video_type(self):

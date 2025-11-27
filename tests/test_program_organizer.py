@@ -398,6 +398,11 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.assertEqual(len(self.po.right), 1)
         self.assertEqual(len(self.po.top), 1)
         self.assertEqual(len(self.po.bot), 1)
+        self.po.vars['exif'] = np.arange(len(self.po.data_list))
+        self.po.vars['do_fading'] = True
+        self.po.complete_image_analysis()
+        self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_frame.csv"))
+        self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_arena.csv"))
         self.po.get_origins_and_backgrounds_lists()
         self.po.vars['network_analysis'] = True
         self.po.vars['save_coord_network'] = True
@@ -406,30 +411,31 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.po.vars['save_coord_thickening_slimming'] = True
         self.po.vars['fractal_analysis'] = True
         self.l = [0, 1, self.po.vars, True, True, False, None]
+        # self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)
 
     def tearDown(self):
         """Remove all written files."""
         if os.path.isfile(self.path_experiment / f"ind_1.mp4"):
             os.remove(self.path_experiment / f"ind_1.mp4")
-
-
-
-
-
-# pathway = "/Users/Directory/Scripts/python/Cellects/data/experiment/"
-# from glob import glob
-# from natsort import natsorted
-# import cv2
-# import numpy as np
-# from cellects.utils.load_display_save import write_video
-# data_list = glob(pathway + "*tif")
-# data_list = natsorted(data_list)
-# im1 = cv2.imread(data_list[0])
-# vid = np.zeros((len(data_list), im1.shape[0], im1.shape[1], 3), dtype=np.uint8)
-# for t, im in enumerate(data_list):
-#     vid[t, ...] = cv2.imread(im)
-# write_video(vid, pathway + "video.mp4", is_color=True, fps=40)
+        if os.path.isfile(self.path_experiment / f"one_row_per_frame.csv"):
+            os.remove(self.path_experiment / f"one_row_per_frame.csv")
+        if os.path.isfile(self.path_experiment / f"one_row_per_arena.csv"):
+            os.remove(self.path_experiment / f"one_row_per_arena.csv")
+        if os.path.isfile(self.path_experiment / f"Analysis efficiency, 3th image.JPG"):
+            os.remove(self.path_experiment / f"Analysis efficiency, 3th image.JPG")
+        if os.path.isfile(self.path_experiment / f"Analysis efficiency, last image.JPG"):
+            os.remove(self.path_experiment / f"Analysis efficiency, last image.JPG")
+        if os.path.isfile(self.path_experiment / f"software_settings.csv"):
+            os.remove(self.path_experiment / f"software_settings.csv")
+        if os.path.isfile(self.path_experiment / f"coord_network1_t25_y244_x300.npy"):
+            os.remove(self.path_experiment / f"coord_network1_t25_y244_x300.npy")
+        if os.path.isfile(self.path_experiment / f"coord_pseudopods1_t25_y244_x300.npy"):
+            os.remove(self.path_experiment / f"coord_pseudopods1_t25_y244_x300.npy")
+        if os.path.isfile(self.path_experiment / f"vertex_table1_t25_y244_x300.csv"):
+            os.remove(self.path_experiment / f"vertex_table1_t25_y244_x300.csv")
+        if os.path.isfile(self.path_experiment / f"edge_table1_t25_y244_x300.csv"):
+            os.remove(self.path_experiment / f"edge_table1_t25_y244_x300.csv")
 
 
 if __name__ == '__main__':
