@@ -34,6 +34,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple
 from scipy.spatial import KDTree
+from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average
@@ -935,6 +936,85 @@ def get_minimal_distance_between_2_shapes(image_of_2_shapes: NDArray[np.uint8], 
     dists, nns = t.query(np.transpose(shape2_idx), 1)
     return np.min(dists)
 
+def get_min_or_max_euclidean_pair(coords, min_or_max: str="max") -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Find the pair of points in a given set with the minimum or maximum Euclidean distance.
+
+    Parameters
+    ----------
+    coords : Union[np.ndarray, Tuple]
+        An Nx2 numpy array or a tuple of two arrays, each containing the x and y coordinates of points.
+    min_or_max : str, optional
+        Whether to find the 'min' or 'max' distance pair. Default is 'max'.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        A tuple containing the coordinates of the two points that form the minimum or maximum distance pair.
+
+    Raises
+    ------
+    ValueError
+        If `min_or_max` is not 'min' or 'max'.
+
+    Notes
+    -----
+    - The function first computes all pairwise distances in condensed form using `pdist`.
+    - Then, it finds the index of the minimum or maximum distance.
+    - Finally, it maps this index to the actual point indices using a binary search method.
+
+    Examples
+    --------
+    >>> coords = np.array([[0, 1], [2, 3], [4, 5]])
+    >>> point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="max")
+    >>> print(point1)
+    [0 1]
+    >>> print(point2)
+    [4 5]
+    >>> coords = (np.array([0, 2, 4, 8, 1, 5]), np.array([0, 2, 4, 8, 0, 5]))
+    >>> point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="min")
+    >>> print(point1)
+    [0 0]
+    >>> print(point2)
+    [1 0]
+
+    """
+    if isinstance(coords, Tuple):
+        coords = np.column_stack(coords)
+    N = coords.shape[0]
+    if N <= 1:
+        return (coords[0], coords[0]) if N == 1 else None
+
+    # Step 1: Compute all pairwise distances in condensed form
+    distances = pdist(coords)
+
+    # Step 2: Find the index of the maximum distance
+    if min_or_max == "max":
+        idx = np.argmax(distances)
+    elif min_or_max == "min":
+        idx = np.argmin(distances)
+    else:
+        raise ValueError
+
+    # Step 3: Map this index to (i, j) using a binary search method
+
+    def get_pair_index(k):
+        low, high = 0, N
+        while low < high:
+            mid = (low + high) // 2
+            total = mid * (2 * N - mid - 1) // 2
+            if total <= k:
+                low = mid + 1
+            else:
+                high = mid
+
+        i = low - 1
+        prev_sum = i * (2 * N - i - 1) // 2
+        j_index_in_row = k - prev_sum
+        return i, i + j_index_in_row + 1  # Ensure j > i
+
+    i, j = get_pair_index(idx)
+    return coords[i], coords[j]
 
 def find_major_incline(vector: NDArray, natural_noise: float) -> Tuple[int, int]:
     """

@@ -26,7 +26,7 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
@@ -589,9 +589,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
         pad_origin = None
         origin_contours = None
     vertex_table = None
-    tic = timer()
-    for t in np.arange(starting_time, dims[0]): # t=306    Y, X = 729, 554
-        print(f"{t-1} took: {timer() - tic} seconds")
+    for t in np.arange(starting_time, dims[0]): # t=286   Y, X = 729, 554
         tic = timer()
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
@@ -625,6 +623,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             else:
                 vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
                 edge_table = np.vstack((edge_table, edge_id.edge_table))
+        print(f"{t} took: {timer() - tic} seconds")
 
     vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                        "vertex_connected"])
@@ -1255,6 +1254,9 @@ class EdgeIdentification:
         self.numbered_vertices = np.zeros(self.im_shape, dtype=np.uint32)
         self.numbered_vertices[ordered_v_coord[:, 0], ordered_v_coord[:, 1]] = np.arange(1, ordered_v_coord.shape[0] + 1)
         self.vertices = None
+        self.vertex_index_map = {}
+        for idx, (y, x) in enumerate(ordered_v_coord):
+            self.vertex_index_map[idx + 1] = tuple((np.uint32(y), np.uint32(x)))
 
         # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
         self.edges_labels = np.zeros((self.tip_number, 3), dtype=np.uint32)
@@ -1275,6 +1277,7 @@ class EdgeIdentification:
             end = 1
             vertex_coord = loop_coord[0][0], loop_coord[1][0]
             self.numbered_vertices[vertex_coord[0], vertex_coord[1]] = 1
+            self.vertex_index_map[1] = vertex_coord
             self.non_tip_vertices = np.array(vertex_coord)[None, :]
             new_edge_lengths = len(loop_coord[0]) - 1
             new_edge_pix_coord = np.transpose(np.vstack(((loop_coord[0][1:], loop_coord[1][1:], np.zeros(new_edge_lengths, dtype=np.int32)))))
@@ -1402,7 +1405,7 @@ class EdgeIdentification:
         nb, self.unidentified_shapes, self.unidentified_stats, ce = cv2.connectedComponentsWithStats(unidentified.astype(np.uint8))
         # Handle the cases where edges are loops over only one vertex
         looping_edges = np.nonzero(self.unidentified_stats[:, 4 ] > 2)[0][1:]
-        for loop_i in looping_edges: # loop_i = looping_edges[0]
+        for loop_i in looping_edges: # loop_i = looping_edges[0] loop_i=11 #  zoom_on_nonzero(unique_vertices_im, return_coord=False)
             edge_i = (self.unidentified_shapes == loop_i).astype(np.uint8)
             dil_edge_i = cv2.dilate(edge_i, square_33)
             unique_vertices_im = self.numbered_vertices.copy()
@@ -1410,21 +1413,33 @@ class EdgeIdentification:
             unique_vertices_im = dil_edge_i * unique_vertices_im
             unique_vertices = np.unique(unique_vertices_im)
             unique_vertices = unique_vertices[unique_vertices > 0]
-            if len(unique_vertices) == 1:
+            v_nb = len(unique_vertices)
+            new_edge_lengths = edge_i.sum()
+            new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
+            new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
+            if v_nb == 1:
                 start, end = unique_vertices[0], unique_vertices[0]
-                new_edge_lengths = edge_i.sum()
-                new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
-                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
-            elif len(unique_vertices) == 2:
+            elif v_nb == 2:
                 # The edge loops around a group of connected vertices
                 start, end = unique_vertices[0], unique_vertices[1]
-                new_edge_lengths = edge_i.sum()
-                new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
-                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
                 # conn_v_nb, conn_v = cv2.connectedComponents((unique_vertices_im > 0).astype(np.uint8))
                 # if len(unique_vertices) == 2 and conn_v_nb == 2:
+            elif v_nb > 2: # The question is: How to choose two vertices so that they link all missing pixels?
+                # 1. Find every edge pixel connected to these vertices
+                vertex_connected_pixels = np.nonzero(cv2.dilate((unique_vertices_im > 0).astype(np.uint8), square_33) * edge_i)
+                # 2. Find the most distant pair of these
+                pix1, pix2 = get_min_or_max_euclidean_pair(vertex_connected_pixels, "max")
+                # 3. The two best vertices are the two nearest to these two most distant edge pixels
+                dist_to_pix1 = np.zeros(v_nb, np.float64)
+                dist_to_pix2 = np.zeros(v_nb, np.float64)
+                for _i, v_i in enumerate(unique_vertices):
+                    v_coord = self.vertex_index_map[v_i]
+                    dist_to_pix1[_i] = eudist(pix1, v_coord)
+                    dist_to_pix2[_i] = eudist(pix2, v_coord)
+                start, end = unique_vertices[np.argmin(dist_to_pix1)], unique_vertices[np.argmin(dist_to_pix2)]
+                self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
                 logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
         self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
@@ -1631,10 +1646,12 @@ class EdgeIdentification:
                 self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
                 # Remove the removed edge from the edges_labels array
                 self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
-                vY, vX = np.nonzero(self.numbered_vertices == vertex2)
-                v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
+                # vY, vX = np.nonzero(self.numbered_vertices == vertex2)
+                # v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
+                vY, vX = self.vertex_index_map[vertex2]
+                v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY, vX], axis=1))
                 self.non_tip_vertices = np.delete(self.non_tip_vertices, v_idx, axis=0)
-        # Sometines, clearing vertices connecting 2 edges can create edge duplicates, so:
+        # Sometimes, clearing vertices connecting 2 edges can create edge duplicates, so:
         self.clear_edge_duplicates()
 
     def _remove_padding(self):
@@ -1649,6 +1666,7 @@ class EdgeIdentification:
         self.edge_pix_coord[:, :2] -= 1
         self.tips_coord[:, :2] -= 1
         self.non_tip_vertices[:, :2] -= 1
+        del self.vertex_index_map
         self.skeleton, self.distances, self.vertices = remove_padding(
             [self.pad_skeleton, self.pad_distances, self.numbered_vertices])
 
