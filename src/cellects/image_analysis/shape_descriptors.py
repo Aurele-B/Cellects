@@ -37,7 +37,7 @@ descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
                           'euler_number': False, 'standard_deviation_xy': False, 'skewness_xy': False,
                           'kurtosis_xy': False, 'major_axes_len_and_angle': True, 'iso_digi_analysis': False,
-                          'oscilacyto_analysis': False, 'network_analysis': False, 'graph_extraction': False,
+                          'oscilacyto_analysis': False, 'network_analysis': False,
                           'fractal_analysis': False
                           }
 

@@ -49,7 +49,7 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.vars['average_pixel_size'] = 1.
         cls.vars['network_analysis'] = True
         cls.vars['save_coord_network'] = True
-        cls.vars['graph_extraction'] = True
+        cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True
         cls.vars['save_coord_thickening_slimming'] = True
         cls.vars['fractal_analysis'] = True
@@ -85,7 +85,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['do_fading'] = True
         cls.vars['network_analysis'] = True
         cls.vars['save_coord_network'] = True
-        cls.vars['graph_extraction'] = True
+        cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True
         cls.vars['save_coord_thickening_slimming'] = True
         cls.vars['fractal_analysis'] = True
@@ -96,7 +96,6 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['origin_state'] = "constant"
         cls.vars['average_pixel_size'] = 1
         cls.vars['save_coord_specimen'] = False
-        cls.vars['save_coord_contour'] = False
         cls.vars["appearance_detection_method"] = 'largest'
         cls.vars['contour_color']: np.uint8 = 0
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
@@ -223,7 +222,6 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.vars['origin_state'] = "fluctuating"
         cls.vars['filter_spec'] = {'filter1_type': "Gaussian", 'filter1_param': [1., 1.], 'filter2_type': "Median", 'filter2_param': [1., 1.]}
         cls.vars['save_coord_specimen'] = True
-        cls.vars['save_coord_contour'] = True
         cls.vars['average_pixel_size'] = 1
         cls.vars['study_cytoscillations'] = True
         cls.vars['fractal_analysis'] = True

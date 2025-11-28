@@ -407,7 +407,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.po.get_origins_and_backgrounds_lists()
         self.po.vars['network_analysis'] = True
         self.po.vars['save_coord_network'] = True
-        self.po.vars['graph_extraction'] = True
+        self.po.vars['save_graph'] = True
         self.po.vars['study_cytoscillations'] = True
         self.po.vars['save_coord_thickening_slimming'] = True
         self.po.vars['fractal_analysis'] = True

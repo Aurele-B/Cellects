@@ -97,26 +97,25 @@ class RequiredOutput(WindowType):
         self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
         self.save_coord_specimen_label = FixedText('Pixels covered by the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
-        self.save_coord_contour = Checkbox(self.parent().po.vars['save_coord_contour'])
-        self.save_coord_contour_label = FixedText('Contours of the specimen(s)', tip="",
+        self.save_graph = Checkbox(self.parent().po.vars['save_graph'])
+        self.save_graph_label = FixedText('Graph describing the specimen(s)', tip="Compute the graph of the space occupied by the specimen(s).\nOr the graph of the network in the specimen(s) if selected.",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
         self.save_coord_thickening_slimming_label = FixedText('Oscillating areas in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
-        self.save_coord_network_label = FixedText('Tubular network in the specimen(s)', tip="",
+        self.save_coord_network_label = FixedText('Network in the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
         self.save_presence_coordinates_layout.addWidget(self.save_coord_specimen_label, 0, 0)
         self.save_presence_coordinates_layout.addWidget(self.save_coord_specimen, 0, 1)
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_contour_label, 1, 0)
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_contour, 1, 1)
-
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_thickening_slimming_label, 0, 2)
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_thickening_slimming, 0, 3)
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_network_label, 1, 2)
-        self.save_presence_coordinates_layout.addWidget(self.save_coord_network, 1, 3)
+        self.save_presence_coordinates_layout.addWidget(self.save_coord_thickening_slimming_label, 1, 0)
+        self.save_presence_coordinates_layout.addWidget(self.save_coord_thickening_slimming, 1, 1)
+        self.save_presence_coordinates_layout.addWidget(self.save_coord_network_label, 0, 2)
+        self.save_presence_coordinates_layout.addWidget(self.save_coord_network, 0, 3)
+        self.save_presence_coordinates_layout.addWidget(self.save_graph_label, 1, 2)
+        self.save_presence_coordinates_layout.addWidget(self.save_graph, 1, 3)
 
         self.save_presence_coordinates_widget.setLayout(self.save_presence_coordinates_layout)
         self.vlayout.addWidget(self.save_presence_coordinates_widget)
@@ -215,7 +214,7 @@ class RequiredOutput(WindowType):
         widget depending on a condition.
         """
         self.save_coord_specimen.setChecked(self.parent().po.vars['save_coord_specimen'])
-        self.save_coord_contour.setChecked(self.parent().po.vars['save_coord_contour'])
+        self.save_graph.setChecked(self.parent().po.vars['save_graph'])
         self.save_coord_thickening_slimming.setChecked(self.parent().po.vars['save_coord_thickening_slimming'])
         self.save_coord_network.setChecked(self.parent().po.vars['save_coord_network'])
 
@@ -230,8 +229,6 @@ class RequiredOutput(WindowType):
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['fractal_analysis'])
             elif name == 'network_analysis':
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['network_analysis'])
-            elif name == 'graph_extraction':
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['graph_extraction'])
             else:
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.all['descriptors'][name])
 
@@ -254,7 +251,7 @@ class RequiredOutput(WindowType):
         parent object, which saves all user defined parameters.
         """
         self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
-        self.parent().po.vars['save_coord_contour'] = self.save_coord_contour.isChecked()
+        self.parent().po.vars['save_graph'] = self.save_graph.isChecked()
         self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
         self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
         descriptor_names = self.parent().po.all['descriptors'].keys()
@@ -270,8 +267,6 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['fractal_analysis'] = checked_status
             if name == 'network_analysis':
                 self.parent().po.vars['network_analysis'] = checked_status
-            if name == 'graph_extraction':
-                self.parent().po.vars['graph_extraction'] = checked_status
         if not self.parent().thread['SaveAllVars'].isRunning():
             self.parent().thread['SaveAllVars'].start()
         self.parent().po.update_output_list()

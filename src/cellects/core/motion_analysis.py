@@ -1163,14 +1163,6 @@ class MotionAnalysis:
             cv2.waitKey(1)
         self.t += 1
 
-    def save_contour_coord(self):
-        if self.vars['save_coord_contour']:
-            contours = np.zeros(self.dims[:3], np.uint8)
-            for frame in range(self.dims[0]):
-                contours[frame, ...] = get_contours(self.binary[frame, ...])
-            np.save(f"coord_contour{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.npy",
-             smallest_memory_array(np.nonzero(contours), "uint"))
-
     def get_descriptors_from_binary(self, release_memory: bool=True):
         """
 
@@ -1225,7 +1217,6 @@ class MotionAnalysis:
             self.rays = None
             self.holes = None
             collect()
-        self.save_contour_coord()
         self.surfarea = self.binary.sum((1, 2))
         timings = self.vars['exif']
         if len(timings) < self.dims[0]:
@@ -1337,7 +1328,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
         Attributes:
             vars (dict): Dictionary of variables that control the graph extraction process.
-                - 'graph_extraction': Boolean indicating if graph extraction should be performed.
+                - 'save_graph': Boolean indicating if graph extraction should be performed.
                 - 'network_analysis': Boolean indicating if network analysis should be performed.
                 - 'save_coord_network': Boolean indicating if the coordinate network should be saved.
 
@@ -1383,7 +1374,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                                                            self.visu, None, True, True,
                                                            self.vars['save_coord_network'], show_seg)
 
-        if self.vars['graph_extraction']:
+        if self.vars['save_graph']:
             if self.coord_network is None:
                 self.coord_network = np.array(np.nonzero(self.binary))
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting graph extraction.")
