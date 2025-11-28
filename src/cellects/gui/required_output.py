@@ -98,7 +98,7 @@ class RequiredOutput(WindowType):
         self.save_coord_specimen_label = FixedText('Pixels covered by the specimen(s)', tip="",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_graph = Checkbox(self.parent().po.vars['save_graph'])
-        self.save_graph_label = FixedText('Graph describing the specimen(s)', tip="Compute the graph of the space occupied by the specimen(s).\nOr the graph of the network in the specimen(s) if selected.",
+        self.save_graph_label = FixedText('Graph of the specimen(s) (or network)', tip="Compute the graph of the space occupied by the specimen(s).\nOr the graph of the network in the specimen(s) if selected.",
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
         self.save_coord_thickening_slimming_label = FixedText('Oscillating areas in the specimen(s)', tip="",
