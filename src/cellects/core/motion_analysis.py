@@ -1308,9 +1308,7 @@ class MotionAnalysis:
         Check if the converted video type is uint8 and normalize it if necessary.
         """
         if self.converted_video.dtype != "uint8":
-            self.converted_video -= np.min(self.converted_video)
-            self.converted_video = np.round((255 * (self.converted_video / np.max(self.converted_video)))).astype(np.uint8)
-
+            self.converted_video = bracket_to_uint8_image_contrast(self.converted_video)
 
     def networks_analysis(self, show_seg: bool=False):
         """
@@ -1329,7 +1327,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
         Attributes:
             vars (dict): Dictionary of variables that control the graph extraction process.
                 - 'save_graph': Boolean indicating if graph extraction should be performed.
-                - 'network_analysis': Boolean indicating if network analysis should be performed.
                 - 'save_coord_network': Boolean indicating if the coordinate network should be saved.
 
             one_descriptor_per_arena (dict): Dictionary containing descriptors for each arena.
@@ -1359,8 +1356,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 A flag that determines whether to display the segmentation visually.
         """
         coord_pseudopods = None
-        if not self.vars['several_blob_per_arena'] and (self.vars['save_coord_network'] or self.vars['network_analysis']):
-            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting network detection.")
+        if not self.vars['several_blob_per_arena'] and self.vars['save_coord_network']:
             self.check_converted_video_type()
 
             if self.vars['origin_state'] == "constant":
@@ -1374,10 +1370,9 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                                                            self.visu, None, True, True,
                                                            self.vars['save_coord_network'], show_seg)
 
-        if self.vars['save_graph']:
+        if not self.vars['several_blob_per_arena'] and self.vars['save_graph']:
             if self.coord_network is None:
                 self.coord_network = np.array(np.nonzero(self.binary))
-            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting graph extraction.")
             if self.vars['origin_state'] == "constant":
                 extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
                                        0, self.origin, coord_pseudopods)
@@ -1399,7 +1394,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 show_seg (bool): If True, display the segmentation results.
         """
         if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
-            logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting oscillation analysis.")
             oscillations_video = detect_oscillations_dynamics(self.converted_video, self.binary,
                                                               self.one_descriptor_per_arena['arena'], self.start,
                                                               self.vars['expected_oscillation_period'],
@@ -1428,13 +1422,13 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
         if self.vars['fractal_analysis']:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
 
-            if self.vars['network_analysis']:
+            if self.vars['save_coord_network']:
                 box_counting_dimensions = np.zeros((self.dims[0], 7), dtype=np.float64)
             else:
                 box_counting_dimensions = np.zeros((self.dims[0], 3), dtype=np.float64)
 
             for t in np.arange(self.dims[0]):
-                if self.vars['network_analysis']:
+                if self.vars['save_coord_network']:
                     current_network = np.zeros(self.dims[1:], dtype=np.uint8)
                     net_t = self.coord_network[1:, self.coord_network[0, :] == t]
                     current_network[net_t[0], net_t[1]] = 1
@@ -1456,7 +1450,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                                                                        zoom_step=self.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
 
-            if self.vars['network_analysis']:
+            if self.vars['save_coord_network']:
                 self.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
                 self.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
                 self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
@@ -1471,7 +1465,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 self.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
 
-            if self.vars['network_analysis'] or self.vars['save_coord_network']:
+            if self.vars['save_coord_network']:
                 del self.coord_network
 
     def save_efficiency_tests(self):

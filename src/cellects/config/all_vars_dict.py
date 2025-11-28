@@ -89,7 +89,6 @@ class DefaultDicts:
             'min_size_for_connection': 20,
             'origin_state': 'fluctuating',
             'oscilacyto_analysis': False,
-            'network_analysis': False,
             'network_detection_threshold': 20,
             'mesh_side_length': 4,
             'mesh_step_length': 2,

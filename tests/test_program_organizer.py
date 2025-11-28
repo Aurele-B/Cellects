@@ -405,7 +405,6 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_frame.csv"))
         self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_arena.csv"))
         self.po.get_origins_and_backgrounds_lists()
-        self.po.vars['network_analysis'] = True
         self.po.vars['save_coord_network'] = True
         self.po.vars['save_graph'] = True
         self.po.vars['study_cytoscillations'] = True

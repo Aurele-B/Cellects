@@ -37,16 +37,16 @@ descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
                           'euler_number': False, 'standard_deviation_xy': False, 'skewness_xy': False,
                           'kurtosis_xy': False, 'major_axes_len_and_angle': True, 'iso_digi_analysis': False,
-                          'oscilacyto_analysis': False, 'network_analysis': False,
+                          'oscilacyto_analysis': False,
                           'fractal_analysis': False
                           }
 
 descriptors_names_to_display = ['Area', 'Perimeter', 'Circularity', 'Rectangularity', 'Total hole area',
                                 'Solidity', 'Convexity', 'Eccentricity', 'Euler number', 'Standard deviation xy',
                                 'Skewness xy', 'Kurtosis xy', 'Major axes lengths and angle',
-                                'Growth transitions', 'Oscillations', 'Network', 'Graph',
-                                'Fractals'
-                                ]#, 'Oscillating cluster nb and size'
+                                'Growth transitions', 'Oscillations',
+                                'Minkowski dimension'
+                                ]
 
 from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
@@ -64,6 +64,67 @@ descriptors.update({'minkowski_dimension': False})
 def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,
                                      descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
                                      do_fading: bool, save_coord_specimen:bool):
+    """
+    Computes descriptors for each frame in a binary video and returns them as a DataFrame.
+
+    Parameters
+    ----------
+    binary_vid : NDArray[np.uint8]
+        The binary video data where each frame is a 2D array.
+    arena_label : int
+        Label for the arena in the video.
+    timings : NDArray
+        Array of timestamps corresponding to each frame.
+    descriptors_dict : dict
+        Dictionary containing the descriptors to be computed.
+    output_in_mm : bool, optional
+        Flag indicating if output should be in millimeters. Default is False.
+    pixel_size : float, optional
+        Size of a pixel in the video when `output_in_mm` is True. Default is None.
+    do_fading : bool, optional
+        Flag indicating if the fading effect should be applied. Default is False.
+    save_coord_specimen : bool, optional
+        Flag indicating if the coordinates of specimens should be saved. Default is False.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing the descriptors for each frame in the video.
+
+    Notes
+    -----
+    For large inputs, consider pre-allocating memory for efficiency.
+    The `save_coord_specimen` flag will save coordinate data to a file.
+
+    Examples
+    --------
+    >>> binary_vid = np.ones((10, 640, 480), dtype=np.uint8)
+    >>> timings = np.arange(10)
+    >>> descriptors_dict = {'area': True, 'perimeter': True}
+    >>> result = compute_one_descriptor_per_frame(binary_vid, 1, timings, descriptors_dict)
+    >>> print(result.head())
+       arena  time  area  perimeter
+    0      1     0     0          0
+    1      1     1     0          0
+    2      1     2     0          0
+    3      1     3     0          0
+    4      1     4     0          0
+
+    >>> binary_vid = np.ones((5, 640, 480), dtype=np.uint8)
+    >>> timings = np.arange(5)
+    >>> descriptors_dict = {'area': True, 'perimeter': True}
+    >>> result = compute_one_descriptor_per_frame(binary_vid, 2, timings,
+    ...                                            descriptors_dict,
+    ...                                            output_in_mm=True,
+    ...                                            pixel_size=0.1)
+    >>> print(result.head())
+       arena  time  area  perimeter
+    0      2     0    0         0.0
+    1      2     1    0         0.0
+    2      2     2    0         0.0
+    3      2     3    0         0.0
+    4      2     4    0         0.0
+    """
     dims = binary_vid.shape
     all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(descriptors_dict)
     one_row_per_frame = pd.DataFrame(np.zeros((dims[0], 2 + len(all_descriptors))),
@@ -773,7 +834,10 @@ class ShapeDescriptors:
         else:
             if self.perimeter is None:
                 self.get_perimeter()
-            self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
+            if self.perimeter == 0:
+                self.circularity = 0.
+            else:
+                self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
 
     def get_rectangularity(self):
         """

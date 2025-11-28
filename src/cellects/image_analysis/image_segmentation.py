@@ -685,7 +685,6 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
     return binary_image, binary_image2, new_bio_label, new_bio_label2
 
 
-@njit()
 def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_length: int=4, step: int=2, int_var_thresh: float=None):
     """
     Perform grid segmentation on the image.

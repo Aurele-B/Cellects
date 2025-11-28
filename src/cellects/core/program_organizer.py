@@ -25,14 +25,14 @@ import natsort
 
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.load_display_save import extract_time
-from cellects.image_analysis.one_image_analysis_threads import ProcessFirstImage
+from cellects.image_analysis.network_functions import detect_network_dynamics, extract_graph_dynamics
 from cellects.utils.load_display_save import PickleRick, readim, is_raw_image, read_h5_array, get_h5_keys
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame, compute_one_descriptor_per_colony
 from cellects.image_analysis.morphological_operations import Ellipse, rank_from_top_to_bottom_from_left_to_right, \
-    get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component
+    get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import read_and_rotate
@@ -597,17 +597,19 @@ class ProgramOrganizer:
                     timings = extract_time(self.data_list, pathway, self.all['raw_images'])
                     timings = timings - timings[0]
                     timings = timings / 60
-                    time_step = np.mean(np.diff(timings))
-                    digit_nb = 0
-                    for i in str(time_step):
-                        if i in {'.'}:
-                            pass
-                        elif i in {'0'}:
-                            digit_nb += 1
-                        else:
-                            break
-                    self.vars['time_step'] = np.round(time_step, digit_nb + 1)
-                    arbitrary_time_step = False
+                    time_step = np.diff(timings)
+                    if len(time_step) > 0:
+                        time_step = np.mean(time_step)
+                        digit_nb = 0
+                        for i in str(time_step):
+                            if i in {'.'}:
+                                pass
+                            elif i in {'0'}:
+                                digit_nb += 1
+                            else:
+                                break
+                        self.vars['time_step'] = np.round(time_step, digit_nb + 1)
+                        arbitrary_time_step = False
                 except:
                     pass
             if arbitrary_time_step:
@@ -655,7 +657,9 @@ class ProgramOrganizer:
         self.first_image.shape_number = shape_number
         if self.first_image.im_combinations is None:
             self.first_image.im_combinations = []
+        if len(self.first_image.im_combinations) == 0:
             self.first_image.im_combinations.append({})
+        self.current_combination_id = np.min((self.current_combination_id, len(self.first_image.im_combinations) - 1))
         self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
         self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
         self.first_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.first_image.image).astype(np.uint8)
@@ -692,7 +696,6 @@ class ProgramOrganizer:
                                             grid_segmentation=self.vars["grid_segmentation"],
                                             filter_spec=self.vars["filter_spec"])
         if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
-            # self.last_image.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
             self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
@@ -703,7 +706,9 @@ class ProgramOrganizer:
         
         if self.last_image.im_combinations is None:
             self.last_image.im_combinations = []
+        if len(self.last_image.im_combinations) == 0:
             self.last_image.im_combinations.append({})
+        self.current_combination_id = np.min((self.current_combination_id, len(self.last_image.im_combinations) - 1))
         self.last_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_motion']
         self.last_image.im_combinations[self.current_combination_id]['binary_image'] = self.last_image.binary_image
         self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(self.last_image.image)
@@ -1250,27 +1255,38 @@ class ProgramOrganizer:
             self.vars['exif'] = self.vars['exif'][0]
         if len(self.last_image.all_c_spaces) == 0:
             self.last_image.all_c_spaces['bgr'] = self.last_image.bgr.copy()
+        if self.all['bio_mask'] is not None:
+            self.last_image.binary_image[self.all['bio_mask']] = 1
+        if self.all['back_mask'] is not None:
+            self.last_image.binary_image[self.all['back_mask']] = 0
         for i, arena in enumerate(self.vars['analyzed_individuals']):
-            arena_im = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
-            arena_im = keep_one_connected_component(arena_im)
-            one_descriptor_per_arena = {}
-            binary = arena_im[None, :, :]
-            one_descriptor_per_arena["arena"] = arena
-            one_descriptor_per_arena["first_move"] = pd.NA
-            one_descriptor_per_arena["final_area"] = binary.sum()
-            one_descriptor_per_arena["iso_digi_transi"] = pd.NA
-            one_descriptor_per_arena["is_growth_isotropic"] = pd.NA
+            binary = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
+            efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i]]
             if not self.vars['several_blob_per_arena']:
-                one_row_per_frame = compute_one_descriptor_per_frame(binary,
+                binary = keep_one_connected_component(binary)
+                one_row_per_frame = compute_one_descriptor_per_frame(binary[None, :, :],
                                                                      arena,
                                                                      self.vars['exif'],
                                                                      self.vars['descriptors'],
                                                                      self.vars['output_in_mm'],
                                                                      self.vars['average_pixel_size'],
                                                                      self.vars['do_fading'],
-                                                                      self.vars['save_coord_specimen'])
+                                                                     self.vars['save_coord_specimen'])
+                coord_network = None
+                coord_pseudopods = None
+                if self.vars['save_coord_network']:
+                    coord_network, coord_pseudopods = detect_network_dynamics(self.last_image.image[None, :, :],
+                                                                              binary[None, :, :], arena, 0,
+                                                                              None, None, False, True,
+                                                                              self.vars['save_coord_network'], False)
+                if self.vars['save_graph']:
+                    if coord_network is None:
+                        coord_network = np.array(np.nonzero(binary))
+                    extract_graph_dynamics(self.last_image.image[None, :, :], coord_network, arena,
+                                           0, None, coord_pseudopods)
+
             else:
-                one_row_per_frame = compute_one_descriptor_per_colony(binary,
+                one_row_per_frame = compute_one_descriptor_per_colony(binary[None, :, :],
                                                                       arena,
                                                                       self.vars['exif'],
                                                                       self.vars['descriptors'],
@@ -1279,11 +1295,26 @@ class ProgramOrganizer:
                                                                       self.vars['do_fading'],
                                                                       self.vars['first_move_threshold'],
                                                                       self.vars['save_coord_specimen'])
+            if self.vars['fractal_analysis']:
+                zoomed_binary, side_lengths = prepare_box_counting(binary,
+                                                                   min_mesh_side=self.vars[
+                                                                       'fractal_box_side_threshold'],
+                                                                   zoom_step=self.vars['fractal_zoom_step'],
+                                                                   contours=True)
+                box_counting_dimensions = box_counting_dimension(zoomed_binary, side_lengths)
+                one_row_per_frame["fractal_dimension"] = box_counting_dimensions[0]
+                one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[1]
+                one_row_per_frame["fractal_r_value"] = box_counting_dimensions[2]
 
+            one_descriptor_per_arena = {}
+            one_descriptor_per_arena["arena"] = arena
+            one_descriptor_per_arena["first_move"] = pd.NA
+            one_descriptor_per_arena["final_area"] = binary.sum()
+            one_descriptor_per_arena["iso_digi_transi"] = pd.NA
+            one_descriptor_per_arena["is_growth_isotropic"] = pd.NA
             self.update_one_row_per_arena(i, one_descriptor_per_arena)
-            self.update_one_row_per_frame(i * binary.shape[0], (i + 1) * binary.shape[0], one_row_per_frame)
-            efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i]]
-            contours = np.nonzero(get_contours(arena_im))
+            self.update_one_row_per_frame(i * 1, (i + 1) * 1, one_row_per_frame)
+            contours = np.nonzero(get_contours(binary))
             efficiency_test[contours[0], contours[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             self.add_analysis_visualization_to_first_and_last_images(i, efficiency_test, None)
         self.save_tables(with_last_image=False)
@@ -1445,8 +1476,6 @@ class ProgramOrganizer:
             Flag indicating if oscilacyto analysis is enabled.
         save_coord_network : bool
             Flag to save coordinates for network analysis.
-        network_analysis : bool
-            Flag indicating if network analysis is enabled.
 
         Returns
         -------
@@ -1469,7 +1498,7 @@ class ProgramOrganizer:
         if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
             video_bit_number += 16
             image_bit_number += 128
-        if self.vars['save_coord_network'] or self.vars['network_analysis']:
+        if self.vars['save_coord_network']:
             video_bit_number += 8
             image_bit_number += 64
 

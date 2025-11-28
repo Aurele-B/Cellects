@@ -93,6 +93,7 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
     - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
     - Pseudopod detection requires sufficient contrast with the background in grayscale images.
     """
+    logging.info(f"Arena n°{arena_label}. Starting network detection.")
     # converted_video = self.converted_video; binary=self.binary; arena_label=1; starting_time=0; visu=self.visu; origin=None; smooth_segmentation_over_time=True; detect_pseudopods=True;save_coord_network=True; show_seg=False
     dims = binary.shape
     pseudopod_min_size = 50
@@ -576,6 +577,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
     - Edge table contains betweenness centrality calculated during skeleton processing.
     Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
     """
+    logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
     # converted_video = self.converted_video; coord_network=self.coord_network; arena_label=1; starting_time=0; origin=self.origin
     dims = converted_video.shape[:3]
     if origin is not None:
@@ -589,7 +591,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
         pad_origin = None
         origin_contours = None
     vertex_table = None
-    for t in np.arange(starting_time, dims[0]): # t=286   Y, X = 729, 554
+    for t in np.arange(starting_time, dims[0]): # t=320   Y, X = 729, 554
         tic = timer()
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
