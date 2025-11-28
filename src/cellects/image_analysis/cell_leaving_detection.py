@@ -81,7 +81,7 @@ def cell_leaving_detection(new_shape: NDArray[np.uint8], covering_intensity:NDAr
         add_to_fading_coord = np.nonzero(add_to_fading)
         fading[add_to_fading_coord] = 1
         if lighter_background:
-            covering_intensity[add_to_fading_coord] = 1 / (1 - fading_coefficient)  # 0.9 * covering_intensity[add_to_fading_coord]  #
+            covering_intensity[add_to_fading_coord] = 1  # 0.9 * covering_intensity[add_to_fading_coord]  #
         else:
             covering_intensity[add_to_fading_coord] = 255  # 1.1 * covering_intensity[add_to_fading_coord]
     # With a lighter background, fading them if their intensity gets higher than the covering intensity
