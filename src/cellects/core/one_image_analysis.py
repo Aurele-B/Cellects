@@ -216,7 +216,7 @@ class OneImageAnalysis:
 
     def _get_all_color_spaces(self):
         """Generate and store all supported color spaces for the image."""
-        if len(self.all_c_spaces) == 0 and not self.already_greyscale:
+        if len(self.all_c_spaces) < 6 and not self.already_greyscale:
             self.all_c_spaces = get_color_spaces(self.bgr)
 
     def generate_subtract_background(self, c_space_dict: dict, drift_corrected: bool=False):
@@ -305,7 +305,6 @@ class OneImageAnalysis:
             mask = cv2.dilate(self.binary_image, kernel=cross_33)
             mask -= self.binary_image
             mask = np.nonzero(mask)
-
             drift_correction = np.mean(self.image[mask[0], mask[1]])
             self.image[np.nonzero(self.binary_image)] = drift_correction
             threshold = get_otsu_threshold(self.image)
@@ -422,18 +421,17 @@ class OneImageAnalysis:
             # Get the most and the least covered images and the 2 best biomask and backmask scores
             # To try combinations of those
             if self.saved_csc_nb <= 1:
-                if self.saved_csc_nb == 0:
-                    csc_dict = {'bgr': np.array((1, 1, 1))}
-                    list_args = [self, False, False, csc_dict, several_blob_per_arena,
-                                 sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
-                    process_i = ProcessFirstImage(list_args)
-                    process_i.image = self.bgr.mean(axis=-1)
-                    process_i.binary_image = otsu_thresholding(process_i.image)
-                    process_i.csc_dict = csc_dict
-                    process_i.total_area = process_i.binary_image.sum()
-                    process_i.process_binary_image()
-                    process_i.unaltered_concomp_nb, shapes = cv2.connectedComponents(process_i.validated_shapes)
-                    self.save_combination_features(process_i)
+                csc_dict = {'bgr': np.array((1, 1, 1))}
+                list_args = [self, False, False, csc_dict, several_blob_per_arena,
+                             sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
+                process_i = ProcessFirstImage(list_args)
+                process_i.image = self.bgr.mean(axis=-1)
+                process_i.binary_image = otsu_thresholding(process_i.image)
+                process_i.csc_dict = csc_dict
+                process_i.total_area = process_i.binary_image.sum()
+                process_i.process_binary_image()
+                process_i.unaltered_concomp_nb, shapes = cv2.connectedComponents(process_i.validated_shapes)
+                self.save_combination_features(process_i)
                 self.combination_features = self.combination_features[:self.saved_csc_nb, :]
                 fit = np.array([True])
             else:
@@ -474,10 +472,8 @@ class OneImageAnalysis:
 
                 # If most images are very low in biosum or backsum, try to mix them together to improve that score
                 # Do a logical And between the two best biomasks
-                print(self.saved_csc_nb)
                 if biomask is not None:
                     if not np.all(np.isin((bio1, bio2), (most1, most2))):
-                        print('h1')
                         process_i.image = self.converted_images_list[bio1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[bio2]).astype(
                         np.uint8)
@@ -493,7 +489,6 @@ class OneImageAnalysis:
                 # Do a logical And between the two best backmask
                 if backmask is not None:
                     if not np.all(np.isin((back1, back2), (most1, most2))):
-                        print('h2')
                         process_i.image = self.converted_images_list[back1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[back1], self.saved_images_list[back2]).astype(
                         np.uint8)
@@ -823,22 +818,30 @@ class OneImageAnalysis:
             for remove_col_space in color_space_to_remove:
                 potentials.pop(remove_col_space)
             i += 1
-        if np.logical_and(len(potentials) > 0, i > 1):
-            self.converted_images_list.append(self.image)
-            self.saved_images_list.append(self.binary_image)
-            self.saved_color_space_list.append(potentials)
-            self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
-            self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-            self.combination_features[self.saved_csc_nb, area_idx] = surf
-            self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-            self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-            if biomask is not None:
-                self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                    self.binary_image[biomask[0], biomask[1]])
-            if backmask is not None:
-                self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                    (1 - self.binary_image)[backmask[0], backmask[1]])
-            self.saved_csc_nb += 1
+        if len(potentials) == 0 or i <= 1:
+            self.image = self.bgr.mean(axis=-1)
+            self.binary_image = otsu_thresholding(self.image)
+            potentials['bgr'] = np.array((1, 1, 1))
+            nb, shapes = cv2.connectedComponents(self.binary_image)
+            surf = self.binary_image.sum()
+            outside_pixels = np.sum(self.binary_image * out_of_arenas)
+            in_common = np.sum(ref_image * self.binary_image)
+
+        self.converted_images_list.append(self.image)
+        self.saved_images_list.append(self.binary_image)
+        self.saved_color_space_list.append(potentials)
+        self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
+        self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
+        self.combination_features[self.saved_csc_nb, area_idx] = surf
+        self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+        self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
+        if biomask is not None:
+            self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
+                self.binary_image[biomask[0], biomask[1]])
+        if backmask is not None:
+            self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
+                (1 - self.binary_image)[backmask[0], backmask[1]])
+        self.saved_csc_nb += 1
 
         self.combination_features = self.combination_features[:self.saved_csc_nb, :]
         # Among all potentials, select the best one, according to criterion decreasing in importance

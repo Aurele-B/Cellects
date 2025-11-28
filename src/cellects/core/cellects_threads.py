@@ -35,8 +35,9 @@ from numba.typed import Dict as TDict
 import numpy as np
 import pandas as pd
 from PySide6 import QtCore
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.load_display_save import read_and_rotate, video2numpy
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.utils.load_display_save import write_video
@@ -318,11 +319,11 @@ class UpdateImageThread(QtCore.QThread):
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
-
-                cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
-                binary_idx = binary_idx - cv2.eroded_binary
-                binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
-                binary_idx = np.nonzero(binary_idx)
+                binary_idx = np.nonzero(get_contours(binary_idx))
+                # cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
+                # binary_idx = binary_idx - cv2.eroded_binary
+                # binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
+                # binary_idx = np.nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
                     # logging.info('Color the segmentation mask in magenta')
@@ -837,10 +838,16 @@ class CompleteImageAnalysisThread(QtCore.QThread):
     """
     Thread for completing the last image analysis.
 
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Signal emitted upon completion of the thread's task.
+
     Notes
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
+    message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
         """
@@ -860,7 +867,14 @@ class CompleteImageAnalysisThread(QtCore.QThread):
         self.parent().po.data_to_save['coordinates'] = True
         self.parent().po.data_to_save['exif'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
+        self.parent().po.all['bio_mask'] = None
+        self.parent().po.all['back_mask'] = None
+        if self.parent().imageanalysiswindow.bio_masks_number != 0:
+            self.parent().po.all['bio_mask'] = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
+        if self.parent().imageanalysiswindow.back_masks_number != 0:
+            self.parent().po.all['back_mask'] = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         self.parent().po.complete_image_analysis()
+        self.message_when_thread_finished.emit(True)
 
 
 class PrepareVideoAnalysisThread(QtCore.QThread):
@@ -1249,10 +1263,7 @@ class OneArenaThread(QtCore.QThread):
         self.when_loading_finished.emit(save_loaded_video)
 
         if self.parent().po.motion.visu is None:
-            visu = self.parent().po.motion.converted_video
-            visu -= np.min(visu)
-            visu = 255 * (visu / np.max(visu))
-            visu = np.round(visu).astype(np.uint8)
+            visu = bracket_to_uint8_image_contrast(self.parent().po.motion.converted_video)
             if len(visu.shape) == 3:
                 visu = np.stack((visu, visu, visu), axis=3)
             self.parent().po.motion.visu = visu

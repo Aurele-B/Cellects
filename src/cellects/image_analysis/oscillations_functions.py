@@ -66,6 +66,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
     - Memory-intensive operations use float16 when available RAM would otherwise be exceeded
     - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
     """
+    logging.info(f"Arena n°{arena_label}. Starting oscillation analysis.")
     dims = converted_video.shape
     oscillations_video = None
     if dims[0] > 1:

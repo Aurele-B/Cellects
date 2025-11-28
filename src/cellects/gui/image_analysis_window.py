@@ -826,8 +826,14 @@ class ImageAnalysisWindow(MainTabsType):
                 self.hold_click_flag = True
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
         else:
-            if "PCA" in self.csc_dict:
-                self.popup_img = FullScreenImage(bracket_to_uint8_image_contrast(self.parent().po.first_image.greyscale), self.parent().screen_width, self.parent().screen_height)
+            if not self.asking_first_im_parameters_flag and "PCA" in self.csc_dict:
+                if self.step < 2:
+                    popup_img = self.parent().po.first_image.binary_image
+                else:
+                    popup_img = self.parent().po.last_image.binary_image
+                popup_img[np.nonzero(self.back_mask)] = 0
+                popup_img[np.nonzero(self.bio_mask)] = 1
+                self.popup_img = FullScreenImage(popup_img * 255, self.parent().screen_width, self.parent().screen_height)
             else:
                 self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
@@ -1081,6 +1087,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.csc_dict_is_empty:
                 self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
+                self.is_image_analysis_running = False
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
             self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
             self.thread["FirstImageAnalysis"].start()
@@ -1149,6 +1156,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.update_csc_editing_display()
             else:
                 self.message.setText("No options could be generated automatically, use the advanced mode")
+                self.is_image_analysis_running = False
 
         if self.parent().po.visualize or len(im_combinations) > 0:
             self.is_image_analysis_display_running = True
@@ -1172,7 +1180,6 @@ class ImageAnalysisWindow(MainTabsType):
         """
         color_analysis = not self.parent().po.vars['already_greyscale']
         self.message.setText("")
-
 
         if self.step < 2:
             detected_shape_nb = self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id][
@@ -1219,10 +1226,12 @@ class ImageAnalysisWindow(MainTabsType):
             self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
             self.yes.setVisible(False)
             self.no.setVisible(False)
-            self.message.setText('When the resulting segmentation of the last image seems good, click next.')
-
             if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
                 self.next.setVisible(True)
+                self.message.setText('When the resulting segmentation of the last image seems good, click next.')
+            else:
+                self.video_tab.set_not_usable()
+                self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
             self.complete_image_analysis.setVisible(True)
 
         try:
@@ -2154,6 +2163,7 @@ class ImageAnalysisWindow(MainTabsType):
 
             # Slower or manual delineation?
             elif self.asking_slower_or_manual_delineation_flag:
+                self.back1_bio2 = 0
                 if not is_yes:
                     self.manual_delineation()
                 else:
@@ -2317,8 +2327,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText("Draw each arena")
         self.user_drawn_lines_label.setVisible(True)
         self.decision_label.setText(
-            f"Hold click to draw {self.parent().po.sample_number} arena(s) on the image")
-        self.message.setText('Click Yes when it is done')
+            f"Hold click to draw {self.parent().po.sample_number} arena(s) on the image. Once done, click yes.")
+        self.message.setText('An error? Hit one button on the left to remove any drawn arena.')
 
     def last_image_question(self):
         """
@@ -2331,18 +2341,19 @@ class ImageAnalysisWindow(MainTabsType):
         self.image_number.setVisible(False)
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
-        self.asking_last_image_flag = True
         self.step = 2
         if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
             self.starting_differs_from_growing_cb.setChecked(False)
-            self.decision_label.setText('Click yes to improve the segmentation')
+            self.start_last_image()
         else:
+            self.asking_last_image_flag = True
             self.decision_label.setText('Click yes to improve the segmentation using the last image')
             self.message.setText('This is useful when the specimen(s) is more visible.')
             self.starting_differs_from_growing_cb.setVisible(True)
             self.starting_differs_from_growing_label.setVisible(True)
-        self.yes.setVisible(True)
-        self.no.setVisible(True)
+            self.yes.setVisible(True)
+            self.no.setVisible(True)
+
     def start_last_image(self):
         """
         Start the process of analyzing the last image in the time-lapse or the video.
@@ -2386,8 +2397,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread['CompleteImageAnalysisThread'].isRunning()):
             self.message.setText(f"Analyzing and saving the segmentation result, wait... ")
             self.thread['CompleteImageAnalysisThread'].start()
-            self.thread['CompleteImageAnalysisThread'].wait()
-            self.message.setText(f"")
+            self.thread['CompleteImageAnalysisThread'].message_when_thread_finished.connect(self.complete_image_analysis_done)
+
+    def complete_image_analysis_done(self, res):
+        self.message.setText(f"Complete image analysis done.")
 
     def go_to_next_widget(self):
         """

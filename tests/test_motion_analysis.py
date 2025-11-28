@@ -47,7 +47,6 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
         cls.vars['average_pixel_size'] = 1.
-        cls.vars['network_analysis'] = True
         cls.vars['save_coord_network'] = True
         cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True
@@ -83,7 +82,6 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['several_blob_per_arena'] = False
         cls.vars['output_in_mm'] = True
         cls.vars['do_fading'] = True
-        cls.vars['network_analysis'] = True
         cls.vars['save_coord_network'] = True
         cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True

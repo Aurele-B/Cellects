@@ -395,7 +395,7 @@ class FirstWindow(MainTabsType):
         self.parent().instantiate_widgets()
         self.parent().imageanalysiswindow.true_init()
         self.instantiate = False
-        if self.parent().po.first_exp_ready_to_run:
+        if self.parent().po.first_exp_ready_to_run and (self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1):
             self.parent().imageanalysiswindow.video_tab.set_not_in_use()
         self.parent().change_widget(2) # imageanalysiswindow
         # From now on, image analysis will be available from video analysis:
@@ -544,7 +544,8 @@ class FirstWindow(MainTabsType):
             self.radical.setText(self.parent().po.all['radical'])
             self.extension.setText(self.parent().po.all['extension'])
             self.Run_all_directly.setVisible(True)
-            self.video_tab.set_not_in_use()
+            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+                self.video_tab.set_not_in_use()
 
 
     def re_instantiate_widgets(self):

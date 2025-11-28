@@ -199,9 +199,9 @@ class RequiredOutput(WindowType):
             self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name]))
             cb_index = label_index + 1
 
-            if name == 'fractal_analysis':
-                self.descriptor_widgets_list[label_index].setVisible(False)
-                self.descriptor_widgets_list[cb_index].setVisible(False)
+            # if name == 'fractal_analysis' or name == 'oscilacyto_analysis':
+            #     self.descriptor_widgets_list[label_index].setVisible(False)
+            #     self.descriptor_widgets_list[cb_index].setVisible(False)
 
             self.save_descriptors_layout.addWidget(self.descriptor_widgets_list[cb_index], row, col + 1)
 
@@ -227,8 +227,6 @@ class RequiredOutput(WindowType):
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['oscilacyto_analysis'])
             elif name == 'fractal_analysis':
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['fractal_analysis'])
-            elif name == 'network_analysis':
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['network_analysis'])
             else:
                 self.descriptor_widgets_list[k].setChecked(self.parent().po.all['descriptors'][name])
 
@@ -265,8 +263,6 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['oscilacyto_analysis'] = checked_status
             if name == 'fractal_analysis':
                 self.parent().po.vars['fractal_analysis'] = checked_status
-            if name == 'network_analysis':
-                self.parent().po.vars['network_analysis'] = checked_status
         if not self.parent().thread['SaveAllVars'].isRunning():
             self.parent().thread['SaveAllVars'].start()
         self.parent().po.update_output_list()
