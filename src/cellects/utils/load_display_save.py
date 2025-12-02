@@ -494,8 +494,6 @@ def movie(video, increase_contrast: bool=True):
     ----------
     video : numpy.ndarray
         The input video represented as a 3D NumPy array.
-    keyboard : int, optional
-        Key for waiting during display (default is 1).
     increase_contrast : bool, optional
         Flag to increase the contrast of each frame (default is True).
 
@@ -1105,21 +1103,6 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     >>> print(time)
     array([0, 0])
 
-    Notes
-    --------
-    dir(my_image)
-    ['<unknown EXIF tag 59932>', '<unknown EXIF tag 59933>', '_exif_ifd_pointer', '_gps_ifd_pointer', '_segments', 'aperture
-    _value', 'brightness_value', 'color_space', 'components_configuration', 'compression', 'datetime', 'datetime_digitized',
-    'datetime_original', 'exif_version', 'exposure_bias_value', 'exposure_mode', 'exposure_program', 'exposure_time', 'f_
-    number', 'flash', 'flashpix_version', 'focal_length', 'focal_length_in_35mm_film', 'get', 'get_file', 'get_thumbnail',
-    'gps_altitude', 'gps_altitude_ref', 'gps_datestamp', 'gps_dest_bearing', 'gps_dest_bearing_ref', 'gps_horizontal_
-    positioning_error', 'gps_img_direction', 'gps_img_direction_ref', 'gps_latitude', 'gps_latitude_ref', 'gps_longitude',
-    'gps_longitude_ref', 'gps_speed', 'gps_speed_ref', 'gps_timestamp', 'has_exif', 'jpeg_interchange_format', 'jpeg_
-    interchange_format_length', 'lens_make', 'lens_model', 'lens_specification', 'make', 'maker_note', 'metering_mode',
-    'model', 'orientation', 'photographic_sensitivity', 'pixel_x_dimension', 'pixel_y_dimension', 'resolution_unit',
-    'scene_capture_type', 'scene_type', 'sensing_method', 'shutter_speed_value', 'software', 'subject_area', 'subsec_time_
-    digitized', 'subsec_time_original', 'white_balance', 'x_resolution', 'y_and_c_positioning', 'y_resolution']
-
     """
     if isinstance(pathway, str):
         pathway = Path(pathway)
@@ -1161,6 +1144,24 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     return time
 
 def display_network_methods(network_detection: object, save_path: str=None):
+    """
+
+    Display segmentation results from a network detection object.
+
+    Extended Description
+    --------------------
+
+    Plots the binary segmentation results for various methods stored in ``network_detection.all_results``.
+    Highlights the best result based on quality metrics and allows for saving the figure to a file.
+
+    Parameters
+    ----------
+    network_detection : object
+        An object containing segmentation results and quality metrics.
+    save_path : str, optional
+        Path to save the figure. If ``None``, the plot is displayed.
+
+    """
     row_nb = 6
     fig, axes = plt.subplots(int(np.ceil(len(network_detection.all_results) / row_nb)), row_nb, figsize=(100, 100))
     fig.suptitle(f'Segmentation Comparison: Frangi + Sato Variations', fontsize=16)
