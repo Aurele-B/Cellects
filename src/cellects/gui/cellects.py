@@ -1,21 +1,24 @@
 #!/usr/bin/env python3
+
 """
-This module contains the Widget that stacks all Cellects widget.
-An important note is that user-friendliness and versatility are at the core of Cellects’ development.
-Henceforth, the general workflow is in fact, a user-assisted workflow. Every step of the general workflow can
-be fine-tuned by the user to cope with various imaging conditions. At every step, automatic algorithms suggest options
-to help the user to find the best parameters.
+Main window for Cellects application managing stacked workflow steps.
+
+This module implements a user-assisted image analysis workflow using a QStackedWidget to navigate between configuration
+ and analysis phases. It provides windows for data setup, image/video processing, output requirements, and
+ advanced parameters. Automatic algorithm suggestions are offered at each step while allowing full user customization.
+ Uses SaveAllVarsThread in background operations to maintain UI responsiveness.
+
+Main Components
+CellectsMainWidget : Central stacked widget managing workflow navigation
+
+Notes
+Uses QThread for background operations to maintain UI responsiveness.
 """
 import logging
 import signal
-
-# necessary on OSX
-# pip install cython pyobjus
-import sys
 import numpy as np
 from PySide6 import QtWidgets, QtGui
 from screeninfo import get_monitors
-
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.cellects_threads import SaveAllVarsThread
 from cellects.gui.advanced_parameters import AdvancedParameters
@@ -25,13 +28,46 @@ from cellects.gui.image_analysis_window import ImageAnalysisWindow
 from cellects.gui.required_output import RequiredOutput
 from cellects.gui.video_analysis_window import VideoAnalysisWindow
 
-from cellects.core.cellects_paths import ICONS_DIR
-
 
 class CellectsMainWidget(QtWidgets.QStackedWidget):
-    """ Main widget: this is the main window """
+    """ Main widget: this is the main window of the Cellects application. """
 
     def __init__(self):
+        """
+
+        Initializes the Cellects application window and sets up initial state.
+
+        Sets the title, dimensions, and default values for various attributes
+        required to manage the GUI's state and display settings.
+        Initializes a ProgramOrganizer object and loads its variable dictionary.
+
+        Attributes
+        ----------
+        pre_processing_done : bool
+            Indicates whether pre-processing has been completed.
+        last_is_first : bool
+            Tracks if the last operation was the first in sequence.
+        last_tab : str
+            The most recently accessed tab name (default: "data_specifications").
+        screen_height : int
+            Height of the monitor in pixels.
+        screen_width : int
+            Width of the monitor in pixels.
+        im_max_width : int
+            Maximum width allowed for displayed images (default: 570).
+        im_max_height : int
+            Maximum height allowed for displayed images (default: 266).
+        image_window_width_diff : int
+            Difference in width between image window and max image size.
+        image_window_height_diff : int
+            Difference in height between image window and max image size.
+        image_to_display : ndarray
+            Placeholder for the image to be displayed (initialized as zeros).
+        i : int
+            Counter or index used in the application.
+        po : ProgramOrganizer
+            Instance managing the organization and variables of the program.
+        """
         super().__init__()
 
         self.setWindowTitle('Cellects')
@@ -41,41 +77,32 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.pre_processing_done: bool = False
         self.screen_height = get_monitors()[0].height
         self.screen_width = get_monitors()[0].width
-        self.im_max_width = 570  # self.screen_width // 5 374, 296
-        self.im_max_height = 266  # self.screen_height // 5 (1369, 778) (1380, 834)
-        # self.image_window_width_ratio = 570/1380
-        # self.image_window_height_ratio = 266/750
+        self.im_max_width = 570
+        self.im_max_height = 266
         self.image_window_width_diff = 1380 - 570
         self.image_window_height_diff = 750 - 266
         self.image_to_display = np.zeros((self.im_max_height, self.im_max_width, 3), np.uint8)
-        # self.im_max_height = (2 * self.screen_height // 3) // 3
-        # self.im_max_width = (2 * self.screen_width // 3) // 4
         self.i = 1
         self.po = ProgramOrganizer()
-        # self.subwidgets_stack.po = self.po
-        self.po.load_variable_dict()
-        # self.parent().po.all['night_mode'] = True
 
-        # self.resize(4 * self.screen_width // 5, 4 * self.screen_height // 5)
+        self.po.load_variable_dict()
         self.resize(1380, 750)
 
-        # self.setMaximumWidth(self.screen_width)
-        # self.setMaximumHeight(self.screen_height)
-        #
-        # self.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Maximum,
-        #     QtWidgets.QSizePolicy.Maximum)
-        #
-        # self.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Minimum,
-        #     QtWidgets.QSizePolicy.Minimum)
-        # self.setSizePolicy(
-        #     QtWidgets.QSizePolicy.Expanding,
-        #     QtWidgets.QSizePolicy.Expanding)
-
     def instantiate(self):
+        """
+        Initiates the Cellects application by setting up the main window and starting various threads.
 
-        logging.info("instantiate")
+        Extended Description
+        ---------------------
+        This method is responsible for initializing the Cellects application. It sets up the main window, creates necessary widgets, and starts the required threads for background operations.
+
+        Other Parameters
+        ----------------
+        night_mode : bool, optional
+            Indicates whether the application should run in night mode. This parameter is managed by another part of
+            the code and should not be set directly.
+        """
+        logging.info("Instantiate Cellects")
         self.firstwindow = FirstWindow(
             self,
             night_mode=self.po.all['night_mode'])
@@ -88,17 +115,22 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.change_widget(0)
         self.center()
 
-    def instantiate_widgets(self, severalfolder_included=True):
-        print("Widgets are instantiating")
-        # for widg_i in np.arange(1, 6):
-        #     widget = self.widget(1)
-        #     if widget is not None:
-        #         self.removeWidget(widget)
-        #         # widget.deleteLater()
-        if severalfolder_included:
+    def instantiate_widgets(self, several_folder_included: bool=True):
+        """
+        Instantiate various windows for the application's GUI.
+
+        This function configures the main GUI windows for image and video analysis,
+        output requirements, and advanced parameters.
+
+        Parameters
+        ----------
+        several_folder_included: bool, optional
+            A flag to determine whether the `IfSeveralFoldersWindow` should be instantiated. Default is `True`.
+        """
+        logging.info("Widgets are instantiating")
+        if several_folder_included:
             self.ifseveralfolderswindow = IfSeveralFoldersWindow(self, night_mode=self.po.all['night_mode'])
             self.insertWidget(1, self.ifseveralfolderswindow)
-            # self.ifseveralfolderswindow.setVisible(True)
         self.imageanalysiswindow = ImageAnalysisWindow(self, night_mode=self.po.all['night_mode'])
         self.insertWidget(2, self.imageanalysiswindow)
 
@@ -111,20 +143,12 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.advancedparameterswindow = AdvancedParameters(self, night_mode=self.po.all['night_mode'])
         self.insertWidget(5, self.advancedparameterswindow)
 
-        # self.requiredoutputwindow = RequiredOutput(
-        #     self, night_mode=self.po.all['night_mode'])
-        # self.insertWidget(4, self.requiredoutputwindow)
-        #
-        # self.advancedparameterswindow = AdvancedParameters(
-        #     self, night_mode=self.po.all['night_mode'])
-        # self.insertWidget(5, self.requiredoutputwindow)
 
-
-    def update_widget(self, idx, widget_to_call):
+    def update_widget(self, idx: int, widget_to_call):
         """ Update widget at its position (idx) in the stack """
         self.insertWidget(idx, widget_to_call)
 
-    def change_widget(self, idx):
+    def change_widget(self, idx: int):
         """ Display a widget using its position (idx) in the stack """
         self.setCurrentIndex(idx)  # Index that new widget
         self.updateGeometry()
@@ -133,6 +157,13 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             self.currentWidget().display_conditionally_visible_widgets()
 
     def center(self):
+        """
+        Centers the window on the screen.
+
+        Moves the window to the center of the available screen geometry.
+        Allows users to always see the application's windows in a consistent
+        position, regardless of screen resolution or window size.
+        """
         qr = self.frameGeometry()
         # cp = QtWidgets.QDesktopWidget().availableGeometry().center()  # PyQt 5
         cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()  # Pyside 6
@@ -140,6 +171,19 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.move(qr.topLeft())
 
     def closeEvent(self, event):
+        """
+        Close the application window and handle cleanup.
+
+        Parameters
+        ----------
+        event : QCloseEvent
+            The close event that triggered this function.
+
+        Notes
+        -----
+        This function does not return any value and is intended for event
+        handling purposes only.
+        """
         reply = QtWidgets.QMessageBox.question(
             self,
             'Closing Cellects',
@@ -151,39 +195,6 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             signal.signal(signal.SIGSEGV, signal.SIG_IGN)
             logging.info("Closing main window.")
             event.accept()
-            # QtWidgets.QApplication.quit()
             self.close()
         else:
             event.ignore()
-        # self.hide()
-
-    # def update_all_settings(self):
-    #     self.firstwindow
-    #     self.imageanalysiswindow
-    #     self.videoanalysiswindow
-    #     requiredoutputwindow = self.widget(4)
-    #     advancedparameterswindow = self.widget(5)
-
-
-
-"""
-Ajouter
-are_gravity_centers_moving
-Retirer advanced mode de third widget
-Inverser gauche et droite de third widget
-
-drop_nak1 Réduction de la taille de la forme d'origine lors du passage de
-luminosity_segmentation à luminosity_segmentation + gradient_segmentation
-
-Catégories d'Advanced parameters:
-
-- Spatio-temporal scales: time interval, timmings, convert,
-- Analysis parameters: crop, subtract background
-- Computer resources: Parallel, proc, ram,
-- Video saving: fps, over unaltered, keep unaltered, save processed
-- Special cases: correct error around initial shape, connect distant shape,
-  appearing size threshold, appearing detection method, oscillation period
-
-if image_analysis is done:
-    get_average_pixel_size
-"""

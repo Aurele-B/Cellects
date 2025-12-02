@@ -9,10 +9,9 @@ import pandas as pd
 import cv2
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
-from cellects.core.one_video_per_blob import OneVideoPerBlob
 from cellects.core.motion_analysis import MotionAnalysis
-from cellects.config.all_vars_dict import DefaultDicts
-from cellects.utils.load_display_save import show
+from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
+from cellects.image_analysis.network_functions import NetworkDetection
 
 
 def load_one_folder(pathway, sample_number):
@@ -34,7 +33,7 @@ def load_one_folder(pathway, sample_number):
 def run_image_analysis(po):
     if not po.first_exp_ready_to_run:
         po.get_first_image()
-        po.fast_image_segmentation(True)
+        po.fast_first_image_segmentation()
         # po.first_image.find_first_im_csc(sample_number=po.sample_number,
         #                                    several_blob_per_arena=None,
         #                                    spot_shape=None, spot_size=None,
@@ -48,7 +47,7 @@ def run_image_analysis(po):
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
         po.get_last_image()
-        po.fast_image_segmentation(is_first_image=False)
+        po.fast_last_image_segmentation()
         po.find_if_lighter_background()
         po.extract_exif()
     else:
@@ -65,14 +64,14 @@ def write_videos(po):
     do_write_videos = not there_already_are_videos or (
             there_already_are_videos and po.all['overwrite_unaltered_videos'])
     if do_write_videos:
-        po.videos = OneVideoPerBlob(po.first_image, po.starting_blob_hsize_in_pixels, po.all['raw_images'])
-        po.videos.left = po.left
-        po.videos.right = po.right
-        po.videos.top = po.top
-        po.videos.bot = po.bot
-        po.videos.first_image.shape_number = po.sample_number
-        po.videos.write_videos_as_np_arrays(
-            po.data_list, po.vars['min_ram_free'], not po.vars['already_greyscale'], po.reduce_image_dim)
+        po.first_image.shape_number = po.sample_number
+        in_colors = not po.vars['already_greyscale']
+        bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = po.prepare_video_writing(
+            po.data_list, po.vars['min_ram_free'], in_colors)
+        write_video_sets(po.data_list, sizes, vid_names, po.first_image.crop_coord,
+                         (po.top, po.bot, po.left, po.right), bunch_nb, video_nb_per_bunch,
+                         remaining, po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, po.reduce_image_dim,
+                         pathway="")
     po.instantiate_tables()
     return po
 
@@ -91,7 +90,7 @@ def run_one_video_analysis(po):
     MA = MotionAnalysis(l)
     MA.get_descriptors_from_binary()
     MA.detect_growth_transitions()
-    MA.networks_detection(show_seg)
+    MA.networks_analysis(show_seg)
     MA.study_cytoscillations(show_seg)
     return MA
 
@@ -128,27 +127,18 @@ def run_all_arenas(po):
     cv2.imwrite(f"Analysis efficiency, {np.ceil(po.vars['img_number'] / 10).astype(np.uint64)}th image.jpg",
         po.first_image.bgr)
 
+def detect_network_in_one_image(im_path, save_path):
+    im = readim(im_path)
+    im = im[100:870, 200:1000]
+    greyscale_image = im.mean(axis=2)
+    net = NetworkDetection(greyscale_image, add_rolling_window=True)
+    net.get_best_network_detection_method()
+    display_network_methods(net, save_path)
+
 
 
 if __name__ == "__main__":
     po = load_one_folder(Path("/data/experiment"), 1)
     po = run_image_analysis(po)
     po = write_videos(po)
-    # MA = run_one_video_analysis(po)
     run_all_arenas(po)
-
-    # MA.one_row_per_frame.to_csv(
-    #     "/Users/Directory/Scripts/python/Cellects/tests/data/experiment/motion_analysis_thresh.csv")
-
-    # path = Path("/Users/Directory/Scripts/python/Cellects/tests/data/experiment")
-    # po.load_variable_dict()
-    # run_image_analysis(po)
-    # os.chdir(path)
-    # from glob import glob
-    # from cellects.utils.load_display_save import readim
-    # im_names = np.sort(glob("*.JPG"))
-    # for i, im_name in enumerate(im_names): #  im_name = im_names[-1]
-    #     im = readim(im_name)
-    #     cv2.imwrite(f"image{i + 1}.tif", im[2925:3170, 1200:1500, :])
-    #
-    #     show(im[2925:3170,1200:1500, :])

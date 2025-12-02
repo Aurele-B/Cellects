@@ -1,10 +1,25 @@
 #!/usr/bin/env python3
 """
-Cellects graphical user interface interacts with computational scripts through threads.
-Especially, each thread calls one or several methods of the class named "program_organizer",
-which regroup all available computation of the software.
-These threads are started from a children of WindowType, run methods from program_organizer and send messages and
-results to the corresponding children of WindowType, allowing, for instance, to display a result in the interface.
+Cellects GUI module implementing threaded image/video analysis workflows.
+
+This module provides a Qt-based interface for analyzing biological motion and growth through color space combinations,
+segmentation strategies, arena delineation, and video processing. Uses QThreaded workers to maintain UI responsiveness
+during computationally intensive tasks like segmentation, motion tracking, network detection, oscillation and fractal
+analysis.
+
+Main Components
+LoadDataToRunCellectsQuicklyThread : Loads necessary data asynchronously for quick Cellects execution.
+FirstImageAnalysisThread : Analyzes first image with automatic color space selection and segmentation.
+LastImageAnalysisThread : Processes last frame analysis for optimized color space combinations.
+CropScaleSubtractDelineateThread : Handles cropping, scaling, and arena boundary detection.
+OneArenaThread : Performs complete motion analysis on a single arena with post-processing.
+RunAllThread : Executes full batch analysis across multiple arenas/experiments.
+
+Notes
+Uses QThread for background operations to maintain UI responsiveness. Key workflows include automated color space
+optimization, adaptive segmentation algorithms, multithreaded video processing, and arena delineation via geometric
+analysis or manual drawing. Implements special post-processing for Physarum polycephalum network detection and oscillatory
+activity tracking.
 """
 
 import logging
@@ -20,24 +35,52 @@ from numba.typed import Dict as TDict
 import numpy as np
 import pandas as pd
 from PySide6 import QtCore
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, apply_filter
-from cellects.utils.load_display_save import read_and_rotate
+from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_contours
+from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
-from cellects.core.one_video_per_blob import OneVideoPerBlob
-from cellects.utils.load_display_save import write_video
+from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
+                                              create_empty_videos, write_video)
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.core.motion_analysis import MotionAnalysis
 
 
 class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
+    """
+    Load data to run Cellects quickly in a separate thread.
+
+    This class is responsible for loading necessary data asynchronously
+    in order to speed up the process of running Cellects.
+
+    Signals
+    -------
+    message_when_thread_finished : Signal(str)
+        Emitted when the thread finishes execution, indicating whether data loading was successful.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for quickly loading data to run Cellects.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(LoadDataToRunCellectsQuicklyThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Execute the data loading and preparation process for running cellects without setting all parameters in the GUI.
+
+        This method triggers the parent object's methods to look for data and load it,
+        then checks if the first experiment is ready. If so, it emits a message.
+        """
         self.parent().po.look_for_data()
         self.parent().po.load_data_to_run_cellects_quickly()
         if self.parent().po.first_exp_ready_to_run:
@@ -47,21 +90,63 @@ class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
 
 
 class LookForDataThreadInFirstW(QtCore.QThread):
+    """
+    Find and process data in a separate thread.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     def __init__(self, parent=None):
+
+        """
+        Initialize the worker thread for finding data to run Cellects.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(LookForDataThreadInFirstW, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Run the data lookup process.
+        """
         self.parent().po.look_for_data()
 
 
 class LoadFirstFolderIfSeveralThread(QtCore.QThread):
+    """
+    Thread for loading data from the first folder if there are several folders.
+
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Emitted when the thread finishes execution, indicating whether data loading was successful.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_when_thread_finished = QtCore.Signal(bool)
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for loading data and parameters to run Cellects when analyzing several folders.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(LoadFirstFolderIfSeveralThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Run the data lookup process.
+        """
         self.parent().po.load_data_to_run_cellects_quickly()
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.get_first_image()
@@ -69,44 +154,118 @@ class LoadFirstFolderIfSeveralThread(QtCore.QThread):
 
 
 class GetFirstImThread(QtCore.QThread):
+    """
+    Thread for getting the first image.
+
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Emitted when the thread finishes execution, indicating whether data loading was successful.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_when_thread_finished = QtCore.Signal(bool)
     def __init__(self, parent=None):
         """
-        This class read the first image of the (first of the) selected analysis.
-        According to the first_detection_frame value,it can be another image
-        If this is the first time a first image is read, it also gather the following variables:
-            - img_number
-            - dims (video dimensions: time, y, x)
-            - raw_images (whether images are in a raw format)
-        If the selected analysis contains videos instead of images, it opens the first video
-        and read the first_detection_frame th image.
-        :param parent: An object containing all necessary variables.
+        Initialize the worker thread for loading the first image of one folder.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
         """
         super(GetFirstImThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Run the first image reading task in the parent process and emit a signal when it finishes.
+        """
         self.parent().po.get_first_image()
         self.message_when_thread_finished.emit(True)
 
 
 class GetLastImThread(QtCore.QThread):
+    """
+    Thread for getting the last image.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for loading the last image of one folder.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(GetLastImThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Run the last image reading task in the parent process.
+        """
         self.parent().po.get_last_image()
 
 
 class UpdateImageThread(QtCore.QThread):
+    """
+    Thread for updating GUI image.
+
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Emitted when the thread finishes execution, indicating whether image displaying was successful.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for updating the image displayed in GUI
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(UpdateImageThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Execute the image display process, including user input handling and mask application.
+
+        This method performs several steps to analyze an image based on user input
+        and saved mask coordinates. It updates the drawn image with segmentation masks,
+        back masks, bio masks, and video contours.
+
+        Other Parameters
+        ----------------
+        user_input : bool, optional
+            Flag indicating whether user input is available.
+        idx : list or numpy.ndarray, optional
+            Coordinates of the user- defined region of interest.
+        temp_mask_coord : list, optional
+            Temporary mask coordinates.
+        saved_coord : list, optional
+            Saved mask coordinates.
+
+        Notes
+        -----
+        - This function updates several attributes of `self.parent().imageanalysiswindow`.
+        - Performance considerations include handling large images efficiently.
+        - Important behavioral caveats: Ensure coordinates are within image bounds.
+        """
         # I/ If this thread runs from user input, get the right coordinates
         # and convert them to fit the displayed image size
         user_input = len(self.parent().imageanalysiswindow.saved_coord) > 0 or len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0
@@ -160,11 +319,11 @@ class UpdateImageThread(QtCore.QThread):
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
-
-                cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
-                binary_idx = binary_idx - cv2.eroded_binary
-                binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
-                binary_idx = np.nonzero(binary_idx)
+                binary_idx = np.nonzero(get_contours(binary_idx))
+                # cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
+                # binary_idx = binary_idx - cv2.eroded_binary
+                # binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
+                # binary_idx = np.nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
                     # logging.info('Color the segmentation mask in magenta')
@@ -244,8 +403,8 @@ class UpdateImageThread(QtCore.QThread):
                         ellipse = cv2.morphologyEx(ellipse, cv2.MORPH_GRADIENT, cross_33)
                         mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
                     else:
-                        mask[(min_cy, max_cy), min_cx:max_cx] = 1
-                        mask[min_cy:max_cy, (min_cx, max_cx)] = 1
+                        mask[(min_cy, max_cy - 1), min_cx:max_cx] = 1
+                        mask[min_cy:max_cy, (min_cx, max_cx - 1)] = 1
                     mask = cv2.dilate(mask, kernel=cross_33, iterations=contour_width)
 
                     mask = np.nonzero(mask)
@@ -295,14 +454,62 @@ class UpdateImageThread(QtCore.QThread):
 
 
 class FirstImageAnalysisThread(QtCore.QThread):
+    """
+    Thread for analyzing the first image of a given folder.
+
+    Signals
+    -------
+    message_from_thread : Signal(str)
+        Signal emitted when progress messages are available.
+    message_when_thread_finished : Signal(bool)
+        Signal emitted upon completion of the thread's task.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
     message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for analyzing the first image of a given folder
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(FirstImageAnalysisThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Perform image analysis and segmentation based on the current state of the application.
+
+        This function handles both bio-mask and background mask processing, emits status messages,
+        computes average pixel size if necessary, and performs image segmentation or generates
+        analysis options.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method. Should have attributes:
+            - parent: Reference to the parent object
+            - message_from_thread.emit: Method to emit messages from the thread
+            - message_when_thread_finished.emit: Method to signal thread completion
+
+        Returns
+        -------
+        None
+            This method does not return a value but emits messages and modifies the state of
+            self.parent objects.
+        Notes
+        -----
+        This method performs several complex operations involving image segmentation and
+        analysis generation. It handles both bio-masks and background masks, computes average
+        pixel sizes, and updates various state attributes on the parent object.
+        """
         tic = default_timer()
         biomask = None
         backmask = None
@@ -315,15 +522,14 @@ class FirstImageAnalysisThread(QtCore.QThread):
         if self.parent().imageanalysiswindow.back_masks_number != 0:
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2 or shape_nb == self.parent().po.sample_number:
-            self.message_from_thread.emit("Image segmentation, wait 30 seconds at most")
+            self.message_from_thread.emit("Image segmentation, wait")
             if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
                 self.parent().po.get_average_pixel_size()
-                spot_size = self.parent().po.starting_blob_hsize_in_pixels
             else:
-                spot_size = None
+                self.parent().po.starting_blob_hsize_in_pixels = None
             self.parent().po.all["bio_mask"] = biomask
             self.parent().po.all["back_mask"] = backmask
-            self.parent().po.fast_image_segmentation(is_first_image=True, biomask=biomask, backmask=backmask, spot_size=spot_size)
+            self.parent().po.fast_first_image_segmentation()
             if shape_nb == self.parent().po.sample_number and self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] != self.parent().po.sample_number:
                 self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] = shape_nb
                 self.parent().po.first_image.shape_number = shape_nb
@@ -365,7 +571,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    biomask=self.parent().po.all["bio_mask"],
                                                                                    backmask=self.parent().po.all["back_mask"],
                                                                                    color_space_dictionaries=None,
-                                                                                   carefully=self.parent().po.carefully)
+                                                               carefully=self.parent().po.carefully)
 
         logging.info(f" image analysis lasted {default_timer() - tic} secondes")
         logging.info(f" image analysis lasted {np.round((default_timer() - tic) / 60)} minutes")
@@ -373,14 +579,66 @@ class FirstImageAnalysisThread(QtCore.QThread):
 
 
 class LastImageAnalysisThread(QtCore.QThread):
+    """
+    Thread for analyzing the last image of a given folder.
+
+    Signals
+    -------
+    message_from_thread : Signal(str)
+        Signal emitted when progress messages are available.
+    message_when_thread_finished : Signal(bool)
+        Signal emitted upon completion of the thread's task.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
     message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for analyzing the last image of a given folder
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(LastImageAnalysisThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Summary:
+        Run the image processing and analysis pipeline based on current settings.
+
+        Extended Description:
+        This function initiates the workflow for image processing and analysis,
+        including segmenting images, generating analysis options, and handling
+        various masks and settings based on the current state of the parent object.
+
+        Returns:
+        --------
+        None
+            This method does not return a value. It emits signals to indicate the
+            progress and completion of the processing tasks.
+
+        Notes:
+        ------
+        This function uses various attributes from the parent class to determine
+        how to process and analyze images. The specific behavior is heavily
+        dependent on the state of these attributes.
+
+        Attributes:
+        -----------
+        parent() : object
+            The owner of this instance, containing necessary settings and methods.
+        message_from_thread.emit(s : str) : signal
+            Signal to indicate progress messages from the thread.
+        message_when_thread_finished.emit(success : bool) : signal
+            Signal to indicate the completion of the thread.
+        """
         self.parent().po.cropping(False)
         self.parent().po.get_background_to_subtract()
         biomask = None
@@ -391,7 +649,7 @@ class LastImageAnalysisThread(QtCore.QThread):
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
             self.message_from_thread.emit("Image segmentation, wait...")
-            self.parent().po.fast_image_segmentation(is_first_image=False, biomask=biomask, backmask=backmask)
+            self.parent().po.fast_last_image_segmentation(biomask=biomask, backmask=backmask)
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
             if self.parent().po.vars['several_blob_per_arena']:
@@ -401,12 +659,12 @@ class LastImageAnalysisThread(QtCore.QThread):
             else:
                 concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
                 if self.parent().po.all['are_zigzag'] == "columns":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
                 elif self.parent().po.all['are_zigzag'] == "rows":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
                 else:
-                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.y_boundaries)))
-                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.videos.first_image.x_boundaries)))
+                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
                     inter_dist = np.max(dist1, dist2)
                 if self.parent().po.all['starting_blob_shape'] == "circle":
                     max_shape_size = np.pi * np.square(inter_dist)
@@ -415,12 +673,12 @@ class LastImageAnalysisThread(QtCore.QThread):
                 total_surfarea = max_shape_size * self.parent().po.sample_number
             out_of_arenas = None
             if self.parent().po.all['are_gravity_centers_moving'] != 1:
-                out_of_arenas = np.ones_like(self.parent().po.videos.first_image.validated_shapes)
+                out_of_arenas = np.ones_like(self.parent().po.first_image.validated_shapes)
                 for blob_i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
-                    out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
-                    self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
+                    out_of_arenas[self.parent().po.top[blob_i]: self.parent().po.bot[blob_i],
+                    self.parent().po.left[blob_i]: self.parent().po.right[blob_i]] = 0
             ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'])
+            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
             kmeans_clust_nb = None
             self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
                                                          ref_image, self.parent().po.first_image.subtract_background,
@@ -430,14 +688,53 @@ class LastImageAnalysisThread(QtCore.QThread):
 
 
 class CropScaleSubtractDelineateThread(QtCore.QThread):
+    """
+    Thread for detecting crop and arena coordinates.
+
+    Signals
+    -------
+    message_from_thread : Signal(str)
+        Signal emitted when progress messages are available.
+    message_when_thread_finished : Signal(bool)
+        Signal emitted upon completion of the thread's task.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
     message_when_thread_finished = QtCore.Signal(str)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for detecting crop and arena coordinates in the first image
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+
         super(CropScaleSubtractDelineateThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Start cropping if required, perform initial processing,
+        and handle subsequent operations based on configuration.
+
+        Extended Description
+        --------------------
+        This method initiates the cropping process if necessary,
+        performs initial processing steps, and manages subsequent operations
+        depending on whether multiple blobs are detected per arena.
+
+        Notes
+        -----
+        This method uses several logging operations to track its progress.
+        It interacts with various components of the parent object
+        to perform necessary image processing tasks.
+        """
         logging.info("Start cropping if required")
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.cropping(is_first_image=False)
@@ -468,12 +765,29 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
 
 
 class SaveManualDelineationThread(QtCore.QThread):
+    """
+    Thread for saving user's defined arena delineation through the GUI.
 
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for saving the arena coordinates when the user draw them manually
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(SaveManualDelineationThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Do save the coordinates.
+        """
         self.parent().po.left = np.arange(self.parent().po.sample_number)
         self.parent().po.right = np.arange(self.parent().po.sample_number)
         self.parent().po.top = np.arange(self.parent().po.sample_number)
@@ -492,37 +806,114 @@ class SaveManualDelineationThread(QtCore.QThread):
 
         logging.info("Save manual video delineation")
         self.parent().po.vars['analyzed_individuals'] = np.arange(self.parent().po.sample_number) + 1
-        self.parent().po.videos = OneVideoPerBlob(self.parent().po.first_image, self.parent().po.starting_blob_hsize_in_pixels, self.parent().po.all['raw_images'])
-        self.parent().po.videos.left = self.parent().po.left
-        self.parent().po.videos.right = self.parent().po.right
-        self.parent().po.videos.top = self.parent().po.top
-        self.parent().po.videos.bot = self.parent().po.bot
 
 
 class GetExifDataThread(QtCore.QThread):
+    """
+    Thread for loading exif data from images.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for looking for the exif data.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(GetExifDataThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Do extract exif data..
+        """
         self.parent().po.extract_exif()
 
 
-class FinalizeImageAnalysisThread(QtCore.QThread):
+class CompleteImageAnalysisThread(QtCore.QThread):
+    """
+    Thread for completing the last image analysis.
+
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Signal emitted upon completion of the thread's task.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
+    message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
-        super(FinalizeImageAnalysisThread, self).__init__(parent)
+        """
+        Initialize the worker thread for completing the last image analysis
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+        super(CompleteImageAnalysisThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        self.parent().po.get_background_to_subtract()
+        self.parent().po.get_origins_and_backgrounds_lists()
+        self.parent().po.data_to_save['coordinates'] = True
+        self.parent().po.data_to_save['exif'] = True
+        self.parent().po.save_data_to_run_cellects_quickly()
+        self.parent().po.all['bio_mask'] = None
+        self.parent().po.all['back_mask'] = None
+        if self.parent().imageanalysiswindow.bio_masks_number != 0:
+            self.parent().po.all['bio_mask'] = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
+        if self.parent().imageanalysiswindow.back_masks_number != 0:
+            self.parent().po.all['back_mask'] = np.nonzero(self.parent().imageanalysiswindow.back_mask)
+        self.parent().po.complete_image_analysis()
+        self.message_when_thread_finished.emit(True)
+
+
+class PrepareVideoAnalysisThread(QtCore.QThread):
+    """
+    Thread for preparing video analysis.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the worker thread for ending up the last image analysis and preparing video analysis.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+        super(PrepareVideoAnalysisThread, self).__init__(parent)
+        self.setParent(parent)
+
+    def run(self):
+        """
+        Run the image processing pipeline for the last image of the current folder.
+
+        This method handles background subtraction,
+        image segmentation, and data saving.
+        """
         self.parent().po.get_background_to_subtract()
 
         self.parent().po.get_origins_and_backgrounds_lists()
 
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
-            self.parent().po.fast_image_segmentation(False)
+            self.parent().po.fast_last_image_segmentation()
         self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
@@ -534,25 +925,46 @@ class FinalizeImageAnalysisThread(QtCore.QThread):
 
 
 class SaveAllVarsThread(QtCore.QThread):
+    """
+    Thread for saving the GUI parameters and updating current folder.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for saving the GUI parameters and updating current folder
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(SaveAllVarsThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Execute a sequence of operations to save data and update the current folder.
+
+        This method performs several steps:
+            1. Save variable dictionary.
+            2. Set the current folder.
+            3. Save data to run Cellects quickly without creating a new one if it doesn't exist.
+        """
         self.parent().po.save_variable_dict()
-
-        #self.parent().po.all['global_pathway']
-        #os.getcwd()
-
-        self.set_current_folder()
+        self._set_current_folder()
         self.parent().po.save_data_to_run_cellects_quickly(new_one_if_does_not_exist=False)
-        #if os.access(f"", os.R_OK):
-        #    self.parent().po.save_data_to_run_cellects_quickly()
-        #else:
-        #    logging.error(f"No permission access to write in {os.getcwd()}")
 
-    def set_current_folder(self):
+    def _set_current_folder(self):
+        """
+        Set the current folder based on conditions.
+
+        Sets the current folder to the first one in the list if there are multiple
+        folders, otherwise sets it to a reduced global pathway.
+        """
         if self.parent().po.all['folder_number'] > 1: # len(self.parent().po.all['folder_list']) > 1:  # len(self.parent().po.all['folder_list']) > 0:
             logging.info(f"Use {self.parent().po.all['folder_list'][0]} folder")
             self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
@@ -564,17 +976,69 @@ class SaveAllVarsThread(QtCore.QThread):
 
 
 class OneArenaThread(QtCore.QThread):
+    """
+    Thread for completing the analysis of one particular arena in the current folder.
+
+    Signals
+    -------
+    message_from_thread_starting : Signal(str)
+        Signal emitted when the thread successfully starts.
+    image_from_thread : Signal(dict)
+        Signal emitted during the video reading or analysis to display images of the current status to the GUI.
+    when_loading_finished : Signal(bool)
+        Signal emitted when the video is completely loaded.
+    when_detection_finished : Signal(str)
+        Signal emitted when the video analysis is finished.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread_starting = QtCore.Signal(str)
     image_from_thread = QtCore.Signal(dict)
     when_loading_finished = QtCore.Signal(bool)
     when_detection_finished = QtCore.Signal(str)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for saving the analyzing one arena entirely
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(OneArenaThread, self).__init__(parent)
         self.setParent(parent)
         self._isRunning = False
 
     def run(self):
+        """
+
+        Run analysis on one arena.
+
+        This method prepares and initiates the analysis process for a video by setting up required folders,
+        loading necessary data, and performing pre-processing steps. It manages the state of running analysis and
+        handles memory allocation for efficient processing.
+
+        Notes
+        -----
+        - This method uses threading to handle long-running operations without blocking the main UI.
+        - The memory allocation is dynamically adjusted based on available system resources.
+
+        Attributes
+        ----------
+        self.parent().po.vars['convert_for_motion'] : dict
+            Dictionary containing variables related to motion conversion.
+        self.parent().po.first_exp_ready_to_run : bool
+            Boolean indicating if the first experiment is ready to run.
+        self.parent().po.cores : int
+            Number of cores available for processing.
+        self.parent().po.motion : object
+            Object containing motion-related data and methods.
+        self.parent().po.load_quick_full : int
+            Number of arenas to load quickly for full detection.
+        """
         continue_analysis = True
         self._isRunning = True
         self.message_from_thread_starting.emit("Video loading, wait...")
@@ -607,9 +1071,22 @@ class OneArenaThread(QtCore.QThread):
                         self.message_from_thread_starting.emit(f"The current parameters failed to detect the cell(s) motion")
 
     def stop(self):
+        """
+        Stops the running process.
+
+        This method is used to safely halt the current process.
+        """
         self._isRunning = False
 
     def set_current_folder(self):
+        """
+
+        Sets the current folder based on conditions.
+
+        This method determines which folder to use and updates the current
+        folder ID accordingly. If there are multiple folders, it uses the first folder
+        from the list; otherwise, it uses a reduced global pathway as the current.
+        """
         if self.parent().po.all['folder_number'] > 1:
             logging.info(f"Use {self.parent().po.all['folder_list'][0]} folder")
             self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
@@ -620,11 +1097,24 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
 
     def pre_processing(self):
+        """
+        Pre-processes the data for running Cellects on one arena.
+
+        This function logs various stages of preprocessing, validates specimen numbers,
+        performs necessary segmentations and data saving operations. It handles the
+        initialization, image analysis, and background extraction processes to prepare
+        the folder for further analysis.
+
+        Returns
+        -------
+        bool
+            Returns True if pre-processing completed successfully; False otherwise.
+        """
         logging.info("Pre-processing has started")
         analysis_status = {"continue": True, "message": ""}
 
         self.parent().po.get_first_image()
-        self.parent().po.fast_image_segmentation(is_first_image=True)
+        self.parent().po.fast_first_image_segmentation()
         if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
             self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
             analysis_status["continue"] = False
@@ -646,126 +1136,75 @@ class OneArenaThread(QtCore.QThread):
                 else:
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
-                    self.parent().po.fast_image_segmentation(False)
+                    self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
                     logging.info("The current (or the first) folder is ready to run")
                     self.parent().po.first_exp_ready_to_run = True
         return analysis_status["continue"]
 
     def load_one_arena(self):
+        """
+        Load a single arena from images or video to perform motion analysis.
+        """
         arena = self.parent().po.all['arena']
         i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
+        true_frame_width = self.parent().po.vars['origin_list'][i].shape[1]
+        if self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile(f'ind_{arena}.npy'):
+            os.remove(f'ind_{arena}.npy')
+        background = None
+        background2 = None
+        if self.parent().po.vars['subtract_background']:
+            background = self.parent().po.vars['background_list'][i]
+            if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
+                background2 = self.parent().po.vars['background_list2'][i]
+        vid_name = None
+        if self.parent().po.vars['video_list'] is not None:
+            vid_name = self.parent().po.vars['video_list'][i]
+        visu, converted_video, converted_video2 = read_one_arena(self.parent().po.all['arena'],
+            self.parent().po.vars['already_greyscale'], self.parent().po.vars['convert_for_motion'],
+            None, true_frame_width, vid_name, background, background2)
+
         save_loaded_video: bool = False
-        if not os.path.isfile(f'ind_{arena}.npy') or self.parent().po.all['overwrite_unaltered_videos']:
+        if visu is None or (self.parent().po.vars['already_greyscale'] and converted_video is None):
+            cr = [self.parent().po.top[i], self.parent().po.bot[i],
+                  self.parent().po.left[i], self.parent().po.right[i]]
+            vids = create_empty_videos(self.parent().po.data_list, cr,
+                self.parent().po.vars['lose_accuracy_to_save_memory'], self.parent().po.vars['already_greyscale'],
+                self.parent().po.vars['convert_for_motion'])
+            self.parent().po.visu, self.parent().po.converted_video, self.parent().po.converted_video2 = vids
             logging.info(f"Starting to load arena n°{arena} from images")
-            add_to_c = 1
-            self.parent().po.one_arenate_done = True
-            i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
-            if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                self.parent().po.converted_video = np.zeros(
-                    (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                    dtype=np.uint8)
-            else:
-                self.parent().po.converted_video = np.zeros(
-                    (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                    dtype=float)
-            if not self.parent().po.vars['already_greyscale']:
-                self.parent().po.visu = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                   self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=np.uint8)
-                if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=np.uint8)
-                    else:
-                        self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
-                first_dict = TDict()
-                second_dict = TDict()
-                c_spaces = []
-                for k, v in self.parent().po.vars['convert_for_motion'].items():
-                     if k != 'logical' and v.sum() > 0:
-                        if k[-1] != '2':
-                            first_dict[k] = v
-                            c_spaces.append(k)
-                        else:
-                            second_dict[k[:-1]] = v
-                            c_spaces.append(k[:-1])
+
             prev_img = None
-            background = None
-            background2 = None
             pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
+            is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
             for image_i, image_name in enumerate(self.parent().po.data_list):
                 current_percentage, eta = pat_tracker.get_progress()
-                is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
-                img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
-                # img = self.parent().po.videos.read_and_rotate(image_name, prev_img)
-                prev_img = deepcopy(img)
-                if self.parent().po.first_image.cropped:
-                    img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
-                          self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3], :]
-                img = img[self.parent().po.top[arena - 1]: (self.parent().po.bot[arena - 1] + add_to_c),
-                      self.parent().po.left[arena - 1]: (self.parent().po.right[arena - 1] + add_to_c), :]
-
-                self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
+                reduce_image_dim = self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim
+                img, prev_img = read_rotate_crop_and_reduce_image(image_name, prev_img,
+                    self.parent().po.first_image.crop_coord, cr, self.parent().po.all['raw_images'], is_landscape,
+                    reduce_image_dim)
+                self.image_from_thread.emit(
+                    {"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
                 if self.parent().po.vars['already_greyscale']:
-                    if self.parent().po.reduce_image_dim:
-                        self.parent().po.converted_video[image_i, ...] = img[:, :, 0]
-                    else:
-                        self.parent().po.converted_video[image_i, ...] = img
+                    self.parent().po.converted_video[image_i, ...] = img
                 else:
                     self.parent().po.visu[image_i, ...] = img
 
-                    if self.parent().po.vars['subtract_background']:
-                        background = self.parent().po.vars['background_list'][i]
-                        if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                            background2 = self.parent().po.vars['background_list2'][i]
-                    greyscale_image, greyscale_image2 = generate_color_space_combination(img, c_spaces,
-                                                                                         first_dict,
-                                                                                         second_dict,background,background2,
-                                                                                         self.parent().po.vars[
-                                                                                             'lose_accuracy_to_save_memory'])
+            if not self.parent().po.vars['already_greyscale']:
+                msg = "Video conversion"
+                if background is not None :
+                    msg += ", background subtraction"
+                if self.parent().po.vars['filter_spec'] is not None:
+                    msg += ", filtering"
+                msg += ", wait..."
+                self.image_from_thread.emit({"message": msg, "current_image": img})
+                converted_videos = convert_subtract_and_filter_video(self.parent().po.visu,
+                                                                        self.parent().po.vars['convert_for_motion'],
+                                                                        background, background2,
+                                                                        self.parent().po.vars['lose_accuracy_to_save_memory'],
+                                                                        self.parent().po.vars['filter_spec'])
+                self.parent().po.converted_video, self.parent().po.converted_video2 = converted_videos
 
-                    if self.parent().po.vars['filter_spec'] is not None and self.parent().po.vars['filter_spec']['filter1_type'] != "":
-                        greyscale_image = apply_filter(greyscale_image,
-                                                       self.parent().po.vars['filter_spec']['filter1_type'],
-                                                       self.parent().po.vars['filter_spec']['filter1_param'],
-                                                       self.parent().po.vars['lose_accuracy_to_save_memory'])
-                        if greyscale_image2 is not None and self.parent().po.vars['filter_spec']['filter2_type'] != "":
-                            greyscale_image2 = apply_filter(greyscale_image2,
-                                                            self.parent().po.vars['filter_spec']['filter2_type'],
-                                                            self.parent().po.vars['filter_spec']['filter2_param'],
-                                                            self.parent().po.vars['lose_accuracy_to_save_memory'])
-                    self.parent().po.converted_video[image_i, ...] = greyscale_image
-                    if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                        self.parent().po.converted_video2[image_i, ...] = greyscale_image2
-
-
-
-                    # csc = OneImageAnalysis(img)
-                    # if self.parent().po.vars['subtract_background']:
-                    #     if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                    #                                              self.parent().po.vars['background_list'][i],
-                    #                                              self.parent().po.vars['background_list2'][i])
-                    #     else:
-                    #         csc.generate_color_space_combination(c_spaces, first_dict, second_dict,
-                    #                                              self.parent().po.vars['background_list'][i], None)
-                    # else:
-                    #     csc.generate_color_space_combination(c_spaces, first_dict, second_dict, None, None)
-                    # # self.parent().po.converted_video[image_i, ...] = csc.image
-                    # if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #     self.parent().po.converted_video[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image)
-                    # else:
-                    #     self.parent().po.converted_video[image_i, ...] = csc.image
-                    # if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                    #     if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    #         self.parent().po.converted_video2[image_i, ...] = bracket_to_np.uint8_image_contrast(csc.image2)
-                    #     else:
-                    #         self.parent().po.converted_video2[image_i, ...] = csc.image2
-
-
-
-            # self.parent().po.load_one_arena(arena)
             save_loaded_video = True
             if self.parent().po.vars['already_greyscale']:
                 self.videos_in_ram = self.parent().po.converted_video
@@ -773,9 +1212,8 @@ class OneArenaThread(QtCore.QThread):
                 if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
                     self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video)]
                 else:
-                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video), deepcopy(self.parent().po.converted_video2)]
-
-            # videos = [self.parent().po.video.copy(), self.parent().po.converted_video.copy()]
+                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video),
+                                          deepcopy(self.parent().po.converted_video2)]
         else:
             logging.info(f"Starting to load arena n°{arena} from .npy saved file")
             self.videos_in_ram = None
@@ -800,42 +1238,97 @@ class OneArenaThread(QtCore.QThread):
         self.when_loading_finished.emit(save_loaded_video)
 
         if self.parent().po.motion.visu is None:
-            visu = self.parent().po.motion.converted_video
-            visu -= np.min(visu)
-            visu = 255 * (visu / np.max(visu))
-            visu = np.round(visu).astype(np.uint8)
+            visu = bracket_to_uint8_image_contrast(self.parent().po.motion.converted_video)
             if len(visu.shape) == 3:
                 visu = np.stack((visu, visu, visu), axis=3)
             self.parent().po.motion.visu = visu
 
     def detection(self):
+        """
+        Perform quick video segmentation and update motion detection parameters.
+
+        This method is responsible for initiating a quick video segmentation process and updating the motion detection
+        parameters accordingly. It handles duplicate video conversion based on certain logical conditions and computes
+        video options.
+        """
         self.message_from_thread_starting.emit(f"Quick video segmentation")
         self.parent().po.motion.converted_video = deepcopy(self.parent().po.converted_video)
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
             self.parent().po.motion.converted_video2 = deepcopy(self.parent().po.converted_video2)
-        # self.parent().po.motion.detection(compute_all_possibilities=True)
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         if self.parent().po.all['compute_all_options']:
             self.parent().po.computed_video_options = np.ones(5, bool)
         else:
             self.parent().po.computed_video_options = np.zeros(5, bool)
             self.parent().po.computed_video_options[self.parent().po.all['video_option']] = True
-        # if self.parent().po.vars['color_number'] > 2:
 
     def post_processing(self):
-        self.parent().po.motion.smoothed_video = None
-        # if self.parent().po.vars['already_greyscale']:
-        #     if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
-        #         self.videos_in_ram = self.parent().po.converted_video
-        #     else:
-        #         self.videos_in_ram = self.parent().po.converted_video, self.parent().po.converted_video2
-        # else:
-        #     if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
-        #         videos_in_ram = self.parent().po.visu, self.parent().po.converted_video
-        #     else:
-        #         videos_in_ram = self.parent().po.visu, self.parent().po.converted_video, \
-        #                         self.parent().po.converted_video2
+        """
+        Handle post-processing operations for motion analysis and video processing.
 
+        Extended Description
+        --------------------
+        This method is responsible for managing various post-processing steps,
+        including video segmentation, contour detection, and updating motion analysis
+        parameters. It processes different video options based on the configuration
+        settings and handles motion detection failures by emitting appropriate signals.
+
+        Notes
+        -----
+        This method performs a series of operations that are computationally intensive.
+        It leverages NumPy and OpenCV for image processing tasks. The method assumes
+        that the parent object has been properly initialized with all required attributes
+        and configurations.
+
+        Attributes
+        ----------
+        self.parent().po.motion.smoothed_video : NoneType
+            A placeholder for the smoothed video data.
+        self.parent().po.vars['already_greyscale'] : bool
+            Indicates if the video is already in greyscale format.
+        self.parent().po.vars['convert_for_motion']['logical'] : str
+            Indicates the logical conversion method for motion analysis.
+        self.parent().po.converted_video : ndarray
+            The converted video data for motion analysis.
+        self.parent().po.converted_video2 : ndarray
+            Another converted video data for motion analysis.
+        self.parent().po.visu : ndarray
+            The visual representation of the video data.
+        self.videos_in_ram : list or tuple
+            The videos currently in RAM, either a single video or multiple.
+        self.parent().po.vars['color_number'] : int
+            The number of colors in the video.
+        self.parent().po.all['compute_all_options'] : bool
+            Indicates if all options should be computed.
+        self.parent().po.all['video_option'] : int
+            The current video option to be processed.
+        self.parent().po.newly_explored_area : ndarray
+            The area newly explored during motion detection.
+        self.parent().po.motion.start : int
+            The start frame for motion analysis.
+        self.parent().po.motion.step : int
+            The step interval in frames for motion analysis.
+        self.parent().po.motion.lost_frames : int
+            The number of lost frames during motion analysis.
+        self.parent().po.motion.substantial_growth : int
+            The substantial growth threshold for motion detection.
+        self.parent().po.all['arena'] : int
+            The arena identifier used in motion analysis.
+        self.parent().po.vars['do_fading'] : bool
+            Indicates if fading effects should be applied.
+        self.parent().po.motion.dims : tuple
+            The dimensions of the motion data.
+        analyses_to_compute : list or ndarray
+            List of analysis options to compute based on configuration settings.
+        args : list
+            Arguments used for initializing the MotionAnalysis object.
+        analysis_i : MotionAnalysis
+            An instance of MotionAnalysis for each segment to be processed.
+        mask : tuple or NoneType
+            The mask used for different segmentation options.
+
+        """
+        self.parent().po.motion.smoothed_video = None
         if self.parent().po.vars['color_number'] > 2:
             analyses_to_compute = [0]
         else:
@@ -850,14 +1343,14 @@ class OneArenaThread(QtCore.QThread):
         args = [self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
                 False, False, False, self.videos_in_ram]
         if self.parent().po.vars['do_fading']:
-            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.unp.int64)
+            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             r = weakref.ref(analysis_i)
-            analysis_i.segmentation = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
+            analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
-                    analysis_i.segmentation = self.parent().po.motion.segmentation
+                    analysis_i.segmented = self.parent().po.motion.segmented
                 else:
                     if seg_i == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -867,10 +1360,10 @@ class OneArenaThread(QtCore.QThread):
                         mask = self.parent().po.motion.logical_and
                     elif seg_i == 4:
                         mask = self.parent().po.motion.logical_or
-                    analysis_i.segmentation[mask[0], mask[1], mask[2]] = 1
+                    analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
             else:
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    analysis_i.segmentation = self.parent().po.motion.segmentation
+                    analysis_i.segmented = self.parent().po.motion.segmented
 
             analysis_i.start = time_parameters[0]
             analysis_i.step = time_parameters[1]
@@ -879,10 +1372,8 @@ class OneArenaThread(QtCore.QThread):
             analysis_i.origin_idx = self.parent().po.motion.origin_idx
             analysis_i.initialize_post_processing()
             analysis_i.t = analysis_i.start
-            # print_progress = ForLoopCounter(self.start)
 
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
-                # analysis_i.update_shape(True)
                 analysis_i.update_shape(False)
                 contours = np.nonzero(
                     cv2.morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], cv2.MORPH_GRADIENT, cross_33))
@@ -902,7 +1393,7 @@ class OneArenaThread(QtCore.QThread):
 
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
-                    self.parent().po.motion.segmentation = analysis_i.binary
+                    self.parent().po.motion.segmented = analysis_i.binary
                 elif seg_i == 1:
                     self.parent().po.motion.luminosity_segmentation = np.nonzero(analysis_i.binary)
                 elif seg_i == 2:
@@ -912,21 +1403,54 @@ class OneArenaThread(QtCore.QThread):
                 elif seg_i == 4:
                     self.parent().po.motion.logical_or = np.nonzero(analysis_i.binary)
             else:
-                self.parent().po.motion.segmentation = analysis_i.binary
-
-        # self.message_from_thread_starting.emit("If there are problems, change some parameters and try again")
+                self.parent().po.motion.segmented = analysis_i.binary
         self.when_detection_finished.emit("Post processing done, read to see the result")
 
 
 
 class VideoReaderThread(QtCore.QThread):
+    """
+    Thread for reading a video in the GUI.
+
+    Signals
+    --------
+    message_from_thread : Signal(dict)
+        Signal emitted during the video reading to display images to the GUI.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(dict)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for reading a video in the GUI
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(VideoReaderThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Summary
+        -------
+        Run the video analysis process, applying segmentation and contouring to each frame.
+
+        Extended Description
+        --------------------
+        This method performs video analysis by segmenting frames based on selected options and overlaying contours.
+        It also updates the UI with progress messages.
+
+        Notes
+        -----
+        This method emits signals to update the UI with progress messages and current images.
+        It uses OpenCV for morphological operations on video frames.
+        """
         video_analysis = deepcopy(self.parent().po.motion.visu)
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
@@ -934,7 +1458,7 @@ class VideoReaderThread(QtCore.QThread):
 
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
-                    video_mask = self.parent().po.motion.segmentation
+                    video_mask = self.parent().po.motion.segmented
                 else:
                     if self.parent().po.all['video_option'] == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -949,18 +1473,16 @@ class VideoReaderThread(QtCore.QThread):
             else:
                 video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    video_mask = self.parent().po.motion.segmentation
+                    video_mask = self.parent().po.motion.segmented
 
             if self.parent().po.load_quick_full == 1:
                 video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
                 video_mask[video_mask > 0] = 1
                 video_mask = video_mask.astype(np.uint8)
         logging.info(f"sum: {video_mask.sum()}")
-        # timings = genfromtxt("timings.csv")
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
-            # current_image[current_image > 0] = self.parent().po.vars['contour_color']
             current_image = deepcopy(video_analysis[t, ...])
             current_image[mask > 0] = self.parent().po.vars['contour_color']
             self.message_from_thread.emit(
@@ -970,23 +1492,52 @@ class VideoReaderThread(QtCore.QThread):
 
 
 class ChangeOneRepResultThread(QtCore.QThread):
+    """
+    Thread for modifying the results of one arena.
+
+    Signals
+    --------
+    message_from_thread : Signal(str)
+        Signal emitted when the result is changed.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for changing the saved results in the current folder, for a particular arena
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(ChangeOneRepResultThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Modify the motion and results of an arena.
+
+        Extended Description
+        --------------------
+        This method performs various operations on the motion data of an arena,
+        including binary mask creation, descriptor computation, and transition
+        detection. It also handles optional computations like fading effects and
+        segmentation based on different video options.
+        """
         self.message_from_thread.emit(
             f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
-        # self.parent().po.motion2 = deepcopy(self.parent().po.motion)
         if self.parent().po.motion.start is None:
             self.parent().po.motion.binary = np.repeat(np.expand_dims(self.parent().po.motion.origin, 0),
                                                      self.parent().po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
         else:
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
                 else:
                     if self.parent().po.all['video_option'] == 1:
                         mask = self.parent().po.motion.luminosity_segmentation
@@ -1001,17 +1552,16 @@ class ChangeOneRepResultThread(QtCore.QThread):
             else:
                 self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmentation
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
 
         if self.parent().po.vars['do_fading']:
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
         self.parent().po.motion.max_distance = 9 * self.parent().po.vars['detection_range_factor']
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         self.parent().po.motion.detect_growth_transitions()
-        self.parent().po.motion.networks_detection(False)
+        self.parent().po.motion.networks_analysis(False)
         self.parent().po.motion.study_cytoscillations(False)
         self.parent().po.motion.fractal_descriptions()
-        self.parent().po.motion.get_descriptors_summary()
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
         # self.parent().po.motion = None
@@ -1019,13 +1569,62 @@ class ChangeOneRepResultThread(QtCore.QThread):
 
 
 class WriteVideoThread(QtCore.QThread):
-    # message_from_thread_in_thread = QtCore.Signal(bool)
+    """
+    Thread for writing one video per arena in the current folder.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for writing the video corresponding to the current arena
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(WriteVideoThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
-        # self.message_from_thread_in_thread.emit({True})
+        """
+        Run the visualization or converted video for a specific arena and save it as an .npy file.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method.
+
+        Other Parameters
+        ----------------
+        arena : str
+            Name of the arena.
+
+        already_greyscale : bool
+            Flag indicating if the video is already in greyscale format.
+            This parameter must be set as a variable named 'already_greyscale' in the instance
+            variables of the parent object.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        FileNotFoundError
+            When the path to write the video is not specified.
+
+        Examples
+        --------
+        >>> self.parent().po.vars['already_greyscale'] = False
+        >>> self.run()
+        >>> # Expects to write a visualization video as 'ind_arena.npy'
+        >>> self.parent().po.vars['already_greyscale'] = True
+        >>> self.run()
+        >>> # Expects to write a converted video as 'ind_arena.npy'
+        """
         arena = self.parent().po.all['arena']
         if not self.parent().po.vars['already_greyscale']:
             write_video(self.parent().po.visu, f'ind_{arena}.npy')
@@ -1034,19 +1633,61 @@ class WriteVideoThread(QtCore.QThread):
 
 
 class RunAllThread(QtCore.QThread):
+    """
+    Thread for running the analysis on all arenas of the current folder.
+
+    Signals
+    --------
+    image_from_thread : Signal(str)
+        Signal emitted to send information to the user through the GUI
+    message_from_thread : Signal(str)
+        Signal emitted to send images showing the current status of the analysis to the GUI.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
     message_from_thread = QtCore.Signal(str)
     image_from_thread = QtCore.Signal(dict)
 
     def __init__(self, parent=None):
+        """
+        Initialize the worker thread for running a complete analysis on one folder or a folder containing several
+        folders.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
         super(RunAllThread, self).__init__(parent)
         self.setParent(parent)
 
     def run(self):
+        """
+        Run the analysis process for video writing and motion analysis.
+
+        This method manages the overall flow of the analysis including setting up
+        folders, loading data, writing videos from images, and performing motion
+        analysis. It handles various conditions like checking if the specimen number
+        matches expectations or if multiple experiments are ready to run.
+
+        Returns
+        -------
+        dict
+            A dictionary containing:
+            - 'continue': bool indicating if the analysis should continue.
+            - 'message': str with a relevant message about the current status.
+        Notes
+        -----
+        This method uses several internal methods like `set_current_folder`,
+        `run_video_writing`, and `run_motion_analysis` to perform the analysis steps.
+        It also checks various conditions based on parent object attributes.
+        """
         analysis_status = {"continue": True, "message": ""}
         message = self.set_current_folder(0)
 
         if self.parent().po.first_exp_ready_to_run:
-
             self.message_from_thread.emit(message + ": Write videos...")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
                 analysis_status["continue"] = False
@@ -1074,7 +1715,6 @@ class RunAllThread(QtCore.QThread):
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None
                 self.parent().po.last_image = None
-                self.parent().po.videos = None
                 self.parent().po.top = None
 
                 message = self.set_current_folder(exp_i)
@@ -1095,14 +1735,7 @@ class RunAllThread(QtCore.QThread):
                             analysis_status = self.run_motion_analysis(message)
 
                 if not analysis_status["continue"]:
-                    # self.message_from_thread.emit(analysis_status["message"])
                     break
-                # if not continue_analysis:
-                #     self.message_from_thread.emit(f"Error: wrong folder or parameters")
-                #     break
-                # if not enough_memory:
-                #     self.message_from_thread.emit(f"Error: not enough memory")
-                #     break
                 print(self.parent().po.vars['convert_for_motion'])
         if analysis_status["continue"]:
             if self.parent().po.all['folder_number'] > 1:
@@ -1127,12 +1760,37 @@ class RunAllThread(QtCore.QThread):
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
         return message
 
-    def pre_processing(self):
+    def pre_processing(self) -> dict:
+        """
+        Pre-processes the video data for further analysis.
+
+        Extended Description
+        ---------------------
+        This method performs several preprocessing steps on the video data, including image segmentation,
+        cropping, background subtraction, and origin detection. It also handles errors related to image analysis
+        and manual delineation.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `continue` (bool) and `message` (str). If analysis can continue, `continue`
+            is True; otherwise, it's False and a descriptive message is provided.
+
+        Raises
+        ------
+        **ValueError**
+            When the correct number of cells cannot be detected in the first image.
+
+        Notes
+        -----
+        * The method logs important preprocessing steps using `logging.info`.
+        * Assumes that parent object (`self.parent().po`) has methods and attributes required for preprocessing.
+        """
         analysis_status = {"continue": True, "message": ""}
         logging.info("Pre-processing has started")
         if len(self.parent().po.data_list) > 0:
             self.parent().po.get_first_image()
-            self.parent().po.fast_image_segmentation(True)
+            self.parent().po.fast_first_image_segmentation()
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
             try:
@@ -1157,7 +1815,7 @@ class RunAllThread(QtCore.QThread):
                 else:
                     self.parent().po.get_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
-                    self.parent().po.fast_image_segmentation(is_first_image=False)
+                    self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
             return analysis_status
         else:
@@ -1165,26 +1823,45 @@ class RunAllThread(QtCore.QThread):
             analysis_status["continue"] = False
             return analysis_status
 
-    def run_video_writing(self, message):
+    def run_video_writing(self, message: str) -> dict:
+        """
+        Initiate the process of writing videos from image data.
+
+        Parameters
+        ----------
+        message : str
+            A string to emit as a status update during video writing.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the analysis status with keys:
+            - "continue": bool indicating whether to continue video writing
+            - "message": str providing a status or error message
+
+        Raises
+        ------
+        FileNotFoundError
+            If an image file specified in `data_list` does not exist.
+        OSError
+            If there is an issue writing to disk, such as when the disk is full.
+
+        Notes
+        -----
+        This function manages video writing in batches, checking available memory
+        and handling errors related to file sizes or missing images
+        """
         analysis_status = {"continue": True, "message": ""}
         look_for_existing_videos = glob('ind_' + '*' + '.npy')
         there_already_are_videos = len(look_for_existing_videos) == len(self.parent().po.vars['analyzed_individuals'])
         logging.info(f"{len(look_for_existing_videos)} .npy video files found for {len(self.parent().po.vars['analyzed_individuals'])} arenas to analyze")
-        do_write_videos = not there_already_are_videos or (
-                there_already_are_videos and self.parent().po.all['overwrite_unaltered_videos'])
+        do_write_videos = not self.parent().po.all['im_or_vid'] and (not there_already_are_videos or (there_already_are_videos and self.parent().po.all['overwrite_unaltered_videos']))
         if do_write_videos:
             logging.info(f"Starting video writing")
             # self.videos.write_videos_as_np_arrays(self.data_list, self.vars['convert_for_motion'], in_colors=self.vars['save_in_colors'])
             in_colors = not self.parent().po.vars['already_greyscale']
-            self.parent().po.videos = OneVideoPerBlob(self.parent().po.first_image,
-                                                      self.parent().po.starting_blob_hsize_in_pixels,
-                                                      self.parent().po.all['raw_images'])
-            self.parent().po.videos.left = self.parent().po.left
-            self.parent().po.videos.right = self.parent().po.right
-            self.parent().po.videos.top = self.parent().po.top
-            self.parent().po.videos.bot = self.parent().po.bot
-            self.parent().po.videos.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining = self.parent().po.videos.prepare_video_writing(
+            self.parent().po.first_image.shape_number = self.parent().po.sample_number
+            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = self.parent().po.prepare_video_writing(
                 self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
             if analysis_status["continue"]:
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
@@ -1192,14 +1869,13 @@ class RunAllThread(QtCore.QThread):
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
                     pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
                     arena_percentage = 0
-                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1) and remaining > 0:
                             arena = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
                         else:
                             arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        if self.parent().po.videos.use_list_of_vid:
+                        if use_list_of_vid:
                             video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
                         else:
                             video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
@@ -1217,9 +1893,9 @@ class RunAllThread(QtCore.QThread):
 
                             for arena_i, arena_name in enumerate(arena):
                                 try:
-                                    sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
-                                              self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
-                                    if self.parent().po.videos.use_list_of_vid:
+                                    sub_img = img[self.parent().po.top[arena_name]: self.parent().po.bot[arena_name],
+                                              self.parent().po.left[arena_name]: self.parent().po.right[arena_name], ...]
+                                    if use_list_of_vid:
                                         video_bunch[arena_i][image_i, ...] = sub_img
                                     else:
                                         if len(video_bunch.shape) == 5:
@@ -1227,9 +1903,9 @@ class RunAllThread(QtCore.QThread):
                                         else:
                                             video_bunch[image_i, :, :, arena_i] = sub_img
                                 except ValueError:
-                                    analysis_status["message"] = f"One (or more) image has a different size (restart)"
+                                    analysis_status["message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
                                     analysis_status["continue"] = False
-                                    logging.info(f"In the {message} folder: one (or more) image has a different size (restart)")
+                                    logging.info(f"Reset all settings in advanced parameters")
                                     break
                             if not analysis_status["continue"]:
                                 break
@@ -1240,7 +1916,7 @@ class RunAllThread(QtCore.QThread):
                                 try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
                                     self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
-                                    if self.parent().po.videos.use_list_of_vid:
+                                    if use_list_of_vid:
                                         np.save(vid_names[arena_name], video_bunch[arena_i])
                                     else:
                                         if len(video_bunch.shape) == 5:
@@ -1254,9 +1930,8 @@ class RunAllThread(QtCore.QThread):
                     self.parent().po.all['overwrite_unaltered_videos'] = False
                     self.parent().po.save_variable_dict()
                     self.parent().po.save_data_to_run_cellects_quickly()
-                    analysis_status["message"] = f"Video writing complete."
-                    if self.parent().po.videos is not None:
-                        del self.parent().po.videos
+                    if analysis_status["continue"]:
+                        analysis_status["message"] = f"Video writing complete."
                     return analysis_status
                 else:
                     analysis_status["continue"] = False
@@ -1286,7 +1961,35 @@ class RunAllThread(QtCore.QThread):
             analysis_status["message"] = f"Cellects is not writing videos: unnecessary"
             return analysis_status
 
-    def run_motion_analysis(self, message):
+    def run_motion_analysis(self, message: str) -> dict:
+        """
+        Run motion analysis on analyzed individuals with optional multiprocessing.
+
+        This method processes video frames to analyze motion attributes of individuals.
+        It can operate in either sequential or parallel mode based on available system
+        resources and configuration settings. Analysis results are saved in multiple
+        output formats.
+
+        Parameters
+        ----------
+        message : str
+            A status message to be displayed during the analysis process.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the status of the motion analysis.
+
+        Raises
+        ------
+        MemoryError
+            If there is insufficient memory to perform the analysis in parallel.
+
+        Notes
+        -----
+        Sequential mode is used when multiprocessing is disabled or only one core
+        is available. Parallel mode utilizes multiple CPU cores for faster processing.
+        """
         analysis_status = {"continue": True, "message": ""}
         logging.info(f"Starting motion analysis with the detection method n°{self.parent().po.all['video_option']}")
         self.parent().po.instantiate_tables()
@@ -1301,7 +2004,6 @@ class RunAllThread(QtCore.QThread):
                     for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
 
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
-                        # l = [0, 1, self.parent().po.vars, True, False, False, None]
                         analysis_i = MotionAnalysis(l)
                         r = weakref.ref(analysis_i)
                         if not self.parent().po.vars['several_blob_per_arena']:
@@ -1311,19 +2013,7 @@ class RunAllThread(QtCore.QThread):
 
                             # Save descriptors in long_format
                             self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
-                            
-                            # Save cytosol_oscillations
-                        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-                            if self.parent().po.vars['oscilacyto_analysis']:
-                                oscil_i = pd.DataFrame(
-                                    np.c_[np.repeat(arena,
-                                              analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
-                                if self.parent().po.one_row_per_oscillating_cluster is None:
-                                    self.parent().po.one_row_per_oscillating_cluster = oscil_i
-                                else:
-                                    self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, oscil_i))
-                                
+
                         # Save efficiency visualization
                         self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                                  analysis_i.efficiency_test_2)
@@ -1339,7 +2029,6 @@ class RunAllThread(QtCore.QThread):
 
                     logging.info("fStarting analysis in parallel")
 
-                    # new
                     tiii = default_timer()
                     arena_number = len(self.parent().po.vars['analyzed_individuals'])
                     self.advance = 0
@@ -1378,17 +2067,9 @@ class RunAllThread(QtCore.QThread):
                                     self.parent().po.update_one_row_per_arena(results_i['i'], results_i['one_row_per_arena'])
                                     # Save descriptors in long_format
                                     self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
-                                                                              results_i['arena'] * self.parent().po.vars['img_number'],
+                                                                              (results_i['i'] + 1) * self.parent().po.vars['img_number'],
                                                                               results_i['one_row_per_frame'])
-                                if not pd.isna(results_i['first_move']):
-                                    # Save cytosol_oscillations
-                                    if self.parent().po.vars['oscilacyto_analysis']:
-                                        if self.parent().po.one_row_per_oscillating_cluster is None:
-                                            self.parent().po.one_row_per_oscillating_cluster = results_i['one_row_per_oscillating_cluster']
-                                        else:
-                                            self.parent().po.one_row_per_oscillating_cluster = pd.concat((self.parent().po.one_row_per_oscillating_cluster, results_i['one_row_per_oscillating_cluster']))
-                                        
-                                # Save efficiency visualization
+
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])
                         self.image_from_thread.emit(
@@ -1416,6 +2097,26 @@ class RunAllThread(QtCore.QThread):
 
 
 def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subtotals: Queue) -> None:
+    """
+    Motion Analysis Process for parallel computing
+
+    Process a group of motion analysis results and store them in a queue.
+
+    Parameters
+    ----------
+    lower_bound : int
+        The lower bound index for the range of analysis.
+    upper_bound : int
+        The upper bound index (exclusive) for the range of analysis.
+    vars : dict
+        Dictionary containing variables and configurations for the motion analysis process.
+    subtotals : Queue
+        A queue to store intermediate results.
+    Notes
+    -----
+    This function processes a range of motion analysis results based on the provided configuration variables and
+    stores the intermediate results in a queue.
+    """
     grouped_results = []
     for i in range(lower_bound, upper_bound):
         analysis_i = MotionAnalysis([i, i + 1, vars, True, True, False, None])
@@ -1430,19 +2131,8 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena
             # Save descriptors in long_format
             results_i['one_row_per_frame'] = analysis_i.one_row_per_frame
-            # Save cytosol_oscillations
 
         results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
-        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-            if vars['oscilacyto_analysis']:
-                results_i['clusters_final_data'] = analysis_i.clusters_final_data
-                results_i['one_row_per_oscillating_cluster'] = pd.DataFrame(
-                    np.c_[np.repeat(arena, analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y', 'coord_x'])
-            if vars['fractal_analysis']:
-                results_i['fractal_box_sizes'] = pd.DataFrame(analysis_i.fractal_boxes,
-                               columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-
         # Save efficiency visualization
         results_i['efficiency_test_1'] = analysis_i.efficiency_test_1
         results_i['efficiency_test_2'] = analysis_i.efficiency_test_2

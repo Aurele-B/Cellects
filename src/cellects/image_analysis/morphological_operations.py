@@ -34,6 +34,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple
 from scipy.spatial import KDTree
+from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average
@@ -359,6 +360,180 @@ def cc(binary_img: NDArray[np.uint8]) -> Tuple[NDArray, NDArray, NDArray]:
     return new_order, stats, centers
 
 
+spot_size_coefficients = np.arange(0.75, 0.00, - 0.05)
+spot_shapes = np.tile(["circle", "rectangle"], len(spot_size_coefficients))
+spot_sizes = np.repeat(spot_size_coefficients, 2)
+
+
+def shape_selection(binary_image:NDArray, several_blob_per_arena: bool, true_shape_number: int=None,
+                    horizontal_size: int=None, spot_shape: str=None, bio_mask:NDArray=None, back_mask:NDArray=None):
+    """
+    binary_image=self.first_image.binary_image;true_shape_number=self.sample_number;horizontal_size=self.starting_blob_hsize_in_pixels
+    spot_shape=self.all['starting_blob_shape'];several_blob_per_arena=self.vars['several_blob_per_arena'];bio_mask=self.all["bio_mask"]; back_mask=self.all["back_mask"]
+    Process the binary image to identify and validate shapes.
+
+    This method processes a binary image to detect connected components,
+    validate their sizes, and handle bio and back masks if specified.
+    It ensures that the number of validated shapes matches the expected
+    sample number or applies additional filtering if necessary.
+
+    Args:
+        use_bio_and_back_masks (bool): Whether to use bio and back masks
+            during the processing. Default is False.
+
+    Selects and validates the shapes of stains based on their size and shape.
+
+    This method performs two main tasks:
+    1. Removes stains whose horizontal size varies too much from a reference value.
+    2. Determines the shape of each remaining stain and only keeps those that correspond to a reference shape.
+
+    The method first removes stains whose horizontal size is outside the specified confidence interval. Then, it identifies shapes that do not correspond to a predefined reference shape and removes them as well.
+
+    Args:
+        horizontal_size (int): The expected horizontal size of the stains to use as a reference.
+        shape (str): The shape type ('circle' or 'rectangle')
+            that the stains should match. Other shapes are not currently supported.
+        confint (float): The confidence interval as a decimal
+            representing the percentage within which the size of the stains should fall.
+        do_not_delete (NDArray, optional): An array of stain indices that should not be deleted.
+            Default is None.
+
+    """
+
+    shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(binary_image, connectivity=8)
+    do_not_delete = None
+    if bio_mask is not None or back_mask is not None:
+        if back_mask is not None:
+            if np.any(shapes[back_mask]):
+                shapes[np.isin(shapes, np.unique(shapes[back_mask]))] = 0
+                shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(
+                    (shapes > 0).astype(np.uint8), connectivity=8)
+        if bio_mask is not None:
+            if np.any(shapes[bio_mask]):
+                do_not_delete = np.unique(shapes[bio_mask])
+                do_not_delete = do_not_delete[do_not_delete != 0]
+    shape_number -= 1
+
+    if not several_blob_per_arena and horizontal_size is not None:
+        ordered_shapes = shapes.copy()
+        if spot_shape is None:
+            c_spot_shapes = spot_shapes
+            c_spot_sizes = spot_sizes
+        else:
+            if spot_shape == 'circle':
+                c_spot_shapes = spot_shapes[::2]
+            else:
+                c_spot_shapes = spot_shapes[::-2]
+            c_spot_sizes = spot_sizes[::2]
+
+        # shape_number = stats.shape[0]
+        counter = 0
+        while shape_number != true_shape_number and counter < len(spot_size_coefficients):
+            shape = c_spot_shapes[counter]
+            confint = c_spot_sizes[counter]
+            # counter+=1;horizontal_size = self.spot_size; shape = self.parent.spot_shapes[counter];confint = self.parent.spot_size_confints[::-1][counter]
+            # stats columns contain in that order:
+            # - x leftmost coordinate of boundingbox
+            # - y topmost coordinate of boundingbox
+            # - The horizontal size of the bounding box.
+            # - The vertical size of the bounding box.
+            # - The total area (in pixels) of the connected component.
+
+            # First, remove each stain which horizontal size varies too much from reference
+            size_interval = [horizontal_size * (1 - confint), horizontal_size * (1 + confint)]
+            cc_to_remove = np.argwhere(np.logical_or(stats[:, 2] < size_interval[0], stats[:, 2] > size_interval[1]))
+
+            if do_not_delete is None:
+                ordered_shapes[np.isin(ordered_shapes, cc_to_remove)] = 0
+            else:
+                ordered_shapes[np.logical_and(np.isin(ordered_shapes, cc_to_remove),
+                                              np.logical_not(np.isin(ordered_shapes, do_not_delete)))] = 0
+
+            # Second, determine the shape of each stain to only keep the ones corresponding to the reference shape
+            validated_shapes = np.zeros(ordered_shapes.shape, dtype=np.uint8)
+            validated_shapes[ordered_shapes > 0] = 1
+            nb_components, ordered_shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes,
+                                                                                               connectivity=8)
+            if nb_components > 1:
+                if shape == 'circle':
+                    surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint),
+                                     np.pi * np.square(horizontal_size // 2) * (1 + confint)]
+                    cc_to_remove = np.argwhere(
+                        np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                elif shape == 'rectangle':
+                    # If the smaller side is the horizontal one, use the user provided horizontal side
+                    if np.argmin((np.mean(stats[1:, 2]), np.mean(stats[1:, 3]))) == 0:
+                        surf_interval = [np.square(horizontal_size) * (1 - confint),
+                                         np.square(horizontal_size) * (1 + confint)]
+                        cc_to_remove = np.argwhere(
+                            np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                    # If the smaller side is the vertical one, use the median vertical length shape
+                    else:
+                        surf_interval = [np.square(np.median(stats[1:, 3])) * (1 - confint),
+                                         np.square(np.median(stats[1:, 3])) * (1 + confint)]
+                        cc_to_remove = np.argwhere(
+                            np.logical_or(stats[:, 4] < surf_interval[0], stats[:, 4] > surf_interval[1]))
+                else:
+                    logging.info("Original blob shape not well written")
+
+                if do_not_delete is None:
+                    ordered_shapes[np.isin(ordered_shapes, cc_to_remove)] = 0
+                else:
+                    ordered_shapes[np.logical_and(np.isin(ordered_shapes, cc_to_remove),
+                                                  np.logical_not(np.isin(ordered_shapes, do_not_delete)))] = 0
+                # There was only that before:
+                validated_shapes = np.zeros(ordered_shapes.shape, dtype=np.uint8)
+                validated_shapes[np.nonzero(ordered_shapes)] = 1
+                nb_components, ordered_shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes,
+                                                                                                   connectivity=8)
+
+            shape_number = nb_components - 1
+            counter += 1
+        
+        if shape_number == true_shape_number:
+            shapes = ordered_shapes
+    if true_shape_number is None or shape_number == true_shape_number:
+        validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+        validated_shapes[shapes > 0] = 1
+    else:
+        max_size = binary_image.size * 0.75
+        min_size = 10
+        cc_to_remove = np.argwhere(np.logical_or(stats[1:, 4] < min_size, stats[1:, 4] > max_size)) + 1
+        shapes[np.isin(shapes, cc_to_remove)] = 0
+        validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+        validated_shapes[shapes > 0] = 1
+        shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes, connectivity=8)
+        if not several_blob_per_arena and true_shape_number is not None and shape_number > true_shape_number:
+            # Sort shapes by size and compare the largest with the second largest
+            # If the difference is too large, remove that largest shape.
+            cc_to_remove = np.array([], dtype=np.uint8)
+            to_remove = np.array([], dtype=np.uint8)
+            stats = stats[1:, :]
+            while stats.shape[0] > true_shape_number and to_remove is not None:
+                # 1) rank by height
+                sorted_height = np.argsort(stats[:, 2])
+                # and only consider the number of shapes we want to detect
+                standard_error = np.std(stats[sorted_height, 2][-true_shape_number:])
+                differences = np.diff(stats[sorted_height, 2])
+                # Look for very big changes from one height to the next
+                if differences.any() and np.max(differences) > 2 * standard_error:
+                    # Within these, remove shapes that are too large
+                    to_remove = sorted_height[np.argmax(differences)]
+                    cc_to_remove = np.append(cc_to_remove, to_remove + 1)
+                    stats = np.delete(stats, to_remove, 0)
+
+                else:
+                    to_remove = None
+            shapes[np.isin(shapes, cc_to_remove)] = 0
+            validated_shapes = np.zeros(shapes.shape, dtype=np.uint8)
+            validated_shapes[shapes > 0] = 1
+            shape_number, shapes, stats, centroids = cv2.connectedComponentsWithStats(validated_shapes, connectivity=8)
+
+        shape_number -= 1
+    return validated_shapes, shape_number, stats, centroids
+    
+    
+
 def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance: int=None, with_erosion: int=0) -> NDArray[np.uint32]:
     """
     Perform rounded inverted distance transform on a binary image.
@@ -573,7 +748,7 @@ def get_all_line_coordinates(start_point: NDArray[int], end_points: NDArray[int]
     return lines
 
 
-def draw_me_a_sun(main_shape: NDArray, ray_length_coef=4) -> Tuple[NDArray, NDArray]:
+def draw_me_a_sun(main_shape: NDArray, ray_length_coef: int=4) -> Tuple[NDArray, NDArray]:
     """
     Draw a sun-shaped pattern on an image based on the main shape and ray length coefficient.
 
@@ -609,6 +784,7 @@ def draw_me_a_sun(main_shape: NDArray, ray_length_coef=4) -> Tuple[NDArray, NDAr
     r = 0
     for i in range(1, nb):
         shape_i = cv2.dilate((shapes == i).astype(np.uint8), kernel=cross_33)
+        # shape_i = (shapes == i).astype(np.uint8)
         contours = get_contours(shape_i)
         first_ring_idx = np.nonzero(contours)
         centroid = np.round((center[i, 1], center[i, 0])).astype(np.int64)
@@ -679,10 +855,10 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
 
     Examples
     --------
-    >>> main_shape = np.zeros((10, 10), dtype=np.uint8)
-    >>> main_shape[1:3, 1:3] = 1
-    >>> main_shape[1:3, 4:6] = 2
-    >>> shape1_idx, shape2_idx = reduce_image_size_for_speed(main_shape)
+    >>> image_of_2_shapes = np.zeros((10, 10), dtype=np.uint8)
+    >>> image_of_2_shapes[1:3, 1:3] = 1
+    >>> image_of_2_shapes[1:3, 4:6] = 2
+    >>> shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)
     >>> print(shape1_idx)
     (array([1, 1, 2, 2]), array([1, 2, 1, 2]))
     """
@@ -691,7 +867,7 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
     images_list = [sub_image]
     good_images = [0]
     sub_image = images_list[good_images[0]]
-    while (len(good_images) == 1 | len(good_images) == 2) & y_size > 3 & x_size > 3:
+    while (len(good_images) == 1 or len(good_images) == 2) and y_size > 3 and x_size > 3:
         y_size, x_size = sub_image.shape
         images_list = []
         images_list.append(sub_image[:((y_size // 2) + 1), :((x_size // 2) + 1)])
@@ -703,7 +879,9 @@ def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[T
             if np.any(image == 2):
                 if np.any(image == 1):
                     good_images.append(idx)
-        if len(good_images) == 2:
+        if len(good_images) == 0:
+            break
+        elif len(good_images) == 2:
             if good_images == [0, 1]:
                 sub_image = np.concatenate((images_list[good_images[0]], images_list[good_images[1]]), axis=1)
             elif good_images == [0, 2]:
@@ -758,6 +936,85 @@ def get_minimal_distance_between_2_shapes(image_of_2_shapes: NDArray[np.uint8], 
     dists, nns = t.query(np.transpose(shape2_idx), 1)
     return np.min(dists)
 
+def get_min_or_max_euclidean_pair(coords, min_or_max: str="max") -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Find the pair of points in a given set with the minimum or maximum Euclidean distance.
+
+    Parameters
+    ----------
+    coords : Union[np.ndarray, Tuple]
+        An Nx2 numpy array or a tuple of two arrays, each containing the x and y coordinates of points.
+    min_or_max : str, optional
+        Whether to find the 'min' or 'max' distance pair. Default is 'max'.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        A tuple containing the coordinates of the two points that form the minimum or maximum distance pair.
+
+    Raises
+    ------
+    ValueError
+        If `min_or_max` is not 'min' or 'max'.
+
+    Notes
+    -----
+    - The function first computes all pairwise distances in condensed form using `pdist`.
+    - Then, it finds the index of the minimum or maximum distance.
+    - Finally, it maps this index to the actual point indices using a binary search method.
+
+    Examples
+    --------
+    >>> coords = np.array([[0, 1], [2, 3], [4, 5]])
+    >>> point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="max")
+    >>> print(point1)
+    [0 1]
+    >>> print(point2)
+    [4 5]
+    >>> coords = (np.array([0, 2, 4, 8, 1, 5]), np.array([0, 2, 4, 8, 0, 5]))
+    >>> point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="min")
+    >>> print(point1)
+    [0 0]
+    >>> print(point2)
+    [1 0]
+
+    """
+    if isinstance(coords, Tuple):
+        coords = np.column_stack(coords)
+    N = coords.shape[0]
+    if N <= 1:
+        return (coords[0], coords[0]) if N == 1 else None
+
+    # Step 1: Compute all pairwise distances in condensed form
+    distances = pdist(coords)
+
+    # Step 2: Find the index of the maximum distance
+    if min_or_max == "max":
+        idx = np.argmax(distances)
+    elif min_or_max == "min":
+        idx = np.argmin(distances)
+    else:
+        raise ValueError
+
+    # Step 3: Map this index to (i, j) using a binary search method
+
+    def get_pair_index(k):
+        low, high = 0, N
+        while low < high:
+            mid = (low + high) // 2
+            total = mid * (2 * N - mid - 1) // 2
+            if total <= k:
+                low = mid + 1
+            else:
+                high = mid
+
+        i = low - 1
+        prev_sum = i * (2 * N - i - 1) // 2
+        j_index_in_row = k - prev_sum
+        return i, i + j_index_in_row + 1  # Ensure j > i
+
+    i, j = get_pair_index(idx)
+    return coords[i], coords[j]
 
 def find_major_incline(vector: NDArray, natural_noise: float) -> Tuple[int, int]:
     """
@@ -863,82 +1120,29 @@ def rank_from_top_to_bottom_from_left_to_right(binary_image: NDArray[np.uint8], 
     sorted_against_y = np.argsort(centroids[:, 1])
     # row_nb = (y_boundaries == 1).sum()
     row_nb = np.max(((y_boundaries == 1).sum(), (y_boundaries == - 1).sum()))
-    component_per_row = int(np.ceil((nb_components - 1) / row_nb))
-    for row_i in range(row_nb):
-        row_i_start = row_i * component_per_row
-        if row_i == (row_nb - 1):
-            sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:], 0])
-            final_order[row_i_start:] = sorted_against_y[row_i_start:][sorted_against_x]
-        else:
-            row_i_end = (row_i + 1) * component_per_row
-            sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:row_i_end], 0])
-            final_order[row_i_start:row_i_end] = sorted_against_y[row_i_start:row_i_end][sorted_against_x]
+    if row_nb > 0:
+        component_per_row = int(np.ceil((nb_components - 1) / row_nb))
+        for row_i in range(row_nb):
+            row_i_start = row_i * component_per_row
+            if row_i == (row_nb - 1):
+                sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:], 0])
+                final_order[row_i_start:] = sorted_against_y[row_i_start:][sorted_against_x]
+            else:
+                row_i_end = (row_i + 1) * component_per_row
+                sorted_against_x = np.argsort(centroids[sorted_against_y[row_i_start:row_i_end], 0])
+                final_order[row_i_start:row_i_end] = sorted_against_y[row_i_start:row_i_end][sorted_against_x]
+    else:
+        final_order = np.argsort(centroids[:, 0])
     ordered_centroids = centroids[final_order, :]
     ordered_stats = stats[1:, :]
     ordered_stats = ordered_stats[final_order, :]
 
-    # If it fails, use another algo
-    if (final_order == 0).sum() > 1:
-        nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(binary_image.astype(np.uint8),
-                                                                               connectivity=8)
-        # First order according to x: from left to right
-        # Remove the background and order centroids along x axis
-        centroids = centroids[1:, :]
-        x_order = np.argsort(centroids[:, 0])
-        centroids = centroids[x_order, :]
-
-
-        # Then use the boundaries of each Y peak to sort these shapes row by row
-        if y_boundaries is not None:
-            binary_image = deepcopy(output)
-            binary_image[np.nonzero(binary_image)] = 1
-            y_starts, y_ends = np.argwhere(y_boundaries == - 1), np.argwhere(y_boundaries == 1)
-
-            margins_ci = np.array((0.5, 0.4, 0.3, 0.2, 0.1))
-            for margin in margins_ci:
-                ranking_success: bool = True
-                y_order = np.zeros(centroids.shape[0], dtype=np.uint8)
-                count: np.uint8 = 0
-                y_margins = (y_ends - y_starts) * margin# 0.3
-                # Loop and try to fill each row with all components, fail if the final number is wrong
-                for y_interval in np.arange(len(y_starts)):
-                    for patch_i in np.arange(nb_components - 1):
-                        # Compare the y coordinate of the centroid with the detected y intervals with
-                        # an added margin in order to order coordinates
-                        if np.logical_and(centroids[patch_i, 1] >= (y_starts[y_interval] - y_margins[y_interval]),
-                                          centroids[patch_i, 1] <= (y_ends[y_interval] + y_margins[y_interval])):
-                            try:
-                                y_order[count] = patch_i
-                                count = count + 1
-                            except IndexError as exc:
-                                ranking_success = False
-
-                if ranking_success:
-                    break
-        else:
-            ranking_success = False
-        # if that all tested margins failed, do not rank_from_top_to_bottom_from_left_to_right, i.e. keep automatic ranking
-        if not ranking_success:
-            y_order = np.arange(centroids.shape[0])
-
-
-        # Second order according to y: from top to bottom
-        ordered_centroids = centroids[y_order, :]
-        ordered_stats = stats[1:, :]
-        ordered_stats = ordered_stats[x_order, :]
-        ordered_stats = ordered_stats[y_order, :]
-
     if get_ordered_image:
-        ordered_image = np.zeros(binary_image.shape, dtype=np.uint8)
-        for patch_j in np.arange(centroids.shape[0]):
-            sub_output = output[ordered_stats[patch_j, 1]: (ordered_stats[patch_j, 1] + ordered_stats[patch_j, 3]), ordered_stats[patch_j, 0]: (ordered_stats[patch_j, 0] + ordered_stats[patch_j, 2])]
-            sub_output = np.sort(np.unique(sub_output))
-            if len(sub_output) == 1:
-                ordered_image[output == sub_output[0]] = patch_j + 1
-            else:
-                ordered_image[output == sub_output[1]] = patch_j + 1
-
-
+        old_to_new = np.zeros_like(final_order)
+        old_to_new[final_order] = np.arange(len(final_order))
+        mapping_array = np.zeros(binary_image.shape, dtype=np.uint8)
+        mapping_array[output != 0] = old_to_new[output[output != 0] - 1] + 1
+        ordered_image = mapping_array.copy()
         return ordered_stats, ordered_centroids, ordered_image
     else:
         return ordered_stats, ordered_centroids
@@ -1012,36 +1216,44 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
     ndarray of uint8
         The expanded shape.
     """
-
+    # shape_to_expand=test_shape
+    # shape_i=0
+    # shape_original_centroid=ordered_centroids[shape_i, :]
+    # ref_centroids=np.delete(ordered_centroids, shape_i, axis=0)
+    # kernel=self.small_kernels
+    previous_shape_to_expand = shape_to_expand.copy()
     without_shape = deepcopy(without_shape_i)
-    # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
-    centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
-        ref_centroids[1:, 1] - shape_original_centroid[1]))
-    nearest_shapes = np.where(np.greater(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
+    if ref_centroids.shape[0] > 1:
+        # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
+        centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
+            ref_centroids[1:, 1] - shape_original_centroid[1]))
+        nearest_shapes = np.where(np.greater_equal(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
 
-    # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
-    neighbor_mindist = np.min(centroid_distances)
-    idx = np.nonzero(shape_to_expand)
-    for shape_j in nearest_shapes:
-        neighbor_mindist = np.minimum(neighbor_mindist, np.min(
-            np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
-    neighbor_mindist *= 0.5
-    # Get the maximal distance of the focal shape between its contour and its centroids
-    itself_maxdist = np.max(
-        np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
-
+        # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
+        neighbor_mindist = np.min(centroid_distances)
+        idx = np.nonzero(shape_to_expand)
+        for shape_j in nearest_shapes:
+            neighbor_mindist = np.minimum(neighbor_mindist, np.min(
+                np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
+        neighbor_mindist *= 0.5
+        # Get the maximal distance of the focal shape between its contour and its centroids
+        itself_maxdist = np.max(
+            np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
+    else:
+        itself_maxdist = np.max(shape_to_expand.shape)
+        neighbor_mindist = itself_maxdist
+        nearest_shapes = []
     # Put 1 at the border of the reference image in order to be able to stop the while loop once border reached
     without_shape[0, :] = 1
     without_shape[:, 0] = 1
     without_shape[without_shape.shape[0] - 1, :] = 1
     without_shape[:, without_shape.shape[1] - 1] = 1
 
-    # Compare the distance between the contour of the shape and its centroid with this contout with the centroids of neighbors
+    # Compare the distance between the contour of the shape and its centroid with this contour with the centroids of neighbors
     # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
-    previous_shape_to_expand = deepcopy(shape_to_expand)
     while np.logical_and(np.any(np.less_equal(itself_maxdist, neighbor_mindist)),
                          np.count_nonzero(shape_to_expand * without_shape) == 0):
-        previous_shape_to_expand = deepcopy(shape_to_expand)
+        previous_shape_to_expand = shape_to_expand.copy()
         # Dilate the shape by the kernel size
         shape_to_expand = cv2.dilate(shape_to_expand, kernel, iterations=1,
                                      borderType=cv2.BORDER_CONSTANT | cv2.BORDER_ISOLATED)
@@ -1274,7 +1486,14 @@ class Ellipse:
         hr : int
             Half of the vertical size.
         """
-        self.vsize = sizes[0]
+        if sizes[0] == 0:
+            self.vsize = 3
+        else:
+            self.vsize = sizes[0]
+        if sizes[1] == 0:
+            self.hsize = 3
+        else:
+            self.hsize = sizes[1]
         self.hsize = sizes[1]
         self.vr = self.hsize // 2
         self.hr = self.vsize // 2
@@ -1358,11 +1577,242 @@ def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
     if np.all(binary_image):
         contours = 1 - image_borders(binary_image.shape)
     elif np.any(binary_image):
-        eroded_binary = cv2.erode(binary_image, cross_33)
+        eroded_binary = cv2.erode(binary_image, cross_33, borderType=cv2.BORDER_CONSTANT, borderValue=0)
         contours = binary_image - eroded_binary
     else:
         contours = binary_image
     return contours
+
+
+def get_quick_bounding_boxes(binary_image: NDArray[np.uint8], ordered_image: NDArray, ordered_stats: NDArray) -> Tuple[NDArray, NDArray, NDArray, NDArray]:
+    """
+    Compute bounding boxes for shapes in a binary image.
+
+    Parameters
+    ----------
+    binary_image : NDArray[np.uint8]
+        A 2D array representing the binary image.
+    ordered_image : NDArray
+        An array containing the ordered image data.
+    ordered_stats : NDArray
+        A 2D array with statistics about the shapes in the image.
+
+    Returns
+    -------
+    Tuple[NDArray, NDArray, NDArray, NDArray]
+        A tuple containing four arrays:
+        - top: Array of y-coordinates for the top edge of bounding boxes.
+        - bot: Array of y-coordinates for the bottom edge of bounding boxes.
+        - left: Array of x-coordinates for the left edge of bounding boxes.
+        - right: Array of x-coordinates for the right edge of bounding boxes.
+
+    Examples
+    --------
+    >>> binary_image = np.array([[0, 1], [0, 0], [1, 0]], dtype=np.uint8)
+    >>> ordered_image = np.array([[0, 1], [0, 0], [2, 0]], dtype=np.uint8)
+    >>> ordered_stats = np.array([[1, 0, 1, 1, 1], [0, 2, 1, 1, 1]], dtype=np.int32)
+    >>> top, bot, left, right = get_quick_bounding_boxes(binary_image, ordered_image, ordered_stats)
+    >>> print(top)
+    [-1  1]
+    >>> print(bot)
+    [2 4]
+    >>> print(left)
+    [0 -1]
+    >>> print(right)
+    [3 2]
+    """
+    shapes = get_contours(binary_image)
+    x_min = ordered_stats[:, 0]
+    y_min = ordered_stats[:, 1]
+    x_max = ordered_stats[:, 0] + ordered_stats[:, 2]
+    y_max = ordered_stats[:, 1] + ordered_stats[:, 3]
+    x_min_dist = shapes.shape[1]
+    y_min_dist = shapes.shape[0]
+
+    shapes *= ordered_image
+    shape_nb = (len(np.unique(shapes)) - 1)
+    i = 0
+    a_indices, b_indices = np.triu_indices(shape_nb, 1)
+    a_indices, b_indices = a_indices + 1, b_indices + 1
+    all_distances = np.zeros((len(a_indices), 3), dtype=float)
+    # For every pair of components, find the minimal distance
+    for (a, b) in zip(a_indices, b_indices):
+        x_dist = np.absolute(x_max[a - 1] - x_min[b - 1])
+        y_dist = np.absolute(y_max[a - 1] - y_min[b - 1])
+        if x_dist < 2 * x_min_dist and y_dist < 2 * y_min_dist:
+            sub_shapes = np.logical_or(shapes == a, shapes == b) * shapes
+            sub_shapes = sub_shapes[np.min((y_min[a - 1], y_min[b - 1])):np.max((y_max[a - 1], y_max[b - 1])),
+                         np.min((x_min[a - 1], x_min[b - 1])):np.max((x_max[a - 1], x_max[b - 1]))]
+            sub_shapes[sub_shapes == a] = 1
+            sub_shapes[sub_shapes == b] = 2
+            if np.any(sub_shapes == 1) and np.any(sub_shapes == 2):
+                all_distances[i, :] = a, b, get_minimal_distance_between_2_shapes(sub_shapes, False)
+
+                if x_dist > y_dist:
+                    x_min_dist = np.min((x_min_dist, x_dist))
+                else:
+                    y_min_dist = np.min((y_min_dist, y_dist))
+                i += 1
+    shape_number = ordered_stats.shape[0]
+    top = np.zeros(shape_number, dtype=np.int64)
+    bot = np.repeat(binary_image.shape[0], shape_number)
+    left = np.zeros(shape_number, dtype=np.int64)
+    right = np.repeat(binary_image.shape[1], shape_number)
+    for shape_i in np.arange(1, shape_nb + 1):
+        # Get where the shape i appear in pairwise comparisons
+        idx = np.nonzero(np.logical_or(all_distances[:, 0] == shape_i, all_distances[:, 1] == shape_i))
+        # Compute the minimal distance related to shape i and divide by 2
+        if len(all_distances[idx, 2]) > 0:
+            dist = all_distances[idx, 2].min() // 2
+        else:
+            dist = 1
+            # Save the coordinates of the arena around shape i
+        top[shape_i - 1] = y_min[shape_i - 1] - dist.astype(np.int64)
+        bot[shape_i - 1] = y_max[shape_i - 1] + dist.astype(np.int64)
+        left[shape_i - 1] = x_min[shape_i - 1] - dist.astype(np.int64)
+        right[shape_i - 1] = x_max[shape_i - 1] + dist.astype(np.int64)
+    return top, bot, left, right
+
+
+
+def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direction: bool,
+                                original_shape_hsize: int, binary_image: NDArray,
+                                y_boundaries: NDArray):
+    """
+    Get the bounding boxes with moving centers.
+
+    Parameters
+    ----------
+    motion_list : list
+        List of binary images representing the motion frames.
+    all_specimens_have_same_direction : bool
+        Boolean indicating if all specimens move in the same direction.
+    original_shape_hsize : int or None
+        Original height size of the shape. If `None`, a default kernel size is used.
+    binary_image : NDArray
+        Binary image of the initial frame.
+    y_boundaries : NDArray
+        Array defining the y-boundaries for ranking shapes.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - top : NDArray
+            Array of top coordinates for each bounding box.
+        - bot : NDArray
+            Array of bottom coordinates for each bounding box.
+        - left : NDArray
+            Array of left coordinates for each bounding box.
+        - right : NDArray
+            Array of right coordinates for each bounding box.
+        - ordered_image_i : NDArray
+            Updated binary image with the final ranked shapes.
+
+    Notes
+    -----
+    This function processes each frame to expand and confirm shapes, updating centroids if necessary.
+    It uses morphological operations like dilation to detect shape changes over frames.
+
+    Examples
+    --------
+    >>> top, bot, left, right, ordered_image = _get_bb_with_moving_centers(motion_frames, True, None, binary_img, y_bounds)
+    >>> print("Top coordinates:", top)
+    >>> print("Bottom coordinates:", bot)
+    """
+    print("Read and segment each sample image and rank shapes from top to bot and from left to right")
+    k_size = 3
+    if original_shape_hsize is not None:
+        k_size = int((np.ceil(original_shape_hsize / 5) * 2) + 1)
+    big_kernel = Ellipse((k_size, k_size)).create().astype(np.uint8)
+
+    ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(
+        binary_image, y_boundaries, get_ordered_image=True)
+    blob_number = ordered_stats.shape[0]
+
+    ordered_image_i = deepcopy(ordered_image)
+    logging.info("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
+    for step_i in np.arange(1, len(motion_list)):
+        previously_ordered_centroids = deepcopy(ordered_centroids)
+        new_image_i = motion_list[step_i].copy()
+        detected_shape_number = blob_number + 1
+        c = 0
+        while c < 5 and detected_shape_number == blob_number + 1:
+            c += 1
+            image_i = new_image_i
+            new_image_i = cv2.dilate(image_i, cross_33, iterations=1)
+            detected_shape_number, _ = cv2.connectedComponents(new_image_i, connectivity=8)
+        if c == 0:
+            break
+        else:
+            for shape_i in range(blob_number):
+                shape_to_expand = np.zeros(image_i.shape, dtype=np.uint8)
+                shape_to_expand[ordered_image_i == (shape_i + 1)] = 1
+                without_shape_i = ordered_image_i.copy()
+                without_shape_i[ordered_image_i == (shape_i + 1)] = 0
+                if k_size != 3:
+                    test_shape = expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand, without_shape_i,
+                                                                                   ordered_centroids[shape_i, :],
+                                                                                   np.delete(ordered_centroids, shape_i,
+                                                                                             axis=0), big_kernel)
+                else:
+                    test_shape = shape_to_expand
+                test_shape = expand_until_neighbor_center_gets_nearer_than_own(test_shape, without_shape_i,
+                                                                               ordered_centroids[shape_i, :],
+                                                                               np.delete(ordered_centroids, shape_i,
+                                                                                         axis=0), cross_33)
+                confirmed_shape = test_shape * image_i
+                ordered_image_i[confirmed_shape > 0] = shape_i + 1
+
+
+            mask_to_display = np.zeros(image_i.shape, dtype=np.uint8)
+            mask_to_display[ordered_image_i > 0] = 1
+
+            # If the blob moves enough to drastically change its gravity center,
+            # update the ordered centroids at each frame.
+            detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
+                                                                             connectivity=8)
+
+            mask_to_display = mask_to_display.astype(np.uint8)
+            while np.logical_and(detected_shape_number - 1 != blob_number,
+                                 np.sum(mask_to_display > 0) < mask_to_display.size):
+                mask_to_display = cv2.dilate(mask_to_display, cross_33, iterations=1)
+                detected_shape_number, mask_to_display = cv2.connectedComponents(mask_to_display,
+                                                                                 connectivity=8)
+                mask_to_display[np.nonzero(mask_to_display)] = 1
+                mask_to_display = mask_to_display.astype(np.uint8)
+            ordered_stats, ordered_centroids = rank_from_top_to_bottom_from_left_to_right(mask_to_display, y_boundaries)
+
+            if all_specimens_have_same_direction:
+                # Adjust each centroid position according to the maximal centroid displacement.
+                x_diffs = ordered_centroids[:, 0] - previously_ordered_centroids[:, 0]
+                if np.mean(x_diffs) > 0: # They moved left, we add to x
+                    add_to_x = np.max(x_diffs) - x_diffs
+                else: #They moved right, we remove from x
+                    add_to_x = np.min(x_diffs) - x_diffs
+                ordered_centroids[:, 0] = ordered_centroids[:, 0] + add_to_x
+
+                y_diffs = ordered_centroids[:, 1] - previously_ordered_centroids[:, 1]
+                if np.mean(y_diffs) > 0:  # They moved down, we add to y
+                    add_to_y = np.max(y_diffs) - y_diffs
+                else:  # They moved up, we remove from y
+                    add_to_y = np.min(y_diffs) - y_diffs
+                ordered_centroids[:, 1] = ordered_centroids[:, 1] + add_to_y
+
+            ordered_image_i = mask_to_display
+
+    # Save each bounding box
+    top = np.zeros(blob_number, dtype=np.int64)
+    bot = np.repeat(binary_image.shape[0], blob_number)
+    left = np.zeros(blob_number, dtype=np.int64)
+    right = np.repeat(binary_image.shape[1], blob_number)
+    for shape_i in range(blob_number):
+        shape_i_indices = np.where(ordered_image_i == shape_i + 1)
+        left[shape_i] = np.min(shape_i_indices[1])
+        right[shape_i] = np.max(shape_i_indices[1])
+        top[shape_i] = np.min(shape_i_indices[0])
+        bot[shape_i] = np.max(shape_i_indices[0])
+    return top, bot, left, right, ordered_image_i
 
 
 def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, min_mesh_side: int=8, zoom_step: int=0, contours: bool=True)-> Tuple[NDArray[np.uint8], NDArray[np.uint8]]:

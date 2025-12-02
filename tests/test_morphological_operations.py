@@ -4,7 +4,8 @@ Unit tests for morphological operations.
 """
 
 import unittest
-from tests._base import CellectsUnitTest
+import numpy as np
+from tests._base import CellectsUnitTest, several_arenas_bin_img
 from cellects.image_analysis.morphological_operations import *
 
 
@@ -72,6 +73,45 @@ class TestCompareNeighborsWithValue(CellectsUnitTest):
                                  [1, 0, 1, 0],
                                  [1, 1, 1, 0]], dtype=np.uint8)
         self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
+
+    def test_is_equal_diagonal(self):
+        """
+        Test equality comparison between a value and the diagonal pixels.
+        """
+        comparer = CompareNeighborsWithValue(self.matrix, connectivity=0)
+        comparer.is_equal(1)
+        expected_result = np.array([[0, 1, 0, 1],
+                                           [0, 1, 0, 1],
+                                           [0, 1, 0, 1],
+                                           [0, 1, 0, 1]], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.equal_neighbor_nb, expected_result))
+
+
+    def test_is_sup_diagonal(self):
+        """
+        Test superiority comparison between a value and the diagonal pixels.
+        """
+        comparer = CompareNeighborsWithValue(self.matrix, connectivity=0)
+        comparer.is_sup(1)
+        expected_result = np.array([[3, 3, 3, 3],
+                                           [3, 3, 3, 3],
+                                           [3, 3, 3, 3],
+                                           [3, 3, 3, 3]], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.sup_neighbor_nb, expected_result))
+
+
+    def test_is_inf_diagonal(self):
+        """
+        Test inferiority comparison between a value and the diagonal pixels.
+        """
+        comparer = CompareNeighborsWithValue(self.matrix, connectivity=0)
+        comparer.is_inf(1)
+        expected_result = np.array([[1, 0, 1, 0],
+                                           [1, 0, 1, 0],
+                                           [1, 0, 1, 0],
+                                           [1, 0, 1, 0]], dtype=np.uint8)
+        self.assertTrue(np.array_equal(comparer.inf_neighbor_nb, expected_result))
+
 
     def test_is_equal_with_itself_connectivity_4(self):
         """
@@ -235,6 +275,24 @@ class TestCC(CellectsUnitTest):
         new_order, stats, centers = cc(self.binary_img)
         self.assertTrue(np.array_equal(new_order, expected_order))
         self.assertTrue(np.array_equal(stats, expected_stats))
+
+    def test_cc_with_large_component_touching_border(self):
+        """Test that cc is correct when one large component touches the border."""
+        binary_img = np.array([[0, 1, 1, 1, 0],
+                                    [0, 1, 1, 1, 0],
+                                    [0, 1, 1, 1, 0],
+                                    [0, 1, 1, 1, 0],
+                                    [0, 0, 1, 0, 0]], dtype=np.uint8)
+        new_order, stats, centers = cc(binary_img)
+        self.assertTrue(np.array_equal(new_order, binary_img))
+
+    def test_cc_with_many_components_touching_border(self):
+        """Test that cc is correct when one large component touches the border."""
+        binary_img = np.ones((50, 50), dtype=np.uint8)
+        binary_img[1::3, :] = 0
+        binary_img[:, 1::3] = 0
+        new_order, stats, centers = cc(binary_img)
+        self.assertEqual(new_order.max(), 289)
 
 
 class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
@@ -492,12 +550,10 @@ class TestReduceImageSizeForSpeed(CellectsUnitTest):
     """Test the `reduce_image_size_for_speed` function."""
     def test_reduce_image_size_for_speed(self):
         """Test reduce_image_size_for_speed functionality."""
-        image_of_2_shapes = np.array([[1, 0, 1, 1],
-                                   [2, 0, 2, 2],
-                                   [1, 0, 1, 1],
-                                   [1, 0, 2, 2]], dtype=np.uint8)
-        expected_shape1_idx = (np.array([0, 0, 0, 2, 2, 2, 3], dtype=np.int64), np.array([0, 2, 3, 0, 2, 3, 0], dtype=np.int64))
-        expected_shape2_idx = (np.array([1, 1, 1, 3, 3], dtype=np.int64), np.array([0, 2, 3, 2, 3], dtype=np.int64))
+        image_of_2_shapes = np.array([[1, 0, 2],
+                                             [0, 0, 2]], dtype=np.uint8)
+        expected_shape1_idx = (np.array([0], dtype=np.int64), np.array([0], dtype=np.int64))
+        expected_shape2_idx = (np.array([0, 1], dtype=np.int64), np.array([2, 2], dtype=np.int64))
         shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)
         self.assertTrue(np.array_equal(shape1_idx, expected_shape1_idx))
         self.assertTrue(np.array_equal(shape2_idx, expected_shape2_idx))
@@ -574,17 +630,7 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         """Setup test fixtures, including a binary image and y-axis boundaries."""
         super().setUpClass()
 
-        cls.binary_image = np.array([[0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-                                          [0,  0,  1,  0,  0,  0,  1,  0,  0,  1,  0],
-                                          [0,  1,  1,  1,  0,  0,  1,  0,  1,  0,  0],
-                                          [0,  0,  1,  0,  0,  1,  1,  0,  1,  1,  0],
-                                          [0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0],
-                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-                                          [0,  1,  0,  0,  0,  0,  0,  0,  0,  1,  0],
-                                          [0,  0,  1,  0,  0,  1,  0,  0,  1,  0,  0],
-                                          [0,  0,  0,  1,  0,  0,  1,  0,  0,  1,  0],
-                                          [0,  0,  0,  1,  0,  0,  0,  0,  0,  1,  0],
-                                          [0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]], dtype=np.uint8)
+        cls.binary_image = several_arenas_bin_img
         cls.y_boundaries = np.array([0,  1,  0,  0,  -1,  0,  1,  0,  0,  -1,  0], dtype=np.int8)
 
     def test_rank_from_top_to_bottom_from_left_to_right(self):
@@ -604,6 +650,26 @@ class TestRankFromTopToBottomFromLeftToRight(CellectsUnitTest):
         self.assertTrue(ordered_image[6, 1] == 4)
         self.assertTrue(ordered_image[7, 5] == 5)
         self.assertTrue(ordered_image[7, 8] == 6)
+
+    def test_rank_from_top_to_bottom_from_left_to_right_with_no_boundaries(self):
+        """
+        Test that the ranking function orders objects from top to bottom and left to right.
+        This test method verifies that the `rank_from_top_to_bottom_from_left_to_right`
+        function correctly orders objects in a binary image based on their positions
+        from top to bottom and left to right.
+        """
+        binary_image = np.zeros((7, 7), dtype=np.uint8)
+        binary_image[1:3, 1:3] = 1
+        binary_image[4:6, 4:6] = 1
+
+        # Y boundaries with no detected rows
+        y_boundaries = np.zeros(self.binary_image.shape[0])  # No +1 or -1 markers to indicate row intervals
+        ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(self.binary_image,
+                                                                                                     y_boundaries,
+                                                                                                     get_ordered_image=True)
+        self.assertTrue(len(np.unique(ordered_image)) == 7)
+        self.assertTrue(ordered_centroids.shape[0] == 6)
+        self.assertTrue(ordered_stats[:, 4].sum() == self.binary_image.sum())
 
 
 class TestGetLargestConnectedComponent(CellectsUnitTest):
@@ -690,9 +756,8 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
         without_shape_i[5:8, 1:4] = 1
         shape_original_centroid = [6, 6]
         ref_centroids = np.array([[2, 2], [6, 2], [2, 6]], dtype=np.int32)
-        kernel = np.ones((3, 3), dtype=np.uint8)
         expanded_shape = expand_until_neighbor_center_gets_nearer_than_own(
-            shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, kernel
+            shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, square_33
         )
         expected_result = np.array(
             [[0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -720,11 +785,12 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
         without_shape_i = np.zeros((10, 10), dtype=np.uint8)
         without_shape_i[1:4, 2] = 1
         without_shape_i[2, 1:4] = 1
+        without_shape_i[:3, 7] = 1
+        without_shape_i[1, 6:9] = 1
         shape_original_centroid = [6, 6]
-        ref_centroids = np.array([[4, 4], [2, 2]], dtype=np.int32)
-        kernel = np.ones((3, 3), dtype=np.uint8)
+        ref_centroids = np.array([[4, 4], [2, 2], [1, 7]], dtype=np.int32)
         expanded_shape = expand_until_neighbor_center_gets_nearer_than_own(
-            shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, kernel
+            shape_to_expand, without_shape_i, shape_original_centroid, ref_centroids, square_33
         )
         expected_result = np.array(
             [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -748,6 +814,17 @@ class TestImageBorders(CellectsUnitTest):
         # Test 1: Verify borders for a 3x3 image
         dimensions = (3, 3)
         borders = image_borders(dimensions)
+        expected_result = np.array(
+            [[0, 0, 0],
+             [0, 1, 0],
+             [0, 0, 0]], dtype=np.uint8
+        )
+        self.assertTrue(np.array_equal(borders, expected_result))
+
+    def test_image_borders_circular(self):
+        """Test image borders circular."""
+        dimensions = (3, 3)
+        borders = image_borders(dimensions, "circular")
         expected_result = np.array(
             [[0, 0, 0],
              [0, 1, 0],
@@ -875,7 +952,14 @@ class TestCloseHoles(CellectsUnitTest):
 
 
 class TestDynamicallyExpandToFillHoles(CellectsUnitTest):
-    """Test dynamically expanding to fill holes."""
+
+    def test_dynamically_expand_to_fill_holes_with_no_hole(self):
+        """Test dynamically expanding to fill holes without holes."""
+        binary_video = np.zeros((2, 5, 5), dtype=np.uint8)
+        holes = np.zeros((5, 5), dtype=np.uint8)
+        expanded_video, holes_time_end, distance_against_time = dynamically_expand_to_fill_holes(binary_video, holes)
+        self.assertIsInstance(expanded_video, np.ndarray)
+
     def test_dynamically_expand_to_fill_holes(self):
         """
         Test that binary video dynamically expands to fill holes.
@@ -1059,6 +1143,20 @@ class TestGetContours(CellectsUnitTest):
 
         # Expected result - no contours
         expected = np.array([[1]], dtype=np.uint8)
+
+        # Execute function
+        result = get_contours(binary_img)
+
+        # Verify result
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_get_contours_no_pixel(self):
+        """Test that get_contours returns no contours for single pixel."""
+        # Setup test data
+        binary_img = np.zeros(1, dtype=np.uint8)
+
+        # Expected result - no contours
+        expected = np.zeros(1, dtype=np.uint8)
 
         # Execute function
         result = get_contours(binary_img)

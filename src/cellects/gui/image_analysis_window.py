@@ -1,38 +1,87 @@
 #!/usr/bin/env python3
 """
-Genereate the Image analysis window of the user interface of Cellects
+Image analysis GUI module for Cellects application
 
-Cellects transforms the color images into grayscale images in a way that maximizes the contrast between the specimens and the background.
-It has an automatic procedure, processed by the one_image_analysis class. If this automatic procedure does not produce good enough results, the user can manually label some areas of the picture as “cell” or “background” to help find a better color space combination. This is particularly useful when the background is heterogeneous, and Cellects can use this information in two ways: First; it can simply ignore the parts labeled as background (e.g. objects or manual writings). Second, it can  use the manual annotation to train a more sophisticated segmentation method: A k-means algorithm to split the image into as many categories as necessary and use the “Cell” labelling to infer to what category the specimens are related to.
-Then, Cellects will take into account the user’s input as follows: For each of the segmentations created in the previous steps, it will count the amount of pixels labeled as specimens by the user that were correctly labeled as cell in the segmentation, and will select the segmentation that achieves the highest number. Then, it will do the same thing for the pixels labeled as background. Then, it will use the AND operator between the two results having the best match with the areas labeled as specimens, the AND operator between the two results having the best match with the areas labeled as background, and the OR operator between the result having the best match with the areas labeled as specimens and the result having the best match with the areas labeled as background. Therefore, this optional labeling adds three new segmentations that take into account the user-labeled regions. If the results are still unsatisfactory, the user can continue labeling more areas until one of the segmentations matches their expectations.
+This module provides a user interface for configuring and performing image analysis with the Cellects system.
+It allows users to adjust scaling parameters, manually label cell/background regions, select segmentation methods
+(quick/careful), visualize results, and validate analysis outcomes through interactive decision prompts. The UI supports
+manual arena delineation when automatic detection fails, using threaded operations for background processing.
 
+Main Components
+ImageAnalysisWindow : Main UI window for image analysis configuration and execution.
+
+Includes parameter controls (scaling, spot shape/size), segmentation options (quick/careful/visualize)
+Provides cell/background selection buttons with manual drawing capabilities
+Features decision prompts via Yes/No buttons to validate intermediate results
+Displays real-time image updates with user-defined annotations
+Notes
+Uses QThread for background operations to maintain UI responsiveness.
 """
 import logging
 import time
 from copy import deepcopy
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
-
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetLastImThread, FirstImageAnalysisThread,
-    CropScaleSubtractDelineateThread, UpdateImageThread,
-    LastImageAnalysisThread, SaveManualDelineationThread, FinalizeImageAnalysisThread)
+    CropScaleSubtractDelineateThread, UpdateImageThread, CompleteImageAnalysisThread,
+    LastImageAnalysisThread, SaveManualDelineationThread, PrepareVideoAnalysisThread)
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.image_segmentation import filter_dict
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
 class ImageAnalysisWindow(MainTabsType):
-    def __init__(self, parent, night_mode):
+    def __init__(self, parent: object, night_mode: bool):
+        """
+        Initialize the ImageAnalysis window with a parent widget and night mode setting.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget to which this window will be attached.
+        night_mode : bool
+            A boolean indicating whether the night mode should be enabled.
+
+        Examples
+        --------
+        >>> from PySide6 import QtWidgets
+        >>> from cellects.gui.cellects import CellectsMainWidget
+        >>> from cellects.gui.image_analysis_window import ImageAnalysisWindow
+        >>> from cellects.core.program_organizer import ProgramOrganizer
+        >>> import numpy as np
+        >>> import sys
+        >>> app = QtWidgets.QApplication([])
+        >>> parent = CellectsMainWidget()
+        >>> parent.po = ProgramOrganizer()
+        >>> parent.po.update_variable_dict()
+        >>> parent.po.get_first_image(np.zeros((10, 10), dtype=np.uint8), 1)
+        >>> session = ImageAnalysisWindow(parent, False)
+        >>> session.true_init()
+        >>> parent.insertWidget(0, session)
+        >>> parent.show()
+        >>> sys.exit(app.exec())
+        """
         super().__init__(parent, night_mode)
         self.setParent(parent)
         self.csc_dict = self.parent().po.vars['convert_for_origin'] # To change
         self.manual_delineation_flag: bool = False
 
     def true_init(self):
+        """
+        Initialize the ImageAnalysisWindow class with default settings and UI components.
 
+        This function sets up the initial state of the ImageAnalysisWindow, including various flags,
+        labels, input fields, and layout configurations. It also initializes the display image
+        and connects UI elements to their respective event handlers.
+
+        Notes
+        -----
+        This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
+        """
         logging.info("Initialize ImageAnalysisWindow")
         self.data_tab.set_not_in_use()
         self.image_tab.set_in_use()
@@ -68,15 +117,18 @@ class ImageAnalysisWindow(MainTabsType):
         self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
 
         ## Title
-        # self.title_label = FixedText('One Image Analysis', police=30, night_mode=self.parent().po.all['night_mode'])
-        # self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.image_number_label = FixedText('Image number',
                                             tip="Change this number if cells are invisible on the first image, never otherwise\nIf they cannot be seen on the first image, increase this number and read until all cells have appeared.",
                                             night_mode=self.parent().po.all['night_mode'])
         self.image_number_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.image_number = Spinbox(min=1, max=self.parent().po.vars['img_number'], val=self.parent().po.all['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
+        self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'], val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
         self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
+        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+            # If there is only one image in the folder
+            self.image_number.setVisible(False)
+            self.image_number_label.setVisible(False)
+            self.read.setVisible(False)
 
         self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
         self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
@@ -122,50 +174,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.row1_layout.addWidget(self.scale_size_label)
         self.row1_layout.addWidget(self.horizontal_size)
 
-        # self.row1_widget = QtWidgets.QWidget()
-        # self.row1_layout = QtWidgets.QHBoxLayout()
-        # self.row1_col1_widget = QtWidgets.QWidget()
-        # self.row1_col1_layout = QtWidgets.QVBoxLayout()
-        # self.row1_col2_widget = QtWidgets.QWidget()
-        # self.row1_col2_layout = QtWidgets.QVBoxLayout()
-        #
-        # self.im_number_widget = QtWidgets.QWidget()
-        # self.im_number_layout = QtWidgets.QHBoxLayout()
-        # self.im_number_layout.addWidget(self.image_number_label)
-        # self.im_number_layout.addWidget(self.image_number)
-        # self.im_number_layout.addWidget(self.read)
-        # self.im_number_widget.setLayout(self.im_number_layout)
-        # self.row1_col1_layout.addWidget(self.im_number_widget)
-        #
-        # self.specimen_number_widget = QtWidgets.QWidget()
-        # self.specimen_number_layout = QtWidgets.QHBoxLayout()
-        # self.specimen_number_layout.addWidget(self.one_blob_per_arena)
-        # self.specimen_number_layout.addWidget(self.one_blob_per_arena_label)
-        # self.specimen_number_widget.setLayout(self.specimen_number_layout)
-        # self.row1_col1_layout.addWidget(self.specimen_number_widget)
-        # self.row1_col1_widget.setLayout(self.row1_col1_layout)
-        # self.row1_layout.addWidget(self.row1_col1_widget)
-        #
-        # # self.row1_layout.addItem(self.horizontal_space)
-        # # self.row1_layout.addWidget(self.title_label)
-        # self.row1_layout.addItem(self.horizontal_space)
-        #
-        # self.scale_with_widget = QtWidgets.QWidget()
-        # self.scale_with_layout = QtWidgets.QHBoxLayout()
-        # self.scale_with_layout.addWidget(self.scale_with_label)
-        # self.scale_with_layout.addWidget(self.scale_with)
-        # self.scale_with_widget.setLayout(self.scale_with_layout)
-        # self.row1_col2_layout.addWidget(self.scale_with_widget)
-        #
-        # self.scale_size_widget = QtWidgets.QWidget()
-        # self.scale_size_layout = QtWidgets.QHBoxLayout()
-        # self.scale_size_layout.addWidget(self.scale_size_label)
-        # self.scale_size_layout.addWidget(self.horizontal_size)
-        # self.scale_size_widget.setLayout(self.scale_size_layout)
-        # self.row1_col2_layout.addWidget(self.scale_size_widget)
-        # self.row1_col2_widget.setLayout(self.row1_col2_layout)
-        # self.row1_layout.addWidget(self.row1_col2_widget)
-
         self.row1_widget.setLayout(self.row1_layout)
         self.Vlayout.addItem(self.vertical_space)
         self.Vlayout.addWidget(self.row1_widget)
@@ -175,7 +183,6 @@ class ImageAnalysisWindow(MainTabsType):
         # 2) Open the central row layout
         self.central_row_widget = QtWidgets.QWidget()
         self.central_row_layout = QtWidgets.QGridLayout()
-        # self.central_row_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
 
         # it will contain a) the user drawn lines, b) the image, c) the csc
         # 2)a) the user drawn lines
@@ -204,23 +211,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.pbuttons_tables_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.bio_pbuttons_table = QtWidgets.QScrollArea()#QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.bio_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.bio_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.bio_pbuttons_table.setMinimumHeight(self.parent().im_max_height // 2)
         self.bio_pbuttons_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.bio_pbuttons_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        # self.bio_pbuttons_table.setColumnCount(1)
-        # self.bio_pbuttons_table.verticalHeader().hide()
-        # self.bio_pbuttons_table.horizontalHeader().hide()
         self.back_pbuttons_table = QtWidgets.QScrollArea()#QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.back_pbuttons_table.setMinimumHeight(self.parent().im_max_height // 2)
         self.back_pbuttons_table.setFrameShape(QtWidgets.QFrame.NoFrame)
-        # self.back_pbuttons_table.setShowGrid(False)
         self.back_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.back_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.back_pbuttons_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        # self.back_pbuttons_table.setColumnCount(1)
-        # self.back_pbuttons_table.verticalHeader().hide()
-        # self.back_pbuttons_table.horizontalHeader().hide()
 
         self.bio_added_lines_widget = QtWidgets.QWidget()
         self.back_added_lines_widget = QtWidgets.QWidget()
@@ -238,35 +236,17 @@ class ImageAnalysisWindow(MainTabsType):
         self.pbuttons_tables_widget.setLayout(self.pbuttons_tables_layout)
         self.user_drawn_lines_layout.addWidget(self.pbuttons_tables_widget)
 
-        # self.added_lines_widget = QtWidgets.QWidget()
-        # self.added_lines_layout = QtWidgets.QHBoxLayout()
-        # self.bio_added_lines_widget = QtWidgets.QWidget()
-        # self.bio_added_lines_layout = QtWidgets.QVBoxLayout()
-        # self.back_added_lines_widget = QtWidgets.QWidget()
-        # self.back_added_lines_layout = QtWidgets.QVBoxLayout()
         # # Dynamically add the lines
         self.bio_lines = {}
         self.back_lines = {}
         self.arena_lines = {}
-        # self.bio_added_lines_widget.setLayout(self.bio_added_lines_layout)
-        # self.back_added_lines_widget.setLayout(self.back_added_lines_layout)
-        # self.added_lines_layout.addWidget(self.bio_added_lines_widget)
-        # self.added_lines_layout.addWidget(self.back_added_lines_widget)
-        # self.added_lines_widget.setLayout(self.added_lines_layout)
-        # self.user_drawn_lines_layout.addWidget(self.added_lines_widget)
-        # self.user_drawn_lines_layout.addItem(self.vertical_space)
 
         self.user_drawn_lines_widget.setLayout(self.user_drawn_lines_layout)
-        # self.user_drawn_lines_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.user_drawn_lines_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.user_drawn_lines_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.user_drawn_lines_widget.setFixedWidth(450)
         self.central_row_layout.addWidget(self.user_drawn_lines_widget, 0, 0)
 
         # 2)b) the image
-        # self.central_row_layout.columnStretch(1)
         self.central_row_layout.addWidget(self.display_image, 0, 1)
-        # self.central_row_layout.columnStretch(2)
 
         # Need to create this before self.generate_csc_editing()
         self.message = FixedText("", halign="r", night_mode=self.parent().po.all['night_mode'])
@@ -278,29 +258,18 @@ class ImageAnalysisWindow(MainTabsType):
         self.generate_csc_editing()
         self.central_right_layout.addWidget(self.edit_widget)
         self.central_right_widget.setLayout(self.central_right_layout)
-        # self.central_right_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.central_right_widget.setFixedWidth(450)
 
         self.central_row_layout.addWidget(self.central_right_widget, 0, 2)
         self.central_row_layout.setAlignment(QtCore.Qt.AlignLeft)
         self.central_row_layout.setAlignment(QtCore.Qt.AlignHCenter)
         # 2) Close the central row layout
         self.central_row_widget.setLayout(self.central_row_layout)
-        # self.central_row_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.central_row_widget.setFixedHeight(self.parent().im_max_height)
         self.Vlayout.addWidget(self.central_row_widget)
-        # self.Vlayout.setSpacing(0)
         self.Vlayout.addItem(self.vertical_space)
 
         # 3) Add Set supplementary parameters row 1
         self.sup_param_row1_widget = QtWidgets.QWidget()
         self.sup_param_row1_layout = QtWidgets.QHBoxLayout()
-        # self.sample_number = Spinbox(min=0, max=255, val=self.parent().po.all['first_folder_sample_number'],
-        #                             decimals=0, night_mode=self.parent().po.all['night_mode'])
-        # self.sample_number_label = FixedText("Arena per image", night_mode=self.parent().po.all['night_mode'])
-        # self.sample_number.valueChanged.connect(self.sample_number_changed)
-
-        #HERE
 
         # 4) Add Set supplementary parameters row2
         self.sup_param_row2_widget = QtWidgets.QWidget()
@@ -341,8 +310,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.Vlayout.addWidget(self.sup_param_row2_widget)
         self.Vlayout.setSpacing(0)
 
-        # self.sample_number.setVisible(False)
-        # self.sample_number_label.setVisible(False)
         self.one_blob_per_arena.setVisible(True)
         self.one_blob_per_arena_label.setVisible(True)
         self.set_spot_shape.setVisible(False)
@@ -371,8 +338,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row1_layout.addWidget(self.quickly)
         self.sup_param_row1_layout.addWidget(self.carefully)
         self.sup_param_row1_layout.addItem(self.horizontal_space)
-        # self.sup_param_row1_layout.addWidget(self.sample_number)
-        # self.sup_param_row1_layout.addWidget(self.sample_number_label)
         self.sup_param_row1_layout.addItem(self.horizontal_space)
         self.sup_param_row1_layout.addWidget(self.visualize_label)
         self.sup_param_row1_layout.addWidget(self.visualize)
@@ -390,7 +355,6 @@ class ImageAnalysisWindow(MainTabsType):
         if self.parent().po.vars['color_number'] == 2:
             self.select_option.setCurrentIndex(self.parent().po.all['video_option'])
         self.select_option.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.select_option.setFixedWidth(120)
         self.select_option.setMinimumWidth(145)
         self.select_option.currentTextChanged.connect(self.option_changed)
         self.n_shapes_detected = FixedText(f'', night_mode=self.parent().po.all['night_mode'])
@@ -448,12 +412,16 @@ class ImageAnalysisWindow(MainTabsType):
         self.previous.clicked.connect(self.previous_is_clicked)
         self.data_tab.clicked.connect(self.data_is_clicked)
         self.video_tab.clicked.connect(self.video_is_clicked)
+        self.complete_image_analysis = PButton("Save image analysis", night_mode=self.parent().po.all['night_mode'])
+        self.complete_image_analysis.setVisible(False)
+        self.complete_image_analysis.clicked.connect(self.complete_image_analysis_is_clicked)
         self.next = PButton("Next", night_mode=self.parent().po.all['night_mode'])
         self.next.setVisible(False)
         self.next.clicked.connect(self.go_to_next_widget)
         self.last_row_layout.addWidget(self.previous)
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addWidget(self.complete_image_analysis)
         self.last_row_layout.addWidget(self.next)
         self.last_row_widget.setLayout(self.last_row_layout)
         self.Vlayout.addWidget(self.last_row_widget)
@@ -464,8 +432,6 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.thread = {}
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
-        # self.thread["GetFirstIm"].start()
-        # self.thread["GetFirstIm"].message_when_thread_finished.connect(self.first_im_read)
         self.reinitialize_image_and_masks(self.parent().po.first_im)
         self.thread["GetLastIm"] = GetLastImThread(self.parent())
         self.thread["GetLastIm"].start()
@@ -475,9 +441,17 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread['UpdateImage'] = UpdateImageThread(self.parent())
         self.thread['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.parent())
         self.thread['SaveManualDelineation'] = SaveManualDelineationThread(self.parent())
-        self.thread['FinalizeImageAnalysis'] = FinalizeImageAnalysisThread(self.parent())
+        self.thread['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.parent())
+        self.thread['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.parent())
 
     def previous_is_clicked(self):
+        """
+        Handles the logic for when a "Previous" button is clicked in the interface, leading to the FirstWindow.
+
+        This method resets various flags and variables related to image analysis
+        to their initial state. It is called when the "Previous" button is clicked,
+        preparing the application for new input and reinitialization.
+        """
         if self.is_image_analysis_running:
             self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
@@ -508,6 +482,15 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().change_widget(0)  # First
 
     def data_is_clicked(self):
+        """
+        Handles the logic for when the "Data specifications" button is clicked in the interface,
+        leading to the FirstWindow.
+
+        Notes
+        -----
+        This function displays an error message when a thread relative to the current window is running.
+        This function also save the id of this tab for later use.
+        """
         if self.is_image_analysis_running:
             self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
@@ -515,7 +498,15 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().change_widget(0)  # First
 
     def video_is_clicked(self):
+        """
+        Handles the logic for when the "Video analysis" button is clicked in the interface,
+        leading to the video analysis window.
 
+        Notes
+        -----
+        This function displays an error message when a thread relative to the current window is running.
+        This function also save the id of the following window for later use.
+        """
         if self.video_tab.state != "not_usable":
             if self.is_image_analysis_running:
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
@@ -524,16 +515,25 @@ class ImageAnalysisWindow(MainTabsType):
                 self.parent().change_widget(3)
 
     def read_is_clicked(self):
+        """
+        Read an image (numbered using natural sorting) from the selected folder
+
+        This method handles the logic for starting image reading when the "Read" button is clicked.
+        It ensures that only one thread runs at a time, updates the UI with relevant messages,
+        and resets visual components once processing begins.
+        """
         if not self.thread["GetFirstIm"].isRunning():
-            self.parent().po.all['first_detection_frame'] = int(self.image_number.value())
-            self.message.setText(f"Reading image n°{self.parent().po.all['first_detection_frame']}")
+            self.parent().po.vars['first_detection_frame'] = int(self.image_number.value())
+            self.message.setText(f"Reading image n°{self.parent().po.vars['first_detection_frame']}")
             self.thread["GetFirstIm"].start()
-            # self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_im)
-            
+
 
     def several_blob_per_arena_check(self):
+        """
+        Checks or unchecks the option for having several blobs per arena.
+        """
         is_checked = self.one_blob_per_arena.isChecked()
         self.parent().po.vars['several_blob_per_arena'] = not is_checked
         self.set_spot_size.setVisible(is_checked)
@@ -541,18 +541,27 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_size.setVisible(is_checked and self.set_spot_size.isChecked())
 
     def set_spot_size_check(self):
+        """
+        Set the visibility of spot size based on checkbox state.
+        """
         is_checked = self.set_spot_size.isChecked()
         if self.step == 1:
             self.spot_size.setVisible(is_checked)
         self.parent().po.all['set_spot_size'] = is_checked
 
     def spot_size_changed(self):
+        """
+        Update the starting blob size and corresponding horizontal size based on user input.
+        """
         self.parent().po.all['starting_blob_hsize_in_mm'] = self.spot_size.value()
         if self.parent().po.all['scale_with_image_or_cells'] == 1:
             self.horizontal_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
         self.set_spot_size_check()
 
     def set_spot_shape_check(self):
+        """
+        Set the spot shape setting visibility.
+        """
         is_checked = self.set_spot_shape.isChecked()
         self.spot_shape.setVisible(is_checked)
         self.parent().po.all['set_spot_shape'] = is_checked
@@ -560,10 +569,27 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.all['starting_blob_shape'] = None
 
     def spot_shape_changed(self):
+        """
+        Save the user selection of shape.
+        """
         self.parent().po.all['starting_blob_shape'] = self.spot_shape.currentText()
         self.set_spot_shape_check()
 
     def arena_shape_changed(self):
+        """
+        Calculate and update the arena shape in response to user input and manage threading operations.
+
+        Extended Description
+        --------------------
+        This method updates the arena shape variable based on user selection from a dropdown menu.
+        It ensures that certain background threading operations are completed before proceeding with updates
+        and reinitializes necessary components to reflect the new arena shape.
+
+        Notes
+        -----
+        This method handles threading operations to ensure proper synchronization and updates.
+        It reinitializes the biological legend, image, and masks when the arena shape is changed.
+        """
         self.parent().po.vars['arena_shape'] = self.arena_shape.currentText()
         if self.asking_delineation_flag:
             if self.thread['CropScaleSubtractDelineate'].isRunning():
@@ -582,9 +608,14 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["UpdateImage"].start()
             self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
-        # self.start_crop_scale_subtract_delineate()
-
     def reinitialize_bio_and_back_legend(self):
+        """
+        Reinitialize the bio and back legend.
+
+        Reinitializes the bio and back legends, removing all existing lines
+        and resetting counters for masks. This function ensures that the UI
+        components associated with bio and back lines are correctly cleaned up.
+        """
         lines_names_to_remove = []
         for line_number, back_line_dict in self.back_lines.items():
             line_name = u"\u00D7" + " Back" + str(line_number)
@@ -616,7 +647,16 @@ class ImageAnalysisWindow(MainTabsType):
         self.bio_masks_number = 0
         self.back_masks_number = 0
 
-    def reinitialize_image_and_masks(self, image):
+    def reinitialize_image_and_masks(self, image: np.ndarray):
+        """
+        Reinitialize the image and masks for analysis.
+
+        This method reinitializes the current image and its associated masks
+        used in the analysis process. It checks if the input image is grayscale
+        and converts it to a 3-channel RGB image, stacking identical channels.
+        It also updates the visibility of various UI components based on
+        the image type and reinitializes masks to prepare for new analysis.
+        """
         if len(image.shape) == 2:
             self.parent().po.current_image = np.stack((image, image, image), axis=2)
 
@@ -637,6 +677,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.back_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
 
     def scale_with_changed(self):
+        """
+        Modifies how the image scale is computed: using the image width or the blob unitary size (horizontal diameter).
+        """
         self.parent().po.all['scale_with_image_or_cells'] = self.scale_with.currentIndex()
         if self.parent().po.all['scale_with_image_or_cells'] == 0:
             self.horizontal_size.setValue(self.parent().po.all['image_horizontal_size_in_mm'])
@@ -644,6 +687,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.horizontal_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
 
     def horizontal_size_changed(self):
+        """
+        Changes the horizontal size value of the image or of the blobs in the image, depending on user's choice.
+        """
         if self.parent().po.all['scale_with_image_or_cells'] == 0:
             self.parent().po.all['image_horizontal_size_in_mm'] = self.horizontal_size.value()
         else:
@@ -651,6 +697,12 @@ class ImageAnalysisWindow(MainTabsType):
             self.spot_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
 
     def advanced_mode_check(self):
+        """
+        Update widget visibility based on advanced mode check.
+
+        This function updates the visbility of various UI elements depending on
+        the state of the advanced mode check box and other conditions.
+        """
         is_checked = self.advanced_mode_cb.isChecked()
         color_analysis = is_checked and not self.parent().po.vars['already_greyscale']
         self.parent().po.all['expert_mode'] = is_checked
@@ -668,16 +720,10 @@ class ImageAnalysisWindow(MainTabsType):
             self.first_im_parameters_answered = True
 
         self.space_label.setVisible(color_analysis)
-        # self.c1.setVisible(color_analysis)
-        # self.c2.setVisible(color_analysis)
-        # self.c3.setVisible(color_analysis)
         display_logical = self.logical_operator_between_combination_result.currentText() != 'None'
         self.logical_operator_between_combination_result.setVisible(color_analysis and display_logical)
         self.logical_operator_label.setVisible(color_analysis and display_logical)
 
-        # if not self.parent().po.vars['already_greyscale']:
-        # self.visualize.setVisible(is_checked)
-        # self.visualize_label.setVisible(is_checked)
         at_least_one_line_drawn = self.bio_masks_number > 0
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
@@ -703,12 +749,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter2_param2.setVisible(has_param2)
         self.filter2_param2_label.setVisible(has_param2)
 
-        self.filter1_param1.setVisible(is_checked)
         self.grid_segmentation.setVisible(is_checked)
         self.grid_segmentation_label.setVisible(is_checked)
 
         for i in range(5):
-            self.row1[i].setVisible(color_analysis and self.row1[0].currentText() != "None")
+            if i == 0:
+                self.row1[i].setVisible(color_analysis)
+            else:
+                self.row1[i].setVisible(color_analysis and not "PCA" in self.csc_dict)
             self.row21[i].setVisible(color_analysis and self.row21[0].currentText() != "None")
             self.row2[i].setVisible(color_analysis and self.row2[0].currentText() != "None")
             self.row22[i].setVisible(color_analysis and self.row22[0].currentText() != "None")
@@ -716,7 +764,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.row3[i].setVisible(color_analysis and self.row3[0].currentText() != "None")
                 self.row23[i].setVisible(color_analysis and self.row23[0].currentText() != "None")
         if color_analysis:
-            if self.row1[0].currentText() != "None":
+            if self.row1[0].currentText() != "PCA":
                 if self.row2[0].currentText() == "None":
                     self.row1[4].setVisible(True)
                 else:
@@ -733,6 +781,10 @@ class ImageAnalysisWindow(MainTabsType):
             self.row22[4].setVisible(False)
 
     def cell_is_clicked(self):
+        """
+        Handles the logic for when a "cell" button is clicked in the interface,
+        allowing the user to draw cells on the image.
+        """
         if self.back1_bio2 == 2:
             self.cell.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
             self.back1_bio2 = 0
@@ -743,6 +795,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.saved_coord = []
 
     def background_is_clicked(self):
+        """
+        Handles the logic for when a "back" button is clicked in the interface,
+        allowing the user to draw where there is background on the image.
+        """
         if self.back1_bio2 == 1:
             self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
             self.back1_bio2 = 0
@@ -753,25 +809,44 @@ class ImageAnalysisWindow(MainTabsType):
         self.saved_coord = []
 
     def get_click_coordinates(self, event):
+        """
+        Handle mouse click events to capture coordinate data or display an image.
+
+        This function determines the handling of click events based on various
+        flags and states, including whether image analysis is running or if a
+        manual delineation flag is set.
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The mouse event that triggered the function.
+        """
         if self.back1_bio2 > 0 or self.manual_delineation_flag:
             if not self.is_image_analysis_display_running and not self.thread["UpdateImage"].isRunning():
                 self.hold_click_flag = True
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
         else:
-            self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
+            if not self.asking_first_im_parameters_flag and "PCA" in self.csc_dict:
+                if self.step < 2:
+                    popup_img = self.parent().po.first_image.binary_image
+                else:
+                    popup_img = self.parent().po.last_image.binary_image
+                popup_img[np.nonzero(self.back_mask)] = 0
+                popup_img[np.nonzero(self.bio_mask)] = 1
+                self.popup_img = FullScreenImage(popup_img * 255, self.parent().screen_width, self.parent().screen_height)
+            else:
+                self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
-            # img = resize(self.drawn_image, (self.parent().screen_width, self.parent().screen_height))
-            # cv2.imshow("Full screen image display", img)
-            # waitKey(0)
-            # destroyAllWindows()
 
     def get_mouse_move_coordinates(self, event):
-        # if not self.is_image_analysis_display_running:
-        #     if self.back1_bio2 > 0 or self.manual_delineation_flag:
-        #         if not self.thread["UpdateImage"].isRunning() and len(self.saved_coord) > 0:
-        #             if self.saved_coord[0][0] != event.pos().y() and self.saved_coord[0][1] != event.pos().x():
-        #                 self.temporary_mask_coord = [self.saved_coord[0], [event.pos().y(), event.pos().x()]]
-        #                 self.thread["UpdateImage"].start()
+        """
+        Handles mouse movement events to update the temporary mask coordinate.
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The mouse event object containing position information.
+        """
         if self.hold_click_flag:
             if not self.thread["UpdateImage"].isRunning():
                 if self.saved_coord[0][0] != event.pos().y() and self.saved_coord[0][1] != event.pos().x():
@@ -779,13 +854,27 @@ class ImageAnalysisWindow(MainTabsType):
                     self.thread["UpdateImage"].start()
 
     def get_mouse_release_coordinates(self, event):
+        """
+        Process mouse release event to save coordinates and manage image update thread.
+
+        This method handles the logic for saving mouse release coordinates during
+        manual delineation, checks conditions to prevent exceeding the number of arenas,
+        and manages an image update thread for display purposes.
+
+        Parameters
+        ----------
+        event : QMouseEvent
+            The mouse event containing the release position.
+
+        Notes
+        -----
+        This method requires an active image update thread and assumes certain attributes
+        like `hold_click_flag`, `manual_delineation_flag`, etc., are part of the class
+        state.
+        """
         if self.hold_click_flag:
             if self.thread["UpdateImage"].isRunning():
                 self.thread["UpdateImage"].wait()
-                # self.saved_coord = []
-                # self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
-                # self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
-                # self.back1_bio2 = 0
             self.temporary_mask_coord = []
             if self.manual_delineation_flag and len(self.parent().imageanalysiswindow.available_arena_names) == 0:
                 self.message.setText(f"The total number of arenas are already drawn ({self.parent().po.sample_number})")
@@ -796,22 +885,19 @@ class ImageAnalysisWindow(MainTabsType):
                 self.thread["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
+    def user_defined_shape_displayed(self, when_finished: bool):
+        """
+        Display user-defined shapes or elements based on specific conditions and update the UI accordingly.
 
-        # if not self.is_image_analysis_display_running:
-        #     if self.back1_bio2 > 0 or self.manual_delineation_flag:
-        #         if len(self.saved_coord) > 0 and self.saved_coord[0][0] != event.pos().y() and self.saved_coord[0][1] != event.pos().x():
-        #             if self.thread["UpdateImage"].isRunning():
-        #                 self.thread["UpdateImage"].wait()
-        #             self.temporary_mask_coord = []
-        #             if self.manual_delineation_flag and len(self.parent().imageanalysiswindow.available_arena_names) == 0:
-        #                 self.message.setText(f"The total number of arenas are already drawn ({self.parent().po.sample_number})")
-        #                 self.saved_coord = []
-        #             else:
-        #                 self.saved_coord.append([event.pos().y(), event.pos().x()])
-        #                 self.thread["UpdateImage"].start()
-        #                 self.thread["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
+        Parameters
+        ----------
+        when_finished : bool
+            A flag indicating whether a certain operation has finished.
 
-    def user_defined_shape_displayed(self, boole):
+        Notes
+        -----
+        This method modifies the user interface by adding buttons and updating layouts based on the current state and conditions.
+        """
         if self.back1_bio2 == 1:
             back_name = self.parent().imageanalysiswindow.available_back_names[0]
             self.back_lines[back_name] = {}
@@ -851,7 +937,16 @@ class ImageAnalysisWindow(MainTabsType):
         except RuntimeError:
             pass
 
-    def new_pbutton_on_the_left(self, pbutton_name):
+    def new_pbutton_on_the_left(self, pbutton_name: str):
+        """
+        Create a styled PButton instance positioned on the left of the image.
+
+        Notes
+        -----
+        The button's appearance is customized based on the value of
+        `self.back1_bio2`, which affects its color. The button also has a fixed
+        size and specific font settings.
+        """
         pbutton = PButton(pbutton_name, False, night_mode=self.parent().po.all['night_mode'])
         pbutton.setFixedHeight(20)
         pbutton.setFixedWidth(100)
@@ -869,6 +964,13 @@ class ImageAnalysisWindow(MainTabsType):
         return pbutton
 
     def remove_line(self):
+        """
+        Remove the specified line from the image analysis display.
+
+        This method removes a line identified by its button name from the appropriate mask
+        and updates the layout and available names accordingly. It starts the image update thread
+        after removing the line.
+        """
         if not self.is_image_analysis_display_running and not self.thread["UpdateImage"].isRunning() and hasattr(self.sender(), 'text'):
             pbutton_name = self.sender().text()
             if pbutton_name[2:6] == "Back":
@@ -879,7 +981,6 @@ class ImageAnalysisWindow(MainTabsType):
                 self.back_lines.pop(line_name)
                 self.back_masks_number -= 1
                 self.available_back_names = np.sort(np.concatenate(([line_name], self.available_back_names)))
-                # self.back_pbuttons_table.removeRow(line_name - 1)
             elif pbutton_name[2:6] == "Cell":
                 line_name = np.uint8(pbutton_name[6:])
                 self.bio_mask[self.bio_mask == line_name] = 0
@@ -888,7 +989,6 @@ class ImageAnalysisWindow(MainTabsType):
                 self.bio_lines.pop(line_name)
                 self.bio_masks_number -= 1
                 self.available_bio_names = np.sort(np.concatenate(([line_name], self.available_bio_names)))
-                # self.bio_pbuttons_table.removeRow(line_name - 1)
                 self.display_more_than_two_colors_option()
             else:
                 line_name = np.uint8(pbutton_name[7:])
@@ -902,27 +1002,35 @@ class ImageAnalysisWindow(MainTabsType):
 
                 self.arena_masks_number -= 1
                 self.available_arena_names = np.sort(np.concatenate(([line_name], self.available_arena_names)))
-                # if line_name % 2 == 1:
-                #     self.bio_pbuttons_table.removeRow((line_name + 1) // 2)
-                # else:
-                #     self.back_pbuttons_table.removeRow((line_name + 1) // 2)
-            # if self.parent().po.first_image.im_combinations is not None:
-            # if self.thread["UpdateImage"].isRunning():
-            #     self.thread["UpdateImage"].wait()
             self.thread["UpdateImage"].start()
 
     def quickly_is_clicked(self):
+        """
+        Initiates the quick image analysis and displays a loading message.
+
+        This function quickly launches the image analysis process, setting up necessary states and messages.
+        It ensures that if this is the first image, a specific analysis path is followed; otherwise,
+        it processes the last image.
+        """
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
             self.parent().po.carefully = False
-            self.parent().po.visualize = False
+            self.parent().po.visualize = True
+            self.row1[0].setCurrentIndex(0)
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
 
     def carefully_is_clicked(self):
+        """
+        Toggle image analysis mode and trigger appropriate image analysis process.
+
+        This method enables the image analysis mode, sets a loading message,
+        and initiates either the first or last image analysis based on
+        the current state.
+        """
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
@@ -934,22 +1042,36 @@ class ImageAnalysisWindow(MainTabsType):
                 self.run_last_image_analysis()
 
     def visualize_is_clicked(self):
+        """
+        Instructs the system to perform an image analysis and updates the UI accordingly.
+
+        If image analysis is not currently running, this method triggers the analysis process
+        and updates the UI message to indicate loading.
+        """
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
             self.parent().po.visualize = True
-            # if self.step == 0:
-            #     self.select_option_label.setVisible(False)
-            #     self.select_option.setVisible(False)
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
 
     def run_first_image_analysis(self):
-        # logging.info('runfim' +str(self.parent().po.sample_number))
+        """
+        Run the first image analysis.
+
+        This method performs a series of checks and updates based on user-defined parameters
+        before running the first image analysis. If visualization is enabled, it saves user-defined
+        combinations and checks for empty color selection dictionaries. It then starts the thread
+        for image analysis.
+
+        Notes
+        -----
+        This method assumes that the parent object has already been initialized and contains all
+        necessary variables for image analysis.
+        """
         if self.first_im_parameters_answered:
-            # self.sample_number_changed()
             self.several_blob_per_arena_check()
             self.horizontal_size_changed()
             self.spot_shape_changed()
@@ -963,8 +1085,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.save_user_defined_csc()
             self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
-                self.message.setText('Choose a color space, modify a channel and visualize')
+                self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
+                self.is_image_analysis_running = False
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
             self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
             self.thread["FirstImageAnalysis"].start()
@@ -972,12 +1095,18 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
 
     def run_last_image_analysis(self):
-        logging.info('runlim')
+        """
+        Run the last image analysis thread.
+
+        This function updates relevant variables, saves user-defined color-space configurations (CSC),
+        and manages thread operations for image analysis. The function does not handle any direct processing but
+        prepares the environment by setting variables and starting threads.
+        """
         if self.parent().po.visualize:
             self.save_user_defined_csc()
             self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
-                self.message.setText('Choose a color space, increase a channel and visualize')
+                self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
             else:
                 self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
@@ -991,7 +1120,15 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["LastImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
 
     def when_image_analysis_finishes(self):
-        logging.info('im_finish' + str(self.parent().po.sample_number))
+        """
+        Logs the completion of an image analysis operation, updates the current combination ID,
+        handles visualization settings, manages image combinations, and updates the display.
+
+        Notes
+        -----
+        - This method interacts with the parent object's properties and thread management.
+        - The `is_first_image_flag` determines which set of image combinations to use.
+        """
 
         if self.parent().po.visualize:
             if self.parent().po.current_combination_id != self.select_option.currentIndex():
@@ -1019,6 +1156,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.update_csc_editing_display()
             else:
                 self.message.setText("No options could be generated automatically, use the advanced mode")
+                self.is_image_analysis_running = False
 
         if self.parent().po.visualize or len(im_combinations) > 0:
             self.is_image_analysis_display_running = True
@@ -1029,9 +1167,19 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
 
     def image_analysis_displayed(self):
+        """
+        Display results of image analysis based on the current step and configuration.
+
+        Update the user interface elements based on the current step of image analysis,
+        the detected number of shapes, and whether color analysis is enabled. Handles
+        visibilities of buttons and labels to guide the user through the process.
+
+        Notes
+        -----
+        This method updates the user interface based on the current state of image analysis.
+        """
         color_analysis = not self.parent().po.vars['already_greyscale']
         self.message.setText("")
-
 
         if self.step < 2:
             detected_shape_nb = self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id][
@@ -1060,7 +1208,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.select_option.setVisible(color_analysis)
             self.select_option_label.setVisible(color_analysis)
         if self.step == 0:
-            # self.decision_label.setText(f"Does the color correctly cover the cells? And, is {detected_shape_nb} the number of distinct arenas?")
             if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
                 self.message.setText("Make sure that scaling metric and spot size are correct")
             self.decision_label.setVisible(True)
@@ -1068,8 +1215,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.no.setVisible(True)
             self.arena_shape.setVisible(True)
             self.arena_shape_label.setVisible(True)
-            # self.select_option_label.setVisible(color_analysis)
-            # self.select_option.setVisible(color_analysis)
             self.n_shapes_detected.setVisible(True)
 
         elif self.step == 2:
@@ -1078,23 +1223,33 @@ class ImageAnalysisWindow(MainTabsType):
             self.carefully.setVisible(color_analysis)
             self.visualize.setVisible(True)
 
-            self.decision_label.setText("Click next when color delimits the cell(s) correctly")
+            self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
             self.yes.setVisible(False)
             self.no.setVisible(False)
-            self.message.setText('When the resulting segmentation of the last image seems good, click next.')
-            self.next.setVisible(True)
+            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+                self.next.setVisible(True)
+                self.message.setText('When the resulting segmentation of the last image seems good, click next.')
+            else:
+                self.video_tab.set_not_usable()
+                self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
+            self.complete_image_analysis.setVisible(True)
 
         try:
             self.thread["UpdateImage"].message_when_thread_finished.disconnect()
-        except RuntimeError:
+        except RuntimeError or RuntimeWarning:
             pass
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
 
     def option_changed(self):
         """
-        Save the csc, change the image displayed, the csc editing
-        :return:
+        Update the current image and related display information based on the selected image segmentation option.
+
+        Notes
+        -----
+        This function updates several properties of the parent object, including the current image,
+        combination ID, and display settings. It also handles thread management for updating the
+        image display.
         """
         # Update the current image
         if self.is_first_image_flag:
@@ -1136,11 +1291,6 @@ class ImageAnalysisWindow(MainTabsType):
                         self.decision_label.setText(
                             f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
                         self.yes.setVisible(False)
-                # self.decision_label.setText(f"Does the color correctly cover the cells?")
-                # detected_shape_nb = \
-                # self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number']
-                # self.decision_label.setText(
-                #     f"Does the color correctly cover the cells? And, is {detected_shape_nb} the number of distinct arenas?")
                 if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
@@ -1148,7 +1298,13 @@ class ImageAnalysisWindow(MainTabsType):
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
 
     def generate_csc_editing(self):
-        # self.edit_layout = QtWidgets.QGridLayout()
+        """
+        Create and configure a user interface for color space combination editing.
+
+        This method sets up the UI components needed to edit color space combinations,
+        including checkboxes, labels, and drop-down menus. It also configures the layout
+        and connections between components.
+        """
         self.edit_widget = QtWidgets.QWidget()
         self.edit_layout = QtWidgets.QVBoxLayout()
 
@@ -1176,10 +1332,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.edit_layout.addWidget(self.advanced_mode_widget)
 
         self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
-        # self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         self.csc_scroll_table.setMinimumHeight(self.parent().im_max_height - 100)
-        # self.csc_scroll_table.setMinimumWidth(300)
         self.csc_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.csc_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.csc_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -1190,30 +1344,20 @@ class ImageAnalysisWindow(MainTabsType):
         self.edit_labels_widget = QtWidgets.QWidget()
         self.edit_labels_layout = QtWidgets.QHBoxLayout()
 
-        self.space_label = FixedText('Color space:', halign='l',
+        self.space_label = FixedText('Color combination:', halign='l',
                                     tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
                                     night_mode=self.parent().po.all['night_mode'])
-        # self.c1 = FixedText('  C1', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        # self.c2 = FixedText('  C2', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
-        # self.c3 = FixedText('  C3', halign='c', tip="Increase if it increase cell detection", night_mode=self.parent().po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
-        # self.edit_labels_layout.addWidget(self.c1)
-        # self.edit_labels_layout.addWidget(self.c2)
-        # self.edit_labels_layout.addWidget(self.c3)
         self.edit_labels_layout.addItem(self.horizontal_space)
         self.space_label.setVisible(False)
-        # self.c1.setVisible(False)
-        # self.c2.setVisible(False)
-        # self.c3.setVisible(False)
         self.edit_labels_widget.setLayout(self.edit_labels_layout)
-        # self.edit_layout.addWidget(self.edit_labels_widget)
         self.csc_table_layout.addWidget(self.edit_labels_widget)
 
         # 3) First CSC
         self.first_csc_widget = QtWidgets.QWidget()
         self.first_csc_layout = QtWidgets.QGridLayout()
-        self.row1 = self.one_csc_editing()
+        self.row1 = self.one_csc_editing(with_PCA=True)
         self.row1[4].clicked.connect(self.display_row2)
         self.row2 = self.one_csc_editing()
         self.row2[4].clicked.connect(self.display_row3)
@@ -1223,7 +1367,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
-        # self.logical_operator_between_combination_result.cha
         self.logical_operator_label = FixedText("Logical operator", tip="Between selected color space combinations",
                                                 night_mode=self.parent().po.all['night_mode'])
 
@@ -1251,10 +1394,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.first_csc_layout.addItem(self.horizontal_space, 0, 5, 3, 1)
         self.first_csc_widget.setLayout(self.first_csc_layout)
         self.csc_table_layout.addWidget(self.first_csc_widget)
-        # self.edit_layout.addWidget(self.first_csc_widget)
 
         # First filters
-
         self.filter1_label = FixedText('Filter: ', halign='l',
                                     tip="The filter to apply to the image before segmentation",
                                     night_mode=self.parent().po.all['night_mode'])
@@ -1311,7 +1452,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.logical_operator_label.setVisible(False)
         self.logical_op_widget.setLayout(self.logical_op_layout)
         self.csc_table_layout.addWidget(self.logical_op_widget)
-        # self.edit_layout.addWidget(self.logical_op_widget)
 
         # 5) Second CSC
         self.second_csc_widget = QtWidgets.QWidget()
@@ -1331,7 +1471,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.csc_table_widget.setLayout(self.csc_table_layout)
         self.csc_scroll_table.setWidget(self.csc_table_widget)
         self.csc_scroll_table.setWidgetResizable(True)
-        # self.edit_layout.addWidget(self.second_csc_widget)
         self.edit_layout.addWidget(self.csc_scroll_table)
         self.edit_layout.addItem(self.vertical_space)
 
@@ -1367,7 +1506,6 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.filter1_param2.valueChanged.connect(self.filter2_param2_changed)
         self.filter2_layout.addWidget(self.filter2)
-        # self.filter2_layout.addWidget(self.filter2_label)
         self.filter2_layout.addItem(self.horizontal_space)
         self.filter2_layout.addWidget(self.filter2_param1_label)
         self.filter2_layout.addWidget(self.filter2_param1)
@@ -1400,7 +1538,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.grid_segmentation_label = FixedText("Grid segmentation",
                                                     tip="Segment small squares of the images to detect local intensity valleys\nThis method segment the image locally using otsu thresholding on a rolling window", night_mode=self.parent().po.all['night_mode'])
         self.grid_segmentation_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.more_than_two_colors_label.setFixedWidth(300)
         self.grid_segmentation_label.setAlignment(QtCore.Qt.AlignLeft)
 
         self.grid_segmentation_layout.addWidget(self.grid_segmentation)
@@ -1426,7 +1563,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_two_colors_label = FixedText("More than two colors",
                                                     tip="The program will split the image into categories\nand find the one corresponding to the cell(s)", night_mode=self.parent().po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        # self.more_than_two_colors_label.setFixedWidth(300)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
         self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
 
@@ -1447,20 +1583,18 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.edit_widget.setLayout(self.edit_layout)
 
-    def one_csc_editing(self):
-        widget_list = []
-        widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
-                                       night_mode=self.parent().po.all['night_mode']))
-        widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        widget_list[0].setFixedWidth(100)
-        for i in [1, 2, 3]:
-            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
-            widget_list[i].setFixedWidth(45)
-        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
-
-        return widget_list
-
     def filter1_changed(self):
+        """
+        Update the UI elements and internal state when the `filter1` selection changes.
+
+        This method updates labels, visibility, and values of filter parameters
+        based on the currently selected filter type.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method.
+        """
         current_filter = self.filter1.currentText()
         self.parent().po.vars['filter_spec']['filter1_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
@@ -1483,12 +1617,29 @@ class ImageAnalysisWindow(MainTabsType):
             self.filter1_param2.setVisible(False)
 
     def filter1_param1_changed(self):
+        """
+        Save the first parameter (most often the lower bound) of the first filter.
+        """
         self.parent().po.vars['filter_spec']['filter1_param'][0] = float(self.filter1_param1.value())
 
     def filter1_param2_changed(self):
+        """
+        Save the second parameter (most often the higher bound) of the first filter.
+        """
         self.parent().po.vars['filter_spec']['filter1_param'][1] = float(self.filter1_param2.value())
 
     def filter2_changed(self):
+        """
+        Update the UI elements and internal state when the `filter2` selection changes.
+
+        This method updates labels, visibility, and values of filter parameters
+        based on the currently selected filter type.
+
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method.
+        """
         current_filter = self.filter2.currentText()
         self.parent().po.vars['filter_spec']['filter2_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
@@ -1511,13 +1662,77 @@ class ImageAnalysisWindow(MainTabsType):
             self.filter2_param2.setVisible(False)
 
     def filter2_param1_changed(self):
+        """
+        Save the first parameter (most often the lower bound) of the second filter.
+        """
         self.parent().po.vars['filter_spec']['filter2_param'][0] = float(self.filter2_param1.value())
 
     def filter2_param2_changed(self):
+        """
+        Save the second parameter (most often the higher bound) of the second filter.
+        """
         self.parent().po.vars['filter_spec']['filter2_param'][1] = float(self.filter2_param2.value())
 
+    def one_csc_editing(self, with_PCA: bool=False):
+        """
+        Summary
+        --------
+        Edit the color space configuration and add widgets for PCA or other options.
+
+        Parameters
+        ----------
+        with_PCA : bool, optional
+            Flag indicating whether to include PCA options.
+            Default is False.
+
+        Returns
+        -------
+        list
+            List of widgets for color space configuration.
+        """
+        widget_list = []
+        if with_PCA:
+            widget_list.insert(0, Combobox(["PCA", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
+                                           night_mode=self.parent().po.all['night_mode']))
+            widget_list[0].currentTextChanged.connect(self.pca_changed)
+        else:
+            widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
+                                           night_mode=self.parent().po.all['night_mode']))
+        widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        widget_list[0].setFixedWidth(100)
+        for i in [1, 2, 3]:
+            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
+            widget_list[i].setFixedWidth(45)
+        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
+        return widget_list
+
+    def pca_changed(self):
+        """
+        Handles the UI changes when 'PCA' is selected in dropdown menu.
+
+        Notes
+        -----
+        This function modifies the visibility of UI elements based on the selection in a dropdown menu.
+        It is triggered when 'PCA' is selected, and hides elements related to logical operators.
+        """
+        if self.row1[0].currentText() == 'PCA':
+            self.logical_operator_between_combination_result.setCurrentText('None')
+            for i in range(1, 5):
+                self.row1[i].setVisible(False)
+                self.row2[i].setVisible(False)
+                self.row3[i].setVisible(False)
+            self.logical_operator_label.setVisible(False)
+            self.logical_operator_between_combination_result.setVisible(False)
+        else:
+            for i in range(1, 5):
+                self.row1[i].setVisible(True)
+
+
     def logical_op_changed(self):
-        # show = self.logical_operator_between_combination_result.currentText() != 'None'
+        """
+        Handles the visibility and values of UI elements based on the current
+        logical operator selection in a combination result dropdown.
+        """
         if self.logical_operator_between_combination_result.currentText() == 'None':
             self.row21[0].setVisible(False)
             self.row21[0].setCurrentIndex(0)
@@ -1549,71 +1764,99 @@ class ImageAnalysisWindow(MainTabsType):
             self.row21[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
 
     def display_logical_operator(self):
+        """
+        Displays the logical operator UI elements based on expert mode setting.
+        """
         self.logical_operator_between_combination_result.setVisible(self.parent().po.all['expert_mode'])
         self.logical_operator_label.setVisible(self.parent().po.all['expert_mode'])
 
     def display_row2(self):
+        """
+        Display or hide the second row of the csc editing widgets based on expert mode.
+        """
         self.row1[4].setVisible(False)
         for i in range(5):
             self.row2[i].setVisible(self.parent().po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row3(self):
+        """
+        Display or hide the third row of the csc editing widgets based on expert mode.
+        """
         self.row2[4].setVisible(False)
         for i in range(4):
             self.row3[i].setVisible(self.parent().po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row22(self):
+        """
+        Display or hide the second row (for the second image segmentation pipeline) of the csc editing widgets based on expert mode.
+        """
         self.row21[4].setVisible(False)
         for i in range(5):
             self.row22[i].setVisible(self.parent().po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row23(self):
+        """
+        Display or hide the third row (for the second image segmentation pipeline) of the csc editing widgets based on expert mode.
+        """
         self.row22[4].setVisible(False)
         for i in range(4):
             self.row23[i].setVisible(self.parent().po.all['expert_mode'])
         self.display_logical_operator()
 
     def update_csc_editing_display(self):
-        c_space_order = ["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"]
+        """
+        Update the color space conversion (CSC) editing display.
+
+        This method updates the visibility and values of UI elements related to color
+        space conversions based on the current state of `self.csc_dict`. It handles
+        the display logic for different color spaces and their combinations, ensuring
+        that the UI reflects the current configuration accurately.
+        """
         remaining_c_spaces = []
         row_number1 = 0
         row_number2 = 0
-        for i, (k, v) in enumerate(self.csc_dict.items()):
-            if k != "logical":
-                if k[-1] != "2":
-                    if row_number1 == 0:
-                        row_to_change = self.row1
-                    elif row_number1 == 1:
-                        row_to_change = self.row2
-                    elif row_number1 == 2:
-                        row_to_change = self.row3
+        if "PCA" in self.csc_dict.keys():
+            self.row1[0].setCurrentIndex(0)
+            for i in range(1, 4):
+                self.row1[i].setVisible(False)
+        else:
+            c_space_order = ["PCA", "bgr", "hsv", "hls", "lab", "luv", "yuv"]
+            for i, (k, v) in enumerate(self.csc_dict.items()):
+                if k != "logical":
+                    if k[-1] != "2":
+                        if row_number1 == 0:
+                            row_to_change = self.row1
+                        elif row_number1 == 1:
+                            row_to_change = self.row2
+                        elif row_number1 == 2:
+                            row_to_change = self.row3
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number1 += 1
+                        current_row_number = row_number1
                     else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number1 += 1
-                    current_row_number = row_number1
-                else:
-                    if row_number2 == 0:
-                        row_to_change = self.row21
-                    elif row_number2 == 1:
-                        row_to_change = self.row22
-                    elif row_number2 == 2:
-                        row_to_change = self.row23
-                    else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number2 += 1
-                    current_row_number = row_number2
-                    k = k[:-1]
-                if current_row_number <= 3:
-                    row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
-                    row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
-                    for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
-                        row_to_change[i1].setValue(v[i2])
-                        row_to_change[i1].setVisible(self.parent().po.all['expert_mode'])
-                    if current_row_number < 3:
-                        row_to_change[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
+                        if row_number2 == 0:
+                            row_to_change = self.row21
+                        elif row_number2 == 1:
+                            row_to_change = self.row22
+                        elif row_number2 == 2:
+                            row_to_change = self.row23
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number2 += 1
+                        current_row_number = row_number2
+                        k = k[:-1]
+                    if current_row_number <= 3:
+                        row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
+                        row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
+                        for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
+                            row_to_change[i1].setValue(v[i2])
+                            row_to_change[i1].setVisible(self.parent().po.all['expert_mode'])
+                        if current_row_number < 3:
+                            row_to_change[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
 
         # If not all color space combinations are filled, put None and 0 in boxes
         if row_number1 < 3:
@@ -1674,6 +1917,9 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setText(f'')
 
     def save_user_defined_csc(self):
+        """
+        Save user-defined combination of color spaces and channels.
+        """
         self.csc_dict = {}
         spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
         channels = np.array(
@@ -1699,20 +1945,24 @@ class ImageAnalysisWindow(MainTabsType):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
                     self.csc_dict[space] = channels[i, :]
-        if len(self.csc_dict) == 1 or channels.sum() == 0:
+        if not 'PCA' in self.csc_dict and (len(self.csc_dict) == 1 or np.absolute(channels).sum() == 0):
             self.csc_dict_is_empty = True
         else:
             self.csc_dict_is_empty = False
 
     def grid_segmentation_option(self):
+        """
+        Set True the grid segmentation option for future image analysis.
+        """
         self.parent().po.vars["grid_segmentation"] = self.grid_segmentation.isChecked()
 
     def display_more_than_two_colors_option(self):
-        """ should not do
+        """
+        Display the More Than Two Colors Options
 
-            self.parent().po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
-            when init
-            """
+        This method manages the visibility and state of UI elements related to selecting
+        more than two colors for displaying biological masks in advanced mode.
+        """
         if self.bio_masks_number > 0 and self.advanced_mode_cb.isChecked():
             self.more_than_two_colors.setVisible(True)
             self.more_than_two_colors_label.setVisible(True)
@@ -1734,9 +1984,25 @@ class ImageAnalysisWindow(MainTabsType):
             # self.parent().po.vars["color_number"] = 2
 
     def distinct_colors_number_changed(self):
+        """
+        Update the parent object's color number variable based on the current value of a distinct colors control.
+
+        Notes
+        -----
+        This function expects that the parent object has an attribute `po` with a dictionary-like 'vars' that can be updated.
+        """
         self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
 
     def start_crop_scale_subtract_delineate(self):
+        """
+        Start the crop, scale, subtract, and delineate process.
+
+        Extended Description
+        --------------------
+        This function initiates a background thread to perform the crop, scale,
+        subtract, and delineate operations on the image. It also updates the
+        UI elements to reflect the ongoing process.
+        """
         if not self.thread['CropScaleSubtractDelineate'].isRunning():
             self.message.setText("Looking for each arena contour, wait...")
             self.thread['CropScaleSubtractDelineate'].start()
@@ -1745,13 +2011,10 @@ class ImageAnalysisWindow(MainTabsType):
 
             self.yes.setVisible(False)
             self.no.setVisible(False)
-            # self.times_clicked_yes += 1
             self.reinitialize_bio_and_back_legend()
             self.user_drawn_lines_label.setVisible(False)
             self.cell.setVisible(False)
             self.background.setVisible(False)
-            # self.sample_number.setVisible(False)
-            # self.sample_number_label.setVisible(False)
             self.one_blob_per_arena.setVisible(False)
             self.one_blob_per_arena_label.setVisible(False)
             self.set_spot_shape.setVisible(False)
@@ -1771,7 +2034,10 @@ class ImageAnalysisWindow(MainTabsType):
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
 
-    def delineate_is_done(self, message):
+    def delineate_is_done(self, message: str):
+        """
+        Update GUI after delineation is complete.
+        """
         logging.info("Delineation is done, update GUI")
         self.message.setText(message)
         self.arena_shape_label.setVisible(False)
@@ -1793,6 +2059,12 @@ class ImageAnalysisWindow(MainTabsType):
             self.asking_delineation_flag = True
 
     def automatic_delineation_display_done(self, boole):
+        """
+        Automatically handles the delineation display status for the user interface.
+
+        This function updates the visibility of various UI elements and resets
+        certain flags to ensure that delineation is not redrawn unnecessarily.
+        """
         # Remove this flag to not draw it again next time UpdateImage runs for another reason
         self.delineation_done = False
         self.auto_delineation_flag = False
@@ -1802,9 +2074,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_shape_label.setVisible(True)
         self.arena_shape.setVisible(True)
 
-        self.decision_label.setText('Is video delineation correct?')
+        self.decision_label.setText('Is arena delineation correct?')
         self.decision_label.setVisible(True)
-        # self.message.setText('If not, restart the analysis (Previous) or manually draw each arena (No)')
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
         self.no.setVisible(True)
@@ -1813,11 +2084,22 @@ class ImageAnalysisWindow(MainTabsType):
         except RuntimeError:
             pass
 
-    def display_message_from_thread(self, text_from_thread):
+    def display_message_from_thread(self, text_from_thread: str):
+        """
+        Display a message from a thread.
+
+        Parameters
+        ----------
+        text_from_thread : str
+            The message to display.
+        """
         self.message.setText(text_from_thread)
 
     def starting_differs_from_growing_check(self):
-        if self.parent().po.all['first_detection_frame'] > 1:
+        """
+        Set the `origin_state` variable based on checkbox state and frame detection.
+        """
+        if self.parent().po.vars['first_detection_frame'] > 1:
             self.parent().po.vars['origin_state'] = 'invisible'
         else:
             if self.starting_differs_from_growing_cb.isChecked():
@@ -1826,16 +2108,39 @@ class ImageAnalysisWindow(MainTabsType):
                 self.parent().po.vars['origin_state'] = 'fluctuating'
 
     def when_yes_is_clicked(self):
+        """
+        Handles the event when the 'Yes' button is clicked.
+
+        If image analysis is not running, trigger the decision tree process.
+        """
         if not self.is_image_analysis_running:
             # self.message.setText('Loading, wait...')
             self.decision_tree(True)
 
     def when_no_is_clicked(self):
+        """
+        Handles the event when the 'No' button is clicked.
+
+        If image analysis is not running, trigger the decision tree process.
+        """
         if not self.is_image_analysis_running:
-            # self.message.setText('Loading, wait...')
             self.decision_tree(False)
 
-    def decision_tree(self, is_yes):
+    def decision_tree(self, is_yes: bool):
+        """
+        Determine the next step in image processing based on user interaction.
+
+        Parameters
+        ----------
+        is_yes : bool
+            Boolean indicating the user's choice (Yes or No).
+
+        Notes
+        -----
+        This function handles various flags and states to determine the next step in
+        image processing workflow. It updates internal state variables and triggers
+        appropriate methods based on the user's input.
+        """
         color_analysis = not self.parent().po.vars['already_greyscale']
         if self.is_first_image_flag:
             if self.asking_first_im_parameters_flag:
@@ -1859,6 +2164,7 @@ class ImageAnalysisWindow(MainTabsType):
 
             # Slower or manual delineation?
             elif self.asking_slower_or_manual_delineation_flag:
+                self.back1_bio2 = 0
                 if not is_yes:
                     self.manual_delineation()
                 else:
@@ -1893,11 +2199,12 @@ class ImageAnalysisWindow(MainTabsType):
                 self.arena_shape_label.setVisible(False)
                 if is_yes:
                     self.start_last_image()
-                    # if self.parent().po.vars['origin_state'] != 'invisible':
-                    #     self.parent().po.vars['origin_state'] = "constant"
                 else:
-                    # if self.parent().po.vars['origin_state'] != 'invisible':
-                    #     self.parent().po.vars['origin_state'] = "fluctuating"
+                    if "PCA" in self.csc_dict:
+                        if self.parent().po.last_image.first_pc_vector is None:
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.first_image.first_pc_vector), "logical": None}
+                        else:
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.last_image.first_pc_vector), "logical": None}
                     self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
                     self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                     self.go_to_next_widget()
@@ -1908,13 +2215,18 @@ class ImageAnalysisWindow(MainTabsType):
                 self.go_to_next_widget()
 
     def first_im_parameters(self):
-        """ Method called in the decision tree"""
+        """
+        Reset UI components and prepare for first image parameters adjustment.
+
+        This method resets various UI elements to their initial states, hides
+        confirmation buttons, and shows controls for adjusting spot shapes and sizes.
+        It also sets flags to indicate that the user has not yet answered the first
+        image parameters prompt.
+        """
         self.step = 1
         self.decision_label.setText("Adjust settings, draw more cells and background, and try again")
         self.yes.setVisible(False)
         self.no.setVisible(False)
-        # self.one_blob_per_arena.setVisible(True)
-        # self.one_blob_per_arena_label.setVisible(True)
         self.set_spot_shape.setVisible(True)
         self.spot_shape_label.setVisible(True)
         self.spot_shape.setVisible(self.parent().po.all['set_spot_shape'])
@@ -1922,13 +2234,21 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_size_label.setVisible(self.one_blob_per_arena.isChecked())
         self.spot_size.setVisible(
             self.one_blob_per_arena.isChecked() and self.set_spot_size.isChecked())
-        # self.arena_shape.setVisible(True)
-        # self.arena_shape_label.setVisible(True)
         self.auto_delineation_flag = True
         self.first_im_parameters_answered = True
 
     def auto_delineation(self):
-        """ Method called in the decision tree"""
+        """
+        Auto delineation process for image analysis.
+
+        Automatically delineate or start manual delineation based on the number of arenas containing distinct spots.
+
+        Notes
+        -----
+        - The automatic delineation algorithm cannot handle situations where there are more than one arena containing distinct spots. In such cases, manual delineation is initiated.
+        - This function updates the current mask and its stats, removes unnecessary memory, initiates image processing steps including cropping, scaling, subtracting, and delineating.
+        - The visualization labels are hidden during this process.
+        """
         # Do not proceed automatic delineation if there are more than one arena containing distinct spots
         # The automatic delineation algorithm cannot handle this situation
         if self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number > 1:
@@ -1944,11 +2264,29 @@ class ImageAnalysisWindow(MainTabsType):
             self.visualize.setVisible(False)
 
     def asking_slower_or_manual_delineation(self):
+        """
+        Sets the asking_slower_or_manual_delineation_flag to True, updates decision_label and message.
+
+        Extended Description
+        --------------------
+        This method is used to prompt the user to choose between a slower but more efficient delineation algorithm and manual delineation.
+
+        Notes
+        -----
+        This function directly modifies instance attributes `asking_slower_or_manual_delineation_flag`, `decision_label`, and `message`.
+
+        """
         self.asking_slower_or_manual_delineation_flag = True
         self.decision_label.setText(f"Click yes to try a slower but more efficient delineation algorithm, no to do it manually")
         self.message.setText(f"Clicking no will allow you to draw each arena manually")
 
     def slower_delineation(self):
+        """
+        Perform slower delineation process and clear the decision label.
+
+        Execute a sequence of operations that prepare for a slower
+        delineation process.
+        """
         self.decision_label.setText(f"")
         self.arena_shape.setVisible(False)
         self.arena_shape_label.setVisible(False)
@@ -1958,7 +2296,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.start_crop_scale_subtract_delineate()
 
     def manual_delineation(self):
-        """ Method called in the decision tree"""
+        """
+        Manually delineates the analysis arena on the image by enabling user interaction and
+        preparing the necessary attributes for manual drawing of arenas on the image.
+        """
         self.manual_delineation_flag = True
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.get_average_pixel_size()
@@ -1987,28 +2328,42 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText("Draw each arena")
         self.user_drawn_lines_label.setVisible(True)
         self.decision_label.setText(
-            f"Hold click to draw {self.parent().po.sample_number} arenas on the image")
-        self.message.setText('Click Yes when it is done')
+            f"Hold click to draw {self.parent().po.sample_number} arena(s) on the image. Once done, click yes.")
+        self.message.setText('An error? Hit one button on the left to remove any drawn arena.')
 
     def last_image_question(self):
-        """ Method called in the decision tree"""
-        self.decision_label.setText(
-            'Do you want to check if the current parameters work for the last image:')
-        self.message.setText('Click Yes if the cell color may change during the analysis.')
-        self.yes.setVisible(True)
-        self.no.setVisible(True)
-        self.starting_differs_from_growing_cb.setVisible(True)
-        self.starting_differs_from_growing_label.setVisible(True)
+        """
+        Last image question.
+
+        Queries the user if they want to check parameters for the last image,
+        informing them that the best segmentation pipeline may change during analysis.
+        """
+
         self.image_number.setVisible(False)
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
-        self.asking_last_image_flag = True
-        # self.title_label.setVisible(False)
         self.step = 2
+        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+            self.starting_differs_from_growing_cb.setChecked(False)
+            self.start_last_image()
+        else:
+            self.asking_last_image_flag = True
+            self.decision_label.setText('Click yes to improve the segmentation using the last image')
+            self.message.setText('This is useful when the specimen(s) is more visible.')
+            self.starting_differs_from_growing_cb.setVisible(True)
+            self.starting_differs_from_growing_label.setVisible(True)
+            self.yes.setVisible(True)
+            self.no.setVisible(True)
 
     def start_last_image(self):
+        """
+        Start the process of analyzing the last image in the time-lapse or the video.
+
+        This method initializes various UI elements, retrieves the last image,
+        waits for any running threads to complete, processes the image without
+        considering it as the first image, and updates the visualization.
+        """
         self.is_first_image_flag = False
-        # self.parent().po.vars["color_number"] = 2
         self.decision_label.setText('')
         self.yes.setVisible(False)
         self.no.setVisible(False)
@@ -2020,11 +2375,9 @@ class ImageAnalysisWindow(MainTabsType):
         if self.thread['SaveManualDelineation'].isRunning():
             self.thread['SaveManualDelineation'].wait()
         self.parent().po.cropping(is_first_image=False)
-        # self.parent().po.last_image = OneImageAnalysis(self.parent().po.last_im)
         self.reinitialize_image_and_masks(self.parent().po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
         self.parent().po.current_combination_id = 0
-        # self.advanced_mode_cb.setChecked(True)
         self.visualize_is_clicked()
         self.user_drawn_lines_label.setText('Select and draw')
         self.user_drawn_lines_label.setVisible(True)
@@ -2035,12 +2388,33 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize_label.setVisible(True)
         self.visualize.setVisible(True)
         self.row1_widget.setVisible(False)
-        # self.title_label.setVisible(True)
-        # self.row1_col1_widget.setVisible(False)
-        # self.row1_col2_widget.setVisible(False)
+
+    def complete_image_analysis_is_clicked(self):
+        """
+        Completes the image analysis process if no listed threads are running.
+        """
+        if (not self.thread['SaveManualDelineation'].isRunning() or not self.thread[
+            'PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning() or not
+        self.thread['CompleteImageAnalysisThread'].isRunning()):
+            self.message.setText(f"Analyzing and saving the segmentation result, wait... ")
+            self.thread['CompleteImageAnalysisThread'].start()
+            self.thread['CompleteImageAnalysisThread'].message_when_thread_finished.connect(self.complete_image_analysis_done)
+
+    def complete_image_analysis_done(self, res):
+        self.message.setText(f"Complete image analysis done.")
 
     def go_to_next_widget(self):
-        if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['FinalizeImageAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():
+        """
+        Advances the user interface to the next widget after performing final checks.
+
+        Notes
+        -----
+        This function performs several actions in sequence:
+            - Displays a message box to inform the user about final checks.
+            - Waits for some background threads to complete their execution.
+            - Advances the UI to the video analysis window if certain conditions are met.
+        """
+        if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():
 
             self.popup = QtWidgets.QMessageBox()
             self.popup.setWindowTitle("Info")
@@ -2056,14 +2430,14 @@ class ImageAnalysisWindow(MainTabsType):
 
             self.message.setText(f"Final checks, wait... ")
             self.parent().last_tab = "image_analysis"
-            self.thread['FinalizeImageAnalysis'].start()
+            self.thread['PrepareVideoAnalysis'].start()
             if self.parent().po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
                 self.parent().videoanalysiswindow.select_option.addItem(f"1) Kmeans")
                 self.parent().videoanalysiswindow.select_option.setCurrentIndex(0)
                 self.parent().po.all['video_option'] = 0
             time.sleep(1 / 10)
-            self.thread['FinalizeImageAnalysis'].wait()
+            self.thread['PrepareVideoAnalysis'].wait()
             self.message.setText(f"")
 
             self.video_tab.set_not_in_use()
@@ -2073,15 +2447,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.popup.close()
 
     def closeEvent(self, event):
+        """
+        Handle the close event for a QWidget.
+        """
         event.accept
-
-
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = ImageAnalysisWindow(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())

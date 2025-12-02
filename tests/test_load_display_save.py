@@ -145,7 +145,7 @@ class TestWriteVideo(CellectsUnitTest):
 # write_video(np_array,'/Users/Directory/Scripts/python/Cellects/data/input/test_read_video.npy', is_color=True, fps=1)
 #
 # video = video2numpy('/Users/Directory/Scripts/python/Cellects/data/input/test_read_video.npy')
-video = video2numpy('/Users/Directory/Scripts/python/Cellects/data/input/test_read_video.mp4')
+# video = video2numpy('/Users/Directory/Scripts/python/Cellects/data/input/test_read_video.mp4')
 
 
 class TestVideo2Numpy(CellectsUnitTest):
@@ -169,6 +169,22 @@ class TestVideo2Numpy(CellectsUnitTest):
         true_frame_width = 2
         video = video2numpy(str(self.path_input / 'test_read_video.mp4'), true_frame_width=true_frame_width)
         self.assertTrue(isinstance(video, np.ndarray))
+
+    def test_video2numpy_npy_with_conversion(self):
+        """Test npy_with_conversion."""
+        true_frame_width = 2
+        conversion_dict = {'bgr': np.array((1, 1, 1)), 'logical': "Or", 'hsv2': np.array((0, 1, 0))}
+        video, converted_video = video2numpy(str(self.path_input / 'test_read_video.npy'), conversion_dict, true_frame_width=true_frame_width)
+        self.assertIsInstance(video, np.ndarray)
+        self.assertIsInstance(converted_video, np.ndarray)
+
+    def test_video2numpy_mp4_with_conversion(self):
+        """Test mp4."""
+        true_frame_width = 2
+        conversion_dict = {'bgr': np.array((1, 1, 1)), 'logical': "Or", 'hsv2': np.array((0, 1, 0))}
+        video, converted_video = video2numpy(str(self.path_input / 'test_read_video.mp4'), conversion_dict, true_frame_width=true_frame_width)
+        self.assertIsInstance(video, np.ndarray)
+        self.assertIsInstance(converted_video, np.ndarray)
 
 
 class TestIsRawImage(CellectsUnitTest):
@@ -205,13 +221,12 @@ class TestReadImage(CellectsUnitTest):
         self.assertTrue(np.array_equal(ref_size, result.shape))
 
 
-
 class TestReadAndRotate(CellectsUnitTest):
     """Test suite for read_and_rotate function."""
     def test_read_and_rotate_orientation_correction(self):
         """Test basic functionality."""
         image_1 = self.path_experiment / "image1.tif"
-        image_2 = self.path_experiment / "image25.tif"
+        image_2 = self.path_experiment / "image2.tif"
         raw_images = False
         is_landscape = True
 
@@ -416,6 +431,44 @@ class TestExtractTime(CellectsUnitTest):
         result = extract_time(image_list, self.path_experiment)
         # Verify result
         self.assertTrue(np.array_equal(result, expected_time))
+
+
+class TestReadOneArena(CellectsUnitTest):
+    """Test suite for read_one_arena function."""
+    def test_read_one_arena_with_videos_in_ram(self):
+        """Test read_one_arena with videos in ram."""
+        csc_dict = {'bgr': np.array([0, 0, 1]), 'logical': 'None'}
+        videos_already_in_ram = [np.zeros(0), np.zeros(0)]
+        visu, converted_video, converted_video2 = read_one_arena(arena_label=1, already_greyscale=True,
+                                                                 csc_dict=csc_dict,
+                                                                 videos_already_in_ram=videos_already_in_ram)
+        visu, converted_video, converted_video2 = read_one_arena(arena_label=1, already_greyscale=False,
+                                                                 csc_dict=csc_dict,
+                                                                 videos_already_in_ram=videos_already_in_ram)
+        self.assertTrue(converted_video2 is None)
+        csc_dict = {'bgr': np.array([0, 0, 1]), 'logical': 'Or'}
+        videos_already_in_ram = [np.zeros(0), np.zeros(0), np.zeros(0)]
+        visu, converted_video, converted_video2 = read_one_arena(arena_label=1, already_greyscale=False,
+                                                                 csc_dict=csc_dict,
+                                                                 videos_already_in_ram=videos_already_in_ram)
+        self.assertTrue(converted_video2 is not None)
+
+    def test_read_one_arena_with_vid_name(self):
+        """Test read_one_arena with a video on the disk."""
+        os.chdir(self.path_input)
+        csc_dict = {'bgr': np.array([0, 0, 1]), 'logical': 'None'}
+        vid_name = "test_read_video.mp4"
+        visu, converted_video, converted_video2 = read_one_arena(arena_label=1, already_greyscale=False,
+                                                                 csc_dict=csc_dict, vid_name=vid_name)
+        self.assertIsInstance(visu, np.ndarray)
+        self.assertTrue(converted_video is None)
+        csc_dict = {'bgr': np.array([0, 0, 1]), 'logical': 'Or', 'hsv2': np.array([0, 1, 0])}
+        visu, converted_video, converted_video2 = read_one_arena(arena_label=1, already_greyscale=True,
+                                                                 csc_dict=csc_dict, vid_name=vid_name)
+        self.assertIsInstance(converted_video, np.ndarray)
+        self.assertTrue(visu is None)
+
+
 
 
 if __name__ == '__main__':
