@@ -38,9 +38,9 @@ from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.utils.load_display_save import read_and_rotate, video2numpy
+from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
+                                              create_empty_videos, write_video)
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
-from cellects.utils.load_display_save import write_video
 from cellects.core.motion_analysis import MotionAnalysis
 
 
@@ -556,7 +556,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                kmeans_clust_nb=kmeans_clust_nb,
                                                                biomask=self.parent().po.all["bio_mask"],
                                                                backmask=self.parent().po.all["back_mask"],
-                                                               color_space_dictionaries=None)
+                                                               color_space_dictionaries=None,
+                                                               carefully=self.parent().po.carefully)
             else:
                 if self.parent().po.all['scale_with_image_or_cells'] == 0:
                     self.parent().po.get_average_pixel_size()
@@ -569,7 +570,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    kmeans_clust_nb=kmeans_clust_nb,
                                                                                    biomask=self.parent().po.all["bio_mask"],
                                                                                    backmask=self.parent().po.all["back_mask"],
-                                                                                   color_space_dictionaries=None)
+                                                                                   color_space_dictionaries=None,
+                                                               carefully=self.parent().po.carefully)
 
         logging.info(f" image analysis lasted {default_timer() - tic} secondes")
         logging.info(f" image analysis lasted {np.round((default_timer() - tic) / 60)} minutes")
@@ -673,8 +675,8 @@ class LastImageAnalysisThread(QtCore.QThread):
             if self.parent().po.all['are_gravity_centers_moving'] != 1:
                 out_of_arenas = np.ones_like(self.parent().po.first_image.validated_shapes)
                 for blob_i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
-                    out_of_arenas[self.parent().po.top[blob_i]: (self.parent().po.bot[blob_i] + 1),
-                    self.parent().po.left[blob_i]: (self.parent().po.right[blob_i] + 1)] = 0
+                    out_of_arenas[self.parent().po.top[blob_i]: self.parent().po.bot[blob_i],
+                    self.parent().po.left[blob_i]: self.parent().po.right[blob_i]] = 0
             ref_image = self.parent().po.first_image.validated_shapes
             self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
             kmeans_clust_nb = None
@@ -1146,75 +1148,49 @@ class OneArenaThread(QtCore.QThread):
         """
         arena = self.parent().po.all['arena']
         i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
+        true_frame_width = self.parent().po.vars['origin_list'][i].shape[1]
+        if self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile(f'ind_{arena}.npy'):
+            os.remove(f'ind_{arena}.npy')
+        background = None
+        background2 = None
+        if self.parent().po.vars['subtract_background']:
+            background = self.parent().po.vars['background_list'][i]
+            if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
+                background2 = self.parent().po.vars['background_list2'][i]
+        vid_name = None
+        if self.parent().po.vars['video_list'] is not None:
+            vid_name = self.parent().po.vars['video_list'][i]
+        visu, converted_video, converted_video2 = read_one_arena(self.parent().po.all['arena'],
+            self.parent().po.vars['already_greyscale'], self.parent().po.vars['convert_for_motion'],
+            None, true_frame_width, vid_name, background, background2)
+
         save_loaded_video: bool = False
-        if not os.path.isfile(f'ind_{arena}.npy') or self.parent().po.all['overwrite_unaltered_videos']:
+        if visu is None or (self.parent().po.vars['already_greyscale'] and converted_video is None):
+            cr = [self.parent().po.top[i], self.parent().po.bot[i],
+                  self.parent().po.left[i], self.parent().po.right[i]]
+            vids = create_empty_videos(self.parent().po.data_list, cr,
+                self.parent().po.vars['lose_accuracy_to_save_memory'], self.parent().po.vars['already_greyscale'],
+                self.parent().po.vars['convert_for_motion'])
+            self.parent().po.visu, self.parent().po.converted_video, self.parent().po.converted_video2 = vids
             logging.info(f"Starting to load arena n°{arena} from images")
-            add_to_c = 1
-            self.parent().po.one_arenate_done = True
-            i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
-            if self.parent().po.all['im_or_vid'] == 1:
-                vid_name = self.parent().po.vars['video_list'][i]
-                true_frame_width = self.parent().po.vars['origin_list'][i].shape[1]
+
+            prev_img = None
+            pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
+            is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
+            for image_i, image_name in enumerate(self.parent().po.data_list):
+                current_percentage, eta = pat_tracker.get_progress()
+                reduce_image_dim = self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim
+                img, prev_img = read_rotate_crop_and_reduce_image(image_name, prev_img,
+                    self.parent().po.first_image.crop_coord, cr, self.parent().po.all['raw_images'], is_landscape,
+                    reduce_image_dim)
+                self.image_from_thread.emit(
+                    {"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
                 if self.parent().po.vars['already_greyscale']:
-                    self.parent().po.converted_video = video2numpy(
-                        vid_name, None, self.parent().po.background, true_frame_width)
-                    if len(self.parent().po.converted_video.shape) == 4:
-                        self.parent().po.converted_video = self.parent().po.converted_video[:, :, :, 0]
-                    img = self.parent().po.converted_video[-1, ...]
+                    self.parent().po.converted_video[image_i, ...] = img
                 else:
-                    self.parent().po.visu = video2numpy(
-                        vid_name, None, self.parent().po.background, true_frame_width)
-                    img = self.parent().po.visu[-1, ...]
-
-            else:
-                if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                    self.parent().po.converted_video = np.zeros(
-                        (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                        dtype=np.uint8)
-                else:
-                    self.parent().po.converted_video = np.zeros(
-                        (len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c, self.parent().po.right[i] - self.parent().po.left[i] + add_to_c),
-                        dtype=float)
-                if not self.parent().po.vars['already_greyscale']:
-                    self.parent().po.visu = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                       self.parent().po.right[i] - self.parent().po.left[i] + add_to_c, 3), dtype=np.uint8)
-                    if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                        if self.parent().po.vars['lose_accuracy_to_save_memory']:
-                            self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                           self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=np.uint8)
-                        else:
-                            self.parent().po.converted_video2 = np.zeros((len(self.parent().po.data_list), self.parent().po.bot[i] - self.parent().po.top[i] + add_to_c,
-                                                           self.parent().po.right[i] - self.parent().po.left[i] + add_to_c), dtype=float)
-                prev_img = None
-                pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
-                for image_i, image_name in enumerate(self.parent().po.data_list):
-                    current_percentage, eta = pat_tracker.get_progress()
-                    is_landscape = self.parent().po.first_image.image.shape[0] < self.parent().po.first_image.image.shape[1]
-                    img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape)
-                    prev_img = deepcopy(img)
-                    if self.parent().po.first_image.cropped:
-                        img = img[self.parent().po.first_image.crop_coord[0]:self.parent().po.first_image.crop_coord[1],
-                              self.parent().po.first_image.crop_coord[2]:self.parent().po.first_image.crop_coord[3], :]
-                    img = img[self.parent().po.top[arena - 1]: (self.parent().po.bot[arena - 1] + add_to_c),
-                          self.parent().po.left[arena - 1]: (self.parent().po.right[arena - 1] + add_to_c), :]
-
-                    self.image_from_thread.emit({"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
-                    if self.parent().po.vars['already_greyscale']:
-                        if self.parent().po.reduce_image_dim:
-                            self.parent().po.converted_video[image_i, ...] = img[:, :, 0]
-                        else:
-                            self.parent().po.converted_video[image_i, ...] = img
-                    else:
-                        self.parent().po.visu[image_i, ...] = img
-
+                    self.parent().po.visu[image_i, ...] = img
 
             if not self.parent().po.vars['already_greyscale']:
-                background = None
-                background2 = None
-                if self.parent().po.vars['subtract_background']:
-                    background = self.parent().po.vars['background_list'][i]
-                    if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                        background2 = self.parent().po.vars['background_list2'][i]
                 msg = "Video conversion"
                 if background is not None :
                     msg += ", background subtraction"
@@ -1238,7 +1214,6 @@ class OneArenaThread(QtCore.QThread):
                 else:
                     self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video),
                                           deepcopy(self.parent().po.converted_video2)]
-
         else:
             logging.info(f"Starting to load arena n°{arena} from .npy saved file")
             self.videos_in_ram = None
@@ -1740,7 +1715,6 @@ class RunAllThread(QtCore.QThread):
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None
                 self.parent().po.last_image = None
-                self.parent().po.videos = None
                 self.parent().po.top = None
 
                 message = self.set_current_folder(exp_i)
@@ -1919,8 +1893,8 @@ class RunAllThread(QtCore.QThread):
 
                             for arena_i, arena_name in enumerate(arena):
                                 try:
-                                    sub_img = img[self.parent().po.top[arena_name]: (self.parent().po.bot[arena_name] + 1),
-                                              self.parent().po.left[arena_name]: (self.parent().po.right[arena_name] + 1), ...]
+                                    sub_img = img[self.parent().po.top[arena_name]: self.parent().po.bot[arena_name],
+                                              self.parent().po.left[arena_name]: self.parent().po.right[arena_name], ...]
                                     if use_list_of_vid:
                                         video_bunch[arena_i][image_i, ...] = sub_img
                                     else:
@@ -1929,9 +1903,9 @@ class RunAllThread(QtCore.QThread):
                                         else:
                                             video_bunch[image_i, :, :, arena_i] = sub_img
                                 except ValueError:
-                                    analysis_status["message"] = f"One (or more) image has a different size (restart)"
+                                    analysis_status["message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
                                     analysis_status["continue"] = False
-                                    logging.info(f"In the {message} folder: one (or more) image has a different size (restart)")
+                                    logging.info(f"Reset all settings in advanced parameters")
                                     break
                             if not analysis_status["continue"]:
                                 break
@@ -1956,9 +1930,8 @@ class RunAllThread(QtCore.QThread):
                     self.parent().po.all['overwrite_unaltered_videos'] = False
                     self.parent().po.save_variable_dict()
                     self.parent().po.save_data_to_run_cellects_quickly()
-                    analysis_status["message"] = f"Video writing complete."
-                    if self.parent().po.videos is not None:
-                        del self.parent().po.videos
+                    if analysis_status["continue"]:
+                        analysis_status["message"] = f"Video writing complete."
                     return analysis_status
                 else:
                     analysis_status["continue"] = False
@@ -2160,11 +2133,6 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
             results_i['one_row_per_frame'] = analysis_i.one_row_per_frame
 
         results_i['first_move'] = analysis_i.one_descriptor_per_arena["first_move"]
-        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-            if vars['fractal_analysis']:
-                results_i['fractal_box_sizes'] = pd.DataFrame(analysis_i.fractal_boxes,
-                               columns=['arena', 'time', 'fractal_box_lengths', 'fractal_box_widths'])
-
         # Save efficiency visualization
         results_i['efficiency_test_1'] = analysis_i.efficiency_test_1
         results_i['efficiency_test_2'] = analysis_i.efficiency_test_2

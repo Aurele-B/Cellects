@@ -1819,6 +1819,7 @@ class ImageAnalysisWindow(MainTabsType):
         row_number1 = 0
         row_number2 = 0
         if "PCA" in self.csc_dict.keys():
+            self.row1[0].setCurrentIndex(0)
             for i in range(1, 4):
                 self.row1[i].setVisible(False)
         else:

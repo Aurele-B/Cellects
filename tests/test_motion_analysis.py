@@ -97,14 +97,18 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars["appearance_detection_method"] = 'largest'
         cls.vars['contour_color']: np.uint8 = 0
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
-        cls.ma = MotionAnalysis(cls.l)
-        cls.ma.get_origin_shape()
-        cls.ma.get_covering_duration(1) # Put this in init
+
+    def test_simple_motion_analysis(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
 
 class TestMotionAnalysisSlopeDetection(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
 
+
     def test_most_central_detection(self):
+        self.ma = MotionAnalysis(self.l)
         self.ma.vars["appearance_detection_method"] = 'most_central'
         self.ma.get_origin_shape()
         self.assertTrue(self.ma.start is not None)
@@ -112,6 +116,9 @@ class TestMotionAnalysisSlopeDetection(TestMotionAnalysisWithOneBlob):
         self.assertGreater(self.ma.substantial_time, 0)
 
     def test_detect_slope_only(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
         self.ma.vars['do_slope_segmentation'] = True
         self.ma.vars['do_value_segmentation'] = False
         self.ma.vars['frame_by_frame_segmentation'] = False
@@ -122,6 +129,9 @@ class TestMotionAnalysisAnd(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
 
     def test_detect_slope_and_thresh(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
         self.ma.vars['do_slope_segmentation'] = True
         self.ma.vars['do_value_segmentation'] = True
         self.ma.vars['frame_by_frame_segmentation'] = False
@@ -133,6 +143,9 @@ class TestMotionAnalysisOr(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
 
     def test_detect_slope_or_thresh(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
         self.ma.vars['do_slope_segmentation'] = True
         self.ma.vars['do_value_segmentation'] = True
         self.ma.vars['frame_by_frame_segmentation'] = False
@@ -144,6 +157,9 @@ class TestMotionAnalysisStep1(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
 
     def test_detect_frame_step1(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
         self.ma.vars['do_slope_segmentation'] = False
         self.ma.vars['do_value_segmentation'] = False
         self.ma.vars['frame_by_frame_segmentation'] = True
@@ -154,6 +170,9 @@ class TestMotionAnalysisStep1(TestMotionAnalysisWithOneBlob):
 class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
     def test_post_processing(self):
+        self.ma = MotionAnalysis(self.l)
+        self.ma.get_origin_shape()
+        self.ma.get_covering_duration(1)
         self.ma.vars['do_slope_segmentation'] = False
         self.ma.vars['do_value_segmentation'] = False
         self.ma.vars['frame_by_frame_segmentation'] = True
