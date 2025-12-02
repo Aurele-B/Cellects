@@ -10,7 +10,8 @@ import cv2
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
-from cellects.utils.load_display_save import write_video_sets
+from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
+from cellects.image_analysis.network_functions import NetworkDetection
 
 
 def load_one_folder(pathway, sample_number):
@@ -126,27 +127,18 @@ def run_all_arenas(po):
     cv2.imwrite(f"Analysis efficiency, {np.ceil(po.vars['img_number'] / 10).astype(np.uint64)}th image.jpg",
         po.first_image.bgr)
 
+def detect_network_in_one_image(im_path, save_path):
+    im = readim(im_path)
+    im = im[100:870, 200:1000]
+    greyscale_image = im.mean(axis=2)
+    net = NetworkDetection(greyscale_image, add_rolling_window=True)
+    net.get_best_network_detection_method()
+    display_network_methods(net, save_path)
+
 
 
 if __name__ == "__main__":
     po = load_one_folder(Path("/data/experiment"), 1)
     po = run_image_analysis(po)
     po = write_videos(po)
-    # MA = run_one_video_analysis(po)
     run_all_arenas(po)
-
-    # MA.one_row_per_frame.to_csv(
-    #     "/Users/Directory/Scripts/python/Cellects/tests/data/experiment/motion_analysis_thresh.csv")
-
-    # path = Path("/Users/Directory/Scripts/python/Cellects/tests/data/experiment")
-    # po.load_variable_dict()
-    # run_image_analysis(po)
-    # os.chdir(path)
-    # from glob import glob
-    # from cellects.utils.load_display_save import readim
-    # im_names = np.sort(glob("*.JPG"))
-    # for i, im_name in enumerate(im_names): #  im_name = im_names[-1]
-    #     im = readim(im_name)
-    #     cv2.imwrite(f"image{i + 1}.tif", im[2925:3170, 1200:1500, :])
-    #
-    #     show(im[2925:3170,1200:1500, :])

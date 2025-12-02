@@ -1159,3 +1159,39 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     if time.sum() == 0:
         time = np.repeat(0, nb)#arange(1, nb * 60, 60)
     return time
+
+def display_network_methods(network_detection: object, save_path: str=None):
+    row_nb = 6
+    fig, axes = plt.subplots(int(np.ceil(len(network_detection.all_results) / row_nb)), row_nb, figsize=(100, 100))
+    fig.suptitle(f'Segmentation Comparison: Frangi + Sato Variations', fontsize=16)
+
+    # Plot all results
+    for idx, result in enumerate(network_detection.all_results):
+        row = idx // row_nb
+        col = idx % row_nb
+
+        ax = axes[row, col]
+
+        # Display binary segmentation result
+        ax.imshow(result['binary'], cmap='gray')
+
+        # Create title with filter info and quality score
+        title = f"{result['method']}: {str(np.round(network_detection.quality_metrics[idx], 0))}"
+
+        # Highlight the best result
+        if idx == network_detection.best_idx:
+            ax.set_title(title, fontsize=8, color='red', fontweight='bold')
+            ax.add_patch(plt.Rectangle((0, 0), result['binary'].shape[1] - 1,
+                                       result['binary'].shape[0] - 1,
+                                       fill=False, edgecolor='red', linewidth=3))
+        else:
+            ax.set_title(title, fontsize=8)
+
+        ax.axis('off')
+    plt.tight_layout()
+
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
+        plt.close()
+    else:
+        plt.show()
