@@ -204,8 +204,8 @@ class  NetworkDetection:
         ----------
         greyscale_image : NDArray[np.uint8]
             The input greyscale image.
-        possibly_filled_pixels : NDArray[np.uint8]
-            Image containing possibly filled pixels.
+        possibly_filled_pixels : NDArray[np.uint8], optional
+            Image containing possibly filled pixels. Defaults to None.
         add_rolling_window : bool, optional
             Flag to add rolling window. Defaults to False.
         origin_to_add : NDArray[np.uint8], optional
@@ -214,7 +214,10 @@ class  NetworkDetection:
             Best result dictionary. Defaults to None.
         """
         self.greyscale_image = greyscale_image
-        self.possibly_filled_pixels = possibly_filled_pixels
+        if possibly_filled_pixels is None:
+            self.possibly_filled_pixels = np.ones(self.greyscale_image.shape, dtype=np.uint8)
+        else:
+            self.possibly_filled_pixels = possibly_filled_pixels
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
         self.origin_to_add = origin_to_add
