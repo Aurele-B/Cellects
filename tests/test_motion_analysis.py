@@ -171,7 +171,7 @@ class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
         self.ma.study_cytoscillations()
         self.ma.fractal_descriptions()
         self.ma.change_results_of_one_arena(False)
-        self.ma.change_results_of_one_arena(True)
+        self.ma.change_results_of_one_arena(False)
         self.ma.save_results()
 
     def tearDown(self):
