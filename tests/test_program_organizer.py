@@ -300,9 +300,9 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         are_gravity_centers_moving = False
         self.po.get_bounding_boxes(are_gravity_centers_moving)
         self.assertEqual(self.po.top, 0)
-        self.assertEqual(self.po.bot, 20)
+        self.assertEqual(self.po.bot, 21)
         self.assertEqual(self.po.left, 0)
-        self.assertEqual(self.po.right, 20)
+        self.assertEqual(self.po.right, 21)
 
     def test_get_bounding_boxes_with_moving_centers_with_close_shapes(self):
         """Test get_bounding_boxes when shapes are very close to each other"""

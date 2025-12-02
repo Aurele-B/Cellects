@@ -628,7 +628,7 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             else:
                 vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
                 edge_table = np.vstack((edge_table, edge_id.edge_table))
-        print(f"{t} took: {timer() - tic} seconds")
+        # print(f"{t} took: {timer() - tic} seconds")
 
     vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                        "vertex_connected"])

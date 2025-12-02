@@ -27,7 +27,7 @@ from numpy.typing import NDArray
 from typing import Tuple
 from skimage.measure import perimeter
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, spot_size_coefficients
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 from cellects.utils.utilitarian import split_dict
 
@@ -158,7 +158,7 @@ class OneImageAnalysis:
         """
         # 1. Check valid pixels for segmentation (e.g. when there is a drift correction)
         if allowed_window is None:
-            min_y, max_y, min_x, max_x = 0, self.image.shape[0], 0, self.image.shape[1]
+            min_y, max_y, min_x, max_x = 0, self.image.shape[0] + 1, 0, self.image.shape[1] + 1
         else:
             min_y, max_y, min_x, max_x = allowed_window
         greyscale = self.image[min_y:max_y, min_x:max_x].copy()
@@ -277,9 +277,8 @@ class OneImageAnalysis:
             cc_nb, shapes = cv2.connectedComponents(self.binary_image)
             if cc_nb == 2:
                 drift_mask_coord = np.nonzero(1 - self.binary_image)
-                drift_mask_coord = (np.min(drift_mask_coord[0]), np.max(drift_mask_coord[0]),
-                                    np.min(drift_mask_coord[1]),
-                                    np.max(drift_mask_coord[1]))
+                drift_mask_coord = (np.min(drift_mask_coord[0]), np.max(drift_mask_coord[0]) + 1,
+                                    np.min(drift_mask_coord[1]), np.max(drift_mask_coord[1]) + 1)
                 self.drift_mask_coord = drift_mask_coord
                 return True
             else:
@@ -697,12 +696,40 @@ class OneImageAnalysis:
             else:
                 out_of_arenas = np.zeros(self.bgr.shape[:2], dtype=np.uint8)
                 out_of_arenas_threshold = 1
-            self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 9), dtype=np.uint32)
-            cc_nb_idx, area_idx, out_of_arenas_idx, surf_in_common_idx, biosum_idx, backsum_idx = 3, 4, 5, 6, 7, 8
+            self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 10), dtype=np.uint32)
+            cc_nb_idx, area_idx, out_of_arenas_idx, in_arena_idx, surf_in_common_idx, biosum_idx, backsum_idx = 3, 4, 5, 6, 7, 8, 9
             self.save_combination_thread = SaveCombinationThread(self)
 
-            # One channel processing
+            # Start with a PCA:
+            pca_dict = TDict()
+            pca_dict['PCA'] = np.array([1, 1, 1], dtype=np.int8)
+            self.image, explained_variance_ratio, first_pc_vector = extract_first_pc(self.bgr)
+            self.binary_image = otsu_thresholding(self.image)
+            nb, shapes = cv2.connectedComponents(self.binary_image)
+            nb -= 1
+            surf = self.binary_image.sum()
+            outside_pixels = np.sum(self.binary_image * out_of_arenas)
+            inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+            in_common = np.sum(ref_image * self.binary_image)
+            self.converted_images_list.append(self.image)
+            self.saved_images_list.append(self.binary_image)
+            self.saved_color_space_list.append(pca_dict)
+            self.combination_features[self.saved_csc_nb, :3] = list(pca_dict.values())[0]
+            self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
+            self.combination_features[self.saved_csc_nb, area_idx] = surf
+            self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+            self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
+            self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
+            if biomask is not None:
+                self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
+                    self.binary_image[biomask[0], biomask[1]])
+            if backmask is not None:
+                self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
+                    (1 - self.binary_image)[backmask[0], backmask[1]])
+            self.saved_csc_nb += 1
+
             potentials = TDict()
+            # One channel processing
             for csc_dict in color_space_dictionaries:
                 self.image = combine_color_spaces(csc_dict, self.all_c_spaces, subtract_background)
                 if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
@@ -713,7 +740,8 @@ class OneImageAnalysis:
                 if surf < total_surfarea:
                     nb, shapes = cv2.connectedComponents(self.binary_image)
                     outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                    if outside_pixels < out_of_arenas_threshold:
+                    inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+                    if inside_pixels < outside_pixels:
                         if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
                             in_common = np.sum(ref_image * self.binary_image)
                             if in_common > 0:
@@ -728,6 +756,7 @@ class OneImageAnalysis:
                                     self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
                                     self.combination_features[self.saved_csc_nb, area_idx] = surf
                                     self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+                                    self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                                     self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
                                     if biomask is not None:
                                         self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
@@ -754,6 +783,7 @@ class OneImageAnalysis:
                 nb, shapes = cv2.connectedComponents(self.binary_image)
                 nb -= 1
                 outside_pixels = np.sum(self.binary_image * out_of_arenas)
+                inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
                 in_common = np.sum(ref_image * self.binary_image)
                 self.converted_images_list.append(self.image)
                 self.saved_images_list.append(self.binary_image)
@@ -762,6 +792,7 @@ class OneImageAnalysis:
                 self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
                 self.combination_features[self.saved_csc_nb, area_idx] = surf
                 self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+                self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                 self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
                 if biomask is not None:
                     self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
@@ -792,7 +823,8 @@ class OneImageAnalysis:
                     if surf < total_surfarea:
                         nb, shapes = cv2.connectedComponents(self.binary_image)
                         outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                        if outside_pixels < out_of_arenas_threshold:
+                        inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+                        if outside_pixels < inside_pixels:
                             if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
                                 in_common = np.sum(ref_image * self.binary_image)
                                 if in_common > 0:
@@ -806,6 +838,7 @@ class OneImageAnalysis:
                                         self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
                                         self.combination_features[self.saved_csc_nb, area_idx] = surf
                                         self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+                                        self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                                         self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
                                         if biomask is not None:
                                             self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
@@ -823,35 +856,27 @@ class OneImageAnalysis:
                 for remove_col_space in color_space_to_remove:
                     potentials.pop(remove_col_space)
                 i += 1
-            if len(potentials) == 0 or i <= 1:
-                self.image = self.bgr.mean(axis=-1)
-                self.binary_image = otsu_thresholding(self.image)
-                potentials['bgr'] = np.array((1, 1, 1), dtype=np.int8)
-                nb, shapes = cv2.connectedComponents(self.binary_image)
-                nb -= 1
-                surf = self.binary_image.sum()
-                outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                in_common = np.sum(ref_image * self.binary_image)
-
-            self.converted_images_list.append(self.image)
-            self.saved_images_list.append(self.binary_image)
-            self.saved_color_space_list.append(potentials)
-            self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
-            self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-            self.combination_features[self.saved_csc_nb, area_idx] = surf
-            self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-            self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-            if biomask is not None:
-                self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                    self.binary_image[biomask[0], biomask[1]])
-            if backmask is not None:
-                self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                    (1 - self.binary_image)[backmask[0], backmask[1]])
-            self.saved_csc_nb += 1
+            if np.logical_and(len(potentials) > 0, i > 1):
+                self.converted_images_list.append(self.image)
+                self.saved_images_list.append(self.binary_image)
+                self.saved_color_space_list.append(potentials)
+                self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
+                self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
+                self.combination_features[self.saved_csc_nb, area_idx] = surf
+                self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
+                self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
+                self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
+                if biomask is not None:
+                    self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
+                        self.binary_image[biomask[0], biomask[1]])
+                if backmask is not None:
+                    self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
+                        (1 - self.binary_image)[backmask[0], backmask[1]])
+                self.saved_csc_nb += 1
 
             self.combination_features = self.combination_features[:self.saved_csc_nb, :]
             # Among all potentials, select the best one, according to criterion decreasing in importance
-            cc_efficiency_order = np.argsort(self.combination_features[:, surf_in_common_idx])
+            cc_efficiency_order = np.argsort(self.combination_features[:, surf_in_common_idx] + self.combination_features[:, in_arena_idx] - self.combination_features[:, out_of_arenas_idx])
 
             # Save and return a dictionnary containing the selected color space combinations
             # and their corresponding binary images

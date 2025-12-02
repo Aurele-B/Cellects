@@ -256,7 +256,8 @@ class ProgressivelyAddDistantShapes:
             order_of_shapes_to_expand = np.append(order_of_shapes_to_expand, new_connections)
             connections[dil_main_shape > 0] = 1
             connections[other_shapes > 0] = 1
-            nb, connections = cv2.connectedComponents(connections)
+            connections[connections > 0] = 1
+            nb, connections = cv2.connectedComponents(connections.astype(np.uint8))
         if len(order_of_shapes_to_expand) == 0:
             order_of_shapes_to_expand = np.unique(new_order)[2:]
         return order_of_shapes_to_expand
