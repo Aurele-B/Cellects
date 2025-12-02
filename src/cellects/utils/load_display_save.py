@@ -14,6 +14,7 @@ import h5py
 from timeit import default_timer
 import numpy as np
 from numpy.typing import NDArray
+from typing import Tuple
 import cv2
 from pathlib import Path
 import exifread
@@ -21,7 +22,7 @@ from exif import Image
 from matplotlib import pyplot as plt
 from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
-from cellects.utils.utilitarian import translate_dict
+from cellects.utils.utilitarian import translate_dict, split_dict
 
 
 class PickleRick:
@@ -305,28 +306,38 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
                       raw_images: bool, is_landscape: bool, use_list_of_vid: bool,
                       in_colors: bool=False, reduce_image_dim: bool=False, pathway: str=""):
     """
-    Save video frames as NumPy arrays.
-
-    Write the given list of images into NumPy array format for video storage,
-    considering memory constraints and optional color reduction.
+    Write video sets from a list of images, applying cropping and optional rotation.
 
     Parameters
     ----------
     img_list : list
-        List of image file names to process.
+        List of image file names.
+    sizes : NDArray
+        Array containing the dimensions of each video frame.
+    vid_names : list
+        List of video file names to be saved.
+    crop_coord : dict or tuple
+        Coordinates for cropping regions of interest in images/videos.
+    bounding_boxes : tuple
+        Bounding box coordinates to extract sub-images from the original images.
+    bunch_nb : int
+        Number of bunches to divide the videos into.
+    video_nb_per_bunch : int
+        Number of videos per bunch.
+    remaining : int
+        Number of videos remaining after the last full bunch.
+    raw_images : bool
+        Whether the images are in raw format.
+    is_landscape : bool
+        If true, rotate the images to landscape orientation before processing.
+    use_list_of_vid : bool
+        Flag indicating if the output should be a list of videos.
     in_colors : bool, optional
-        Whether to keep images in color. Default is False.
+        If true, process images with color information. Default is False.
     reduce_image_dim : bool, optional
-        Whether to reduce image dimensions by keeping only one color channel.
-        Default is False. Only applicable if `in_colors` is False.
+        If true, reduce image dimensions. Default is False.
     pathway : str, optional
-        Path to save the video arrays. Default is an empty string.
-
-    Notes
-    -----
-    This method manages memory usage by processing the videos in batches. It checks available RAM,
-    reads and rotates images, crops them as specified, and saves the processed portions as NumPy arrays.
-
+        Path where the videos should be saved. Default is an empty string.
     """
     top, bot, left, right = bounding_boxes
     for bunch in np.arange(bunch_nb):
@@ -367,114 +378,79 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
                      np.save(pathway + vid_names[arena_name], video_bunch[:, :, :, arena_i])
 
 
-def video2numpy(vid_name: str, conversion_dict=None, background=None, true_frame_width=None):
+def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, background2: NDArray=None,
+                true_frame_width: int=None):
     """
     Convert a video file to a NumPy array.
-
-    This function reads a video file and converts it into a NumPy array.
-    If a conversion dictionary is provided, the function also generates
-    a converted version of the video using the specified color space conversions.
-    If true_frame_width is provided, and it matches half of the actual frame width,
-    the function adjusts the frame width accordingly.
 
     Parameters
     ----------
     vid_name : str
-        Path to the video file or .npy file containing the video data.
+        The path to the video file. Can be a `.mp4` or `.npy`.
     conversion_dict : dict, optional
-        Dictionary specifying color space conversions. Default is None.
-    background : bool, optional
-        Whether to subtract the background from the video frames. Default is None.
+        Dictionary containing color space conversion parameters.
+    background : NDArray, optional
+        Background image for processing.
+    background2 : NDArray, optional
+        Second background image for processing.
     true_frame_width : int, optional
-        The true width of the video frames. Default is None.
-
-    Other Parameters
-    ----------------
-    background : bool, optional
-        Whether to subtract the background from the video frames. Default is None.
-    true_frame_width : int, optional
-        The true width of the video frames. Default is None.
+        True width of the frame. If specified and the current width is double this value,
+        adjusts to true_frame_width.
 
     Returns
     -------
-    video : numpy.ndarray or tuple(numpy.ndarray, numpy.ndarray)
+    NDArray or tuple of NDArrays
         If conversion_dict is None, returns the video as a NumPy array.
-        Otherwise, returns a tuple containing the original and converted videos.
-
-    Raises
-    ------
-    ValueError
-        If the video file cannot be opened or if there is an error in processing.
+        Otherwise, returns a tuple containing the original video and converted video.
 
     Notes
     -----
-    - This function uses OpenCV to read video files.
-    - If true_frame_width is provided and it matches half of the actual frame width,
-      the function adjusts the frame width accordingly.
-    - The conversion dictionary should contain color space mappings for transformation.
+    This function uses OpenCV to read the contents of a `.mp4` video file.
+    """
+    np_loading = vid_name[-4:] == ".npy"
+    if np_loading:
+        video = np.load(vid_name)
+        dims = list(video.shape)
+    else:
+        cap = cv2.VideoCapture(vid_name)
+        dims = [int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))]
 
-    Examples
-    --------
-    >>> vid_array = video2numpy('example_video.mp4')
-    >>> print(vid_array.shape)
-    (100, 720, 1280, 3)
+    if true_frame_width is not None:
+        if dims[2] == 2 * true_frame_width:
+            dims[2] = true_frame_width
 
-    >>> vid_array, converted_vid = video2numpy('example_video.mp4', {'rgb': 'gray'}, True)
-    >>> print(vid_array.shape, converted_vid.shape)
-    (100, 720, 1280, 3) (100, 720, 640)
-
-    >>> vid_array = video2numpy('example_video.npy')
-    >>> print(vid_array.shape)
-    (100, 720, 1920, 3)
-
-    >>> vid_array = video2numpy('example_video.npy', true_frame_width=1920)
-    >>> print(vid_array.shape)
-    (100, 720, 960, 3)
-
-    >>> vid_array = video2numpy('example_video.npy', {'rgb': 'gray'}, True, 960)
-    >>> print(vid_array.shape)
-    (100, 720, 960)"""
-    if vid_name[-4:] == ".npy":
-        video = np.load(vid_name) # , allow_pickle='TRUE'
-        frame_width = video.shape[2]
-        if true_frame_width is not None:
-            if frame_width == 2 * true_frame_width:
-                frame_width = true_frame_width
-        if conversion_dict is not None:
-            converted_video = np.zeros((video.shape[0], video.shape[1], frame_width), dtype=np.uint8)
+    if conversion_dict is not None:
+        first_dict, second_dict, c_spaces = split_dict(conversion_dict)
+        converted_video = np.empty(dims[:3], dtype=np.uint8)
+        if conversion_dict['logical'] == 'None':
+            converted_video2 = np.empty(dims[:3], dtype=np.uint8)
+        if np_loading:
             for counter in np.arange(video.shape[0]):
-                img = video[counter, :, :frame_width, :]
-                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, list(conversion_dict.keys()),
-                                                                                     conversion_dict, background=background,
+                img = video[counter, :, :dims[2], :]
+                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces,
+                                                                                     first_dict, second_dict, background=background,background2=background2,
                                                                                      convert_to_uint8=True)
                 converted_video[counter, ...] = greyscale_image
-        video = video[:, :, :frame_width, ...]
-    else:
+                if conversion_dict['logical'] == 'None':
+                    converted_video2[counter, ...] = greyscale_image2
+            video = video[:, :, :dims[2], ...]
 
-        cap = cv2.VideoCapture(vid_name)
-        frame_number = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        if true_frame_width is not None:
-            if frame_width == 2 * true_frame_width:
-                frame_width = true_frame_width
-
+    if not np_loading:
         # 2) Create empty arrays to store video analysis data
-
-        video = np.empty((frame_number, frame_height, frame_width, 3), dtype=np.uint8)
-        if conversion_dict is not None:
-            converted_video = np.empty((frame_number, frame_height, frame_width), dtype=np.uint8)
+        video = np.empty((dims[0], dims[1], dims[2], 3), dtype=np.uint8)
         # 3) Read and convert the video frame by frame
         counter = 0
-        while cap.isOpened() and counter < frame_number:
+        while cap.isOpened() and counter < dims[0]:
             ret, frame = cap.read()
-            frame = frame[:, :frame_width, ...]
+            frame = frame[:, :dims[2], ...]
             video[counter, ...] = frame
             if conversion_dict is not None:
-                conversion_dict = translate_dict(conversion_dict)
-                c_spaces = get_color_spaces(frame, list(conversion_dict.keys()))
-                csc = combine_color_spaces(conversion_dict, c_spaces, subtract_background=background)
-                converted_video[counter, ...] = csc
+                greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(frame, c_spaces,
+                                                                                     first_dict, second_dict, background=background,background2=background2,
+                                                                                     convert_to_uint8=True)
+                converted_video[counter, ...] = greyscale_image
+                if conversion_dict['logical'] == 'None':
+                    converted_video2[counter, ...] = greyscale_image2
             counter += 1
         cap.release()
 
@@ -689,6 +665,17 @@ def read_and_rotate(image_name, prev_img: NDArray=None, raw_images: bool=False, 
         if crop_coord is not None:
             img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
     return img
+
+def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_coord: list, cr: list,
+                                      raw_images: bool, is_landscape: bool, reduce_image_dim: bool):
+    img = read_and_rotate(image_name, prev_img, raw_images, is_landscape)
+    prev_img = img.copy()
+    if crop_coord is not None:
+        img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], :]
+    img = img[cr[0]:(cr[1] + 1), cr[2]:(cr[3] + 1), :]
+    if reduce_image_dim:
+        img = img[:, :, 0]
+    return img, prev_img
 
 
 def vstack_h5_array(file_name, table: NDArray, key: str="data"):
@@ -1110,7 +1097,7 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     timings = np.zeros((nb, 6), dtype=np.int64)
     if raw_images:
         for i in np.arange(nb):
-            with open(pathway / image_list[i], 'rb') as image_file:
+            with open(pathway / image_list, 'rb') as image_file:
                 my_image = exifread.process_file(image_file, details=False, stop_tag='DateTimeOriginal')
                 datetime = my_image["EXIF DateTimeOriginal"]
             datetime = datetime.values[:10] + ':' + datetime.values[11:]
@@ -1142,6 +1129,128 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     if time.sum() == 0:
         time = np.repeat(0, nb)#arange(1, nb * 60, 60)
     return time
+
+
+def read_one_arena(arena_label, already_greyscale:bool, csc_dict: dict, videos_already_in_ram=None,
+                   true_frame_width=None, vid_name: str=None, background: NDArray=None, background2: NDArray=None):
+    """
+    Read a single arena's video data, potentially converting it from color to greyscale.
+
+    Parameters
+    ----------
+    arena_label : int
+        The label of the arena.
+    already_greyscale : bool
+        Whether the video is already in greyscale format.
+    csc_dict : dict
+        Dictionary containing color space conversion settings.
+    videos_already_in_ram : np.ndarray, optional
+        Pre-loaded video frames in memory. Default is None.
+    true_frame_width : int, optional
+        The true width of the video frames. Default is None.
+    vid_name : str, optional
+        Name of the video file. Default is None.
+    background : np.ndarray, optional
+        Background image for subtractions. Default is None.
+    background2 : np.ndarray, optional
+        Second background image for subtractions. Default is None.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+            - visu: np.ndarray or None, the visual frame.
+            - converted_video: np.ndarray or None, the video data converted as needed.
+            - converted_video2: np.ndarray or None, additional video data if necessary.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified video file does not exist.
+    ValueError
+        If the video data shape is invalid.
+
+    Notes
+    -----
+    This function assumes that `video2numpy` is a helper function available in the scope.
+    For optimal performance, ensure all video data fits in RAM.
+    """
+    visu, converted_video, converted_video2 = None, None, None
+    logging.info(f"Arena n°{arena_label}. Load images and videos")
+    if videos_already_in_ram is not None:
+        if already_greyscale:
+            converted_video = videos_already_in_ram
+        else:
+            if csc_dict['logical'] == 'None':
+                visu, converted_video = videos_already_in_ram
+            else:
+                visu, converted_video, converted_video2 = videos_already_in_ram
+    else:
+        if vid_name is not None:
+            if already_greyscale:
+                converted_video = video2numpy(vid_name, None, background, background2, true_frame_width)
+                if len(converted_video.shape) == 4:
+                    converted_video = converted_video[:, :, :, 0]
+            else:
+                visu = video2numpy(vid_name, None, background, background2, true_frame_width)
+        else:
+            vid_name = f"ind_{arena_label}.npy"
+            if os.path.isfile(vid_name):
+                if already_greyscale:
+                    converted_video = video2numpy(vid_name, None, background, background2, true_frame_width)
+                    if len(converted_video.shape) == 4:
+                        converted_video = converted_video[:, :, :, 0]
+                else:
+                    visu = video2numpy(vid_name, None, background, background2, true_frame_width)
+    return visu, converted_video, converted_video2
+
+def create_empty_videos(image_list: list, cr: list, lose_accuracy_to_save_memory: bool,
+                        already_greyscale: bool, csc_dict: dict):
+    """
+
+    Create empty video arrays based on input parameters.
+
+    Parameters
+    ----------
+    image_list : list
+        List of images.
+    cr : list
+        Crop region defined by [x_start, y_start, x_end, y_end].
+    lose_accuracy_to_save_memory : bool
+        Boolean flag to determine if memory should be saved by using uint8 data type.
+    already_greyscale : bool
+        Boolean flag indicating if the images are already in greyscale format.
+    csc_dict : dict
+        Dictionary containing color space conversion settings, including 'logical' key.
+
+    Returns
+    -------
+    tuple
+        A tuple containing three elements:
+            - `visu`: NumPy array with shape (len(image_list), cr[1] - cr[0] + 1, cr[3] - cr[2] + 1, 3) and dtype uint8 for RGB images.
+            - `converted_video`: NumPy array with shape (len(image_list), cr[1] - cr[0] + 1, cr[3] - cr[2] + 1) and dtype uint8 or float according to `lose_accuracy_to_save_memory`.
+            - `converted_video2`: NumPy array with shape same as `converted_video` and dtype uint8 or float according to `lose_accuracy_to_save_memory`.
+
+    Notes
+    -----
+    Performance considerations:
+        - If `lose_accuracy_to_save_memory` is True, the function uses np.uint8 for memory efficiency.
+        - If `already_greyscale` is False, additional arrays are created to store RGB data.
+    """
+    visu, converted_video, converted_video2 = None, None, None
+    dims = len(image_list), cr[1] - cr[0] + 1, cr[3] - cr[2] + 1
+    if lose_accuracy_to_save_memory:
+        converted_video = np.zeros(dims, dtype=np.uint8)
+    else:
+        converted_video = np.zeros(dims, dtype=float)
+    if not already_greyscale:
+        visu = np.zeros((dims[0], dims[1], dims[2], 3), dtype=np.uint8)
+        if csc_dict['logical'] != 'None':
+            if lose_accuracy_to_save_memory:
+                converted_video2 = np.zeros(dims, dtype=np.uint8)
+            else:
+                converted_video2 = np.zeros(dims, dtype=float)
+    return visu, converted_video, converted_video2
 
 def display_network_methods(network_detection: object, save_path: str=None):
     """

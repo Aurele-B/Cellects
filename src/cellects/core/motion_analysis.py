@@ -204,46 +204,29 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        self.origin = self.vars['origin_list'][i]# self.vars['origins_list'][i]
-        if videos_already_in_ram is None:
-            true_frame_width = self.origin.shape[1]
-            if self.vars['video_list'] is None:
-                vid_name = f"ind_{self.one_descriptor_per_arena['arena']}.npy"
-            else:
-                vid_name = self.vars['video_list'][i]
-            if len(self.vars['background_list']) == 0:
-                self.background = None
-            else:
-                self.background = self.vars['background_list'][i]
-            if len(self.vars['background_list2']) == 0:
-                self.background2 = None
-            else:
-                self.background2 = self.vars['background_list2'][i]
-
-            if self.vars['already_greyscale']:
-                self.converted_video = video2numpy(
-                    vid_name, None, self.background, true_frame_width)
-                if len(self.converted_video.shape) == 4:
-                    self.converted_video = self.converted_video[:, :, :, 0]
-            else:
-                self.visu = video2numpy(
-                    vid_name, None, self.background, true_frame_width)
-                logging.info(
-                    f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
-                vids = convert_subtract_and_filter_video(self.visu, self.vars['convert_for_motion'],
-                                                         self.background, self.background2,
-                                                         self.vars['lose_accuracy_to_save_memory'],
-                                                         self.vars['filter_spec'])
-                self.converted_video, self.converted_video2 = vids
-        else:
-            if self.vars['already_greyscale']:
-                self.converted_video = videos_already_in_ram
-            else:
-                if self.vars['convert_for_motion']['logical'] == 'None':
-                    self.visu, self.converted_video = videos_already_in_ram
-                else:
-                    self.visu, self.converted_video, self.converted_video2 = videos_already_in_ram
-
+        self.origin = self.vars['origin_list'][i]  # self.vars['origins_list'][i]
+        true_frame_width = self.origin.shape[1]
+        vid_name = None
+        if self.vars['video_list'] is not None:
+            vid_name = self.vars['video_list'][i]
+        self.background = None
+        if len(self.vars['background_list']) > 0:
+            self.background = self.vars['background_list'][i]
+        self.background2 = None
+        if 'background_list2' in self.vars and len(self.vars['background_list2']) > 0:
+            self.background2 = self.vars['background_list2'][i]
+        vids = read_one_arena(self.one_descriptor_per_arena['arena'], self.vars['already_greyscale'],
+                              self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
+                              self.background, self.background2)
+        self.visu, self.converted_video, self.converted_video2 = vids
+        if self.converted_video is None:
+            logging.info(
+                f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
+            vids = convert_subtract_and_filter_video(self.visu, self.vars['convert_for_motion'],
+                                                     self.background, self.background2,
+                                                     self.vars['lose_accuracy_to_save_memory'],
+                                                     self.vars['filter_spec'])
+            self.converted_video, self.converted_video2 = vids
 
     def get_origin_shape(self):
         """
@@ -271,7 +254,7 @@ class MotionAnalysis:
             self.drift_mask_coord = np.zeros((self.dims[0], 4), dtype=np.uint32)
             for frame_i in np.arange(self.dims[0]):  # 100):#
                 true_pixels = np.nonzero(self.converted_video[frame_i, ...])
-                self.drift_mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]), np.min(true_pixels[1]), np.max(true_pixels[1])
+                self.drift_mask_coord[frame_i, :] = np.min(true_pixels[0]), np.max(true_pixels[0]) + 1, np.min(true_pixels[1]), np.max(true_pixels[1]) + 1
             if np.all(self.drift_mask_coord[:, 0] == 0) and np.all(self.drift_mask_coord[:, 1] == self.dims[1] - 1) and np.all(
                     self.drift_mask_coord[:, 2] == 0) and np.all(self.drift_mask_coord[:, 3] == self.dims[2] - 1):
                 logging.error(f"Drift correction has been wrongly detected. Images do not contain zero-valued pixels")
@@ -725,7 +708,7 @@ class MotionAnalysis:
         """
         try:
             if self.vars['lose_accuracy_to_save_memory']:
-                smoothed_video = np.zeros(self.dims, dtype=np.float16)
+                smoothed_video = np.zeros(self.dims, dtype=np.float32)
                 smooth_kernel = np.ones(self.step, dtype=np.float64) / self.step
                 for i in np.arange(converted_video.shape[1]):
                     for j in np.arange(converted_video.shape[2]):
@@ -737,7 +720,7 @@ class MotionAnalysis:
                                 padded = np.pad(moving_average,
                                              (self.step // 2, self.step - 1 - self.step // 2), mode='edge')
                                 moving_average = np.convolve(padded, smooth_kernel, mode='valid')
-                        smoothed_video[:, i, j] = moving_average.astype(np.float16)
+                        smoothed_video[:, i, j] = moving_average.astype(np.float32)
             else:
                 smoothed_video = np.zeros(self.dims, dtype=np.float64)
                 smooth_kernel = np.ones(self.step) / self.step
@@ -777,7 +760,7 @@ class MotionAnalysis:
         Notes
         -----
         This function may consume significant memory and adjusts
-        data types (float16 or float64) based on available RAM.
+        data types (float32 or float64) based on available RAM.
 
         Examples
         --------
@@ -792,7 +775,7 @@ class MotionAnalysis:
         necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 2 * 1.16415e-10
         available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
         if self.vars['lose_accuracy_to_save_memory']:
-            derive = converted_video.astype(np.float16)
+            derive = converted_video.astype(np.float32)
         else:
             derive = converted_video.astype(np.float64)
         if necessary_memory > available_memory:
@@ -808,12 +791,12 @@ class MotionAnalysis:
             for cy in np.arange(self.dims[1]):
                 for cx in np.arange(self.dims[2]):
                     if self.vars['lose_accuracy_to_save_memory']:
-                        derive[:, cy, cx] = np.gradient(derive[:, cy, cx], self.step).astype(np.float16)
+                        derive[:, cy, cx] = np.gradient(derive[:, cy, cx], self.step).astype(np.float32)
                     else:
                         derive[:, cy, cx] = np.gradient(derive[:, cy, cx], self.step)
         else:
             if self.vars['lose_accuracy_to_save_memory']:
-                derive = np.gradient(derive, self.step, axis=0).astype(np.float16)
+                derive = np.gradient(derive, self.step, axis=0).astype(np.float32)
             else:
                 derive = np.gradient(derive, self.step, axis=0)
 
@@ -1230,7 +1213,7 @@ class MotionAnalysis:
         # Detect first motion
         self.one_descriptor_per_arena['first_move'] = detect_first_move(self.surfarea, self.vars['first_move_threshold'])
 
-        self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not np.isin("solidity", list(self.vars['descriptors'].keys()))
+        self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not self.vars['descriptors']['solidity']
         if self.compute_solidity_separately:
             self.solidity = np.zeros(self.dims[0], dtype=np.float64)
         if not self.vars['several_blob_per_arena']:
@@ -1560,7 +1543,8 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 else:
                     self.background = self.vars['background_list'][self.one_descriptor_per_arena['arena'] - 1]
                 if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
-                    self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy", None, self.background, true_frame_width)
+                    self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy",
+                              None, true_frame_width=true_frame_width)
                 else:
                     self.visu = self.converted_video
                 if len(self.visu.shape) == 3:
