@@ -196,7 +196,7 @@ class  NetworkDetection:
     Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
     It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
     """
-    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8], add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
         """
         Initialize the object with given parameters.
 
