@@ -100,7 +100,6 @@ class ProgramOrganizer:
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
         self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
-        self.videos = None
         self.motion = None
         self.analysis_instance = None
         self.computed_video_options = np.zeros(5, bool)
@@ -268,13 +267,14 @@ class ProgramOrganizer:
         This function sorts the `data_list` attribute of an instance using the natsort library,
         which is useful when filenames have a mixture of numbers and letters.
         """
-        lengths = vectorized_len(self.data_list)
-        if len(lengths) > 1 and np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
-            logging.error(f"File names present strong variations and cannot be correctly sorted.")
-        wrong_images = np.nonzero(np.char.startswith(self.data_list, "Analysis efficiency, ", ))[0]
-        for w_im in wrong_images[::-1]:
-            self.data_list.pop(w_im)
-        self.data_list = natsort.natsorted(self.data_list)
+        if len(self.data_list) > 0:
+            lengths = vectorized_len(self.data_list)
+            if len(lengths) > 1 and np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
+                logging.error(f"File names present strong variations and cannot be correctly sorted.")
+            wrong_images = np.nonzero(np.char.startswith(self.data_list, "Analysis efficiency, ", ))[0]
+            for w_im in wrong_images[::-1]:
+                self.data_list.pop(w_im)
+            self.data_list = natsort.natsorted(self.data_list)
         if self.all['im_or_vid'] == 1:
             self.vars['video_list'] = self.data_list
         else:
@@ -426,8 +426,8 @@ class ProgramOrganizer:
             pickle_rick = PickleRick()
             data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
             if data_to_run_cellects_quickly is None:
-                logging.error("Failed to load Data to run Cellects quickly.pkl before update. Abort saving.")
-
+                os.remove('Data to run Cellects quickly.pkl')
+                logging.error("Failed to load Data to run Cellects quickly.pkl before update. Remove pre existing.")
         else:
             if new_one_if_does_not_exist:
                 logging.info("Create Data to run Cellects quickly.pkl in the user chosen directory")
@@ -930,7 +930,6 @@ class ProgramOrganizer:
                     if 'coordinates' in data_to_run_cellects_quickly:
                         (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
                             data_to_run_cellects_quickly['coordinates']
-                        self.videos.left, self.videos.right, self.videos.top, self.videos.bot = self.left, self.right, self.top, self.bot
                         self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                         if (self.first_image.image.shape[0] == (ccy2 - ccy1)) and (
                                 self.first_image.image.shape[1] == (ccx2 - ccx1)):  # maybe useless now
@@ -942,21 +941,21 @@ class ProgramOrganizer:
                 if self.all['are_gravity_centers_moving']:
                     motion_list = self._segment_blob_motion(sample_size=5)
                 # if self.all['im_or_vid'] == 1:
-                self.videos.get_bounding_boxes(are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
+                self.get_bounding_boxes(are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
                     motion_list=motion_list, all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
 
-                if np.any(self.videos.ordered_stats[:, 4] > 100 * np.median(self.videos.ordered_stats[:, 4])):
-                    analysis_status['message'] = "A specimen is at least 100 times larger: (re)do the first image analysis."
+                if np.any(self.ordered_stats[:, 4] > 100 * np.median(self.ordered_stats[:, 4])):
+                    analysis_status['message'] = "A specimen is at least 100 times larger: click previous and retry by specifying 'back' areas."
                     analysis_status['continue'] = False
-                if np.any(self.videos.ordered_stats[:, 4] < 0.01 * np.median(self.videos.ordered_stats[:, 4])):
-                    analysis_status['message'] = "A specimen is at least 100 times smaller: (re)do the first image analysis."
+                if np.any(self.ordered_stats[:, 4] < 0.01 * np.median(self.ordered_stats[:, 4])):
+                    analysis_status['message'] = "A specimen is at least 100 times smaller: click previous and retry by specifying 'back' areas."
                     analysis_status['continue'] = False
+                del self.ordered_stats
                 logging.info(
                     str(self.not_analyzed_individuals) + " individuals are out of picture scope and cannot be analyzed")
-            self.left, self.right, self.top, self.bot = self.videos.left, self.videos.right, self.videos.top, self.videos.bot
 
         else:
-            self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1]]), np.array([0]), np.array([self.first_image.image.shape[0]])
+            self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1] + 1]), np.array([0]), np.array([self.first_image.image.shape[0] + 1])
 
         self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
         if self.not_analyzed_individuals is not None:
@@ -1092,7 +1091,6 @@ class ProgramOrganizer:
                 self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 2
                 self.left[self.left < 0] = 1
                 self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
-            del self.ordered_stats
             del self.ordered_first_image
             del self.unchanged_ordered_fimg
             del self.modif_validated_shapes
@@ -1103,6 +1101,8 @@ class ProgramOrganizer:
             self.bot = np.array(self.first_image.image.shape[0], dtype=np.int64)
             self.left = np.array(0, dtype=np.int64)
             self.right = np.array(self.first_image.image.shape[1], dtype=np.int64)
+        self.bot += 1
+        self.right += 1
 
     def _standardize_video_sizes(self):
         """
@@ -1227,27 +1227,19 @@ class ProgramOrganizer:
         """
         logging.info("Create origins and background lists")
         if self.top is None:
-            self.top = np.array([0])
-            self.bot = np.array([self.first_im.shape[0]])
-            self.left = np.array([0])
-            self.right = np.array([self.first_im.shape[1]])
-
-        add_to_c = 1
+            self.top, self.bot, self.left, self.right = np.array([0]), np.array([self.first_im.shape[0]] + 1), np.array([0]), np.array([self.first_im.shape[1] + 1])
         first_im = self.first_image.validated_shapes
         self.vars['origin_list'] = []
         self.vars['background_list'] = []
         self.vars['background_list2'] = []
         for rep in np.arange(len(self.vars['analyzed_individuals'])):
-            self.vars['origin_list'].append(first_im[self.top[rep]:(self.bot[rep] + add_to_c),
-                                             self.left[rep]:(self.right[rep] + add_to_c)])
+            self.vars['origin_list'].append(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
             if self.vars['subtract_background']:
                 self.vars['background_list'].append(
-                    self.first_image.subtract_background[self.top[rep]:(self.bot[rep] + add_to_c),
-                    self.left[rep]:(self.right[rep] + add_to_c)])
+                    self.first_image.subtract_background[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
                 if self.vars['convert_for_motion']['logical'] != 'None':
-                    self.vars['background_list2'].append(
-                        self.first_image.subtract_background2[self.top[rep]:(self.bot[rep] + add_to_c),
-                        self.left[rep]:(self.right[rep] + add_to_c)])
+                    self.vars['background_list2'].append(self.first_image.subtract_background2[self.top[rep]:
+                                                         self.bot[rep], self.left[rep]:self.right[rep]])
 
     def complete_image_analysis(self):
         self.instantiate_tables()
@@ -1261,7 +1253,7 @@ class ProgramOrganizer:
             self.last_image.binary_image[self.all['back_mask']] = 0
         for i, arena in enumerate(self.vars['analyzed_individuals']):
             binary = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
-            efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i]]
+            efficiency_test = self.last_image.all_c_spaces['bgr'] # [self.top[i]:self.bot[i], self.left[i]:self.right[i]]
             if not self.vars['several_blob_per_arena']:
                 binary = keep_one_connected_component(binary)
                 one_row_per_frame = compute_one_descriptor_per_frame(binary[None, :, :],
@@ -1374,15 +1366,15 @@ class ProgramOrganizer:
 
         # 2) Create a table of the dimensions of each video
         # Add 10% to the necessary memory to avoid problems
-        necessary_memory = img_nb * np.multiply((self.bot - self.top + 1).astype(np.uint64), (self.right - self.left + 1).astype(np.uint64)).sum() * 8 * 1.16415e-10
+        necessary_memory = img_nb * np.multiply((self.bot - self.top).astype(np.uint64), (self.right - self.left).astype(np.uint64)).sum() * 8 * 1.16415e-10
         if in_colors:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top + 1, self.right - self.left + 1,
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left,
                  np.repeat(3, self.first_image.shape_number)))
             necessary_memory *= 3
         else:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top + 1, self.right - self.left + 1))
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left))
         use_list_of_vid = True
         if np.all(sizes[0, :] == sizes):
             use_list_of_vid = False
@@ -1503,11 +1495,11 @@ class ProgramOrganizer:
             image_bit_number += 64
 
         if isinstance(self.bot, list):
-            one_image_memory = np.multiply((self.bot[0] - self.top[0] + 1),
-                                        (self.right[0] - self.left[0] + 1)).max().astype(np.uint64)
+            one_image_memory = np.multiply((self.bot[0] - self.top[0]),
+                                        (self.right[0] - self.left[0])).max().astype(np.uint64)
         else:
-            one_image_memory = np.multiply((self.bot - self.top + 1).astype(np.uint64),
-                                        (self.right - self.left + 1).astype(np.uint64)).max()
+            one_image_memory = np.multiply((self.bot - self.top).astype(np.uint64),
+                                        (self.right - self.left).astype(np.uint64)).max()
         one_video_memory = self.vars['img_number'] * one_image_memory
         necessary_memory = (one_image_memory * image_bit_number + one_video_memory * video_bit_number) * 1.16415e-10
         available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
