@@ -191,7 +191,7 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         color_space_dictionaries = None
         carefully = False
         self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size)
-        self.assertGreater(self.oia.saved_csc_nb, 0)
+        self.assertGreater(self.oia.saved_csc_nb, 1)
 
     def test_find_last_im_csc_zeros_image(self):
         """test find_first_im_csc with zeros image"""
@@ -210,7 +210,7 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         max_shape_size = 10
         carefully = True
         self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, carefully=carefully)
-        self.assertGreater(self.oia.saved_csc_nb, 0)
+        self.assertGreater(self.oia.saved_csc_nb, 1)
 
     def test_find_last_im_csc_with_backmask(self):
         """test find_last_im_csc with background mask"""
