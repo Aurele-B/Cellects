@@ -1,8 +1,21 @@
 #!/usr/bin/env python3
-"""
-This module contains functions for basic operations of image segmentation.
-It starts from converting bgr images into grayscale, filtering these grayscale images,
- and various way of splitting these grayscale pixels into two categories (i.e. methods of thresholding)
+"""Module for image segmentation operations including filtering, color space conversion, thresholding, and quality assessment.
+
+This module provides tools to process images through grayscale conversion, apply various filters (e.g., Gaussian, Median, Butterworth), perform thresholding methods like Otsu's algorithm, combine color spaces for enhanced segmentation, and evaluate binary image quality. Key functionalities include dynamic background subtraction, rolling window segmentation with localized thresholds, and optimization of segmentation masks using shape descriptors.
+
+Functions
+apply_filter : Apply skimage or OpenCV-based filters to grayscale images.
+get_color_spaces : Convert BGR images into specified color space representations (e.g., LAB, HSV).
+combine_color_spaces : Merge multiple color channels with coefficients to produce a segmented image.
+generate_color_space_combination : Create custom grayscale combinations using two sets of channel weights and backgrounds.
+otsu_thresholding : Binarize an image using histogram-based Otsu thresholding.
+segment_with_lum_value : Segment video frames using luminance thresholds adjusted for background variation.
+rolling_window_segmentation : Apply localized Otsu thresholding across overlapping patches to improve segmentation accuracy.
+binary_quality_index : Calculate a quality metric based on perimeter and connected components in binary images.
+find_threshold_given_mask : Binary search optimization to determine optimal threshold between masked regions.
+
+Notes
+Uses Numba's @njit decorator for JIT compilation of performance-critical functions like combine_color_spaces and _get_counts_jit.
 """
 import numpy as np
 import cv2
@@ -11,7 +24,7 @@ from numba.typed import Dict
 from cellects.utils.decorators import njit
 from numpy.typing import NDArray
 from typing import Tuple
-from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict
+from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict, split_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image_analysis.morphological_operations import get_largest_connected_component
 from skimage.measure import perimeter
@@ -254,7 +267,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
             image = subtract_background - image
     # add (resp. subtract) the most negative (resp. smallest) value to the whole matrix to get a min = 0
     image -= np.min(image)
-    # Make analysable this image by bracketing its values between 0 and 255 and converting it to uint8
+    # Make analysable this image by bracketing its values between 0 and 255
     max_im = np.max(image)
     if max_im != 0:
         image = 255 * (image / max_im)
@@ -262,7 +275,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
 
 
-def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False) -> NDArray[np.uint8]:
+def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False, all_c_spaces: dict={}) -> NDArray[np.uint8]:
     """
     Generate color space combinations for an input image.
 
@@ -304,20 +317,85 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
     >>> print(greyscale_image1.shape)
     (100, 100)
     """
-    all_c_spaces = get_color_spaces(bgr_image, c_spaces)
-    try:
-        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
-    except:
-        first_dict = translate_dict(first_dict)
-        greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+    greyscale_image2 = None
+    first_pc_vector = None
+    if "PCA" in c_spaces:
+        greyscale_image, var_ratio, first_pc_vector = extract_first_pc(bgr_image)
+    else:
+        if len(all_c_spaces) == 0:
+            all_c_spaces = get_color_spaces(bgr_image, c_spaces)
+        try:
+            greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+        except:
+            first_dict = translate_dict(first_dict)
+            greyscale_image = combine_color_spaces(first_dict, all_c_spaces, background)
+        if len(second_dict) > 0:
+            greyscale_image2 = combine_color_spaces(second_dict, all_c_spaces, background2)
+
     if convert_to_uint8:
         greyscale_image = bracket_to_uint8_image_contrast(greyscale_image)
-    greyscale_image2 = None
-    if len(second_dict) > 0:
-        greyscale_image2 = combine_color_spaces(second_dict, all_c_spaces, background2)
-        if convert_to_uint8:
+        if greyscale_image2 is not None and len(second_dict) > 0:
             greyscale_image2 = bracket_to_uint8_image_contrast(greyscale_image2)
-    return greyscale_image, greyscale_image2
+    return greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector
+
+
+@njit()
+def get_window_allowed_for_segmentation(im_shape: Tuple, mask:NDArray[np.uint8]=None, padding: int=0) -> Tuple[int, int, int, int]:
+    """
+    Get the allowed window for segmentation within an image.
+
+    This function calculates a bounding box (min_y, max_y, min_x, max_x) around
+    a segmentation mask or the entire image if no mask is provided.
+
+    Parameters
+    ----------
+    im_shape : Tuple[int, int]
+        The shape of the image (height, width).
+    mask : NDArray[np.uint8], optional
+        The binary mask for segmentation. Default is `None`.
+    padding : int, optional
+        Additional padding around the bounding box. Default is 0.
+
+    Returns
+    -------
+    Tuple[int, int, int, int]
+        A tuple containing the bounding box coordinates (min_y, max_y,
+        min_x, max_x).
+
+    Notes
+    -----
+    This function uses NumPy operations to determine the bounding box.
+    If `mask` is `None`, the full image dimensions are used.
+
+    Examples
+    --------
+    >>> im_shape = (500, 400)
+    >>> mask = np.zeros((500, 400), dtype=np.uint8)
+    >>> mask[200:300, 200:300] = 1
+    >>> result = get_window_allowed_for_segmentation(im_shape, mask, padding=10)
+    >>> print(result)
+    (190, 310, 190, 310)
+
+    >>> result = get_window_allowed_for_segmentation(im_shape)
+    >>> print(result)
+    (0, 500, 0, 400)
+    """
+    if mask is None or mask.sum() == 0:
+        min_y = 0
+        min_x = 0
+        max_y = im_shape[0]
+        max_x = im_shape[1]
+    else:
+        y, x = np.nonzero(mask)
+        min_y = np.min(y)
+        min_y = np.max((min_y - padding, 0))
+        min_x = np.min(x)
+        min_x = np.max((min_x - padding, 0))
+        max_y = np.max(y)
+        max_y = np.min((max_y + padding + 1, mask.shape[0]))
+        max_x = np.max(x)
+        max_x = np.min((max_x + padding + 1, mask.shape[0]))
+    return min_y, max_y, min_x, max_x
 
 
 @njit()
@@ -352,9 +430,16 @@ def get_otsu_threshold(image: NDArray):
     weight2 = np.cumsum(hist[::-1])[::-1]
 
     # Get the class means mu0(t)
-    mean1 = np.cumsum(hist * bin_mids) / weight1
+    if weight1.all():
+        mean1 = np.cumsum(hist * bin_mids) / weight1
+    else:
+        mean1 = np.zeros_like(bin_mids)
+
     # Get the class means mu1(t)
-    mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
+    if weight2.all():
+        mean2 = (np.cumsum((hist * bin_mids)[::-1]) / weight2[::-1])[::-1]
+    else:
+        mean2 = np.zeros_like(bin_mids)
 
     inter_class_variance = weight1[:-1] * weight2[1:] * (mean1[:-1] - mean2[1:]) ** 2
 
@@ -466,6 +551,193 @@ def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArr
                 l_threshold = 255
             segmentation += converted_video > l_threshold
     return segmentation, l_threshold_over_time
+
+
+
+def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
+           biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, logical: str='None',
+           bio_label=None, bio_label2=None, previous_binary_image: NDArray[np.uint8]=None):
+    """
+
+    Perform K-means clustering on a greyscale image to generate binary images.
+
+    Extended Description
+    --------------------
+    This function applies the K-means algorithm to a greyscale image or pair of images to segment them into binary images. It supports optional masks and previous segmentation labels for refining the clustering.
+
+    Parameters
+    ----------
+    greyscale : NDArray
+        The input greyscale image to segment.
+    greyscale2 : NDArray, optional
+        A second greyscale image for logical operations. Default is `None`.
+    kmeans_clust_nb : int, optional
+        Number of clusters for K-means. Default is `2`.
+    biomask : NDArray[np.uint8], optional
+        Mask for selecting biological objects. Default is `None`.
+    backmask : NDArray[np.uint8], optional
+        Mask for selecting background regions. Default is `None`.
+    logical : str, optional
+        Logical operation flag to enable processing of the second image. Default is `'None'`.
+    bio_label : int, optional
+        Label for biological objects in the first segmentation. Default is `None`.
+    bio_label2 : int, optional
+        Label for biological objects in the second segmentation. Default is `None`.
+    previous_binary_image : NDArray[np.uint8], optional
+        Previous binary image for refinement. Default is `None`.
+
+    Other Parameters
+    ----------------
+    **greyscale2, logical, bio_label2**: Optional parameters for processing a second image with logical operations.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - `binary_image`: Binary image derived from the first input.
+        - `binary_image2`: Binary image for the second input if processed, else `None`.
+        - `new_bio_label`: New biological label for the first segmentation.
+        - `new_bio_label2`: New biological label for the second segmentation, if applicable.
+
+    Notes
+    -----
+    - The function performs K-means clustering with random centers.
+    - If `logical` is not `'None'`, both images are processed.
+    - Default clustering uses 2 clusters, modify `kmeans_clust_nb` for different needs.
+
+    """
+    new_bio_label = None
+    new_bio_label2 = None
+    binary_image2 = None
+    image = greyscale.reshape((-1, 1))
+    image = np.float32(image)
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+    compactness, label, center = cv2.kmeans(image, kmeans_clust_nb, None, criteria, attempts=10, flags=cv2.KMEANS_RANDOM_CENTERS)
+    kmeans_image = np.uint8(label.flatten().reshape(greyscale.shape[:2]))
+    sum_per_label = np.zeros(kmeans_clust_nb)
+    binary_image = np.zeros(greyscale.shape[:2], np.uint8)
+    if previous_binary_image is not None:
+        binary_images = []
+        image_scores = np.zeros(kmeans_clust_nb, np.uint64)
+        for i in range(kmeans_clust_nb):
+            binary_image_i = np.zeros(greyscale.shape[:2], np.uint8)
+            binary_image_i[kmeans_image == i] = 1
+            image_scores[i] = (binary_image_i * previous_binary_image).sum()
+            binary_images.append(binary_image_i)
+        binary_image[kmeans_image == np.argmax(image_scores)] = 1
+    elif bio_label is not None:
+        binary_image[kmeans_image == bio_label] = 1
+        new_bio_label = bio_label
+    else:
+        if biomask is not None:
+            all_labels = kmeans_image[biomask[0], biomask[1]]
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (all_labels == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[1]
+        elif backmask is not None:
+            all_labels = kmeans_image[backmask[0], backmask[1]]
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (all_labels == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[-2]
+        else:
+            for i in range(kmeans_clust_nb):
+                sum_per_label[i] = (kmeans_image == i).sum()
+            new_bio_label = np.argsort(sum_per_label)[-2]
+        binary_image[np.nonzero(np.isin(kmeans_image, new_bio_label))] = 1
+
+    if logical != 'None' and greyscale is not None:
+        image = greyscale2.reshape((-1, 1))
+        image = np.float32(image)
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        compactness, label, center = cv2.kmeans(image, kmeans_clust_nb, None, criteria, attempts=10,
+                                                flags=cv2.KMEANS_RANDOM_CENTERS)
+        kmeans_image = np.uint8(label.flatten().reshape(greyscale.shape[:2]))
+        sum_per_label = np.zeros(kmeans_clust_nb)
+        binary_image2 = np.zeros(greyscale.shape[:2], np.uint8)
+        if previous_binary_image is not None:
+            binary_images = []
+            image_scores = np.zeros(kmeans_clust_nb, np.uint64)
+            for i in range(kmeans_clust_nb):
+                binary_image_i = np.zeros(greyscale.shape[:2], np.uint8)
+                binary_image_i[kmeans_image == i] = 1
+                image_scores[i] = (binary_image_i * previous_binary_image).sum()
+                binary_images.append(binary_image_i)
+            binary_image2[kmeans_image == np.argmax(image_scores)] = 1
+        elif bio_label2 is not None:
+            binary_image2[kmeans_image == bio_label2] = 1
+            new_bio_label2 = bio_label2
+        else:
+            if biomask is not None:
+                all_labels = kmeans_image[biomask[0], biomask[1]]
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (all_labels == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[1]
+            elif backmask is not None:
+                all_labels = kmeans_image[backmask[0], backmask[1]]
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (all_labels == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[-2]
+            else:
+                for i in range(kmeans_clust_nb):
+                    sum_per_label[i] = (kmeans_image == i).sum()
+                new_bio_label2 = np.argsort(sum_per_label)[-2]
+            binary_image2[kmeans_image == new_bio_label2] = 1
+    return binary_image, binary_image2, new_bio_label, new_bio_label2
+
+
+def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_length: int=4, step: int=2, int_var_thresh: float=None):
+    """
+    Perform grid segmentation on the image.
+
+    This method applies a sliding window approach to segment the image into
+    a grid-like pattern based on intensity variations and optionally uses a mask.
+    The segmented regions are stored in `self.binary_image`.
+
+    Args:
+        lighter_background (bool): If True, areas lighter than the Otsu threshold are considered;
+            otherwise, darker areas are considered.
+        side_length (int, optional): The size of each grid square. Default is 8.
+        step (int, optional): The step size for the sliding window. Default is 2.
+        int_var_thresh (int, optional): Threshold for intensity variation within a grid.
+            Default is 20.
+        mask (NDArray, optional): A binary mask to restrict the segmentation area. Default is None.
+    """
+    if lighter_background is None:
+        binary_image = otsu_thresholding(image)
+        lighter_background = binary_image.sum() > (binary_image.size / 2)
+    if int_var_thresh is None:
+        int_var_thresh = np.ptp(image).astype(np.float64) * 0.1
+    grid_image = np.zeros(image.shape, np.uint64)
+    homogeneities = np.zeros(image.shape, np.uint64)
+    mask = np.ones(image.shape, np.uint64)
+    for to_add in np.arange(0, side_length, step):
+        y_windows = np.arange(0, image.shape[0], side_length)
+        x_windows = np.arange(0, image.shape[1], side_length)
+        y_windows += to_add
+        x_windows += to_add
+        for y_start in y_windows:
+            if y_start < image.shape[0]:
+                y_end = y_start + side_length
+                if y_end < image.shape[0]:
+                    for x_start in x_windows:
+                        if x_start < image.shape[1]:
+                            x_end = x_start + side_length
+                            if x_end < image.shape[1]:
+                                if np.any(mask[y_start:y_end, x_start:x_end]):
+                                    potential_detection = image[y_start:y_end, x_start:x_end]
+                                    if np.any(potential_detection):
+                                        if np.ptp(potential_detection[np.nonzero(potential_detection)]) < int_var_thresh:
+                                            homogeneities[y_start:y_end, x_start:x_end] += 1
+                                        threshold = get_otsu_threshold(potential_detection)
+                                        if lighter_background:
+                                            net_coord = np.nonzero(potential_detection < threshold)
+                                        else:
+                                            net_coord = np.nonzero(potential_detection > threshold)
+                                        grid_image[y_start + net_coord[0], x_start + net_coord[1]] += 1
+
+    binary_image = (grid_image >= (side_length // step)).astype(np.uint8)
+    binary_image[homogeneities >= (((side_length // step) // 2) + 1)] = 0
+    return binary_image
 
 
 def _network_perimeter(threshold, img: NDArray):
@@ -704,3 +976,146 @@ def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDA
         if val > thresh:
             count_b += 1
     return count_a, count_b
+
+
+def extract_first_pc(bgr_image: np.ndarray, standardize: bool=True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+
+    Extract the first principal component from a BGR image.
+
+    Parameters
+    ----------
+    bgr_image : numpy.ndarray
+        A 3D or 2D array representing the BGR image. Expected shape is either
+        (height, width, 3) or (3, height, width).
+    standardize : bool, optional
+        If True, standardizes the image pixel values by subtracting the mean and
+        dividing by the standard deviation before computing the principal
+        components. Default is True.
+
+    Returns
+    -------
+    numpy.ndarray
+        The first principal component image, reshaped to the original image height and width.
+    float
+        The explained variance ratio of the first principal component.
+    numpy.ndarray
+        The first principal component vector.
+
+    Notes
+    -----
+    The principal component analysis (PCA) is performed using Singular Value Decomposition (SVD).
+    Standardization helps in scenarios where the pixel values have different scales.
+    Pixels with zero standard deviation are handled by setting their standardization
+    denominator to 1.0 to avoid division by zero.
+
+    Examples
+    --------
+    >>> bgr_image = np.random.rand(100, 200, 3)  # Example BGR image
+    >>> first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)
+    >>> print(first_pc_image.shape)
+    (100, 200)
+    >>> print(explained_variance_ratio)
+    0.339
+    >>> print(first_pc_vector.shape)
+    (3,)
+    """
+    height, width, channels = bgr_image.shape
+    pixels = bgr_image.reshape(-1, channels)  # Flatten to Nx3 matrix
+
+    if standardize:
+        mean = np.mean(pixels, axis=0)
+        std = np.std(pixels, axis=0)
+        std[std == 0] = 1.0  # Avoid division by zero
+        pixels_scaled = (pixels - mean) / std
+    else:
+        pixels_scaled = pixels
+
+    # Perform SVD on standardized data to get principal components
+    U, d, Vt = np.linalg.svd(pixels_scaled, full_matrices=False)
+
+    # First PC is the projection of each pixel onto first right singular vector (Vt[0])
+    first_pc_vector = Vt[0]  # Shape: (3,)
+    eigen = d ** 2
+    total_variance = np.sum(eigen)
+
+    explained_variance_ratio = np.zeros_like(eigen)
+    np.divide(eigen, total_variance, out=explained_variance_ratio, where=total_variance != 0)
+
+    # Compute first principal component scores
+    first_pc_scores = U[:, 0] * d[0]
+
+    # Reshape to image shape and threshold negative values
+    first_pc_image = first_pc_scores.reshape(height, width)
+    # first_pc_thresholded = np.maximum(first_pc_image, 0)
+
+    return first_pc_image, explained_variance_ratio[0], first_pc_vector
+
+
+def convert_subtract_and_filter_video(video: NDArray, color_space_combination: dict, background: NDArray=None,
+                                      background2: NDArray=None, lose_accuracy_to_save_memory:bool=False,
+                                      filter_spec: dict=None) -> Tuple[NDArray, NDArray]:
+    """
+    Convert a video to grayscale, subtract the background, and apply filters.
+
+    Parameters
+    ----------
+    video : NDArray
+        The input video as a 4D NumPy array.
+    color_space_combination : dict
+        A dictionary containing the combinations of color space transformations.
+    background : NDArray, optional
+        The first background image for subtraction. If `None`, no subtraction is performed.
+    background2 : NDArray, optional
+        The second background image for subtraction. If `None`, no subtraction is performed.
+    lose_accuracy_to_save_memory : bool
+        Flag to reduce accuracy and save memory by using `uint8` instead of `float64`.
+    filter_spec : dict
+        A dictionary containing the specifications for filters to apply.
+
+    Returns
+    -------
+    Tuple[NDArray, NDArray]
+        A tuple containing:
+        - `converted_video`: The converted grayscale video.
+        - `converted_video2`: The second converted grayscale video if logical operation is not 'None'.
+
+    Notes
+    -----
+        - The function reduces accuracy of the converted video when `lose_accuracy_to_save_memory` is set to True.
+        - If `color_space_combination['logical']` is not 'None', a second converted video will be created.
+        - This function uses the `generate_color_space_combination` and `apply_filter` functions internally.
+    """
+
+    converted_video2 = None
+    if len(video.shape) == 3:
+        converted_video = video
+    else:
+        if lose_accuracy_to_save_memory:
+            array_type = np.uint8
+        else:
+            array_type = np.float64
+        first_dict, second_dict, c_spaces = split_dict(color_space_combination)
+        converted_video = np.zeros(video.shape[:3], dtype=array_type)
+        if color_space_combination['logical'] != 'None':
+            converted_video2 = converted_video.copy()
+        for im_i in range(video.shape[0]):
+            if im_i == 0 and background is not None:
+                # when doing background subtraction, the first and the second image are equal
+                image_i = video[1, ...]
+            else:
+                image_i = video[im_i, ...]
+            results = generate_color_space_combination(image_i, c_spaces, first_dict, second_dict, background,
+                                                       background2, lose_accuracy_to_save_memory)
+            greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = results
+            if filter_spec is not None and filter_spec['filter1_type'] != "":
+                greyscale_image = apply_filter(greyscale_image, filter_spec['filter1_type'],
+                                               filter_spec['filter1_param'],lose_accuracy_to_save_memory)
+                if greyscale_image2 is not None and filter_spec['filter2_type'] != "":
+                    greyscale_image2 = apply_filter(greyscale_image2,
+                                                    filter_spec['filter2_type'], filter_spec['filter2_param'],
+                                                    lose_accuracy_to_save_memory)
+            converted_video[im_i, ...] = greyscale_image
+            if color_space_combination['logical'] != 'None':
+                converted_video2[im_i, ...] = greyscale_image2
+    return converted_video, converted_video2

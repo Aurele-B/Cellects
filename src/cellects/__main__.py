@@ -1,23 +1,45 @@
 #!/usr/bin/env python3
-"""Launcher of cellects software.
+"""
+Launcher for the Cellects software.
 
- """
-import logging
+This module initializes logging configuration, creates the Qt application instance,
+loads Cellects icon, and launches the main GUI interface.
+"""
+
 import sys
+import logging
 import coloredlogs
 from PySide6 import QtWidgets, QtGui
 from cellects.core.cellects_paths import ICONS_DIR
 
-# These two lines allow the taskbar icon to be cellects_icon instead if python icon.
 if sys.platform.startswith('win'):
-    import ctypes
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('company.app.1')
+    except Exception as e:
+        logging.getLogger(__name__).debug(f"Windows taskbar icon setup failed: {e}")
 
-
-LOGLEVEL = "INFO" #"DEBUG"
+LOGLEVEL = "INFO" # Set to DEBUG for development
 
 def _initialize_coloredlogs(loglevel: str = 'DEBUG') -> None:
-    """Initialize logging parameters with coloredlogs library."""
+
+    """Initialize colored console logging with custom format.
+
+    Parameters
+    ----------
+    loglevel : str, optional
+        Logging threshold level (default is DEBUG). Accepts standard Python
+        logging level strings like 'DEBUG', 'INFO', or 'WARNING'.
+
+    Notes
+    -----
+    This function must be called before any other logging setup to ensure proper
+    configuration of colored output.
+    """
+    # Configure basic logging before applying colored logs
+    logging.basicConfig(level=loglevel)
+
+    # Apply colored formatting to the root logger
     coloredlogs.install(
         logger=logging.basicConfig(),
         level=loglevel,
@@ -26,23 +48,41 @@ def _initialize_coloredlogs(loglevel: str = 'DEBUG') -> None:
 
 
 def run_cellects():
-    """Entry point of cellects software."""
-    _initialize_coloredlogs(LOGLEVEL)
-    from cellects.gui.cellects import CellectsMainWidget
-    app = QtWidgets.QApplication([])
+    """Run the Cellects application entry point.
 
-    # Add the icon file to the app
-    icon = QtGui.QIcon()
-    if sys.platform.startswith('win'):
-        icon.addPixmap(QtGui.QPixmap(ICONS_DIR / "cellects_icon.ico"))
-    else:
-        icon.addPixmap(QtGui.QPixmap(ICONS_DIR / "cellects_icon.icns"))
-    app.setWindowIcon(icon)
-    # Start session
-    session = CellectsMainWidget()
-    session.instantiate()
-    session.show()
-    sys.exit(app.exec())
+        This function initializes the Qt application, loads platform-specific icons,
+        creates and displays the main window widget, then starts the event loop.
+
+        Raises
+        ------
+        ImportError
+            If required GUI components cannot be loaded
+        """
+    _initialize_coloredlogs(LOGLEVEL)
+
+    try:
+        from cellects.gui.cellects import CellectsMainWidget
+
+        # Initialize application
+        app = QtWidgets.QApplication([])
+
+        # Set custom window icon for taskbar (platform-specific handling)
+        icon = QtGui.QIcon()
+        platform_icon_path = (
+            ICONS_DIR / "cellects_icon.ico" if sys.platform.startswith('win')
+            else ICONS_DIR / "cellects_icon.icns"
+        )
+        icon.addPixmap(QtGui.QPixmap(str(platform_icon_path)))
+        app.setWindowIcon(icon)
+
+        # Create and display main window
+        session = CellectsMainWidget()
+        session.instantiate()
+        session.show()
+        sys.exit(app.exec())
+    except Exception as e:
+        logging.getLogger(__name__).critical("Application failed to start", exc_info=True)
+        raise
 
 
 if __name__ == "__main__":

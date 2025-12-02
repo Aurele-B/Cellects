@@ -1,24 +1,57 @@
 #!/usr/bin/env python3
-"""
-This script contains 2 classes used by the OneImageAnalysis class
-They are threads to process the first image and save the selected combinations simultaneously
+"""Module containing classes for image processing and saving selected color space combinations.
+
+This module provides two thread-based components for analyzing images and storing results:
+
+ProcessFirstImage handles initial segmentation, thresholding, clustering, and shape validation
+SaveCombinationThread stores processed features in parent objects asynchronously
+The processing pipeline includes Otsu thresholding, k-means clustering, connected component analysis,
+and geometric filtering based on size/shape constraints.
+
+Classes
+ProcessFirstImage : Processes image data with segmentation techniques and validates shapes.
+SaveCombinationThread : Thread to save combination results while maintaining UI responsiveness.
+
+Functions (in ProcessFirstImage)
+shape_selection : Filters shapes by size thresholds and geometric criteria.
+kmeans : Performs clustering-based image segmentation into specified number of clusters.
+process_binary_image : Validates detected shapes against area constraints and spot count targets.
+
+Notes
+Uses threading.Thread for background operations to maintain application responsiveness during processing.
 """
 import threading
 import logging
-from copy import deepcopy
 import numpy as np
 import cv2
+from numpy.typing import NDArray
+from typing import Tuple
 from cellects.image_analysis.image_segmentation import otsu_thresholding, combine_color_spaces
+from cellects.image_analysis.morphological_operations import shape_selection
 
 
 class ProcessFirstImage:
+    """
+    A class for processing lists.
+    """
     def __init__(self, l):
+        """
+        Arguments:
+            list : list
+
+        """
         self.start_processing(l)
 
-    def start_processing(self, l):
+    def start_processing(self, l: list):
         """
-        Wil process the first image according to rules and parameters in l
-        :param l: list containing the necessary data to process the first image
+
+        Start the processing based on given list input.
+
+        The method processes the provided list to perform various operations
+        on the image data. It sets up several attributes and performs different
+        image processing tasks like Otsu thresholding or k-means clustering.
+
+        The method does not return any value.
         """
         self.parent = l[0]
         get_one_channel_result = l[1]
@@ -26,10 +59,11 @@ class ProcessFirstImage:
         self.all_c_spaces = self.parent.all_c_spaces
         self.several_blob_per_arena = l[4]
         self.sample_number = l[5]
-        self.spot_size = l[6]
-        kmeans_clust_nb = l[7]
-        self.biomask = l[8]
-        self.backmask = l[9]
+        self.horizontal_size = l[6]
+        self.spot_shape = l[7]
+        kmeans_clust_nb = l[8]
+        self.biomask = l[9]
+        self.backmask = l[10]
         if get_one_channel_result:
             self.csc_dict = l[3]
             self.image = combine_color_spaces(self.csc_dict, self.all_c_spaces)
@@ -43,14 +77,15 @@ class ProcessFirstImage:
             self.unaltered_concomp_nb, shapes = cv2.connectedComponents(self.binary_image)
             if 1 < self.unaltered_concomp_nb < 10000:
                 self.total_area = np.sum(self.binary_image)
-                if 100 < self.total_area < self.binary_image.size * 0.75:
+                inf_lim = np.min((100, np.ceil(self.binary_image.size / 1000)))
+                if inf_lim < self.total_area < self.binary_image.size * 0.9:
                     self.process_binary_image()
                     self.parent.save_combination_features(self)
                     # except RuntimeWarning:
                     #     logging.info("Make sure that scaling and spot size are correct")
         if combine_channels:
             i = l[3]
-            possibilities = l[10]
+            possibilities = l[11]
             saved_color_space_list = self.parent.saved_color_space_list
             combination_features = self.parent.combination_features
             self.csc_dict = saved_color_space_list[i]
@@ -58,7 +93,7 @@ class ProcessFirstImage:
             previous_sum = combination_features[i, 5]
             for j in possibilities[::-1]:
                 csc_dict2 = saved_color_space_list[j]
-                csc_dict = deepcopy(self.csc_dict)
+                csc_dict = self.csc_dict.copy()
                 keys = list(csc_dict.keys())
 
                 k2 = list(csc_dict2.keys())[0]
@@ -80,79 +115,28 @@ class ProcessFirstImage:
                     if previous_shape_number >= self.shape_number and self.total_area > previous_sum * 0.9:
                         previous_shape_number = self.shape_number
                         previous_sum = self.total_area
-                        self.csc_dict = deepcopy(csc_dict)
+                        self.csc_dict = csc_dict.copy()
                         self.unaltered_concomp_nb = combination_features[i, 3]
                         self.parent.save_combination_features(self)
                         logging.info(str(saved_color_space_list[i]) + "-->" + str(self.csc_dict ))
 
-    def shape_selection(self, horizontal_size, shape, confint, do_not_delete=None):
+    def kmeans(self, cluster_number: int, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, bio_label=None):
         """
-        This method use the statistics of the connected components of a binary image to make shape selection
-        :param horizontal_size: the average horizontal size of one shape in pixels
-        :param shape: the geometry of the shape: circle or rectangle
-        :param confint: confidence interval for horizontal size and shape detection
-        :param do_not_delete: binary image with 1 in area drawn by the user as "Cell"
-        :return: A binary matrix of the resulting validated shapes and the number of shapes detected
-        """
-        # counter+=1;horizontal_size = self.spot_size; shape = self.parent.spot_shapes[counter];confint = self.parent.spot_size_confints[::-1][counter]
-        # stats columns contain in that order:
-        # - x leftmost coordinate of boundingbox
-        # - y topmost coordinate of boundingbox
-        # - The horizontal size of the bounding box.
-        # - The vertical size of the bounding box.
-        # - The total area (in pixels) of the connected component.
 
-        # First, remove each stain which horizontal size varies too much from reference
-        size_interval = [horizontal_size * (1 - confint), horizontal_size * (1 + confint)]
-        cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 2] < size_interval[0], self.stats[:, 2] > size_interval[1]))
+        Perform k-means clustering on the image to segment it into a specified number of clusters.
 
-        if do_not_delete is None:
-            self.shapes2[np.isin(self.shapes2, cc_to_remove)] = 0
-        else:
-            self.shapes2[np.logical_and(np.isin(self.shapes2, cc_to_remove), np.logical_not(np.isin(self.shapes2, do_not_delete)))] = 0
+        Args:
+            cluster_number (int): The desired number of clusters.
+            biomask (NDArray[np.uint8]): Optional mask for biological regions. Default is None.
+            backmask (NDArray[np.uint8]): Optional mask for background regions. Default is None.
+            bio_label (int): The label assigned to the biological region. Default is None.
 
-        # Second, determine the shape of each stain to only keep the ones corresponding to the reference shape
-        shapes = np.zeros(self.binary_image.shape, dtype=np.uint8)
-        shapes[self.shapes2 > 0] = 1
-        nb_components, self.shapes2, self.stats, self.centroids = cv2.connectedComponentsWithStats(shapes,
-                                                                                   connectivity=8)
-        if nb_components > 1:
-            if shape == 'circle':
-                surf_interval = [np.pi * np.square(horizontal_size // 2) * (1 - confint), np.pi * np.square(horizontal_size // 2) * (1 + confint)]
-                cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
-            elif shape == 'rectangle':
-                # If the smaller side is the horizontal one, use the user provided horizontal side
-                if np.argmin((np.mean(self.stats[1:, 2]), np.mean(self.stats[1:, 3]))) == 0:
-                    surf_interval = [np.square(horizontal_size) * (1 - confint), np.square(horizontal_size) * (1 + confint)]
-                    cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
-                # If the smaller side is the vertical one, use the median vertical length shape
-                else:
-                    surf_interval = [np.square(np.median(self.stats[1:, 3])) * (1 - confint), np.square(np.median(self.stats[1:, 3])) * (1 + confint)]
-                    cc_to_remove = np.argwhere(np.logical_or(self.stats[:, 4] < surf_interval[0], self.stats[:, 4] > surf_interval[1]))
-            else:
-                logging.info("Original blob shape not well written")
+        Returns:
+            None
 
-            if do_not_delete is None:
-                self.shapes2[np.isin(self.shapes2, cc_to_remove)] = 0
-            else:
-                self.shapes2[np.logical_and(np.isin(self.shapes2, cc_to_remove),
-                                            np.logical_not(np.isin(self.shapes2, do_not_delete)))] = 0
-            # There was only that before:
-            shapes = np.zeros(self.binary_image.shape, dtype=np.uint8)
-            shapes[np.nonzero(self.shapes2)] = 1
+        Note:
+            This method modifies the `binary_image` and `bio_label` attributes of the instance.
 
-            nb_components, self.shapes2, self.stats, self.centroids = cv2.connectedComponentsWithStats(shapes, connectivity=8)
-        self.validated_shapes = shapes
-        self.shape_number = nb_components - 1
-
-    def kmeans(self, cluster_number, biomask=None, backmask=None, bio_label=None):
-        """
-        Use of Kmeans to detect the Cell(s) after having segmented the grayscale image into two or more categories
-        :param cluster_number: the number of categories to find
-        :param biomask: the mask of pixels marked as Cell(s) by the user
-        :param backmask: the mask of pixels marked as Background by the user
-        :param bio_label:
-        :return:
         """
         image = self.image.reshape((-1, 1))
         image = np.float32(image)
@@ -181,92 +165,50 @@ class ProcessFirstImage:
                 self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
             self.binary_image[np.nonzero(kmeans_image == self.bio_label)] = 1
 
-    def process_binary_image(self, use_bio_and_back_masks=False):
+    def process_binary_image(self):
         """
-        Process the binary image to get the final validated shapes
-        Starts by computin connected components, then remove the background pixels marked by the user,
-        then, if there are not several blob per arena, select spot according to their sizes
-        :param use_bio_and_back_masks: if true, will use the cell(s) and background matked by the user
-        :return:
+        Process the binary image to identify and validate shapes.
+
+        This method processes a binary image to detect connected components,
+        validate their sizes, and handle bio and back masks if specified.
+        It ensures that the number of validated shapes matches the expected
+        sample number or applies additional filtering if necessary.
+
         """
-        self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
-            self.binary_image, connectivity=8)
-        do_not_delete = None
-        if use_bio_and_back_masks:
-            if self.backmask is not None:
-                if np.any(self.shapes[self.backmask]):
-                    self.shapes[np.isin(self.shapes, np.unique(self.shapes[self.backmask]))] = 0
-                    self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
-                        (self.shapes > 0).astype(np.uint8), connectivity=8)
-            self.shape_number -= 1
-            if self.biomask is not None:
-                if np.any(self.shapes[self.biomask]):
-                    do_not_delete = np.unique(self.shapes[self.biomask])
-                    do_not_delete = do_not_delete[do_not_delete != 0]
-        if not self.several_blob_per_arena and self.spot_size is not None:
-            counter = 0
-            self.shapes2 = deepcopy(self.shapes)
-            while self.shape_number != self.sample_number and counter < len(self.parent.spot_size_confints):
-                self.shape_selection(horizontal_size=self.spot_size, shape=self.parent.spot_shapes[counter],
-                                     confint=self.parent.spot_size_confints[counter], do_not_delete=do_not_delete)
-                logging.info(f"Shape selection algorithm found {self.shape_number} disconnected shapes")
-                counter += 1
-            if self.shape_number == self.sample_number:
-                self.shapes = self.shapes2
-        if self.shape_number == self.sample_number:
-            self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
-            self.validated_shapes[self.shapes > 0] = 1
-        else:
-            max_size = self.binary_image.size * 0.75
-            min_size = 10
-            cc_to_remove = np.argwhere(np.logical_or(self.stats[1:, 4] < min_size, self.stats[1:, 4] > max_size)) + 1
-            self.shapes[np.isin(self.shapes, cc_to_remove)] = 0
-            self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
-            self.validated_shapes[self.shapes > 0] = 1
-            self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
-                self.validated_shapes,
-                connectivity=8)
-            if not self.several_blob_per_arena and self.sample_number is not None and self.shape_number > self.sample_number:
-                # Sort shapes by size and compare the largest with the second largest
-                # If the difference is too large, remove that largest shape.
-                cc_to_remove = np.array([], dtype=np.uint8)
-                to_remove = np.array([], dtype=np.uint8)
-                self.stats = self.stats[1:, :]
-                while self.stats.shape[0] > self.sample_number and to_remove is not None:
-                    # 1) rank by height
-                    sorted_height = np.argsort(self.stats[:, 2])
-                    # and only consider the number of shapes we want to detect
-                    standard_error = np.std(self.stats[sorted_height, 2][-self.sample_number:])
-                    differences = np.diff(self.stats[sorted_height, 2])
-                    # Look for very big changes from one height to the next
-                    if differences.any() and np.max(differences) > 2 * standard_error:
-                        # Within these, remove shapes that are too large
-                        to_remove = sorted_height[np.argmax(differences)]
-                        cc_to_remove = np.append(cc_to_remove, to_remove + 1)
-                        self.stats = np.delete(self.stats, to_remove, 0)
-
-                    else:
-                        to_remove = None
-                self.shapes[np.isin(self.shapes, cc_to_remove)] = 0
-                self.validated_shapes = np.zeros(self.shapes.shape, dtype=np.uint8)
-                self.validated_shapes[self.shapes > 0] = 1
-                self.shape_number, self.shapes, self.stats, self.centroids = cv2.connectedComponentsWithStats(
-                    self.validated_shapes,
-                    connectivity=8)
-
-            self.shape_number -= 1
+        shapes_features = shape_selection(self.binary_image, true_shape_number=self.sample_number, horizontal_size=self.horizontal_size,
+                        spot_shape=self.spot_shape, several_blob_per_arena=self.several_blob_per_arena,
+                        bio_mask=self.biomask, back_mask=self.backmask)
+        self.validated_shapes, self.shape_number, self.stats, self.centroids = shapes_features
 
 
 class SaveCombinationThread(threading.Thread):
+    """
+    SaveCombinationThread
+
+    This class represents a thread for saving combinations.
+
+    """
     def __init__(self, parent=None):
+        """
+        **Args:**
+
+            - `parent`: The parent object that initiated the thread. This is an optional argument and defaults to 'None'.
+
+        """
         # super(SaveCombinationThread, self).__init__()
         threading.Thread.__init__(self)
         self.parent = parent
 
     def run(self):
         """
-        Save the current process_i data into the combination_features list
-        :return:
+        Runs the color space combination process and saves the results.
+
+        This method performs several tasks to save intermediate and final
+        results of the color space combination process. It logs messages,
+        updates lists with valid shapes, converts images to a specific format,
+        and updates combination features with various statistics. The method
+        also handles biomask and backmask calculations if they are not None.
+        Finally, it increments the saved color space number counter.
         """
         logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct spots detected.")
         self.parent.saved_images_list.append(self.process_i.validated_shapes)

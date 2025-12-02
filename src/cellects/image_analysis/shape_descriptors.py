@@ -25,24 +25,28 @@ If you want to allow the software to compute another variable:
 """
 import cv2
 import numpy as np
+from typing import Tuple
+from numpy.typing import NDArray
 from copy import deepcopy
-from cellects.utils.utilitarian import translate_dict
-from cellects.utils.formulas import get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis
+import pandas as pd
+from cellects.utils.utilitarian import translate_dict, smallest_memory_array
+from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
+                                     get_newly_explored_area)
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
                           'euler_number': False, 'standard_deviation_xy': False, 'skewness_xy': False,
                           'kurtosis_xy': False, 'major_axes_len_and_angle': True, 'iso_digi_analysis': False,
-                          'oscilacyto_analysis': False, 'network_analysis': False, 'graph_extraction': False,
+                          'oscilacyto_analysis': False,
                           'fractal_analysis': False
                           }
 
 descriptors_names_to_display = ['Area', 'Perimeter', 'Circularity', 'Rectangularity', 'Total hole area',
                                 'Solidity', 'Convexity', 'Eccentricity', 'Euler number', 'Standard deviation xy',
                                 'Skewness xy', 'Kurtosis xy', 'Major axes lengths and angle',
-                                'Growth transitions', 'Oscillations', 'Network', 'Graph',
-                                'Fractals'
-                                ]#, 'Oscillating cluster nb and size'
+                                'Growth transitions', 'Oscillations',
+                                'Minkowski dimension'
+                                ]
 
 from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
@@ -51,10 +55,298 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
                'major_axis_len': True, 'minor_axis_len': True, 'axes_orientation': True
                                }
 
-descriptors = deepcopy(from_shape_descriptors_class)
-descriptors.update({'cluster_number': False, 'mean_cluster_area': False, 'minkowski_dimension': False,
-                    'vertices_number': False, 'edges_number': False})
+length_descriptors = ['perimeter', 'major_axis_len', 'minor_axis_len']
+area_descriptors = ['area', 'area_total', 'total_hole_area', 'newly_explored_area', 'final_area']
 
+descriptors = deepcopy(from_shape_descriptors_class)
+descriptors.update({'minkowski_dimension': False})
+
+def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,
+                                     descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
+                                     do_fading: bool, save_coord_specimen:bool):
+    """
+    Computes descriptors for each frame in a binary video and returns them as a DataFrame.
+
+    Parameters
+    ----------
+    binary_vid : NDArray[np.uint8]
+        The binary video data where each frame is a 2D array.
+    arena_label : int
+        Label for the arena in the video.
+    timings : NDArray
+        Array of timestamps corresponding to each frame.
+    descriptors_dict : dict
+        Dictionary containing the descriptors to be computed.
+    output_in_mm : bool, optional
+        Flag indicating if output should be in millimeters. Default is False.
+    pixel_size : float, optional
+        Size of a pixel in the video when `output_in_mm` is True. Default is None.
+    do_fading : bool, optional
+        Flag indicating if the fading effect should be applied. Default is False.
+    save_coord_specimen : bool, optional
+        Flag indicating if the coordinates of specimens should be saved. Default is False.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame containing the descriptors for each frame in the video.
+
+    Notes
+    -----
+    For large inputs, consider pre-allocating memory for efficiency.
+    The `save_coord_specimen` flag will save coordinate data to a file.
+
+    Examples
+    --------
+    >>> binary_vid = np.ones((10, 640, 480), dtype=np.uint8)
+    >>> timings = np.arange(10)
+    >>> descriptors_dict = {'area': True, 'perimeter': True}
+    >>> result = compute_one_descriptor_per_frame(binary_vid, 1, timings, descriptors_dict)
+    >>> print(result.head())
+       arena  time  area  perimeter
+    0      1     0     0          0
+    1      1     1     0          0
+    2      1     2     0          0
+    3      1     3     0          0
+    4      1     4     0          0
+
+    >>> binary_vid = np.ones((5, 640, 480), dtype=np.uint8)
+    >>> timings = np.arange(5)
+    >>> descriptors_dict = {'area': True, 'perimeter': True}
+    >>> result = compute_one_descriptor_per_frame(binary_vid, 2, timings,
+    ...                                            descriptors_dict,
+    ...                                            output_in_mm=True,
+    ...                                            pixel_size=0.1)
+    >>> print(result.head())
+       arena  time  area  perimeter
+    0      2     0    0         0.0
+    1      2     1    0         0.0
+    2      2     2    0         0.0
+    3      2     3    0         0.0
+    4      2     4    0         0.0
+    """
+    dims = binary_vid.shape
+    all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(descriptors_dict)
+    one_row_per_frame = pd.DataFrame(np.zeros((dims[0], 2 + len(all_descriptors))),
+                                          columns=['arena', 'time'] + all_descriptors)
+    one_row_per_frame['arena'] = [arena_label] * dims[0]
+    one_row_per_frame['time'] = timings
+    for t in np.arange(dims[0]):
+        SD = ShapeDescriptors(binary_vid[t, :, :], to_compute_from_sd)
+        for descriptor in to_compute_from_sd:
+            one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
+    if save_coord_specimen:
+        np.save(f"coord_specimen{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+                smallest_memory_array(np.nonzero(binary_vid), "uint"))
+    # Adjust descriptors scale if output_in_mm is specified
+    if do_fading:
+        one_row_per_frame['newly_explored_area'] = get_newly_explored_area(binary_vid)
+    if output_in_mm:
+        one_row_per_frame = scale_descriptors(one_row_per_frame, pixel_size,
+                                                   length_measures, area_measures)
+    return one_row_per_frame
+
+
+def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,
+                                      descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
+                                      do_fading: bool, min_colony_size: int, save_coord_specimen: bool):
+    dims = binary_vid.shape
+    all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(
+        descriptors_dict)
+    # Objective: create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies
+    # against time
+    max_colonies = 0
+    for t in np.arange(dims[0]):
+        nb, shapes = cv2.connectedComponents(binary_vid[t, :, :])
+        max_colonies = np.max((max_colonies, nb))
+
+    time_descriptor_colony = np.zeros((dims[0], len(to_compute_from_sd) * max_colonies * dims[0]),
+                                      dtype=np.float32)  # Adjust max_colonies
+    colony_number = 0
+    colony_id_matrix = np.zeros(dims[1:], dtype=np.uint64)
+    coord_colonies = []
+    centroids = []
+
+    # pat_tracker = PercentAndTimeTracker(dims[0], compute_with_elements_number=True)
+    for t in np.arange(dims[0]):
+        # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
+        # keeps the previous colony name.
+        # shapes, stats, centers = cc(binary_vid[t, :, :])
+        nb, shapes, stats, centers = cv2.connectedComponentsWithStats(binary_vid[t, :, :])
+        true_colonies = np.nonzero(stats[:, 4] >= min_colony_size)[1:]
+        # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
+
+        # current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
+        # logging.info(f"Arena n°{arena_label}, Colony descriptors computation: {current_percentage}%{eta}")
+
+        updated_colony_names = np.zeros(1, dtype=np.uint32)
+        for colon_i in true_colonies:  # 120)):# #92
+            current_colony_img = shapes == colon_i
+            if current_colony_img.sum() >= 4:
+                current_colony_img = current_colony_img.astype(np.uint8)
+
+                # I/ Find out which names the current colony had at t-1
+                colony_previous_names = np.unique(current_colony_img * colony_id_matrix)
+                colony_previous_names = colony_previous_names[colony_previous_names != 0]
+                # II/ Find out if the current colony name had already been analyzed at t
+                # If there no match with the saved colony_id_matrix, assign colony ID
+                if t == 0 or len(colony_previous_names) == 0:
+                    # logging.info("New colony")
+                    colony_number += 1
+                    colony_names = [colony_number]
+                # If there is at least 1 match with the saved colony_id_matrix, we keep the colony_previous_name(s)
+                else:
+                    colony_names = colony_previous_names.tolist()
+                # Handle colony division if necessary
+                if np.any(np.isin(updated_colony_names, colony_names)):
+                    colony_number += 1
+                    colony_names = [colony_number]
+
+                # Update colony ID matrix for the current frame
+                coords = np.nonzero(current_colony_img)
+                colony_id_matrix[coords[0], coords[1]] = colony_names[0]
+
+                # Add coordinates to coord_colonies
+                time_column = np.full(coords[0].shape, t, dtype=np.uint32)
+                colony_column = np.full(coords[0].shape, colony_names[0], dtype=np.uint32)
+                coord_colonies.append(np.column_stack((time_column, colony_column, coords[0], coords[1])))
+
+                # Calculate centroid and add to centroids list
+                centroid_x, centroid_y = centers[colon_i, :]
+                centroids.append((t, colony_names[0], centroid_y, centroid_x))
+
+                # Compute shape descriptors
+                SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
+                # descriptors = list(SD.descriptors.values())
+                descriptors = SD.descriptors
+                # Adjust descriptors if output_in_mm is specified
+                if output_in_mm:
+                    descriptors = scale_descriptors(descriptors, pixel_size, length_measures, area_measures)
+                # Store descriptors in time_descriptor_colony
+                descriptor_index = (colony_names[0] - 1) * len(to_compute_from_sd)
+                time_descriptor_colony[t, descriptor_index:(descriptor_index + len(descriptors))] = list(
+                    descriptors.values())
+
+                updated_colony_names = np.append(updated_colony_names, colony_names)
+
+        # Reset colony_id_matrix for the next frame
+        colony_id_matrix *= binary_vid[t, :, :]
+    if len(centroids) > 0:
+        centroids = np.array(centroids, dtype=np.float32)
+    else:
+        centroids = np.zeros((0, 4), dtype=np.float32)
+    time_descriptor_colony = time_descriptor_colony[:, :(colony_number * len(to_compute_from_sd))]
+    if len(coord_colonies) > 0:
+        coord_colonies = np.vstack(coord_colonies)
+        if save_coord_specimen:
+            coord_colonies = pd.DataFrame(coord_colonies, columns=["time", "colony", "y", "x"])
+            coord_colonies.to_csv(
+                f"coord_colonies{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+                sep=';', index=False, lineterminator='\n')
+
+    centroids = pd.DataFrame(centroids, columns=["time", "colony", "y", "x"])
+    centroids.to_csv(
+        f"colony_centroids{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+        sep=';', index=False, lineterminator='\n')
+
+    # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
+    one_row_per_frame = pd.DataFrame({'arena': arena_label, 'time': timings,
+                                      'area_total': binary_vid.sum((1, 2)).astype(np.float64)})
+
+    if do_fading:
+        one_row_per_frame['newly_explored_area'] = get_newly_explored_area(binary_vid)
+    if output_in_mm:
+        one_row_per_frame = scale_descriptors(one_row_per_frame, pixel_size)
+
+    column_names = np.char.add(np.repeat(to_compute_from_sd, colony_number),
+                               np.tile((np.arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
+    time_descriptor_colony = pd.DataFrame(time_descriptor_colony, columns=column_names)
+    one_row_per_frame = pd.concat([one_row_per_frame, time_descriptor_colony], axis=1)
+
+    return one_row_per_frame
+
+def initialize_descriptor_computation(descriptors_dict: dict) -> Tuple[list, list, list, list]:
+    """
+
+    Initialize descriptor computation based on available and requested descriptors.
+
+    Parameters
+    ----------
+    descriptors_dict : dict
+        A dictionary where keys are descriptor names and values are booleans indicating whether
+        to compute the corresponding descriptor.
+
+    Returns
+    -------
+    tuple
+        A tuple containing four lists:
+        - all_descriptors: List of all requested descriptor names.
+        - to_compute_from_sd: Array of descriptor names that need to be computed from the shape descriptors class.
+        - length_measures: Array of descriptor names that are length measures and need to be computed.
+        - area_measures: Array of descriptor names that are area measures and need to be computed.
+
+    Examples
+    --------
+    >>> descriptors_dict = {'perimeter': True, 'area': False}
+    >>> all_descriptors, to_compute_from_sd, length_measures, area_measures = initialize_descriptor_computation(descriptors_dict)
+    >>> print(all_descriptors, to_compute_from_sd, length_measures, area_measures)
+    ['length'] ['length'] ['length'] []
+
+    """
+    available_descriptors_in_sd = list(from_shape_descriptors_class.keys())
+    all_descriptors = []
+    to_compute_from_sd = []
+    for name, do_compute in descriptors_dict.items():
+        if do_compute:
+            all_descriptors.append(name)
+            if np.isin(name, available_descriptors_in_sd):
+                to_compute_from_sd.append(name)
+    to_compute_from_sd = np.array(to_compute_from_sd)
+    length_measures = to_compute_from_sd[np.isin(to_compute_from_sd, length_descriptors)]
+    area_measures = to_compute_from_sd[np.isin(to_compute_from_sd, area_descriptors)]
+
+    return all_descriptors, to_compute_from_sd, length_measures, area_measures
+
+def scale_descriptors(descriptors_dict, pixel_size: float, length_measures: NDArray[str]=None, area_measures: NDArray[str]=None):
+    """
+    Scale the spatial descriptors in a dictionary based on pixel size.
+
+    Parameters
+    ----------
+    descriptors_dict : dict
+        Dictionary containing spatial descriptors.
+    pixel_size : float
+        Pixel size used for scaling.
+    length_measures : numpy.ndarray, optional
+        Array of descriptors that represent lengths. If not provided,
+        they will be initialized.
+    area_measures : numpy.ndarray, optional
+        Array of descriptors that represent areas. If not provided,
+        they will be initialized.
+
+    Returns
+    -------
+    dict
+        Dictionary with scaled spatial descriptors.
+
+    Examples
+    --------
+    >>> from numpy import array as ndarray
+    >>> descriptors_dict = {'length': ndarray([1, 2]), 'area': ndarray([3, 4])}
+    >>> pixel_size = 0.5
+    >>> scaled_dict = scale_descriptors(descriptors_dict, pixel_size)
+    >>> print(scaled_dict)
+    {'length': array([0.5, 1.]), 'area': array([1.58421369, 2.])}
+    """
+    if length_measures is None or area_measures is None:
+        to_compute_from_sd = np.array(list(descriptors_dict.keys()))
+        length_measures = to_compute_from_sd[np.isin(to_compute_from_sd, length_descriptors)]
+        area_measures = to_compute_from_sd[np.isin(to_compute_from_sd, area_descriptors)]
+    for descr in length_measures:
+        descriptors_dict[descr] *= pixel_size
+    for descr in area_measures:
+        descriptors_dict[descr] *= np.sqrt(pixel_size)
+    return descriptors_dict
 
 
 class ShapeDescriptors:
@@ -150,74 +442,71 @@ class ShapeDescriptors:
         self.get_area()
 
         for name in self.descriptors.keys():
-            if self.area == 0:
-                self.descriptors[name] = 0
-            else:
-                if name == "mo":
-                    self.get_mo()
-                    self.descriptors[name] = self.mo
-                elif name == "area":
-                    self.descriptors[name] = self.area
-                elif name == "contours":
-                    self.get_contours()
-                    self.descriptors[name] = self.contours
-                elif name == "min_bounding_rectangle":
-                    self.get_min_bounding_rectangle()
-                    self.descriptors[name] = self.min_bounding_rectangle
-                elif name == "major_axis_len":
-                    self.get_major_axis_len()
-                    self.descriptors[name] = self.major_axis_len
-                elif name == "minor_axis_len":
-                    self.get_minor_axis_len()
-                    self.descriptors[name] = self.minor_axis_len
-                elif name == "axes_orientation":
-                    self.get_inertia_axes()
-                    self.descriptors[name] = self.axes_orientation
-                elif name == "standard_deviation_y":
-                    self.get_standard_deviations()
-                    self.descriptors[name] = self.sy
-                elif name == "standard_deviation_x":
-                    self.get_standard_deviations()
-                    self.descriptors[name] = self.sx
-                elif name == "skewness_y":
-                    self.get_skewness()
-                    self.descriptors[name] = self.sky
-                elif name == "skewness_x":
-                    self.get_skewness()
-                    self.descriptors[name] = self.skx
-                elif name == "kurtosis_y":
-                    self.get_kurtosis()
-                    self.descriptors[name] = self.ky
-                elif name == "kurtosis_x":
-                    self.get_kurtosis()
-                    self.descriptors[name] = self.kx
-                elif name == "convex_hull":
-                    self.get_convex_hull()
-                    self.descriptors[name] = self.convex_hull
-                elif name == "perimeter":
-                    self.get_perimeter()
-                    self.descriptors[name] = self.perimeter
-                elif name == "circularity":
-                    self.get_circularity()
-                    self.descriptors[name] = self.circularity
-                elif name == "rectangularity":
-                    self.get_rectangularity()
-                    self.descriptors[name] = self.rectangularity
-                elif name == "total_hole_area":
-                    self.get_total_hole_area()
-                    self.descriptors[name] = self.total_hole_area
-                elif name == "solidity":
-                    self.get_solidity()
-                    self.descriptors[name] = self.solidity
-                elif name == "convexity":
-                    self.get_convexity()
-                    self.descriptors[name] = self.convexity
-                elif name == "eccentricity":
-                    self.get_eccentricity()
-                    self.descriptors[name] = self.eccentricity
-                elif name == "euler_number":
-                    self.get_euler_number()
-                    self.descriptors[name] = self.euler_number
+            if name == "mo":
+                self.get_mo()
+                self.descriptors[name] = self.mo
+            elif name == "area":
+                self.descriptors[name] = self.area
+            elif name == "contours":
+                self.get_contours()
+                self.descriptors[name] = self.contours
+            elif name == "min_bounding_rectangle":
+                self.get_min_bounding_rectangle()
+                self.descriptors[name] = self.min_bounding_rectangle
+            elif name == "major_axis_len":
+                self.get_major_axis_len()
+                self.descriptors[name] = self.major_axis_len
+            elif name == "minor_axis_len":
+                self.get_minor_axis_len()
+                self.descriptors[name] = self.minor_axis_len
+            elif name == "axes_orientation":
+                self.get_inertia_axes()
+                self.descriptors[name] = self.axes_orientation
+            elif name == "standard_deviation_y":
+                self.get_standard_deviations()
+                self.descriptors[name] = self.sy
+            elif name == "standard_deviation_x":
+                self.get_standard_deviations()
+                self.descriptors[name] = self.sx
+            elif name == "skewness_y":
+                self.get_skewness()
+                self.descriptors[name] = self.sky
+            elif name == "skewness_x":
+                self.get_skewness()
+                self.descriptors[name] = self.skx
+            elif name == "kurtosis_y":
+                self.get_kurtosis()
+                self.descriptors[name] = self.ky
+            elif name == "kurtosis_x":
+                self.get_kurtosis()
+                self.descriptors[name] = self.kx
+            elif name == "convex_hull":
+                self.get_convex_hull()
+                self.descriptors[name] = self.convex_hull
+            elif name == "perimeter":
+                self.get_perimeter()
+                self.descriptors[name] = self.perimeter
+            elif name == "circularity":
+                self.get_circularity()
+                self.descriptors[name] = self.circularity
+            elif name == "rectangularity":
+                self.get_rectangularity()
+                self.descriptors[name] = self.rectangularity
+            elif name == "total_hole_area":
+                self.get_total_hole_area()
+                self.descriptors[name] = self.total_hole_area
+            elif name == "solidity":
+                self.get_solidity()
+                self.descriptors[name] = self.solidity
+            elif name == "convexity":
+                self.get_convexity()
+                self.descriptors[name] = self.convexity
+            elif name == "eccentricity":
+                self.get_eccentricity()
+                self.descriptors[name] = self.eccentricity
+            elif name == "euler_number":
+                self.get_euler_number()
+                self.descriptors[name] = self.euler_number
 
     """
         The following methods can be called to compute parameters for descriptors requiring it
@@ -231,35 +520,18 @@ class ShapeDescriptors:
         `cv2.moments` function and then translate these moments into a formatted
         dictionary.
 
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing this method.
-        binary_image : numpy.ndarray
-            A binary image (2D array) where pixels are 0 or 255.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        dict
-            A dictionary containing the translated moments of the binary image.
-
-        Raises
-        ------
-        TypeError
-            If `binary_image` is not a NumPy array.
-
         Notes
         -----
         This function assumes the binary image has already been processed and is in a
         suitable format for moment calculation.
 
+        Returns
+        -------
+        None
+
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["mo"])
+       >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["mo"])
         >>> print(SD.mo["m00"])
         9.0
         """
@@ -272,20 +544,13 @@ class ShapeDescriptors:
         This function computes the area covered by white pixels (value 1) in a binary image,
         which is equivalent to counting the number of 'on' pixels.
 
-        Parameters
-        ----------
-        self : object
-            The instance of a class containing the binary_image attribute.
+        Notes
+        -----
+        Sums values in `self.binary_image` and stores the result in `self.area`.
 
         Returns
         -------
-        int
-            The total number of white pixels in the binary image, representing its area.
-
-        Notes
-        -----
-        This function assumes the binary_image attribute is a NumPy array containing only 0s and 1s.
-        If the image contains other values, this function might not produce accurate results.
+        None
 
         Examples
         --------
@@ -302,27 +567,14 @@ class ShapeDescriptors:
         Retrieves contours from a binary image, calculates the Euler number,
         and identifies the largest contour based on its length.
 
-        Parameters
-        ----------
-        self : ImageProcessingObject
-            The image processing object containing the binary image.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        None
-
         Notes
         -----
         This function modifies the internal state of the `self` object to store
         the largest contour and Euler number.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -330,15 +582,19 @@ class ShapeDescriptors:
         >>> print(len(SD.contours))
         8
         """
-        contours, hierarchy = cv2.findContours(self.binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        nb, shapes = cv2.connectedComponents(self.binary_image, ltype=cv2.CV_16U)
-        self.euler_number = (nb - 1) - len(contours)
-        self.contours = contours[0]
-        if len(contours) > 1:
-            all_lengths = np.zeros(len(contours))
-            for i, contour in enumerate(contours):
-                all_lengths[i] = len(contour)
-            self.contours = contours[np.argmax(all_lengths)]
+        if self.area == 0:
+            self.euler_number = 0.
+            self.contours = np.array([], np.uint8)
+        else:
+            contours, hierarchy = cv2.findContours(self.binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+            nb, shapes = cv2.connectedComponents(self.binary_image, ltype=cv2.CV_16U)
+            self.euler_number = (nb - 1) - len(contours)
+            self.contours = contours[0]
+            if len(contours) > 1:
+                all_lengths = np.zeros(len(contours))
+                for i, contour in enumerate(contours):
+                    all_lengths[i] = len(contour)
+                self.contours = contours[np.argmax(all_lengths)]
 
     def get_min_bounding_rectangle(self):
         """
@@ -348,17 +604,10 @@ class ShapeDescriptors:
         the object outlines present in the image, which is useful for
         object detection and analysis tasks.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        tuple
-            A tuple containing the following elements:
-                - (cx, cy): The center point of the rectangle.
-                - (width, height): Width and height of the bounding rectangle.
-                - angle: Angle in degrees describing how much the ellipse is rotated.
+        Notes
+        -----
+        - The bounding rectangle is calculated only if contours are available.
+          If not, they will be retrieved first before calculating the rectangle.
 
         Raises
         ------
@@ -366,10 +615,9 @@ class ShapeDescriptors:
             If the contours are not available and cannot be retrieved,
             indicating a problem with the image or preprocessing steps.
 
-        Notes
-        -----
-        - The bounding rectangle is calculated only if contours are available.
-          If not, they will be retrieved first before calculating the rectangle.
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -377,9 +625,15 @@ class ShapeDescriptors:
         >>> print(len(SD.min_bounding_rectangle))
         3
         """
-        if self.contours is None:
-            self.get_contours()
-        self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
+        if self.area == 0:
+            self.min_bounding_rectangle = np.array([], np.uint8)
+        else:
+            if self.contours is None:
+                self.get_contours()
+            if len(self.contours) == 0:
+                self.min_bounding_rectangle = np.array([], np.uint8)
+            else:
+                self.min_bounding_rectangle = cv2.minAreaRect(self.contours)  # ((cx, cy), (width, height), angle)
 
     def get_inertia_axes(self):
         """
@@ -423,36 +677,26 @@ class ShapeDescriptors:
         """
         if self.mo is None:
             self.get_mo()
-
-        self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = get_inertia_axes(self.mo)
+        if self.area == 0:
+            self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = 0, 0, 0, 0, 0
+        else:
+            self.cx, self.cy, self.major_axis_len, self.minor_axis_len, self.axes_orientation = get_inertia_axes(self.mo)
 
     def get_standard_deviations(self):
         """
-        Calculate the standard deviations along x and y.
-
-        Parameters
-        ----------
-        moment_order : int
-            The order of moments to consider in calculations.
-        binary_image : numpy.ndarray
-            A 2D binary image where the shape corresponds to `[height, width]`.
-        center_x : float
-            The x-coordinate of the centroid of the object in the image.
-        center_y : float
-            The y-coordinate of the centroid of the object in the image.
-
-        Returns
-        -------
-        tuple[float, float]
-            A tuple containing the standard deviations along x and y (sx, sy).
+        Calculate and store standard deviations along x and y (sx, sy).
 
         Notes
         -----
-        The function calculates the standard deviations of a binary image about its centroid.
+        Requires centroid and moments; values are stored in `self.sx` and `self.sy`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["standard_deviation_x", "standard_deviation_y"])
+       >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["standard_deviation_x", "standard_deviation_y"])
         >>> print(SD.sx, SD.sy)
         0.816496580927726 0.816496580927726
         """
@@ -463,37 +707,19 @@ class ShapeDescriptors:
 
     def get_skewness(self):
         """
-        Calculate the skewness of an image.
+        Calculate and store skewness along x and y (skx, sky).
 
         This function computes the skewness about the x-axis and y-axis of
         an image. Skewness is a measure of the asymmetry of the probability
         distribution of values in an image.
 
-        Parameters
-        ----------
-        binary_image : numpy.ndarray
-            A binary image represented as a 2D array of integers, where 0 represents
-            background and other values represent foreground.
-        mo : dict
-            Moments of the image.
-        cx, cy : float
-            The x and y coordinates of the centroid of the object in the image.
-        sx, sy : float
-            The standard deviations along the x and y axes.
-
-        Other Parameters
-        ----------------
-        None
+        Notes
+        -----
+        Requires standard deviations; values are stored in `self.skx` and `self.sky`.
 
         Returns
         -------
-        skx, sky : tuple of float
-            The skewness about the x-axis and y-axis.
-
-        Notes
-        -----
-        This method internally calls `get_standard_deviations` if the standard deviation
-        values are not already computed.
+        None
 
         Examples
         --------
@@ -534,24 +760,15 @@ class ShapeDescriptors:
 
     def get_convex_hull(self):
         """
-        Compute the convex hull of an object's contours.
+        Compute and store the convex hull of the object's contour.
 
-        This method calculates the convex hull for the object represented by its
-        contours. If the contours are not already computed, it will first compute them.
-
-        Parameters
-        ----------
-        self : Object
-            The object containing the contours and convex hull attributes.
+        Notes
+        -----
+        Stores the result in `self.convex_hull`. Computes contours if needed.
 
         Returns
         -------
         None
-
-        Notes
-        -----
-        This method modifies the object in place by setting its `convex_hull`
-        attribute to the result of the convex hull computation.
 
         Examples
         --------
@@ -559,31 +776,24 @@ class ShapeDescriptors:
         >>> print(len(SD.convex_hull))
         4
         """
-        if self.contours is None:
-            self.get_contours()
-        self.convex_hull = cv2.convexHull(self.contours)
+        if self.area == 0:
+            self.convex_hull = np.array([], np.uint8)
+        else:
+            if self.contours is None:
+                self.get_contours()
+            self.convex_hull = cv2.convexHull(self.contours)
 
     def get_perimeter(self):
         """
-        Get the perimeter of a contour.
-
-        Calculates the perimeter length of the contours present in
-        the image after determining them if they are not already available.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        float
-            The perimeter length of the contours in the image.
+        Compute and store the contour perimeter length.
 
         Notes
         -----
-        This function retrieves the contours if they have not been determined
-        yet using `self.get_contours()`. This is crucial for accurate perimeter
-        measurement.
+        Computes contours if needed and stores the length in `self.perimeter`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -591,84 +801,54 @@ class ShapeDescriptors:
         >>> print(SD.perimeter)
         8.0
         """
-        if self.contours is None:
-            self.get_contours()
-        self.perimeter = cv2.arcLength(self.contours, True)
+        if self.area == 0:
+            self.perimeter = 0.
+        else:
+            if self.contours is None:
+                self.get_contours()
+            if len(self.contours) == 0:
+                self.perimeter = 0.
+            else:
+                self.perimeter = cv2.arcLength(self.contours, True)
 
     def get_circularity(self):
         """
-        Calculate and set the circularity of a binary image object.
+        Compute and store circularity: 4πA / P².
 
-        Circularity is defined as (4 * pi * area) / perimeter^2.
-        If the perimeter has not been calculated yet, it will be computed first.
-
-        Parameters
-        ----------
-        self : ShapeObject
-            The object which contains the binary image and its properties.
-
-        Attributes
-        ----------
-        circularity : float
-            The calculated circularity value, set as an attribute of the object.
+        Notes
+        -----
+        Uses `self.area` and `self.perimeter`; stores result in `self.circularity`.
 
         Returns
         -------
         None
-
-        Notes
-        -----
-        Circularity is a measure of how closely the shape of an object approximates a circle.
-        A perfect circle has a circularity of 1.0.
 
         Examples
         --------
-        >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["circularity"])
+         >>> SD = ShapeDescriptors(np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8), ["circularity"])
         >>> print(SD.circularity)
         1.7671458676442586
         """
-        if self.perimeter is None:
-            self.get_perimeter()
-        if self.perimeter == 0:
-            self.circularity = 0
+        if self.area == 0:
+            self.circularity = 0.
         else:
-            self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
+            if self.perimeter is None:
+                self.get_perimeter()
+            if self.perimeter == 0:
+                self.circularity = 0.
+            else:
+                self.circularity = (4 * np.pi * self.binary_image.sum()) / np.square(self.perimeter)
 
     def get_rectangularity(self):
         """
-        Calculates the rectangularity of a binary image.
-
-        Rectangularity is defined as the ratio of the number of pixels in
-        the shape to the area of its bounding rectangle. This function
-        computes this value by considering the binary image stored in
-        `self.binary_image`.
-
-        Parameters
-        ----------
-        None
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        float
-            The rectangularity of the binary image.
-
-        Raises
-        ------
-        None
+        Compute and store rectangularity: area / bounding-rectangle-area.
 
         Notes
         -----
-        This function uses `self.binary_image` to determine the number of pixels in
-        the shape and `self.min_bounding_rectangle` to determine the bounding rectangle area.
-        If the minimum bounding rectangle has not been computed yet, it will be calculated
-        through `self.get_min_bounding_rectangle()`.
+        Uses `self.binary_image` and `self.min_bounding_rectangle`. Computes the MBR if needed.
 
-        Attributes
-        ----------
+        Returns
+        -------
         None
 
         Examples
@@ -677,13 +857,16 @@ class ShapeDescriptors:
         >>> print(SD.rectangularity)
         2.25
         """
-        if self.min_bounding_rectangle is None:
-            self.get_min_bounding_rectangle()
-        bounding_rectangle_area = self.min_bounding_rectangle[1][0] * self.min_bounding_rectangle[1][1]
-        if bounding_rectangle_area != 0:
-            self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
+        if self.area == 0:
+            self.rectangularity = 0.
         else:
-            self.rectangularity = 1
+            if self.min_bounding_rectangle is None:
+                self.get_min_bounding_rectangle()
+            bounding_rectangle_area = self.min_bounding_rectangle[1][0] * self.min_bounding_rectangle[1][1]
+            if bounding_rectangle_area == 0:
+                self.rectangularity = 0.
+            else:
+                self.rectangularity = self.binary_image.sum() / bounding_rectangle_area
 
     def get_total_hole_area(self):
         """
@@ -709,33 +892,15 @@ class ShapeDescriptors:
         >>> print(SD.total_hole_area)
         0
         """
-        # FIRST VERSION
-        # nb, new_order, stats, centers = cv2.connectedComponentsWithStats(1 - self.binary_image)
-        # if stats.shape[0] > 2:
-        #     self.total_hole_area = stats[2:, 4].sum()
-        # else:
-        #     self.total_hole_area = 0
-        # tic = default_timer()
-        # SECOND VERSION
-        # nb, new_order = cv2.connectedComponents(1 - self.binary_image)
-        # if nb <= 1:
-        #     self.total_hole_area = 0
-        # else:
-        #     label_counts = np.bincount(new_order.flatten())
-        #     self.total_hole_area = label_counts[2:].sum()
-        # tac = default_timer()
-        # print( tac-tic)
-        # THIDS VERSION
         nb, new_order = cv2.connectedComponents(1 - self.binary_image)
         if nb > 2:
-            self.total_hole_area = (new_order > 2).sum()
+            self.total_hole_area = (new_order > 1).sum()
         else:
-            self.total_hole_area = 0
+            self.total_hole_area = 0.
 
     def get_solidity(self):
         """
-        Calculate the solidity of a contour, which is the ratio of the area
-        of the contour to the area of its convex hull.
+        Compute and store solidity: contour area / convex hull area.
 
         Extended Summary
         ----------------
@@ -743,34 +908,13 @@ class ShapeDescriptors:
         its convex hull. A solidity of 1 means the contour is fully convex, while a
         value less than 1 indicates concavities.
 
-        Parameters
-        ----------
-        None
-
-        Other Parameters
-        -----------------
-        None
+        Notes
+        -----
+        If the convex hull area is 0 or absent, solidity is set to 0.
 
         Returns
         -------
-        float
-            The solidity of the contour.
-
-        Raises
-        ------
         None
-
-        Notes
-        -----
-        The solidity is computed by dividing the area of the contour by the area of its
-        convex hull. If the convex hull is empty, solidity defaults to 1.
-
-        Attributes
-        ----------
-            self.convex_hull : array-like or None
-                The convex hull of the contour.
-            self.solidity : float
-                The calculated solidity value of the contour.
 
         Examples
         --------
@@ -778,39 +922,31 @@ class ShapeDescriptors:
         >>> print(SD.solidity)
         1.0
         """
-        if self.convex_hull is None:
-            self.get_convex_hull()
-        conv_h_cont_area = cv2.contourArea(self.convex_hull)
-        if conv_h_cont_area != 0:
-            self.solidity = cv2.contourArea(self.contours) / cv2.contourArea(self.convex_hull)
+        if self.area == 0:
+            self.solidity = 0.
         else:
-            self.solidity = 1
+            if self.convex_hull is None:
+                self.get_convex_hull()
+            if len(self.convex_hull) == 0:
+                self.solidity = 0.
+            else:
+                hull_area = cv2.contourArea(self.convex_hull)
+                if hull_area == 0:
+                    self.solidity = 0.
+                else:
+                    self.solidity = cv2.contourArea(self.contours) / hull_area
 
     def get_convexity(self):
         """
-        Calculate the convexity of a shape.
-
-        Convexity is defined as the ratio of the length of
-        the contour to the perimeter of the convex hull.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        float
-            The convexity ratio of the shape.
-
-        Raises
-        ------
-        None
+        Compute and store convexity: convex hull perimeter / contour perimeter.
 
         Notes
         -----
-        This method requires that both `perimeter` and `convex_hull`
-        attributes are computed before calling this method.
-        Convexity is a dimensionless quantity and should always be in the range [0, 1].
+        Requires `self.perimeter` and `self.convex_hull`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -822,40 +958,22 @@ class ShapeDescriptors:
             self.get_perimeter()
         if self.convex_hull is None:
             self.get_convex_hull()
-        self.convexity = cv2.arcLength(self.convex_hull, True) / self.perimeter
+        if self.perimeter == 0 or len(self.convex_hull) == 0:
+            self.convexity = 0.
+        else:
+            self.convexity = cv2.arcLength(self.convex_hull, True) / self.perimeter
 
     def get_eccentricity(self):
         """
-        Calculate the eccentricity of an ellipsoid based on its major and minor axis lengths.
-
-        This function computes the eccentricity of an ellipsoid using its major
-        and minor axis lengths. The eccentricity is a measure of how much the
-        ellipsoid deviates from being circular.
-
-        Parameters
-        ----------
-        self : Ellipsoid
-            The ellipsoid object containing the major and minor axis lengths.
-            These values are assumed to be already set.
-
-        Other Parameters
-        ----------------
-        None
-
-        Returns
-        -------
-        float
-            The calculated eccentricity of the ellipsoid.
-
-        Raises
-        ------
-        None
+        Compute and store eccentricity from major and minor axis lengths.
 
         Notes
         -----
-        - This function assumes that the major and minor axis lengths are already set.
-          If not, you must call `self.get_inertia_axes()` to update these values before
-          calling this function.
+        Calls `get_inertia_axes()` if needed and stores result in `self.eccentricity`.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -864,72 +982,37 @@ class ShapeDescriptors:
         0.0
         """
         self.get_inertia_axes()
-        self.eccentricity = np.sqrt(1 - np.square(self.minor_axis_len / self.major_axis_len))
+        if self.major_axis_len == 0:
+            self.eccentricity = 0.
+        else:
+            self.eccentricity = np.sqrt(1 - np.square(self.minor_axis_len / self.major_axis_len))
 
     def get_euler_number(self):
         """
-        Get Euler number from the contour data.
-
-        Calculate and return the Euler characteristic of the current contour or
-        contours, which is a topological invariant that describes the shape.
-
-        Parameters
-        ----------
-        None
+        Ensure contours are computed; stores Euler number in `self.euler_number` via `get_contours()`.
 
         Returns
         -------
-        int or None
-            The Euler number of the contour(s). Returns `None` if no contours exist.
-
-        Raises
-        ------
-        ValueError
-            If the Euler number cannot be calculated due to invalid contour data.
+        None
 
         Notes
         -----
-        The Euler characteristic is computed as: ``vertices - edges + faces``.
-        This method handles both single contour and multiple contours cases.
-
-        Examples
-        --------
-        >>> contour_object.get_euler_number()
-        1
-
-        >>> no_contours = Contour()  # Object with no contours
-        >>> no_contours.get_euler_number()
-        None
+        Euler number is computed in `get_contours()` as `(components - 1) - len(contours)`.
         """
         if self.contours is None:
             self.get_contours()
 
     def get_major_axis_len(self):
         """
-        Get the length of the major axis.
-
-        Calculate or retrieve the length of the major axis, ensuring it is
-        computed if not already available.
-
-        Parameters
-        ----------
-        None
+        Ensure the major axis length is computed and stored in `self.major_axis_len`.
 
         Returns
         -------
-        float or None
-            The length of the major axis. If the major_axis_len could not be
-            computed, returns `None`.
-
-        Raises
-        ------
-        AttributeError
-           If the major axis length is not available and cannot be computed.
+        None
 
         Notes
         -----
-        - This method may trigger computation of inertia axes if they haven't been
-          precomputed to determine the major axis length.
+        Triggers `get_inertia_axes()` if needed.
 
         Examples
         --------
@@ -942,29 +1025,15 @@ class ShapeDescriptors:
 
     def get_minor_axis_len(self):
         """
-        Get the length of the minor axis.
-
-        This method returns the calculated length of the minor axis. If
-        `self.minor_axis_len` is `None`, it will first compute the inertia axes.
-
-        Parameters
-        ----------
-        none
+        Ensure the minor axis length is computed and stored in `self.minor_axis_len`.
 
         Returns
         -------
-        float:
-            The length of the minor axis.
-
-        Raises
-        ------
-        RuntimeError:
-            If the minor axis cannot be calculated. This might happen if there are not enough data points
-            to determine the inertia axes.
+        None
 
         Notes
         -----
-        This method will compute the inertia axes if `self.minor_axis_len` is not cached.
+        Triggers `get_inertia_axes()` if needed.
 
         Examples
         --------
@@ -977,33 +1046,15 @@ class ShapeDescriptors:
 
     def get_axes_orientation(self):
         """
-
-        Get the orientation of the axes.
-
-        Extended summary
-        ----------------
-
-        This method retrieves the current orientation of the axes. If the orientation is not already computed, it will compute and store it by calling `get_inertia_axes()`.
-
-        Parameters
-        ----------
-        None
+        Ensure the axes orientation angle is computed and stored in `self.axes_orientation`.
 
         Returns
         -------
-        `np.ndarray`
-            A 3x3 matrix representing the orientation of the axes.
-
-        Raises
-        ------
         None
 
         Notes
         -----
-        This method may trigger a computation of inertia axes if they haven't been computed yet.
-
-        Examples
-        --------
+        Calls `get_inertia_axes()` if orientation is not yet computed.
 
         Examples
         --------

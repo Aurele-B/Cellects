@@ -26,9 +26,8 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component
-from cellects.utils.utilitarian import remove_coordinates
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
+from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
@@ -39,6 +38,8 @@ from collections import deque
 from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
 import networkx as nx
+import pandas as pd
+from timeit import default_timer as timer
 
 # 8-connectivity neighbors
 neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
@@ -46,6 +47,146 @@ neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
              (1, -1), (1, 0), (1, 1)]
 neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
+def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int,
+                            starting_time: int=0, visu: NDArray=None, origin: NDArray[np.uint8]=None,
+                            smooth_segmentation_over_time: bool = True, detect_pseudopods: bool = True,
+                            save_coord_network: bool = True, show_seg: bool = False):
+    """
+    Detects and tracks dynamic features (e.g., pseudopods) in a biological network over time from video data.
+
+    Analyzes spatiotemporal dynamics of a network structure using binary masks and grayscale video data. Processes each frame to detect network components, optionally identifies pseudopods, applies temporal smoothing, and generates visualization overlays. Saves coordinate data for detected networks if enabled.
+
+    Parameters
+    ----------
+    converted_video : NDArray
+        Input video data array with shape (time x y x z) representing grayscale intensities.
+    binary : NDArray[np.uint8]
+        Binary mask array with shape (time x y x z) indicating filled regions in each frame.
+    arena_label : int
+        Unique identifier for the current processing arena/session to name saved output files.
+    starting_time : int
+        Zero-based index of the first frame to begin network detection and analysis from.
+    visu : NDArray
+        Visualization video array (time x y x z) with RGB channels for overlay rendering.
+    origin : NDArray[np.uint8]
+        Binary mask defining a central region of interest to exclude from network detection.
+    smooth_segmentation_over_time : bool, optional (default=True)
+        Flag indicating whether to apply temporal smoothing using adjacent frame data.
+    detect_pseudopods : bool, optional (default=True)
+        Determines if pseudopod regions should be detected and merged with the network.
+    save_coord_network : bool, optional (default=True)
+        Controls saving of detected network/pseudopod coordinates as NumPy arrays.
+    show_seg : bool, optional (default=False)
+        Enables real-time visualization display during processing.
+
+    Returns
+    -------
+    NDArray[np.uint8]
+        3D array containing detected network structures with shape (time x y x z). Uses:
+        - `0` for background,
+        - `1` for regular network components,
+        - `2` for pseudopod regions when detect_pseudopods is True.
+
+    Notes
+    -----
+    - Memory-intensive operations on large arrays may require system resources.
+    - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
+    - Pseudopod detection requires sufficient contrast with the background in grayscale images.
+    """
+    logging.info(f"Arena n°{arena_label}. Starting network detection.")
+    # converted_video = self.converted_video; binary=self.binary; arena_label=1; starting_time=0; visu=self.visu; origin=None; smooth_segmentation_over_time=True; detect_pseudopods=True;save_coord_network=True; show_seg=False
+    dims = binary.shape
+    pseudopod_min_size = 50
+    if detect_pseudopods:
+        pseudopod_vid = np.zeros_like(binary, dtype=bool)
+    potential_network = np.zeros_like(binary, dtype=bool)
+    network_dynamics = np.zeros_like(binary, dtype=np.uint8)
+    do_convert = True
+    if visu is None:
+        do_convert = False
+        visu = np.stack((converted_video, converted_video, converted_video), axis=3)
+        greyscale = converted_video[-1, ...]
+    else:
+        greyscale = visu[-1, ...].mean(axis=-1)
+    NetDet = NetworkDetection(greyscale, possibly_filled_pixels=binary[-1, ...],
+                              origin_to_add=origin)
+    NetDet.get_best_network_detection_method()
+    if do_convert:
+        NetDet.greyscale_image = converted_video[-1, ...]
+    lighter_background = NetDet.greyscale_image[binary[-1, ...] > 0].mean() < NetDet.greyscale_image[
+        binary[-1, ...] == 0].mean()
+
+    for t in np.arange(starting_time, dims[0]):  # 20):#
+        if do_convert:
+            greyscale = visu[t, ...].mean(axis=-1)
+        else:
+            greyscale = converted_video[t, ...]
+        NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=binary[t, ...],
+                                       origin_to_add=origin, best_result=NetDet.best_result)
+        NetDet_fast.detect_network()
+        NetDet_fast.greyscale_image = converted_video[t, ...]
+        if detect_pseudopods:
+            NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
+            NetDet_fast.merge_network_with_pseudopods()
+            pseudopod_vid[t, ...] = NetDet_fast.pseudopods
+        potential_network[t, ...] = NetDet_fast.complete_network
+    if dims[0] == 1:
+        network_dynamics = potential_network
+    else:
+        for t in np.arange(starting_time, dims[0]):  # 20):#
+            if smooth_segmentation_over_time:
+                if 2 <= t <= (dims[0] - 2):
+                    computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
+                    computed_network[computed_network == 1] = 0
+                    computed_network[computed_network > 1] = 1
+                else:
+                    if t < 2:
+                        computed_network = potential_network[:2, :, :].sum(axis=0)
+                    else:
+                        computed_network = potential_network[-2:, :, :].sum(axis=0)
+                    computed_network[computed_network > 0] = 1
+            else:
+                computed_network = computed_network[t, :, :].copy()
+
+            if origin is not None:
+                computed_network = computed_network * (1 - origin)
+                origin_contours = get_contours(origin)
+                complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+            else:
+                complete_network = computed_network
+            complete_network = keep_one_connected_component(complete_network)
+
+            if detect_pseudopods:
+                # Make sure that removing pseudopods do not cut the network:
+                without_pseudopods = complete_network * (1 - pseudopod_vid[t])
+                only_connected_network = keep_one_connected_component(without_pseudopods)
+                # # Option A: To add these cutting regions to the pseudopods do:
+                pseudopods = (1 - only_connected_network) * complete_network
+                pseudopod_vid[t] = pseudopods
+            network_dynamics[t] = complete_network
+
+            imtoshow = visu[t, ...]
+            eroded_binary = cv2.erode(network_dynamics[t, ...], cross_33)
+            net_coord = np.nonzero(network_dynamics[t, ...] - eroded_binary)
+            imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+            if show_seg:
+                cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
+                cv2.waitKey(1)
+            else:
+                visu[t, ...] = imtoshow
+            if show_seg:
+                cv2.destroyAllWindows()
+
+    network_coord = smallest_memory_array(np.nonzero(network_dynamics), "uint")
+    pseudopod_coord = None
+    if detect_pseudopods:
+        network_dynamics[pseudopod_vid > 0] = 2
+        pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
+        if save_coord_network:
+            np.save(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", pseudopod_coord)
+    if save_coord_network:
+        np.save(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", network_coord)
+    return network_coord, pseudopod_coord
 
 
 class  NetworkDetection:
@@ -55,7 +196,7 @@ class  NetworkDetection:
     Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
     It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
     """
-    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8], add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
         """
         Initialize the object with given parameters.
 
@@ -63,8 +204,8 @@ class  NetworkDetection:
         ----------
         greyscale_image : NDArray[np.uint8]
             The input greyscale image.
-        possibly_filled_pixels : NDArray[np.uint8]
-            Image containing possibly filled pixels.
+        possibly_filled_pixels : NDArray[np.uint8], optional
+            Image containing possibly filled pixels. Defaults to None.
         add_rolling_window : bool, optional
             Flag to add rolling window. Defaults to False.
         origin_to_add : NDArray[np.uint8], optional
@@ -73,7 +214,10 @@ class  NetworkDetection:
             Best result dictionary. Defaults to None.
         """
         self.greyscale_image = greyscale_image
-        self.possibly_filled_pixels = possibly_filled_pixels
+        if possibly_filled_pixels is None:
+            self.possibly_filled_pixels = np.ones(self.greyscale_image.shape, dtype=np.uint8)
+        else:
+            self.possibly_filled_pixels = possibly_filled_pixels
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
         self.origin_to_add = origin_to_add
@@ -295,7 +439,7 @@ class  NetworkDetection:
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
-    def change_greyscale(self, img: NDArray[np.uint8], c_space_dict: dict):
+    def change_greyscale(self, img: NDArray[np.uint8], first_dict: dict):
         """
         Change the image to greyscale using color space combinations.
 
@@ -307,12 +451,8 @@ class  NetworkDetection:
         ----------
         img : ndarray of uint8
             The input image to be converted to greyscale.
-        c_space_dict : dict
-            A dictionary where keys are color space names and values
-            are parameters for those color spaces.
-
         """
-        self.greyscale_image, g2 = generate_color_space_combination(img, list(c_space_dict.keys()), c_space_dict)
+        self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
     def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
         """
@@ -406,7 +546,102 @@ class  NetworkDetection:
         self.incomplete_network *= (1 - self.pseudopods)
 
 
-def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray=None) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
+def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, arena_label: int,
+                            starting_time: int=0, origin: NDArray[np.uint8]=None, coord_pseudopods: NDArray=None):
+    """
+    Extracts dynamic graph data from video frames based on network dynamics.
+
+    This function processes time-series binary network structures to extract evolving vertices and edges over time. It computes spatial relationships between networks and an origin point through image processing steps including contour detection, padding for alignment, skeleton extraction, and morphological analysis. Vertex and edge attributes like position, connectivity, width, intensity, and betweenness are compiled into tables saved as CSV files.
+
+    Parameters
+    ----------
+    converted_video : NDArray
+        3D video data array (t x y x) containing pixel intensities used for calculating edge intensity attributes during table generation.
+    coord_network : NDArray[np.uint8]
+        3D binary network mask array (t x y x) representing connectivity structures across time points.
+    arena_label : int
+        Unique identifier to prefix output filenames corresponding to specific experimental arenas.
+    starting_time : int, optional (default=0)
+        Time index within `coord_network` to begin processing from (exclusive of origin initialization).
+    origin : NDArray[np.uint8], optional (default=None)
+        Binary mask identifying the region of interest's central origin for spatial reference during network comparison.
+
+    Returns
+    -------
+    None
+    Saves two CSV files in working directory:
+    1. `vertex_table{arena_label}_t{T}_y{Y}_x{X}.csv` - Vertex table with time, coordinates, and connectivity information
+    2. `edge_table{arena_label}_t{T}_y{Y}_x{X}.csv` - Edge table containing attributes like length, width, intensity, and betweenness
+
+    Notes
+    ---
+    Output CSVs use NumPy arrays converted to pandas DataFrames with columns:
+    - Vertex table includes timestamps (t), coordinates (y,x), and connectivity flags.
+    - Edge table contains betweenness centrality calculated during skeleton processing.
+    Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
+    """
+    logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
+    # converted_video = self.converted_video; coord_network=self.coord_network; arena_label=1; starting_time=0; origin=self.origin
+    dims = converted_video.shape[:3]
+    if origin is not None:
+        _, _, _, origin_centroid = cv2.connectedComponentsWithStats(origin)
+        origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.int64)
+        pad_origin_centroid = origin_centroid + 1
+        origin_contours = get_contours(origin)
+        pad_origin = add_padding([origin])[0]
+    else:
+        pad_origin_centroid = None
+        pad_origin = None
+        origin_contours = None
+    vertex_table = None
+    for t in np.arange(starting_time, dims[0]): # t=320   Y, X = 729, 554
+        tic = timer()
+        computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
+        net_t = coord_network[1:, coord_network[0, :] == t]
+        computed_network[net_t[0], net_t[1]] = 1
+        if origin is not None:
+            computed_network = computed_network * (1 - origin)
+            computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+        else:
+            computed_network = computed_network.astype(np.uint8)
+        if computed_network.any():
+            computed_network = keep_one_connected_component(computed_network)
+            pad_network = add_padding([computed_network])[0]
+            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
+                                                                                           pad_origin_centroid)
+
+            edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
+            edge_id.run_edge_identification()
+            if pad_origin_contours is not None:
+                origin_contours = remove_padding([pad_origin_contours])[0]
+            growing_areas = None
+            if coord_pseudopods is not None:
+                growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
+            edge_id.make_vertex_table(origin_contours, growing_areas)
+            edge_id.make_edge_table(converted_video[t, ...])
+
+            edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+            edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+            if vertex_table is None:
+                vertex_table = edge_id.vertex_table.copy()
+                edge_table = edge_id.edge_table.copy()
+            else:
+                vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
+                edge_table = np.vstack((edge_table, edge_id.edge_table))
+        # print(f"{t} took: {timer() - tic} seconds")
+
+    vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
+                                                       "vertex_connected"])
+    edge_table = pd.DataFrame(edge_table,
+                              columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity",
+                                       "betweenness_centrality"])
+    vertex_table.to_csv(
+        f"vertex_table{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv")
+    edge_table.to_csv(
+        f"edge_table{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv")
+
+
+def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray[np.int64]=None) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
     """
     Get skeleton and widths from a network.
 
@@ -695,24 +930,47 @@ def get_inner_vertices(pad_skeleton: NDArray[np.uint8], potential_tips: NDArray[
             potential_tips[wrong_tip] = 0
         else:
             #  otherwise do:
-            # Find the most 4-connected one, and check whether
-            # its 4 connected neighbors have 1 or more other connexions
-            # 1. # Find the most 4-connected one:
-            vertices_group_4 = cnv4.equal_neighbor_nb * vertices_group
-            max_con = vertices_group_4.max()
-            most_con = np.nonzero(vertices_group_4 == max_con)
-            # 2. Check its 4-connected neighbors and remove those having only 1 other 8-connexion
-            skel_copy = pad_skeleton.copy()
-            skel_copy[most_con] = 0
-            skel_copy[most_con[0] - 1, most_con[1]] = 0
-            skel_copy[most_con[0] + 1, most_con[1]] = 0
-            skel_copy[most_con[0], most_con[1] - 1] = 0
-            skel_copy[most_con[0], most_con[1] + 1] = 0
-            sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
-            sub_cnv8.is_equal(1, and_itself=False)
-            # Remove those having
-            v_to_remove = ((vertices_group_4 > 0) * sub_cnv8.equal_neighbor_nb) == 1
-            pad_vertices[v_to_remove] = 0
+            # Find the most 8-connected one, if its 4-connected neighbors have no more 8-connexions than 4-connexions + 1, they can be removed
+            # Otherwise,
+            # Find the most 4-connected one, and remove its 4 connected neighbors having only 1 or other 8-connexion
+
+            c = zoom_on_nonzero(vertices_group)
+            # 1. Find the most 8-connected one:
+            sub_v_grp = vertices_group[c[0]:c[1], c[2]:c[3]]
+            c8 = cnv8.equal_neighbor_nb[c[0]:c[1], c[2]:c[3]]
+            vertices_group_8 = c8 * sub_v_grp
+            max_8_con = vertices_group_8.max()
+            most_8_con = np.nonzero(vertices_group_8 == max_8_con)
+            # c4[(most_8_con[0][0] - 1):(most_8_con[0][0] + 2), (most_8_con[1][0] - 1):(most_8_con[1][0] + 2)]
+            if len(most_8_con[0]) == 1:
+                skel_copy = pad_skeleton[c[0]:c[1], c[2]:c[3]].copy()
+                skel_copy[most_8_con] = 0
+                sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
+                sub_cnv8.is_equal(1, and_itself=False)
+                sub_cnv4 = CompareNeighborsWithValue(skel_copy, 4)
+                sub_cnv4.is_equal(1, and_itself=False)
+                v_to_remove = sub_v_grp * (sub_cnv8.equal_neighbor_nb <= sub_cnv4.equal_neighbor_nb + 1)
+            else:
+                c4 = cnv4.equal_neighbor_nb[c[0]:c[1], c[2]:c[3]]
+                # 1. # Find the most 4-connected one:
+                vertices_group_4 = c4 * sub_v_grp
+                max_con = vertices_group_4.max()
+                most_con = np.nonzero(vertices_group_4 == max_con)
+                if len(most_con[0]) < sub_v_grp.sum():
+                    # 2. Check its 4-connected neighbors and remove those having only 1 other 8-connexion
+                    skel_copy = pad_skeleton[c[0]:c[1], c[2]:c[3]].copy()
+                    skel_copy[most_con] = 0
+                    skel_copy[most_con[0] - 1, most_con[1]] = 0
+                    skel_copy[most_con[0] + 1, most_con[1]] = 0
+                    skel_copy[most_con[0], most_con[1] - 1] = 0
+                    skel_copy[most_con[0], most_con[1] + 1] = 0
+                    sub_cnv8 = CompareNeighborsWithValue(skel_copy, 8)
+                    sub_cnv8.is_equal(1, and_itself=False)
+                    # There are:
+                    v_to_remove = ((vertices_group_4 > 0) * sub_cnv8.equal_neighbor_nb) == 1
+                else:
+                    v_to_remove = np.zeros(sub_v_grp.shape, dtype=bool)
+            pad_vertices[c[0]:c[1], c[2]:c[3]][v_to_remove] = 0
 
     # Other vertices to remove:
     # - Those that are forming a cross with 0 at the center while the skeleton contains 1
@@ -770,7 +1028,7 @@ class EdgeIdentification:
     provided skeleton and distance arrays. It performs various operations to
     refine and label edges, ultimately producing a fully identified network.
     """
-    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64]):
+    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], t: int=0):
         """
         Initialize the class with skeleton and distance arrays.
 
@@ -794,6 +1052,7 @@ class EdgeIdentification:
         """
         self.pad_skeleton = pad_skeleton
         self.pad_distances = pad_distances
+        self.t = t
         self.remaining_vertices = None
         self.vertices = None
         self.growing_vertices = None
@@ -824,6 +1083,7 @@ class EdgeIdentification:
         self.get_tipped_edges()
         self.remove_tipped_edge_smaller_than_branch_width()
         self.label_tipped_edges_and_their_vertices()
+        self.check_vertex_existence()
         self.label_edges_connected_with_vertex_clusters()
         self.label_edges_connecting_vertex_clusters()
         self.label_edges_from_known_vertices_iteratively()
@@ -881,11 +1141,6 @@ class EdgeIdentification:
         smaller than the width of the nearest network branch (an information included in pad_distances).
         This method also updates internal data structures (skeleton, edge coordinates, vertex/tip positions)
         accordingly through pixel-wise analysis and connectivity checks.
-
-        Parameters
-        ----------
-        pad_distances : ndarray of float64
-            2D array containing the network width (in pixels) at each position occupied by the skeleton
         """
         # Identify edges that are smaller than the width of the branch it is attached to
         tipped_edges_to_remove = np.zeros(self.edge_lengths.shape[0], dtype=bool)
@@ -893,73 +1148,48 @@ class EdgeIdentification:
         branches_to_remove = np.zeros(self.non_tip_vertices.shape[0], dtype=bool)
         new_edge_pix_coord = []
         remaining_tipped_edges_nb = 0
-        if self.edge_pix_coord.shape[0] == 0:
-            for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
-                Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
-                if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
-                    tipped_edges_to_remove[i] = True
-                    # Remove the tip
-                    self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
-                    # check whether the connecting vertex remains a vertex of not
-                    pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
-                                              mode='constant')
-                    sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
-                    # If the vertex does not connect at least 3 edges anymore, remove its vertex label
-                    if sub_vertices[3, 3] == 0:
+        for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
+            Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
+            edge_bool = self.edge_pix_coord[:, 2] == i + 1
+            eY, eX = self.edge_pix_coord[edge_bool, 0], self.edge_pix_coord[edge_bool, 1]
+            if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
+                tipped_edges_to_remove[i] = True
+                # Remove the edge
+                self.pad_skeleton[eY, eX] = 0
+                # Remove the tip
+                self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
+
+                # Remove the coordinates corresponding to that edge
+                self.edge_pix_coord = np.delete(self.edge_pix_coord, edge_bool, 0)
+
+                # check whether the connecting vertex remains a vertex of not
+                pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
+                                          mode='constant')
+                sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
+                # If the vertex does not connect at least 3 edges anymore, remove its vertex label
+                if sub_vertices[3, 3] == 0:
+                    vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
+                    branches_to_remove[vertex_to_remove] = True
+                # If that pixel became a tip connected to another vertex remove it from the skeleton
+                if sub_tips[3, 3]:
+                    if sub_vertices[2:5, 2:5].sum() > 1:
+                        self.pad_skeleton[Y, X] = 0
+                        self.edge_pix_coord = np.delete(self.edge_pix_coord, np.all(self.edge_pix_coord[:, :2] == [Y, X], axis=1), 0)
                         vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
                         branches_to_remove[vertex_to_remove] = True
-                    # If that pixel became a tip connected to another vertex remove it from the skeleton
-                    if sub_tips[3, 3]:
-                        if sub_vertices[2:5, 2:5].sum() > 1:
-                            self.pad_skeleton[Y, X] = 0
-                            vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                            branches_to_remove[vertex_to_remove] = True
-                else:
-                    remaining_tipped_edges_nb += 1
-        else:
-            for i in range(len(self.edge_lengths)): # i = 3142 #1096 # 974 # 222
-                Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
-                edge_bool = self.edge_pix_coord[:, 2] == i + 1
-                eY, eX = self.edge_pix_coord[edge_bool, 0], self.edge_pix_coord[edge_bool, 1]
-                if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= self.edge_lengths[i]:
-                    tipped_edges_to_remove[i] = True
-                    # Remove the edge
-                    self.pad_skeleton[eY, eX] = 0
-                    # Remove the tip
-                    self.pad_skeleton[self.tips_coord[i, 0], self.tips_coord[i, 1]] = 0
-
-                    # Remove the coordinates corresponding to that edge
-                    self.edge_pix_coord = np.delete(self.edge_pix_coord, edge_bool, 0)
-
-                    # check whether the connecting vertex remains a vertex of not
-                    pad_sub_skeleton = np.pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)], [(1,), (1,)],
-                                              mode='constant')
-                    sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
-                    # If the vertex does not connect at least 3 edges anymore, remove its vertex label
-                    if sub_vertices[3, 3] == 0:
-                        vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                        branches_to_remove[vertex_to_remove] = True
-                    # If that pixel became a tip connected to another vertex remove it from the skeleton
-                    if sub_tips[3, 3]:
-                        if sub_vertices[2:5, 2:5].sum() > 1:
-                            self.pad_skeleton[Y, X] = 0
-                            self.edge_pix_coord = np.delete(self.edge_pix_coord, np.all(self.edge_pix_coord[:, :2] == [Y, X], axis=1), 0)
-                            vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                            branches_to_remove[vertex_to_remove] = True
-                else:
-                    remaining_tipped_edges_nb += 1
-                    new_edge_pix_coord.append(np.stack((eY, eX, np.repeat(remaining_tipped_edges_nb, len(eY))), axis=1))
+            else:
+                remaining_tipped_edges_nb += 1
+                new_edge_pix_coord.append(np.stack((eY, eX, np.repeat(remaining_tipped_edges_nb, len(eY))), axis=1))
 
         # Check that excedent connected components are 1 pixel size, if so:
         # It means that they were neighbors to removed tips and not necessary for the skeleton
         nb, sh = cv2.connectedComponents(self.pad_skeleton)
         if nb > 2:
-            for i in range(2, nb):
-                excedent = sh == i
-                if (excedent).sum() == 1:
-                    self.pad_skeleton[excedent] = 0
-                # else:
-                #     print("More than one pixel area excedent components exists")
+            logging.error("Removing small tipped edges split the skeleton")
+            # for i in range(2, nb):
+            #     excedent = sh == i
+            #     if (excedent).sum() == 1:
+            #         self.pad_skeleton[excedent] = 0
 
         # Remove in distances the pixels removed in skeleton:
         self.pad_distances *= self.pad_skeleton
@@ -968,21 +1198,21 @@ class EdgeIdentification:
         if len(new_edge_pix_coord) > 0:
             self.edge_pix_coord = np.vstack(new_edge_pix_coord)
 
-        # Remove tips connected to very small edges
-        self.tips_coord = np.delete(self.tips_coord, tipped_edges_to_remove, 0)
-        # Add corresponding edge names
-        self.tips_coord = np.hstack((self.tips_coord, np.arange(1, len(self.tips_coord) + 1)[:, None]))
+        # # Remove tips connected to very small edges
+        # self.tips_coord = np.delete(self.tips_coord, tipped_edges_to_remove, 0)
+        # # Add corresponding edge names
+        # self.tips_coord = np.hstack((self.tips_coord, np.arange(1, len(self.tips_coord) + 1)[:, None]))
 
-        # Within all branching (non-tip) vertices, keep those that did not lose their vertex status because of the edge removal
-        self.non_tip_vertices = np.delete(self.non_tip_vertices, branches_to_remove, 0)
+        # # Within all branching (non-tip) vertices, keep those that did not lose their vertex status because of the edge removal
+        # self.non_tip_vertices = np.delete(self.non_tip_vertices, branches_to_remove, 0)
 
-        # Get the branching vertices who kept their typped edge
-        self.vertices_branching_tips = np.delete(self.vertices_branching_tips, tipped_edges_to_remove, 0)
+        # # Get the branching vertices who kept their typped edge
+        # self.vertices_branching_tips = np.delete(self.vertices_branching_tips, tipped_edges_to_remove, 0)
 
         # Within all branching (non-tip) vertices, keep those that do not connect a tipped edge.
-        v_branching_tips_in_branching_v = find_common_coord(self.non_tip_vertices, self.vertices_branching_tips[:, :2])
-        self.remaining_vertices = np.delete(self.non_tip_vertices, v_branching_tips_in_branching_v, 0)
-        ordered_v_coord = np.vstack((self.tips_coord[:, :2], self.vertices_branching_tips[:, :2], self.remaining_vertices))
+        # v_branching_tips_in_branching_v = find_common_coord(self.non_tip_vertices, self.vertices_branching_tips[:, :2])
+        # self.remaining_vertices = np.delete(self.non_tip_vertices, v_branching_tips_in_branching_v, 0)
+        # ordered_v_coord = np.vstack((self.tips_coord[:, :2], self.vertices_branching_tips[:, :2], self.remaining_vertices))
 
         # tips = self.tips_coord
         # branching_any_edge = self.non_tip_vertices
@@ -1029,6 +1259,9 @@ class EdgeIdentification:
         self.numbered_vertices = np.zeros(self.im_shape, dtype=np.uint32)
         self.numbered_vertices[ordered_v_coord[:, 0], ordered_v_coord[:, 1]] = np.arange(1, ordered_v_coord.shape[0] + 1)
         self.vertices = None
+        self.vertex_index_map = {}
+        for idx, (y, x) in enumerate(ordered_v_coord):
+            self.vertex_index_map[idx + 1] = tuple((np.uint32(y), np.uint32(x)))
 
         # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
         self.edges_labels = np.zeros((self.tip_number, 3), dtype=np.uint32)
@@ -1041,6 +1274,20 @@ class EdgeIdentification:
 
         # Remove duplicates in vertices_branching_tips
         self.vertices_branching_tips = np.unique(self.vertices_branching_tips[:, :2], axis=0)
+
+    def check_vertex_existence(self):
+        if self.tips_coord.shape[0] == 0 and self.non_tip_vertices.shape[0] == 0:
+            loop_coord = np.nonzero(self.pad_skeleton)
+            start = 1
+            end = 1
+            vertex_coord = loop_coord[0][0], loop_coord[1][0]
+            self.numbered_vertices[vertex_coord[0], vertex_coord[1]] = 1
+            self.vertex_index_map[1] = vertex_coord
+            self.non_tip_vertices = np.array(vertex_coord)[None, :]
+            new_edge_lengths = len(loop_coord[0]) - 1
+            new_edge_pix_coord = np.transpose(np.vstack(((loop_coord[0][1:], loop_coord[1][1:], np.zeros(new_edge_lengths, dtype=np.int32)))))
+            self.edge_pix_coord = np.zeros((0, 3), dtype=np.int32)
+            self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
 
     def label_edges_connected_with_vertex_clusters(self):
         """
@@ -1070,28 +1317,29 @@ class EdgeIdentification:
         # Find every vertex_to_vertex_connexion
         v_cluster_nb, self.v_cluster_lab, self.v_cluster_stats, vgc = cv2.connectedComponentsWithStats(
             (self.numbered_vertices > 0).astype(np.uint8), connectivity=8)
-        max_v_nb = np.max(self.v_cluster_stats[1:, 4])
-        cropped_skeleton_list = []
-        starting_vertices_list = []
-        for v_nb in range(2, max_v_nb + 1):
-            labels = np.nonzero(self.v_cluster_stats[:, 4] == v_nb)[0]
-            coord_list = []
-            for lab in labels:  # lab=labels[0]
-                coord_list.append(np.nonzero(self.v_cluster_lab == lab))
-            for iter in range(v_nb):
-                for lab_ in range(labels.shape[0]): # lab=labels[0]
-                    cs = cropped_skeleton.copy()
-                    sv = []
-                    v_c = coord_list[lab_]
-                    # Save the current coordinate in the starting vertices array of this iteration
-                    sv.append([v_c[0][iter], v_c[1][iter]])
-                    # Remove one vertex coordinate to keep it from cs
-                    v_y, v_x = np.delete(v_c[0], iter), np.delete(v_c[1], iter)
-                    cs[v_y, v_x] = 0
-                    cropped_skeleton_list.append(cs)
-                    starting_vertices_list.append(np.array(sv))
-        for cropped_skeleton, starting_vertices in zip(cropped_skeleton_list, starting_vertices_list):
-            _, _ = self._identify_edges_connecting_a_vertex_list(cropped_skeleton, cropped_non_tip_vertices, starting_vertices)
+        if v_cluster_nb > 0:
+            max_v_nb = np.max(self.v_cluster_stats[1:, 4])
+            cropped_skeleton_list = []
+            starting_vertices_list = []
+            for v_nb in range(2, max_v_nb + 1):
+                labels = np.nonzero(self.v_cluster_stats[:, 4] == v_nb)[0]
+                coord_list = []
+                for lab in labels:  # lab=labels[0]
+                    coord_list.append(np.nonzero(self.v_cluster_lab == lab))
+                for iter in range(v_nb):
+                    for lab_ in range(labels.shape[0]): # lab=labels[0]
+                        cs = cropped_skeleton.copy()
+                        sv = []
+                        v_c = coord_list[lab_]
+                        # Save the current coordinate in the starting vertices array of this iteration
+                        sv.append([v_c[0][iter], v_c[1][iter]])
+                        # Remove one vertex coordinate to keep it from cs
+                        v_y, v_x = np.delete(v_c[0], iter), np.delete(v_c[1], iter)
+                        cs[v_y, v_x] = 0
+                        cropped_skeleton_list.append(cs)
+                        starting_vertices_list.append(np.array(sv))
+            for cropped_skeleton, starting_vertices in zip(cropped_skeleton_list, starting_vertices_list):
+                _, _ = self._identify_edges_connecting_a_vertex_list(cropped_skeleton, cropped_non_tip_vertices, starting_vertices)
 
     def label_edges_connecting_vertex_clusters(self):
         """
@@ -1160,9 +1408,9 @@ class EdgeIdentification:
 
         # Find out the remaining non-identified pixels
         nb, self.unidentified_shapes, self.unidentified_stats, ce = cv2.connectedComponentsWithStats(unidentified.astype(np.uint8))
-        # Handle the cases were edges are loops over only one vertex
+        # Handle the cases where edges are loops over only one vertex
         looping_edges = np.nonzero(self.unidentified_stats[:, 4 ] > 2)[0][1:]
-        for loop_i in looping_edges: # loop_i = looping_edges[0]
+        for loop_i in looping_edges: # loop_i = looping_edges[0] loop_i=11 #  zoom_on_nonzero(unique_vertices_im, return_coord=False)
             edge_i = (self.unidentified_shapes == loop_i).astype(np.uint8)
             dil_edge_i = cv2.dilate(edge_i, square_33)
             unique_vertices_im = self.numbered_vertices.copy()
@@ -1170,14 +1418,35 @@ class EdgeIdentification:
             unique_vertices_im = dil_edge_i * unique_vertices_im
             unique_vertices = np.unique(unique_vertices_im)
             unique_vertices = unique_vertices[unique_vertices > 0]
-            if len(unique_vertices) == 1:
+            v_nb = len(unique_vertices)
+            new_edge_lengths = edge_i.sum()
+            new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
+            new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None]))
+            if v_nb == 1:
                 start, end = unique_vertices[0], unique_vertices[0]
-                new_edge_lengths = edge_i.sum()
-                new_edge_pix_coord = np.transpose(np.vstack((np.nonzero(edge_i))))
-                new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.repeat(1, new_edge_pix_coord.shape[0])[:, None])) # np.arange(1, new_edge_pix_coord.shape[0] + 1)[:, None]))
+                self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+            elif v_nb == 2:
+                # The edge loops around a group of connected vertices
+                start, end = unique_vertices[0], unique_vertices[1]
+                self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+                # conn_v_nb, conn_v = cv2.connectedComponents((unique_vertices_im > 0).astype(np.uint8))
+                # if len(unique_vertices) == 2 and conn_v_nb == 2:
+            elif v_nb > 2: # The question is: How to choose two vertices so that they link all missing pixels?
+                # 1. Find every edge pixel connected to these vertices
+                vertex_connected_pixels = np.nonzero(cv2.dilate((unique_vertices_im > 0).astype(np.uint8), square_33) * edge_i)
+                # 2. Find the most distant pair of these
+                pix1, pix2 = get_min_or_max_euclidean_pair(vertex_connected_pixels, "max")
+                # 3. The two best vertices are the two nearest to these two most distant edge pixels
+                dist_to_pix1 = np.zeros(v_nb, np.float64)
+                dist_to_pix2 = np.zeros(v_nb, np.float64)
+                for _i, v_i in enumerate(unique_vertices):
+                    v_coord = self.vertex_index_map[v_i]
+                    dist_to_pix1[_i] = eudist(pix1, v_coord)
+                    dist_to_pix2[_i] = eudist(pix2, v_coord)
+                start, end = unique_vertices[np.argmin(dist_to_pix1)], unique_vertices[np.argmin(dist_to_pix2)]
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
-                logging.error(f"Other long edges cannot be identified: i={loop_i} of len={edge_i.sum()}")
+                logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
         self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
 
     def clear_areas_of_1_or_2_unidentified_pixels(self):
@@ -1201,9 +1470,9 @@ class EdgeIdentification:
             else:
                 self.pad_skeleton[y1:y2, x1:x2][self.unidentified_shapes[y1:y2, x1:x2] == pix_i] = 0
         if len(cutting_removal) > 0:
-            logging.error(f"These pixels break the skeleton when removed: {cutting_removal}")
+            logging.error(f"t={self.t}, These pixels break the skeleton when removed: {cutting_removal}")
         if (self.identified > 0).sum() != self.pad_skeleton.sum():
-            logging.error(f"Proportion of identified pixels in the skeleton: {(self.identified > 0).sum() / self.pad_skeleton.sum()}")
+            logging.error(f"t={self.t}, Proportion of identified pixels in the skeleton: {(self.identified > 0).sum() / self.pad_skeleton.sum()}")
         self.pad_distances *= self.pad_skeleton
         del self.identified
         del self.unidentified_stats
@@ -1278,6 +1547,7 @@ class EdgeIdentification:
                     self.new_level_vertices = ending_vertices_coord[found_connexion, :].copy()
                 else:
                     self.new_level_vertices = np.vstack((self.new_level_vertices, ending_vertices_coord[found_connexion, :]))
+
         return cropped_skeleton, cropped_non_tip_vertices
 
     def _update_edge_data(self, start, end, new_edge_lengths: NDArray, new_edge_pix_coord: NDArray):
@@ -1346,7 +1616,7 @@ class EdgeIdentification:
                     edge_j_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[edge_j], :2]
                     if np.array_equal(edge_i_coord, edge_j_coord):
                         edges_to_remove.append(edge_labs[edge_j])
-
+        edges_to_remove = np.unique(edges_to_remove)
         for edge in edges_to_remove:
             edge_bool = self.edges_labels[:, 0] != edge
             self.edges_labels = self.edges_labels[edge_bool, :]
@@ -1369,22 +1639,25 @@ class EdgeIdentification:
             edge_names = [self.edges_labels[edge_indices[0], 0], self.edges_labels[edge_indices[1], 0]]
             v_names = np.concatenate((self.edges_labels[edge_indices[0], 1:], self.edges_labels[edge_indices[1], 1:]))
             v_names = v_names[v_names != vertex2]
-            kept_edge = int(self.edge_lengths[edge_indices[1]] >= self.edge_lengths[edge_indices[0]])
-
-            # Rename the removed edge by the kept edge name in pix_coord:
-            self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_names[1 - kept_edge], 2] = edge_names[kept_edge]
-            # Add the removed edge length to the kept edge length
-            self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]]
-            # Remove the corresponding edge length from the list
-            self.edge_lengths = self.edge_lengths[self.edges_labels[:, 0] != edge_names[1 - kept_edge]]
-            # Rename the vertex of the kept edge in edges_labels
-            self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
-            # Remove the removed edge from the edges_labels array
-            self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
-
-            vY, vX = np.nonzero(self.numbered_vertices == vertex2)
-            v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
-            self.non_tip_vertices = np.delete(self.non_tip_vertices, v_idx, axis=0)
+            if len(v_names) > 0: # Otherwise it's a vertex between a normal edge and a loop
+                kept_edge = int(self.edge_lengths[edge_indices[1]] >= self.edge_lengths[edge_indices[0]])
+                # Rename the removed edge by the kept edge name in pix_coord:
+                self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_names[1 - kept_edge], 2] = edge_names[kept_edge]
+                # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
+                self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]] - 1
+                # Remove the corresponding edge length from the list
+                self.edge_lengths = self.edge_lengths[self.edges_labels[:, 0] != edge_names[1 - kept_edge]]
+                # Rename the vertex of the kept edge in edges_labels
+                self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
+                # Remove the removed edge from the edges_labels array
+                self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
+                # vY, vX = np.nonzero(self.numbered_vertices == vertex2)
+                # v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY[0], vX[0]], axis=1))
+                vY, vX = self.vertex_index_map[vertex2]
+                v_idx = np.nonzero(np.all(self.non_tip_vertices == [vY, vX], axis=1))
+                self.non_tip_vertices = np.delete(self.non_tip_vertices, v_idx, axis=0)
+        # Sometimes, clearing vertices connecting 2 edges can create edge duplicates, so:
+        self.clear_edge_duplicates()
 
     def _remove_padding(self):
         """
@@ -1398,11 +1671,12 @@ class EdgeIdentification:
         self.edge_pix_coord[:, :2] -= 1
         self.tips_coord[:, :2] -= 1
         self.non_tip_vertices[:, :2] -= 1
+        del self.vertex_index_map
         self.skeleton, self.distances, self.vertices = remove_padding(
             [self.pad_skeleton, self.pad_distances, self.numbered_vertices])
 
 
-    def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray[bool]=None):
+    def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
         """
         Generate a vertex table for the vertices.
 
@@ -1416,7 +1690,7 @@ class EdgeIdentification:
         ----------
         origin_contours : ndarray of uint8, optional
             Binary map to identify food vertices. Default is `None`.
-        growing_areas : ndarray of bool, optional
+        growing_areas : ndarray, optional
             Binary map to identify growing regions. Default is `None`.
 
         Notes
@@ -1437,9 +1711,13 @@ class EdgeIdentification:
             food_vertices = food_vertices[food_vertices > 0]
             self.vertex_table[np.isin(self.vertex_table[:, 2], food_vertices), 4] = 1
 
-        if growing_areas is not None:
-            growing = self.vertex_table[:, 2] == np.unique(self.vertices * growing_areas)[1:]
-            self.vertex_table[growing, 4] = 2
+        if growing_areas is not None and growing_areas.shape[1] > 0:
+            # growing = np.unique(self.vertices * growing_areas)[1:]
+            growing = np.unique(self.vertices[growing_areas[0], growing_areas[1]])
+            growing = growing[growing > 0]
+            if len(growing) > 0:
+                growing = np.isin(self.vertex_table[:, 2], growing)
+                self.vertex_table[growing, 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.vertices > 0).astype(np.uint8))
         for i, v_i in enumerate(np.nonzero(stats[:, 4] > 1)[0][1:]):
@@ -1448,7 +1726,7 @@ class EdgeIdentification:
                 self.vertex_table[self.vertex_table[:, 2] == v_lab, 5] = 1
 
 
-    def make_edge_table(self, greyscale: NDArray[np.uint8]):
+    def make_edge_table(self, greyscale: NDArray[np.uint8], compute_BC: bool=False):
         """
         Generate edge table with length and average intensity information.
 
@@ -1462,47 +1740,57 @@ class EdgeIdentification:
         greyscale : ndarray of uint8
             Grayscale image.
         """
+        if self.vertices is None:
+            self._remove_padding()
         self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
         self.edge_table[:, :3] = self.edges_labels[:, :]
         self.edge_table[:, 3] = self.edge_lengths
         for idx, edge_lab in enumerate(self.edges_labels[:, 0]):
             edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :]
+            pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
             v_id = self.edges_labels[self.edges_labels[:, 0] == edge_lab, 1:][0]
-            v1_width, v2_width = self.distances[self.vertices == v_id[0]], self.distances[self.vertices == v_id[1]]
-            pix_widths = np.concatenate((v1_width, v2_width))
-            v1_int, v2_int = greyscale[self.vertices == v_id[0]], greyscale[self.vertices == v_id[1]]
-            pix_ints = np.concatenate((v1_int, v2_int))
-            if len(edge_coord) > 0:
-                pix_widths = np.append(pix_widths, self.distances[edge_coord[:, 0], edge_coord[:, 1]])
-                pix_ints = np.append(pix_widths, greyscale[edge_coord[:, 0], edge_coord[:, 1]])
-            self.edge_table[idx, 4] = pix_widths.mean()
+            v1_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[0], :2][0]#
+            v2_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[1], :2][0]#
+            v1_width, v2_width = self.distances[v1_coord[0], v1_coord[1]], self.distances[v2_coord[0], v2_coord[1]]
+            if not np.isnan(v1_width):
+                pix_widths = np.append(pix_widths, v1_width)
+            if not np.isnan(v2_width):
+                pix_widths = np.append(pix_widths, v2_width)
+            if pix_widths.size > 0:
+                self.edge_table[idx, 4] = pix_widths.mean()
+            else:
+                self.edge_table[idx, 4] = np.nan
+            pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
+            v1_int, v2_int = greyscale[v1_coord[0], v1_coord[1]], greyscale[v2_coord[0], v2_coord[1]]
+            pix_ints = np.append(pix_ints, (v1_int, v2_int))
             self.edge_table[idx, 5] = pix_ints.mean()
 
-        G = nx.from_edgelist(self.edges_labels[:, 1:])
-        e_BC = nx.edge_betweenness_centrality(G, seed=0)
-        self.BC_net = np.zeros_like(self.distances)
-        for v, k in e_BC.items(): # v=(81, 80)
-            v1_coord = self.vertex_table[self.vertex_table[:, 2] == v[0], :2]
-            v2_coord = self.vertex_table[self.vertex_table[:, 2] == v[1], :2]
-            full_coord = np.concatenate((v1_coord, v2_coord))
-            edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
-            edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
-            edge_lab = np.unique(np.concatenate((edge_lab1, edge_lab2)))
-            if len(edge_lab) == 1:
-                edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :2]
-                full_coord = np.concatenate((full_coord, edge_coord))
-                self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                self.edge_table[self.edge_table[:, 0] == edge_lab, 6] = k
-            elif len(edge_lab) > 1:
-                edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[0], :2]
-                for edge_i in range(len(edge_lab)): #  edge_i=1
-                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[edge_i], :2]
-                    self.edge_table[self.edge_table[:, 0] == edge_lab[edge_i], 6] = k
+        if compute_BC:
+            G = nx.from_edgelist(self.edges_labels[:, 1:])
+            e_BC = nx.edge_betweenness_centrality(G, seed=0)
+            self.BC_net = np.zeros_like(self.distances)
+            for v, k in e_BC.items(): # v=(81, 80)
+                v1_coord = self.vertex_table[self.vertex_table[:, 2] == v[0], :2]
+                v2_coord = self.vertex_table[self.vertex_table[:, 2] == v[1], :2]
+                full_coord = np.concatenate((v1_coord, v2_coord))
+                edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
+                edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
+                edge_lab = np.unique(np.concatenate((edge_lab1, edge_lab2)))
+                if len(edge_lab) == 1:
+                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :2]
                     full_coord = np.concatenate((full_coord, edge_coord))
                     self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                    if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
-                        print(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking v={v}")
-                        break
+                    self.edge_table[self.edge_table[:, 0] == edge_lab, 6] = k
+                elif len(edge_lab) > 1:
+                    edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[0], :2]
+                    for edge_i in range(len(edge_lab)): #  edge_i=1
+                        edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[edge_i], :2]
+                        self.edge_table[self.edge_table[:, 0] == edge_lab[edge_i], 6] = k
+                        full_coord = np.concatenate((full_coord, edge_coord))
+                        self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
+                        if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
+                            logging.error(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking vertices {v}")
+                            break
 
 
 def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: NDArray, starting_vertices_coord: NDArray) -> Tuple[NDArray, NDArray[np.float64], NDArray[np.uint32]]:
@@ -1606,10 +1894,70 @@ def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: NDAr
         else:
             edge_lengths[i] = np.nan
         i += 1
-
-    edges_coords = np.array(all_path_pixels, dtype=np.uint32)
+    if len(all_path_pixels) > 0:
+        edges_coords = np.array(all_path_pixels, dtype=np.uint32)
+    else:
+        edges_coords = np.zeros((0, 3), dtype=np.uint32)
     return ending_vertices_coord, edge_lengths, edges_coords
 
+def ad_pad(arr: NDArray) -> NDArray:
+    """
+    Pad the input array with a single layer of zeros around its edges.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The input array to pad. Must be at least 2-dimensional.
+
+    Returns
+    -------
+    padded_arr : ndarray
+        The output array with a single 0-padded layer around its edges.
+
+    Notes
+    -----
+    This function uses NumPy's `pad` with mode='constant' to add a single layer
+    of zeros around the edges of the input array.
+
+    Examples
+    --------
+    >>> arr = np.array([[1, 2], [3, 4]])
+    >>> ad_pad(arr)
+    array([[0, 0, 0, 0],
+       [0, 1, 2, 0],
+       [0, 3, 4, 0],
+       [0, 0, 0, 0]])
+    """
+    return np.pad(arr, [(1, ), (1, )], mode='constant')
+
+def un_pad(arr: NDArray) -> NDArray:
+    """
+    Unpads a 2D NumPy array by removing the first and last row/column.
+
+    Extended Description
+    --------------------
+    Reduces the size of a 2D array by removing the outermost rows and columns.
+    Useful for trimming boundaries added during padding operations.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input 2D array to be unpadded. Shape (n,m) is expected.
+
+    Returns
+    -------
+    ndarray
+        Unpadded 2D array with shape (n-2, m-2).
+
+    Examples
+    --------
+    >>> arr = np.array([[0, 0, 0],
+    >>>                 [0, 4, 0],
+    >>>                 [0, 0, 0]])
+    >>> un_pad(arr)
+    array([[4]])
+    """
+    return arr[1:-1, 1:-1]
 
 def add_padding(array_list: list) -> list:
     """
@@ -1637,7 +1985,7 @@ def add_padding(array_list: list) -> list:
     """
     new_array_list = []
     for arr in array_list:
-        new_array_list.append(np.pad(arr, [(1, ), (1, )], mode='constant'))
+        new_array_list.append(ad_pad(arr))
     return new_array_list
 
 
@@ -1664,11 +2012,11 @@ def remove_padding(array_list: list) -> list:
     """
     new_array_list = []
     for arr in array_list:
-        new_array_list.append(arr[1:-1, 1:-1])
+        new_array_list.append(un_pad(arr))
     return new_array_list
 
 
-def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], pad_origin: NDArray[np.uint8], pad_network: NDArray[np.uint8], pad_origin_centroid: NDArray) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
+def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], pad_origin: NDArray[np.uint8], pad_network: NDArray[np.uint8], pad_origin_centroid: NDArray[np.int64]) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
     """
     Add a central contour to the skeleton while preserving distances.
 
@@ -1700,7 +2048,12 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
     # Make a hole at the skeleton center and find the vertices connecting it
     holed_skeleton = pad_skeleton * (1 - pad_origin)
     pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
-    dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=20)
+    ite = 20
+    dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=ite)
+    im_border = 1 - image_borders(pad_network.shape)
+    while np.any(dil_origin * im_border):
+        ite -= 1
+        dil_origin = cv2.dilate(pad_origin, rhombus_55, iterations=ite)
     pad_vertices *= dil_origin
     connecting_pixels = np.transpose(np.array(np.nonzero(pad_vertices)))
 
@@ -1725,7 +2078,10 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
 
     # show(dil_origin * with_central_contour)
     # Capture only the new contour and its neighborhood, get its skeleton and update the final skeleton
-    new_contour = cv2.morphologyEx(dil_origin * with_central_contour, cv2.MORPH_CLOSE, square_33)
+    new_contour = dil_origin * with_central_contour
+    dil_im_border = cv2.dilate(im_border, cross_33, iterations=1)
+    if not np.any(new_contour * dil_im_border):
+        new_contour = cv2.morphologyEx(new_contour, cv2.MORPH_CLOSE, square_33)
     new_contour = morphology.medial_axis(new_contour, rng=0).astype(np.uint8)
     new_skeleton = with_central_contour * (1 - dil_origin)
     new_skeleton += new_contour

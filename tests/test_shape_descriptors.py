@@ -13,117 +13,197 @@ from tests._base import CellectsUnitTest
 
 class TestShapeDescriptors(CellectsUnitTest):
     """Test suite for ShapeDescriptors class."""
-    binary_image = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype=np.uint8)
-    sd = ShapeDescriptors(binary_image, [])
+    ones_image = np.ones((3, 3), dtype=np.uint8)
+    zeros_image = np.zeros((3, 3), dtype=np.bool_)
+    sd1 = ShapeDescriptors(ones_image, [])
+    sd0 = ShapeDescriptors(zeros_image, [])
 
     def test_empty_descriptor_list(self):
         """Ensure class handles empty descriptor list gracefully."""
-        self.assertEqual(self.sd.descriptors, {})
+        self.assertEqual(self.sd1.descriptors, {})
 
-    def test_moments(self):
+    def test_ones_moments(self):
         """Test get mo."""
-        self.sd.get_mo()
-        self.assertEqual(len(self.sd.mo), 24)
+        self.sd1.get_mo()
+        self.assertEqual(len(self.sd1.mo), 24)
 
-    def test_get_area(self):
+    def test_zeros_moments(self):
+        """Test get mo."""
+        self.sd0.get_mo()
+        self.assertEqual(len(self.sd0.mo), 24)
+
+    def test_ones_get_area(self):
         """Test get area."""
-        self.sd.get_area()
-        self.assertEqual(self.sd.area, 9)
+        self.sd1.get_area()
+        self.assertEqual(self.sd1.area, 9)
 
-    def test_get_contours(self):
+    def test_zeros_get_area(self):
+        """Test get area."""
+        self.sd0.get_area()
+        self.assertEqual(self.sd0.area, 0)
+
+    def test_ones_get_contours(self):
         """Test get contours."""
-        self.sd.get_contours()
-        self.assertEqual(len(self.sd.contours), 8)
+        self.sd1.get_contours()
+        self.assertEqual(len(self.sd1.contours), 8)
 
-    def test_get_min_bounding_rectangle(self):
+    def test_zeros_get_contours(self):
+        """Test get contours."""
+        self.sd0.get_contours()
+        self.assertEqual(len(self.sd0.contours), 0)
+
+    def test_ones_get_min_bounding_rectangle(self):
         """Test get_min_bounding_rectangle."""
-        self.sd.get_min_bounding_rectangle()
-        self.assertEqual(len(self.sd.min_bounding_rectangle), 3)
+        self.sd1.contours = None
+        self.sd1.get_min_bounding_rectangle()
+        self.assertEqual(len(self.sd1.min_bounding_rectangle), 3)
+
+    def test_zeros_get_min_bounding_rectangle(self):
+        """Test get_min_bounding_rectangle."""
+        self.sd0.get_min_bounding_rectangle()
+        self.assertEqual(len(self.sd0.min_bounding_rectangle), 0)
 
     def test_get_inertia_axes(self):
         """Test get_inertia_axes."""
-        self.sd.get_inertia_axes()
-        self.assertEqual(self.sd.axes_orientation, 0.)
+        self.sd1.get_inertia_axes()
+        self.assertEqual(self.sd1.axes_orientation, 0.)
 
     def test_get_standard_deviations(self):
         """Test get_standard_deviations."""
-        self.sd.get_standard_deviations()
-        self.assertTrue(self.sd.sx > 0)
+        self.sd1.sx = None
+        self.sd1.axes_orientation = None
+        self.sd1.get_standard_deviations()
+        self.assertTrue(self.sd1.sx > 0)
 
     def test_get_skewness(self):
         """Test get_skewness."""
-        self.sd.get_skewness()
-        self.assertTrue(self.sd.skx == 0.)
+        self.sd1.sx = None
+        self.sd1.get_skewness()
+        self.assertTrue(self.sd1.skx == 0.)
 
     def test_get_kurtosis(self):
         """Test get_kurtosis."""
-        self.sd.get_kurtosis()
-        self.assertTrue(self.sd.kx > 0)
+        self.sd1.get_kurtosis()
+        self.assertTrue(self.sd1.kx > 0)
 
-    def test_get_convex_hull(self):
+    def test_ones_get_convex_hull(self):
         """Test get_convex_hull."""
-        self.sd.get_convex_hull()
-        self.assertTrue(len(self.sd.convex_hull) == 4)
+        self.sd1.get_convex_hull()
+        self.assertTrue(len(self.sd1.convex_hull) == 4)
 
-    def test_get_perimeter(self):
+    def test_zeros_get_convex_hull(self):
+        """Test get_convex_hull."""
+        self.sd0.get_convex_hull()
+        self.assertTrue(len(self.sd0.convex_hull) == 0)
+
+    def test_ones_get_perimeter(self):
         """Test get_perimeter."""
-        self.sd.get_perimeter()
-        self.assertTrue(self.sd.perimeter == 8)
+        self.sd1.get_perimeter()
+        self.assertTrue(self.sd1.perimeter == 8)
+
+    def test_zeros_get_perimeter(self):
+        """Test get_perimeter."""
+        self.sd0.get_perimeter()
+        self.assertTrue(self.sd0.perimeter == 0)
 
     def test_get_circularity(self):
         """Test get_circularity."""
-        self.sd.get_circularity()
-        self.assertTrue(self.sd.circularity > 1)
+        self.sd1.get_circularity()
+        self.assertTrue(self.sd1.circularity > 1)
+
+    def test_get_circularity_null_perimeter(self):
+        """Test get_circularity."""
+        self.sd0.get_circularity()
+        self.assertTrue(self.sd0.circularity == 0)
 
     def test_get_circularity_type(self):
         """Test get_circularity."""
-        self.sd.get_circularity()
-        self.assertTrue(isinstance(self.sd.circularity, float))
+        self.sd1.get_circularity()
+        self.assertTrue(isinstance(self.sd1.circularity, float))
 
     def test_get_rectangularity(self):
         """Test get_rectangularity."""
-        self.sd.get_rectangularity()
-        self.assertTrue(isinstance(self.sd.rectangularity, float))
+        self.sd1.get_rectangularity()
+        self.assertTrue(isinstance(self.sd1.rectangularity, float))
 
-    def test_get_total_hole_area(self):
+    def test_get_rectangularity_null_rectangle(self):
+        """Test get_rectangularity."""
+        sd = ShapeDescriptors(np.zeros((3, 3), np.uint8), ["rectangularity"])
+        self.assertTrue(sd.descriptors['rectangularity'] == 0)
+
+    def test_get_total_hole_area_no_holes(self):
         """Test get_total_hole_area."""
-        self.sd.get_total_hole_area()
-        self.assertTrue(self.sd.total_hole_area == 0)
+        self.sd1.get_total_hole_area()
+        self.assertEqual(self.sd1.total_hole_area, 0)
+    def test_get_total_hole_area_two_holes(self):
+        """Test get_total_hole_area."""
+        im = np.ones((7, 7), np.uint8)
+        im[0, :] = 0
+        im[-1, :] = 0
+        im[:, 0] = 0
+        im[:, -1] = 0
+        im[2, 2:4] = 0
+        im[4, 3:5] = 0
+        sd = ShapeDescriptors(im, [])
+        sd.get_total_hole_area()
+        self.assertEqual(sd.total_hole_area, 4)
 
-    def test_get_solidity(self):
+    def test_ones_get_solidity(self):
         """Test get_solidity."""
-        self.sd.get_solidity()
-        self.assertTrue(self.sd.solidity == 1.)
+        self.sd1.get_solidity()
+        self.assertTrue(self.sd1.solidity == 1.)
+
+    def test_zeros_get_solidity(self):
+        """Test get_solidity."""
+        self.sd0.get_solidity()
+        self.assertTrue(self.sd0.solidity == 0.)
 
     def test_get_convexity(self):
         """Test get_convexity."""
-        self.sd.get_convexity()
-        self.assertTrue(self.sd.convexity == 1.)
+        self.sd1.perimeter = None
+        self.sd1.convex_hull = None
+        self.sd1.get_convexity()
+        self.assertTrue(self.sd1.convexity == 1.)
 
     def test_get_eccentricity(self):
         """Test get_eccentricity."""
-        self.sd.get_eccentricity()
-        self.assertTrue(self.sd.eccentricity == 0.)
+        self.sd1.get_eccentricity()
+        self.assertTrue(self.sd1.eccentricity == 0.)
 
     def test_get_euler_number(self):
         """Test get_euler_number."""
-        self.sd.get_euler_number()
-        self.assertTrue(self.sd.euler_number == 0)
+        self.sd1.contours = None
+        self.sd1.get_euler_number()
+        self.assertTrue(self.sd1.euler_number == 0)
 
     def test_get_major_axis_len(self):
         """Test get_major_axis_len."""
-        self.sd.get_major_axis_len()
-        self.assertTrue(isinstance(self.sd.major_axis_len, float))
+        self.sd1.major_axis_len = None
+        self.sd1.get_major_axis_len()
+        self.assertTrue(isinstance(self.sd1.major_axis_len, float))
 
     def test_get_minor_axis_len(self):
         """Test get_minor_axis_len."""
-        self.sd.get_minor_axis_len()
-        self.assertTrue(isinstance(self.sd.minor_axis_len, float))
+        self.sd1.minor_axis_len = None
+        self.sd1.get_minor_axis_len()
+        self.assertTrue(isinstance(self.sd1.minor_axis_len, float))
 
     def test_get_axes_orientation(self):
         """Test get_axes_orientation."""
-        self.sd.get_axes_orientation()
-        self.assertTrue(isinstance(self.sd.axes_orientation, float))
+        self.sd1.axes_orientation = None
+        self.sd1.get_axes_orientation()
+        self.assertTrue(isinstance(self.sd1.axes_orientation, float))
+
+    def test_all_descriptors(self):
+        """Test get_axes_orientation."""
+        all_descriptors = list(from_shape_descriptors_class.keys())
+        all_descriptors.append("mo")
+        all_descriptors.append("area")
+        all_descriptors.append("contours")
+        all_descriptors.append("min_bounding_rectangle")
+        all_descriptors.append("convex_hull")
+        sd = ShapeDescriptors(self.ones_image, all_descriptors)
+        self.assertTrue(isinstance(sd.descriptors, dict))
 
 
 if __name__ == '__main__':

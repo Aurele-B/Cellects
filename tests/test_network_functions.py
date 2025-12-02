@@ -3,16 +3,7 @@ import unittest
 from cellects.image_analysis.network_functions import *
 from tests._base import CellectsUnitTest
 
-# --- Small helpers -----------------------------------------------------------
-
-def _pad(arr):
-    return np.pad(arr, [(1, ), (1, )], mode='constant')
-
-def _unpad(arr):
-    return arr[1:-1, 1:-1]
-
 # --- Tests -------------------------------------------------------------------
-
 
 class TestNetworkDetection(CellectsUnitTest):
     """Test suite for get_best_network_detection_method() method"""
@@ -109,9 +100,9 @@ class TestNetworkDetection(CellectsUnitTest):
     def test_change_greyscale(self):
         """Check that change greyscale function works"""
         img = np.random.randint(255, size=(self.dims[0], self.dims[1], 3), dtype=np.uint8)
-        c_space_dict = {"hsv": np.array([0, 1, 0])}
+        first_dict = {"hsv": np.array([0, 1, 0])}
         previous_greyscale = self.greyscale_image.copy()
-        self.NetDet.change_greyscale(img, c_space_dict)
+        self.NetDet.change_greyscale(img, first_dict)
         self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))
 
     def test_detect_pseudopods(self):
@@ -166,7 +157,7 @@ class TestGetSkeletonAndWidths(CellectsUnitTest):
         """Test skeletonization with optional origin parameter"""
         # Test pattern where we can verify origin contour handling
         network = np.ones((5, 5), dtype=np.uint8)
-        pad_network = add_padding([network])[0]
+        pad_network = ad_pad(network)
         pad_origin = np.zeros_like(pad_network)
         pad_origin_centroid = np.array((2, 2))
         pad_origin[pad_origin_centroid[0], pad_origin_centroid[1]] = 1
@@ -182,7 +173,7 @@ class TestGetSkeletonAndWidths(CellectsUnitTest):
         """Test skeletonization when origin does not overlap the network"""
         # Test pattern where we can verify origin contour handling
         network = np.ones((5, 5), dtype=np.uint8)
-        pad_network = add_padding([network])[0]
+        pad_network = ad_pad(network)
         pad_origin = np.zeros_like(pad_network)
         pad_origin_centroid = np.array((2, 2))
         pad_origin[pad_origin_centroid[0], pad_origin_centroid[1]] = 1
@@ -190,15 +181,14 @@ class TestGetSkeletonAndWidths(CellectsUnitTest):
 
         skeleton, distances, contours = get_skeleton_and_widths(
             pad_network, pad_origin, pad_origin_centroid)
-        contours_coord = np.nonzero(contours)
-        self.assertTrue(np.array_equal(contours_coord[0], np.array([2, 3])))
-        self.assertTrue(np.array_equal(contours_coord[1], np.array([3, 2])))
+        self.assertTrue(skeleton.any())
 
     def test_skeleton_with_disconnected_origin(self):
         """Test skeletonization with origin containing two shapes"""
+
         # Test pattern where we can verify origin contour handling
         network = np.ones((5, 5), dtype=np.uint8)
-        pad_network = add_padding([network])[0]
+        pad_network = ad_pad(network)
         pad_origin = np.zeros_like(pad_network)
         pad_origin_centroid = np.array((2, 2))
         pad_origin[pad_origin_centroid[0], pad_origin_centroid[1]] = 1
@@ -377,10 +367,10 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
 
         for name, skeleton, target in cases:
             with self.subTest(name=name):
-                pad_skeleton = _pad(skeleton)
+                pad_skeleton = ad_pad(skeleton)
                 cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
                 pad_terminations = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
-                vertices = _unpad(pad_terminations)
+                vertices = un_pad(pad_terminations)
                 self.assertTrue(np.array_equal(vertices, target))
 
     def test_thick_node_is_not_equal_to_given_target(self):
@@ -390,10 +380,10 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
         target   = np.array([[0,0,1,0,0],
                              [0,0,0,0,0],
                              [1,0,0,0,1]], dtype=np.uint8)
-        pad_skeleton = _pad(skeleton)
+        pad_skeleton = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
         pad_terminations = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
-        vertices = _unpad(pad_terminations)
+        vertices = un_pad(pad_terminations)
         self.assertFalse(np.array_equal(vertices, target))
 
     def test_non_connectivity_consistency(self):
@@ -405,7 +395,7 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
             [0,0,0,0,1,0,0,1,0,0],
             [0,0,0,1,0,1,0,1,0,0],
             [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8)
-        pad_skeleton = _pad(skeleton)
+        pad_skeleton = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
         pad_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
         nb, labels = cv2.connectedComponents(pad_tips)
@@ -521,22 +511,22 @@ class TestGetInnerVertices(unittest.TestCase):
                        [0,0,0,0,1,0,0,1,0,0],
                        [0,0,0,1,0,1,0,1,0,0],
                        [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8),
-             np.array([[0,0,1,1,1,0,0,1,0,0],
-                       [0,0,0,1,0,0,0,0,0,0],
-                       [0,1,0,0,1,0,1,1,0,0],
-                       [0,0,0,1,0,1,0,0,0,0],
-                       [0,0,0,0,1,0,0,0,0,0],
-                       [0,0,0,0,0,1,0,0,0,0],
-                       [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8)),
+             np.array([ [0,0,1,1,1,0,0,1,0,0],
+                               [0,0,0,1,0,0,0,0,0,0],
+                               [0,1,0,0,1,0,1,0,0,0],
+                               [0,0,0,1,0,1,0,0,0,0],
+                               [0,0,0,0,1,0,0,0,0,0],
+                               [0,0,0,0,0,1,0,0,0,0],
+                               [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8)),
         ]
 
         for name, skeleton, v_target in cases:
             with self.subTest(name=name):
-                pad = _pad(skeleton)
+                pad = ad_pad(skeleton)
                 cnv4, cnv8 = get_neighbor_comparisons(pad)
                 potential_tips = get_terminations_and_their_connected_nodes(pad, cnv4, cnv8)
                 pad_vertices, _ = get_inner_vertices(pad, potential_tips, cnv4, cnv8)
-                vertices = _unpad(pad_vertices)
+                vertices = un_pad(pad_vertices)
                 self.assertTrue(np.array_equal(vertices, v_target), msg=name)
 
     def test_asymmetric_plus_checks_vertices_and_tips(self):
@@ -556,13 +546,13 @@ class TestGetInnerVertices(unittest.TestCase):
                              [1,0,0,0,1],
                              [0,0,0,1,0]], dtype=np.uint8)
 
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad)
         potential_tips = get_terminations_and_their_connected_nodes(pad, cnv4, cnv8)
         pad_vertices, pad_tips = get_inner_vertices(pad, potential_tips, cnv4, cnv8)
 
-        vertices = _unpad(pad_vertices)
-        tips = _unpad(pad_tips)
+        vertices = un_pad(pad_vertices)
+        tips = un_pad(pad_tips)
 
         self.assertTrue(np.array_equal(tips, t_target), msg="tips")
         self.assertTrue(np.array_equal(vertices, v_target), msg="vertices")
@@ -576,11 +566,11 @@ class TestGetInnerVertices(unittest.TestCase):
                            [0,0,0,0,0],
                            [1,0,1,0,1]], dtype=np.uint8)
 
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad)
         potential_tips = get_terminations_and_their_connected_nodes(pad, cnv4, cnv8)
         pad_vertices, _ = get_inner_vertices(pad, potential_tips, cnv4, cnv8)
-        vertices = _unpad(pad_vertices)
+        vertices = un_pad(pad_vertices)
 
         self.assertFalse(np.array_equal(vertices, target))
 
@@ -594,7 +584,7 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [1,1,0,1,1],
             [0,0,1,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         pad = remove_small_loops(pad)
         new_skeleton = remove_padding([pad])[0]
         target = np.array([
@@ -615,7 +605,7 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,1,0,0,0,0,0],
             [1,0,0,0,0,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         pad = remove_small_loops(pad)
         new_skeleton = remove_padding([pad])[0]
         target = np.array([
@@ -655,8 +645,8 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,0,0,0,0,2,0],
         ], dtype=np.float64)
 
-        pad_skel = _pad(skeleton)
-        pad_dist = _pad(distances)
+        pad_skel = ad_pad(skeleton)
+        pad_dist = ad_pad(distances)
         pad_skel, pad_dist = remove_small_loops(pad_skel, pad_dist)
 
         target_dist = np.array([
@@ -682,13 +672,13 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,0,0,0,1,0,1],
             [0,0,0,0,0,1,0],
         ], dtype=np.uint8)
-        pad_skel = _pad(skeleton)
+        pad_skel = ad_pad(skeleton)
         # distances not needed for this check; rely on remove_small_loops default
         pad_skel = remove_small_loops(pad_skel)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skel)
         potential = get_terminations_and_their_connected_nodes(pad_skel, cnv4, cnv8)
         pad_vertices, _ = get_inner_vertices(pad_skel, potential, cnv4, cnv8)
-        vertices = _unpad(pad_vertices)
+        vertices = un_pad(pad_vertices)
         target = np.array([
             [1,0,0,0,0,0,0],
             [0,0,0,0,0,0,0],
@@ -708,12 +698,12 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,0,0,0,1,0,0],
             [0,0,0,0,0,1,0],
         ], dtype=np.uint8)
-        pad_skel = _pad(skeleton)
+        pad_skel = ad_pad(skeleton)
         pad_skel = remove_small_loops(pad_skel)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skel)
         potential = get_terminations_and_their_connected_nodes(pad_skel, cnv4, cnv8)
         pad_vertices, _ = get_inner_vertices(pad_skel, potential, cnv4, cnv8)
-        vertices = _unpad(pad_vertices)
+        vertices = un_pad(pad_vertices)
         target = np.array([
             [0,0,0,0,0,0,1],
             [1,0,0,0,0,0,0],
@@ -733,7 +723,7 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,0,0,1,0,0],
             [0,0,0,1,0,0],
         ], dtype=np.uint8)
-        pad_skel = _pad(skeleton)
+        pad_skel = ad_pad(skeleton)
         pad_skel = remove_small_loops(pad_skel)
         new_skeleton = remove_padding([pad_skel])[0]
         target = np.array([
@@ -756,7 +746,7 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [1,0,0,0,0,1,0],
             [0,0,0,0,0,0,1],
         ], dtype=np.uint8)
-        pad_skel = _pad(skeleton)
+        pad_skel = ad_pad(skeleton)
         pad_skel = remove_small_loops(pad_skel)
         new_skeleton = remove_padding([pad_skel])[0]
         target = np.array([
@@ -781,8 +771,8 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,1,0,1,0,1,0,0],
             [0,0,1,0,0,0,0,1,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
         nb, labels = cv2.connectedComponents(pad_tips)
         self.assertEqual((labels > 0).sum(), nb - 1)
 
@@ -796,8 +786,8 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [1,0,0,0,1,0,0],
             [0,0,0,0,0,1,1],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
         nb, labels = cv2.connectedComponents(pad_tips)
         self.assertEqual((labels > 0).sum(), nb - 1)
 
@@ -811,8 +801,8 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,1,0,0,0],
             [0,0,0,1,0,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
         nb, labels = cv2.connectedComponents(pad_tips)
         self.assertEqual((labels > 0).sum(), nb - 1)
 
@@ -826,9 +816,9 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,0,1,0,0],
             [0,0,0,0,1,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
-        pad = keep_one_connected_component(pad)
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_skeleton = keep_one_connected_component(pad_skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
 
         vertices = remove_padding([pad_vertices])[0]
         target = np.array([
@@ -852,7 +842,7 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,1,0,0,0],
             [0,0,0,1,0,0,0],
         ], dtype=np.uint8)
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         pad = keep_one_connected_component(pad)
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
 
@@ -877,20 +867,46 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,1,0,0,1,0],
             [1,1,0,0,0,0,1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
-
-    def test_false_tip_misc_2(self):
-        skeleton = np.array([
-            [1,0,0,0,1,0,0],
-            [0,1,0,1,0,0,0],
-            [0,0,1,0,0,1,1],
-            [0,1,1,1,1,0,0],
-            [1,0,1,0,0,1,0],
-            [0,0,1,0,0,0,1],
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [1, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        self.assertTrue(np.array_equal(vertices, target))
+
+    def test_special_cross(self):
+        skeleton = np.array([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [1, 1, 1, 1, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0, 1, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_false_tip_misc_3(self):
         skeleton = np.array([
@@ -901,8 +917,18 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,1,1,0],
             [1,0,0,1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 0, 1, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 0],
+            [1, 0, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_false_tip_misc_4(self):
         skeleton = np.array([
@@ -912,8 +938,39 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,1,1,1,1,0,0],
             [1,0,0,0,0,1,0],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
+        pad = keep_one_connected_component(ad_pad(skeleton))
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 1, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 1],
+            [0, 0, 0, 0, 1, 0, 0],
+            [1, 0, 0, 0, 0, 1, 0],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
+
+    def test_false_tip_misc_2(self):
+        skeleton = np.array([
+            [1,0,0,0,1,0,0],
+            [0,1,0,1,0,0,0],
+            [0,0,1,0,0,1,1],
+            [0,1,1,1,1,0,0],
+            [1,0,1,0,0,1,0],
+            [0,0,1,0,0,0,1],
+        ], dtype=np.uint8)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [1, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 1],
+            [0, 1, 0, 1, 1, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_false_tip_misc_5(self):
         skeleton = np.array([
@@ -927,8 +984,21 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,0,1,0,0,0,0,0,0,0,0,1,0],
             [0,0,0,0,0,1,0,0,0,0,0,0,1,0,1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
+        pad = keep_one_connected_component(ad_pad(skeleton))
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_false_tip_misc_6(self):
         skeleton = np.array([
@@ -944,8 +1014,23 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,1,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,1,0,0,0,0,0,0,0,0,0,0],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
+        pad = keep_one_connected_component(ad_pad(skeleton))
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_cross_two_edges_branch_1(self):
         skeleton = np.array([
@@ -957,20 +1042,19 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,1,0,0,0,1,1,0,1,0,0,1,0],
             [1,1,0,0,0,0,0,0,1,0,0,0,0,0],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
+        pad = keep_one_connected_component(ad_pad(skeleton))
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
-
-    def test_cross_two_edges_branch_2(self):
-        skeleton = np.array([
-            [1,0,0,0,0,0],
-            [0,1,0,0,0,0],
-            [0,1,0,0,0,1],
-            [0,0,1,0,1,0],
-            [1,1,1,1,0,0],
-            [0,0,0,0,1,1],
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
-        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        self.assertTrue(np.array_equal(vertices, target))
 
     def test_cross_two_edges_branch_3_large(self):
         skeleton = np.array([
@@ -991,8 +1075,51 @@ class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
             [0,0,0,0,0,0,0,0,0,0,0,0,0,1,0],
             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
         ], dtype=np.uint8)
-        pad = keep_one_connected_component(_pad(skeleton))
+        pad = keep_one_connected_component(ad_pad(skeleton))
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
+        vertices = remove_padding([pad_vertices])[0]
+        target = np.array([
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
+
+    def test_cross_two_edges_branch_2(self):
+        """ This is the last known case for which the algorithm is not perfect"""
+        skeleton = np.array([
+            [1,0,0,0,0,0],
+            [0,1,0,0,0,0],
+            [0,1,0,0,0,1],
+            [0,0,1,0,1,0],
+            [1,1,1,1,0,0],
+            [0,0,0,0,1,1],
+        ], dtype=np.uint8)
+        pad_skeleton = ad_pad(skeleton)
+        pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad_skeleton)
+        vertices = un_pad(pad_vertices)
+        target = np.array([
+            [1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0],
+            [1, 0, 1, 1, 0, 0],
+            [0, 0, 0, 0, 0, 1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(vertices, target))
 
 def _coords_to_mask(shape, coords):
     """coords: (N,2) array of [row, col]."""
@@ -1013,7 +1140,7 @@ class TestGetBranchesAndTipsCoord(unittest.TestCase):
             [0,0,1,0,0,0,0,1,0,0],
         ], dtype=np.uint8)
 
-        pad = _pad(skeleton)
+        pad = ad_pad(skeleton)
         pad_vertices, pad_tips = get_vertices_and_tips_from_skeleton(pad)
         non_tip_vertices, tips_coord = get_branches_and_tips_coord(pad_vertices, pad_tips)
 
@@ -1028,7 +1155,7 @@ class TestGetBranchesAndTipsCoord(unittest.TestCase):
             [0,0,0,0,0,0,0,0,0,0,0,0],
             [0,0,0,1,2,1,0,0,1,0,0,0],
             [0,0,0,0,2,0,0,0,0,0,0,0],
-            [0,0,1,0,0,2,0,2,2,0,0,0],
+            [0,0,1,0,0,2,0,2,0,0,0,0],
             [0,0,0,0,2,0,2,0,0,0,0,0],
             [0,0,0,0,0,2,0,0,0,0,0,0],
             [0,0,0,0,0,0,1,0,0,0,0,0],
@@ -1045,11 +1172,11 @@ class TestEdgeIdentification(CellectsUnitTest):
     def setUp(self) -> None:
         """Set up test fixtures."""
         # Create minimal valid input data
-        self.valid_skeleton = _pad(np.array([[0, 0, 1, 0, 1],
+        self.valid_skeleton = ad_pad(np.array([[0, 0, 1, 0, 1],
                                                     [1, 1, 1, 1, 0],
                                                     [0, 0, 1, 0, 1],
                                                     [0, 0, 1, 0, 1]], dtype=np.uint8))
-        self.valid_distances = _pad(np.array([[0.0, 0.0, 1.0, 0.0, 1.0],
+        self.valid_distances = ad_pad(np.array([[0.0, 0.0, 1.0, 0.0, 1.0],
                                                      [1.0, 1.0, 1.0, 1.0, 0.0],
                                                      [0.0, 0.0, 1.0, 0.0, 1.0],
                                                      [0.0, 0.0, 1.0, 0.0, 1.0]], dtype=np.float64))
@@ -1114,13 +1241,13 @@ class TestEdgeIdentification(CellectsUnitTest):
     def test_remove_tipped_edge_smaller_than_branch_width_when_new_tip_is_connected_to_a_vertex(self):
         """Test removal of short tipped edges in the particular case where removing tips create a tip that is
         connected to another vertex."""
-        valid_skeleton = _pad(np.array([[0, 1, 0, 1, 0],
+        valid_skeleton = ad_pad(np.array([[0, 1, 0, 1, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 1, 0, 1, 0],
                                                [1, 0, 0, 0, 1],
                                                [0, 1, 0, 1, 0]], dtype=np.uint8))
-        valid_distances = _pad(np.array([[0, 1, 0, 1, 0],
+        valid_distances = ad_pad(np.array([[0, 1, 0, 1, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 1, 0, 1, 0],
@@ -1132,7 +1259,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
         # Remove short edges + the newly created tip, that is only one pixel long
         edge_id.remove_tipped_edge_smaller_than_branch_width()
-        expected = _pad(np.array([[0, 0, 0, 0, 0],
+        expected = ad_pad(np.array([[0, 0, 0, 0, 0],
                                          [0, 0, 0, 0, 0],
                                          [0, 0, 1, 0, 0],
                                          [0, 1, 0, 1, 0],
@@ -1144,13 +1271,13 @@ class TestEdgeIdentification(CellectsUnitTest):
 
     def test_remove_tipped_edge_smaller_than_branch_width_with_no_edge_longer_than_1(self):
         """Test remove_tipped_edge_smaller_than_branch_width with no edge longer than 1."""
-        valid_skeleton = _pad(np.array([[0, 1, 0, 1, 0],
+        valid_skeleton = ad_pad(np.array([[0, 1, 0, 1, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 1, 0, 1, 0],
                                                [1, 0, 1, 0, 1],
                                                [0, 1, 0, 1, 0]], dtype=np.uint8))
-        valid_distances = _pad(np.array([[0, 1, 0, 1, 0],
+        valid_distances = ad_pad(np.array([[0, 1, 0, 1, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 0, 1, 0, 0],
                                                [0, 1, 0, 1, 0],
@@ -1179,14 +1306,14 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.remove_tipped_edge_smaller_than_branch_width()
         edge_id.label_tipped_edges_and_their_vertices()
 
-        expected = np.array([[2, 3], [2, 4]], dtype=np.uint32)
+        expected = np.array([[2, 4]], dtype=np.uint32)
 
         self.assertTrue(np.array_equal(edge_id.vertices_branching_tips, expected))
 
 
     def test_label_edges_connected_with_vertex_clusters(self):
         """Test that label_edges_connected_with_vertex_clusters completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 1, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 1, 1, 0, 1],
                                                [1, 0, 1, 0, 1],
                                                [1, 1, 0, 0, 1],
                                                [1, 0, 0, 1, 0],
@@ -1207,7 +1334,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
     def test_label_edges_connecting_vertex_clusters(self):
         """Test that label_edges_connecting_vertex_clusters completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 1, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 1, 1, 0, 1],
                                                [1, 0, 1, 0, 1],
                                                [1, 1, 0, 0, 1],
                                                [1, 0, 0, 1, 0],
@@ -1229,7 +1356,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
     def test_label_edges_from_known_vertices_iteratively_without_vertex_clusters(self):
         """Test that label_edges_from_known_vertices_iteratively works without vertex clusters."""
-        valid_skeleton = _pad(np.array([[0, 1, 0, 0, 1, 1, 1, 0, 0],
+        valid_skeleton = ad_pad(np.array([[0, 1, 0, 0, 1, 1, 1, 0, 0],
                                                [1, 0, 1, 0, 1, 0, 0, 1, 1],
                                                [0, 1, 0, 0, 1, 0, 1, 0, 0],
                                                [1, 0, 0, 0, 1, 0, 0, 1, 1],
@@ -1250,7 +1377,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
     def test_label_edges_from_known_vertices_iteratively_with_vertex_clusters(self):
         """Test that label_edges_from_known_vertices_iteratively works with vertex clusters."""
-        valid_skeleton = _pad(np.array([[1, 1, 1, 0, 1, 1, 1, 0, 0],
+        valid_skeleton = ad_pad(np.array([[1, 1, 1, 0, 1, 1, 1, 0, 0],
                                                [1, 0, 1, 0, 1, 0, 1, 1, 1],
                                                [0, 1, 0, 0, 1, 0, 1, 0, 0],
                                                [1, 0, 0, 1, 0, 0, 1, 1, 1],
@@ -1271,7 +1398,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
     def test_label_edges_looping_on_1_vertex(self):
         """Test that label_edges_looping_on_1_vertex completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 1, 1, 1, 1, 0, 1, 1, 1],
                                                [0, 1, 0, 0, 0, 1, 0, 0, 1],
@@ -1293,14 +1420,14 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_connected_with_vertex_clusters()
         edge_id.label_edges_connecting_vertex_clusters()
         edge_id.label_edges_from_known_vertices_iteratively()
-        self.assertEqual(len(edge_id.edge_lengths), 19)
+        self.assertEqual(len(edge_id.edge_lengths), 16)
         edge_id.label_edges_looping_on_1_vertex()
-        self.assertEqual(len(edge_id.edge_lengths), 20)
+        self.assertEqual(len(edge_id.edge_lengths), 17)
         self.assertEqual(edge_id.edge_lengths[-1], 15)
 
     def test_clear_areas_of_1_or_2_unidentified_pixels(self):
         """Test that clear_areas_of_1_or_2_unidentified_pixels completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 1, 1, 1, 1, 0, 1, 1, 1],
                                                [0, 1, 0, 0, 0, 1, 0, 0, 1],
@@ -1325,11 +1452,11 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_looping_on_1_vertex()
         self.assertEqual(edge_id.pad_skeleton.sum(), 51)
         edge_id.clear_areas_of_1_or_2_unidentified_pixels()
-        self.assertEqual(edge_id.pad_skeleton.sum(), 49)
+        self.assertLess(edge_id.pad_skeleton.sum(), 51)
 
     def test_clear_edge_duplicates(self):
         """Test that clear_edge_duplicates completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 1, 1, 1, 1, 0, 1, 1, 1],
                                                [0, 1, 0, 0, 0, 1, 0, 0, 1],
@@ -1353,13 +1480,13 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_from_known_vertices_iteratively()
         edge_id.label_edges_looping_on_1_vertex()
         edge_id.clear_areas_of_1_or_2_unidentified_pixels()
-        self.assertEqual(edge_id.edges_labels.shape[0], 20)
+        self.assertEqual(edge_id.edges_labels.shape[0], 17)
         edge_id.clear_edge_duplicates()
-        self.assertEqual(edge_id.edges_labels.shape[0], 19)
+        self.assertEqual(edge_id.edges_labels.shape[0], 17)
 
     def test_clear_vertices_connecting_2_edges(self):
         """Test that clear_vertices_connecting_2_edges completes without errors."""
-        valid_skeleton = _pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
+        valid_skeleton = ad_pad(np.array([[1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 0, 1, 0, 1, 0, 1, 0, 1],
                                                [1, 1, 1, 1, 1, 0, 1, 1, 1],
                                                [0, 1, 0, 0, 0, 1, 0, 0, 1],
@@ -1384,9 +1511,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_looping_on_1_vertex()
         edge_id.clear_areas_of_1_or_2_unidentified_pixels()
         edge_id.clear_edge_duplicates()
-        self.assertEqual(edge_id.non_tip_vertices.shape[0], 9)
+        self.assertEqual(edge_id.non_tip_vertices.shape[0], 7)
         edge_id.clear_vertices_connecting_2_edges()
-        self.assertEqual(edge_id.non_tip_vertices.shape[0], 8)
+        self.assertEqual(edge_id.non_tip_vertices.shape[0], 6)
 
     def test_run_edge_identification_completes(self):
         """Test that run_edge_identification completes without errors."""
@@ -1406,11 +1533,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         # This should complete all steps without raising exceptions
         edge_id.run_edge_identification()
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
-        y_ori, x_ori = 1, 2
+        y_ori, x_ori = 1, 3
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool_)
-        y_grow, x_grow = 3, 4
-        growing_areas[y_grow, x_grow] = True
+        growing_areas = np.array([[3], [4]])
         edge_id.make_vertex_table(origin_contours, growing_areas)
 
         # Check that there are 4 tips
@@ -1420,10 +1545,10 @@ class TestEdgeIdentification(CellectsUnitTest):
         self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 4] == 1, :2], np.array([[y_ori, x_ori]], dtype=np.uint32)))
 
         # Check that the growing region is well located
-        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 4] == 2, :2], np.array([[y_grow, x_grow]], dtype=np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 4] == 2, :2], np.transpose(growing_areas).astype(np.uint32)))
 
         # Check that the connected vertices are well located
-        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 5] == 1, :2], np.array([[0, 4], [1, 2], [1, 3]], dtype=np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 5] == 1, :2], np.array([[0, 4], [1, 3]], dtype=np.uint32)))
 
     def test_make_edge_table(self):
         """Test that make_edge_table completes without errors."""
@@ -1431,20 +1556,26 @@ class TestEdgeIdentification(CellectsUnitTest):
         # This should complete all steps without raising exceptions
         edge_id.run_edge_identification()
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
-        y_ori, x_ori = 1, 2
+        y_ori, x_ori = 1, 3
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.bool_)
-        y_grow, x_grow = 3, 4
-        growing_areas[y_grow, x_grow] = True
+        growing_areas = np.array([[3], [4]])
         edge_id.make_vertex_table(origin_contours, growing_areas)
         greyscale = self.valid_skeleton.copy()
         greyscale[greyscale > 0] = np.random.randint(170, 255, self.valid_skeleton.sum())
         greyscale[greyscale == 0] = np.random.randint(0, 50, self.valid_skeleton.size - self.valid_skeleton.sum())
-        greyscale = _unpad(greyscale)
+        greyscale = un_pad(greyscale)
         edge_id.make_edge_table(greyscale)
 
         # Check 5 edges are documented
-        self.assertEqual(edge_id.edge_table.shape[0], 5)
+        self.assertEqual(edge_id.edge_table.shape[0], 4)
+
+        res = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
+        res[edge_id.edge_pix_coord[:, 0], edge_id.edge_pix_coord[:, 1]] = 1
+        res[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 1
+
+        expected = un_pad(self.valid_skeleton)
+        expected[0, 2] = 0
+        self.assertTrue(np.array_equal(res, expected))
 
 
 

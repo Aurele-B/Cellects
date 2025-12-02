@@ -8,6 +8,9 @@ Tests include unit tests and edge cases validation across different input types.
 """
 import os
 import unittest
+from pathlib import Path
+
+import numpy as np
 from cellects.utils.utilitarian import *
 from tests._base import CellectsUnitTest
 
@@ -146,6 +149,16 @@ class TestReducePathLen(CellectsUnitTest):
             expected_result = pathway
 
         self.assertEqual(result, expected_result)
+    def test_reduce_path_len_no_str(self):
+        """Test basic functionality."""
+        pathway = Path("some/long/path/to/a/file.txt")
+        to_start = 15
+        from_end = 8
+
+        result = reduce_path_len(pathway, to_start, from_end)
+
+        self.assertIsInstance(result, str)
+        self.assertLessEqual(len(result), to_start + from_end + 3)
 
 
 class TestFindNearest(CellectsUnitTest):
@@ -300,6 +313,24 @@ class TestSmallestMemoryArray(CellectsUnitTest):
         self.assertEqual(result.dtype, expected_dtype)
         self.assertTrue(np.array_equal(result, np.array([[0, 0], [0, 0]], dtype=np.uint8)))
 
+    def test_smallest_memory_array_tuple(self):
+        """Test with zero values."""
+        img = np.array([[0,1,0],[0,1,0],[0,1,0]], dtype=np.uint8)
+        array_object = np.nonzero(img)
+        result = smallest_memory_array(array_object)
+        expected_dtype = np.uint8
+        self.assertEqual(result.dtype, expected_dtype)
+        self.assertTrue(np.array_equal(result, np.array(array_object, dtype=np.uint8)))
+
+    def test_smallest_memory_array_empty_tuple(self):
+        """Test with zero values."""
+        img = np.array([[0,0,0],[0,0,0],[0,0,0]], dtype=np.uint8)
+        array_object = np.nonzero(img)
+        result = smallest_memory_array(array_object)
+        expected_dtype = np.uint8
+        self.assertEqual(result.dtype, expected_dtype)
+        self.assertTrue(np.array_equal(result, np.array(array_object, dtype=np.uint8)))
+
 
 class TestRemoveCoordinates(CellectsUnitTest):
     """Test suite for remove_coordinates function."""
@@ -356,6 +387,13 @@ class TestRemoveCoordinates(CellectsUnitTest):
 
         result = remove_coordinates(arr1, arr2)
         self.assertTrue(np.array_equal(result, expected))
+    def test_remove_coordinates_wrong_shapes(self):
+        """Test with mixed data types (int and float)."""
+        arr1 = np.array([[0, 0, 0], [1.5, 2.3, 0], [3, 4, 0]])
+        arr2 = np.array([[1.5, 2.3], [5, 6]])
+
+        with self.assertRaises(ValueError):
+            result = remove_coordinates(arr1, arr2)
 
 
 

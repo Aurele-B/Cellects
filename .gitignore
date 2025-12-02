@@ -18,6 +18,9 @@ README_DEV_CHEATSHEET.md
 setup.py
 requirements.txt
 
+# Pyinstaller
+__main__.spec
+
 # macOS
 .DS_Store
 
@@ -33,6 +36,7 @@ data/output/*
 
 # coverage
 .coverage
+.coverage*
 htmlcov/
 
 # build

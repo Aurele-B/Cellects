@@ -28,6 +28,7 @@ Notes:
 - Image processing functions expect binary (boolean/int8) input matrices
 """
 from copy import deepcopy
+import pandas as pd
 from cellects.utils.decorators import njit
 import numpy as np
 from numpy.typing import NDArray
@@ -115,10 +116,22 @@ def bracket_to_uint8_image_contrast(image: NDArray):
     -------
     ndarray of uint8
         Output image converted to uint8 type after normalization.
-    """
-    image -= np.min(image)
-    return to_uint8(255 * (image / np.max(image)))
 
+    Examples
+    --------
+    >>> image = np.random.randint(0, 255, (10, 10), dtype=np.uint8)
+    >>> res = bracket_to_uint8_image_contrast(image)
+    >>> print(res)
+
+    >>> image = np.zeros((10, 10), dtype=np.uint8)
+    >>> res = bracket_to_uint8_image_contrast(image)
+    >>> print(res)
+    """
+    image -= image.min()
+    if image.max() == 0:
+        return np.zeros_like(image, dtype=np.uint8)
+    else:
+        return to_uint8(255 * (image / np.max(image)))
 
 @njit()
 def linear_model(x: NDArray, a: float, b: float) -> float:
@@ -229,8 +242,11 @@ def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[
     -----
     Performance considerations: This function uses Numba's `@njit` decorator for performance.
     """
-    vx = np.sum(binary_image * Xn) / mo["m00"]
-    vy = np.sum(binary_image * Yn) / mo["m00"]
+    if mo['m00'] == 0:
+        vx, vy = 0., 0.
+    else:
+        vx = np.sum(binary_image * Xn) / mo["m00"]
+        vy = np.sum(binary_image * Yn) / mo["m00"]
     return vx, vy
 
 
@@ -277,7 +293,17 @@ def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) 
     Kurtosis: nan
 
     """
-    return mnx / sx ** n, mny / sy ** n
+    if sx == 0:
+        fx = 0
+    else:
+        fx = mnx / sx ** n
+
+    if sy == 0:
+        fy = 0
+    else:
+        fy = mny / sy ** n
+
+    return fx, fy
 
 
 def get_standard_deviations(mo: dict, binary_image: NDArray, cx: float, cy: float) -> Tuple[float, float]:
@@ -635,3 +661,72 @@ def find_duplicates_coord(array1: NDArray[int]) -> NDArray[bool]:
     counts = np.bincount(inverse_indices)
     # A row is duplicate if its count > 1
     return counts[inverse_indices] > 1
+
+def detect_first_move(size_dynamics: NDArray, growth_threshold)-> int:
+    """
+    Detects the first move in a time series where the value exceeds the initial value by a given threshold.
+
+    Parameters
+    ----------
+    size_dynamics : numpy.ndarray
+        The time series data of dynamics.
+    growth_threshold: int or float
+        The threshold value for detecting the first move.
+
+    Returns
+    -------
+    int or pandas.NA
+        The index of the first move where the condition is met.
+        Returns `pandas.NA` if no such index exists.
+
+    Examples
+    --------
+    >>> size_dynamics = np.array([10, 12, 15, 18])
+    >>> growth_threshold = 5
+    >>> detect_first_move(size_dynamics, growth_threshold)
+    2
+    """
+    first_move = pd.NA
+    thresh_reached = np.nonzero(size_dynamics >= (size_dynamics[0] + growth_threshold))[0]
+    if len(thresh_reached) > 0:
+        first_move = thresh_reached[0]
+    return first_move
+
+@njit()
+def get_newly_explored_area(binary_vid: NDArray[np.uint8]) -> NDArray:
+    """
+    Get newly explored area in a binary video.
+
+    Calculate the number of new pixels that have become active (==1) from
+    the previous frame in a binary video representation.
+
+    Parameters
+    ----------
+    binary_vid : np.ndarray
+        The current frame of the binary video.
+
+    Returns
+    -------
+    np.ndarray
+        An array containing the number of new active pixels for each row.
+
+    Notes
+    -----
+    This function uses Numba's @njit decorator for performance.
+
+    Examples
+    --------
+    >>> binary_vid=np.zeros((4, 5, 5), dtype=np.uint8)
+    >>> binary_vid[:2, 3, 3] = 1
+    >>> binary_vid[1, 4, 3] = 1
+    >>> binary_vid[2, 3, 4] = 1
+    >>> binary_vid[3, 2, 3] = 1
+    >>> get_newly_explored_area(binary_vid)
+    array([0, 1, 1, 1])
+
+    >>> binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]
+    >>> get_newly_explored_area(binary_vid)
+    array([0])
+    """
+    return ((binary_vid - binary_vid[0, ...]) == 1).reshape(binary_vid.shape[0], - 1).sum(1)
+binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]

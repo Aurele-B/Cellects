@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
-"""This module creates the First window of the user interface of Cellects"""
+"""First window of the Cellects graphical user interface (GUI).
+
+This module implements the initial setup UI for Cellects data processing. It provides
+widgets for selecting image/video inputs, configuring folder paths, arena numbers,
+and prefixes/extensions. Threaded operations ensure UI responsiveness during background tasks.
+
+Main Components
+FirstWindow : QWidget subclass implementing the first GUI window with tabs and interactive widgets
+"""
 
 import os
 import logging
 from pathlib import Path
 import numpy as np
-import cv2
 from PySide6 import QtWidgets, QtCore
-
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetExifDataThread, RunAllThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
 from cellects.gui.custom_widgets import (
@@ -16,14 +22,56 @@ from cellects.gui.custom_widgets import (
 
 
 class FirstWindow(MainTabsType):
+    """
+    First window of the Cellects GUI.
+    """
     def __init__(self, parent, night_mode):
+        """
+        Initialize the First window with a parent widget and night mode setting.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget to which this window will be attached.
+        night_mode : bool
+            A boolean indicating whether the night mode should be enabled.
+
+
+        Examples
+        --------
+        >>> from PySide6 import QtWidgets
+        >>> from cellects.gui.cellects import CellectsMainWidget
+        >>> from cellects.gui.first_window import FirstWindow
+        >>> import sys
+        >>> app = QtWidgets.QApplication([])
+        >>> parent = CellectsMainWidget()
+        >>> session = FirstWindow(parent, False)
+        >>> session.true_init()
+        >>> parent.insertWidget(0, session)
+        >>> parent.show()
+        >>> sys.exit(app.exec())
+        """
         super().__init__(parent, night_mode)
         logging.info("Initialize first window")
         self.setParent(parent)
+
+        self.true_init()
+
+    def true_init(self):
+        """
+        Initialize the FirstWindow components and setup its layout.
+
+        Sets up various widgets, layouts, and threading components for the Cellects GUI,
+        including image or video selection, folder path input, arena number management,
+        and display setup.
+
+        Notes
+        -----
+        This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
+        """
         self.data_tab.set_in_use()
         self.image_tab.set_not_usable()
         self.video_tab.set_not_usable()
-        # self.night_mode_switch(False)
         self.thread = {}
         self.thread["LookForData"] = LookForDataThreadInFirstW(self.parent())
         self.thread["RunAll"] = RunAllThread(self.parent())
@@ -31,15 +79,11 @@ class FirstWindow(MainTabsType):
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
         self.thread["GetExifDataThread"] = GetExifDataThread(self.parent())
         self.instantiate: bool = True
-        ##
         self.title_label = FixedText('Cellects', police=60, night_mode=self.parent().po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        # self.subtitle_label = FixedText('A Cell Expansion Computer Tracking Software', police=18, night_mode=self.parent().po.all['night_mode'])
-        # self.subtitle_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.subtitle_line = LineWidget(size=[1, 50], night_mode=self.parent().po.all['night_mode'])
 
         self.Vlayout.addWidget(self.title_label)
-        # self.Vlayout.addWidget(self.subtitle_label)
         self.Vlayout.addWidget(self.subtitle_line)
         self.Vlayout.addItem(self.vertical_space)
 
@@ -147,12 +191,6 @@ class FirstWindow(MainTabsType):
         self.display_image.setVisible(False)
         self.display_image.mousePressEvent = self.full_screen_display
 
-        # Add the display shortcuts option
-        #self.shortcut_cb = Checkbox(self.parent().po.all['display_shortcuts'])
-        #self.shortcut_cb.stateChanged.connect(self.display_shortcuts_checked)
-        #self.shortcut_label = FixedText('Display shortcuts', night_mode=self.parent().po.all['night_mode'])
-        #self.shortcut_label.setAlignment(QtCore.Qt.AlignVCenter)
-
         # 4) Create the shortcuts row
         self.shortcuts_widget = QtWidgets.QWidget()
         self.shortcuts_layout = QtWidgets.QHBoxLayout()
@@ -164,19 +202,15 @@ class FirstWindow(MainTabsType):
         self.required_outputs = PButton('Required Outputs', night_mode=self.parent().po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         # Shortcut 3 :
-        # self.Video_analysis_window = PButton("Video tracking window", night_mode=self.parent().po.all['night_mode'])
-        # self.Video_analysis_window.clicked.connect(self.video_analysis_window_is_clicked)
         self.video_tab.clicked.connect(self.video_analysis_window_is_clicked)
         # Shortcut 4 :
         self.Run_all_directly = PButton("Run all directly", night_mode=self.parent().po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
-        # self.Video_analysis_window.setVisible(False)
         self.Run_all_directly.setVisible(False)
 
         self.shortcuts_layout.addItem(self.horizontal_space)
         self.shortcuts_layout.addWidget(self.advanced_parameters)
         self.shortcuts_layout.addWidget(self.required_outputs)
-        # self.shortcuts_layout.addWidget(self.Video_analysis_window)
         self.shortcuts_layout.addWidget(self.Run_all_directly)
         self.shortcuts_layout.addItem(self.horizontal_space)
         self.shortcuts_widget.setLayout(self.shortcuts_layout)
@@ -194,8 +228,6 @@ class FirstWindow(MainTabsType):
         self.image_tab.clicked.connect(self.next_is_clicked)
         self.next.clicked.connect(self.next_is_clicked)
         # Add widgets to the last_row_layout
-        #self.last_row_layout.addWidget(self.shortcut_cb)
-        #self.last_row_layout.addWidget(self.shortcut_label)
         self.last_row_layout.addItem(self.horizontal_space)
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.next)
@@ -208,10 +240,41 @@ class FirstWindow(MainTabsType):
         self.pathway_changed()
 
     def full_screen_display(self, event):
+        """
+        Display an image in full screen.
+
+        Displays the current `image_to_display` of the parent window
+        in a separate full-screen window.
+
+        Parameters
+        ----------
+        event : QEvent
+            The event that triggers the full-screen display.
+
+        Other Parameters
+        ----------------
+        popup_img : FullScreenImage
+            The instance of `FullScreenImage` created to display the image.
+
+        Notes
+        -----
+        The method creates a new instance of `FullScreenImage` and displays it.
+        This is intended to provide a full-screen view of the image currently
+        displayed in the parent window.
+        """
         self.popup_img = FullScreenImage(self.parent().image_to_display, self.parent().screen_width, self.parent().screen_height)
         self.popup_img.show()
 
     def browse_is_clicked(self):
+        """
+        Handles the logic for when a "Browse" button is clicked in the interface.
+
+        Opens a file dialog to select a directory and updates the global pathway.
+
+        Notes
+        -----
+        This function assumes that `self.parent().po.all` is a dictionary with a key `'global_pathway'`.
+        """
         dialog = QtWidgets.QFileDialog()
         dialog.setDirectory(str(self.parent().po.all['global_pathway']))
         self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
@@ -219,6 +282,9 @@ class FirstWindow(MainTabsType):
         self.global_pathway.setText(self.parent().po.all['global_pathway'])
 
     def im2vid(self):
+        """
+        Toggle between processing images or videos based on UI selection.
+        """
         if self.im_or_vid.currentText() == "Image list":
             what = 'Images'
             if self.parent().po.all['extension'] == '.mp4':
@@ -234,20 +300,43 @@ class FirstWindow(MainTabsType):
         self.radical.setText(self.parent().po.all['radical'])
         self.extension.setText(self.parent().po.all['extension'])
 
-    def display_message_from_thread(self, text_from_thread):
+    def display_message_from_thread(self, text_from_thread: str):
+        """
+        Updates the message displayed in the UI with text from a thread.
+
+        Parameters
+        ----------
+        text_from_thread : str
+            The text to be displayed in the UI message.
+        """
         self.message.setText(text_from_thread)
 
-    def display_image_during_thread(self, dictionary):
+    def display_image_during_thread(self, dictionary: dict):
+        """
+        Display an image and set a message during a thread operation.
+
+        Parameters
+        ----------
+        dictionary : dict
+            A dictionary containing the 'message' and 'current_image'.
+                The message is a string to display.
+                The current_image is the image data that will be displayed.
+        """
         self.message.setText(dictionary['message'])
         self.parent().image_to_display = dictionary['current_image']
         self.display_image.update_image(dictionary['current_image'])
 
     def next_is_clicked(self):
+        """
+        Handles the logic for when a "Next" button is clicked in the interface.
+
+        Checks if certain threads are running, updates parent object's attributes,
+        and starts a data-looking thread if conditions are met.
+        """
         if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
             self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
             self.parent().po.all['radical'] = self.radical.text()
             self.parent().po.all['extension'] = self.extension.text()
-            #self.parent().po.all['display_shortcuts'] = self.shortcut_cb.isChecked()
             self.parent().po.sample_number = int(self.arena_number.value())
             self.parent().po.all['first_folder_sample_number'] = self.parent().po.sample_number
             self.parent().po.all['sample_number_per_folder'] = [self.parent().po.sample_number]
@@ -260,11 +349,6 @@ class FirstWindow(MainTabsType):
                     self.message.setText('The folder selected is not valid')
                 else:
                     self.message.setText('')
-                    # self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
-                    # self.parent().po.all['radical'] = self.radical.text()
-                    # self.parent().po.all['extension'] = self.extension.text()
-                    # self.parent().po.all['display_shortcuts'] = self.shortcut_cb.isChecked()
-
                     self.message.setText(f"Looking for {self.parent().po.all['radical']}***{self.parent().po.all['extension']} Wait...")
                     self.message.setStyleSheet("color: rgb(230, 145, 18)")
                     self.thread["LookForData"].start()
@@ -273,27 +357,23 @@ class FirstWindow(MainTabsType):
             self.message.setText('Analysis has already begun, wait or restart Cellects.')
 
     def when_look_for_data_finished(self):
+        """
+        Check if there are any data items left in the selected folder and its sub-folders.
+        Display appropriate error messages or proceed with further actions based on the data availability.
+
+        Notes
+        -----
+        This function checks if there are any data items (images or videos) left in the selected folder and its sub-folders.
+        If no data is found, it displays an error message. Otherwise, it proceeds with instantiating widgets or starting a thread.
+        """
         if len(self.parent().po.all['folder_list']) == 0 and len(self.parent().po.data_list) == 0:
             if self.parent().po.all['im_or_vid'] == 1:
                 error_message = f"There is no videos ({self.parent().po.all['extension']})in the selected folder and its sub-folders"
             else:
                 error_message = f"There is no images ({self.parent().po.all['extension']}) in the selected folder and its sub-folders"
             self.message.setText(error_message)
-            #     = FixedText(error_message, align='r')
-            # self.message.setStyleSheet("color: rgb(230, 145, 18)")
-            # self.layout.addWidget(self.message, 12, 0, 12, 3)
         else:
             self.message.setText('')
-            # if len(self.parent().po.all['folder_list']) > 0:
-            #     self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'],
-            #                                       self.parent().po.all['folder_list'][0])
-            # if self.instantiate:  # not self.parent().imageanalysiswindow.initialized:
-            #     self.thread["GetFirstIm"].start()
-            #     self.thread["GetFirstIm"].message_when_thread_finished.connect(self.first_im_read)
-            # else:
-            #     self.first_im_read(True)
-            # if isinstance(self.parent().po.all['sample_number_per_folder'], int):
-            #     self.parent().po.all['folder_number'] = 1
             if self.parent().po.all['folder_number'] > 1:
                 self.parent().instantiate_widgets()
                 self.parent().ifseveralfolderswindow.true_init()
@@ -304,10 +384,18 @@ class FirstWindow(MainTabsType):
                 self.thread["GetFirstIm"].message_when_thread_finished.connect(self.first_im_read)
 
     def first_im_read(self, greyscale):
+        """
+        Initialize the image analysis window and prepare for reading images.
+
+        Notes
+        -----
+        This function prepares the image analysis window and sets it to be ready for
+        reading images. It also ensures that certain tabs are set as not in use.
+        """
         self.parent().instantiate_widgets()
         self.parent().imageanalysiswindow.true_init()
         self.instantiate = False
-        if self.parent().po.first_exp_ready_to_run:
+        if self.parent().po.first_exp_ready_to_run and (self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1):
             self.parent().imageanalysiswindow.video_tab.set_not_in_use()
         self.parent().change_widget(2) # imageanalysiswindow
         # From now on, image analysis will be available from video analysis:
@@ -315,10 +403,27 @@ class FirstWindow(MainTabsType):
         self.thread["GetExifDataThread"].start()
 
     def required_outputs_is_clicked(self):
+        """
+        Handle the click event for switching to required outputs.
+
+        This function sets the `last_is_first` attribute of the parent to True
+        and changes the widget to the Required Outputs view.
+        """
         self.parent().last_is_first = True
         self.parent().change_widget(4)  # RequiredOutput
 
     def advanced_parameters_is_clicked(self):
+        """
+        Handle the click event for switching to advanced parameters.
+
+        Checks if an Exif data reading thread is running and acts accordingly.
+        If not, it updates the display for advanced parameters.
+
+        Notes
+        -----
+        This function updates the display for advanced parameters only if no Exif data reading thread is running.
+        If a thread is active, it informs the user to wait or restart Cellects.
+        """
         if self.thread["GetExifDataThread"].isRunning():
             self.message.setText("Reading data, wait or restart Cellects")
         else:
@@ -327,26 +432,61 @@ class FirstWindow(MainTabsType):
             self.parent().change_widget(5) # AdvancedParameters
 
     def video_analysis_window_is_clicked(self):
+        """
+        Handles the logic for when the "Video analysis" button is clicked in the interface,
+        leading to the video analysis window.
+
+        Notes
+        -----
+        This function displays an error message when a thread relative to the current window is running.
+        This function also save the id of the following window for later use.
+        """
         if self.video_tab.state != "not_usable":
             if self.thread["LookForData"].isRunning() or self.thread["LoadDataToRunCellectsQuickly"].isRunning() or self.thread["GetFirstIm"].isRunning() or self.thread["RunAll"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 self.parent().last_tab = "data_specifications"
-                # self.parent().po.first_exp_ready_to_run = False
                 self.parent().change_widget(3) # Should be VideoAnalysisW
 
     def Run_all_directly_is_clicked(self):
+        """
+        Run_all_directly_is_clicked
+
+        This method initiates a complete analysis process by starting the `RunAll` thread
+        after ensuring no other relevant threads are currently running.
+
+        Notes
+        -----
+        - This method ensures that the `LookForData` and `RunAll` threads are not running
+          before initiating a new analysis.
+        - The method updates the UI to indicate that an analysis has started and displays
+          progress messages.
+        """
         if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
             self.parent().po.motion = None
             self.message.setText("Complete analysis has started, wait until this message disappear...")
-            # if not self.parent().po.first_exp_ready_to_run:
-            #     self.parent().po.use_data_to_run_cellects_quickly = True
             self.thread["RunAll"].start()
             self.thread["RunAll"].message_from_thread.connect(self.display_message_from_thread)
             self.thread["RunAll"].image_from_thread.connect(self.display_image_during_thread)
             self.display_image.setVisible(True)
 
     def pathway_changed(self):
+        """
+        Method for handling pathway changes in the application.
+
+        This method performs several operations when a new global pathway is set:
+        1. Waits for any running thread to complete.
+        2. Updates the global pathway if a valid directory is found.
+        3. Changes the current working directory to the new global pathway.
+        4. Hides various widgets associated with advanced options and outputs.
+        5. Starts a background thread to load data quickly.
+        6. If the provided pathway is invalid, it hides relevant tabs and outputs an error message.
+
+        Notes
+        -----
+        This method performs actions to prepare the application for loading data from a new pathway.
+        It ensures that certain widgets are hidden and starts necessary background processes.
+        """
         if self.thread["LoadDataToRunCellectsQuickly"].isRunning():
             self.thread["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(Path(self.global_pathway.text())):
@@ -360,7 +500,6 @@ class FirstWindow(MainTabsType):
             self.im_or_vid.setVisible(False)
             self.advanced_parameters.setVisible(False)
             self.required_outputs.setVisible(False)
-            # self.Video_analysis_window.setVisible(False)
             self.Run_all_directly.setVisible(False)
             self.next.setVisible(False)
             # 2) Load the dict
@@ -368,13 +507,25 @@ class FirstWindow(MainTabsType):
             self.thread["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
             # 3) go to another func to change, put visible and re_instantiate
         else:
-            # self.Video_analysis_window.setVisible(False)
             self.Run_all_directly.setVisible(False)
             self.image_tab.set_not_usable()
             self.video_tab.set_not_usable()
             self.message.setText("Please, enter a valid path")
 
-    def load_data_quickly_finished(self, message):
+    def load_data_quickly_finished(self, message: str):
+        """
+        Set up the UI components for a new experiment.
+
+        Parameters
+        ----------
+        message : str
+            The message to be displayed on the UI component.
+
+        Notes
+        -----
+        This function sets several visibility flags and values for UI components
+        in preparation for starting an experiment.
+        """
         self.image_tab.set_not_in_use()
         self.message.setText(message)
         self.radical.setVisible(True)
@@ -392,58 +543,21 @@ class FirstWindow(MainTabsType):
             self.im_or_vid.setCurrentIndex(self.parent().po.all['im_or_vid'])
             self.radical.setText(self.parent().po.all['radical'])
             self.extension.setText(self.parent().po.all['extension'])
-            #self.shortcut_cb.setChecked(self.parent().po.all['display_shortcuts'])
-            #self.display_shortcuts_checked()
-            # self.Video_analysis_window.setVisible(True)
             self.Run_all_directly.setVisible(True)
-            self.video_tab.set_not_in_use()
+            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+                self.video_tab.set_not_in_use()
 
 
     def re_instantiate_widgets(self):
         """
-
-        :return:
+        Reinstantiate the videoanalysis window from the parent of the current window.
         """
         self.instantiate = True
         # Since we re-instantiate everything, image analysis will no longer be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_usable()
 
-        # self.parent().po.all['radical'] = self.radical.text()
-        # self.parent().po.all['extension'] = self.extension.text()
-        # self.parent().po.sample_number = int(self.arena_number.value())
-        # self.parent().po.all['first_folder_sample_number'] = self.parent().po.sample_number
-        # self.parent().po.all['sample_number_per_folder'] = [self.parent().po.sample_number]
-
-
-        # Mettre ça en thread ? PB : conflict entre all et vars
-        # if os.path.isfile('Data to run Cellects quickly.pkl'):
-        #     try:
-        #         with open('Data to run Cellects quickly.pkl', 'rb') as fileopen:
-        #             data_to_run_cellects_quickly = pickle.load(fileopen)
-        #         if 'vars' in data_to_run_cellects_quickly:
-        #             self.vars = data_to_run_cellects_quickly['vars']
-        #     except EOFError:
-        #         print("Pickle error: could not load vars from the data folder")
-        #         self.instantiate = True
-        # else:
-        #     self.instantiate = True
-        # if self.instantiate:
-        #     self.parent().po.all['radical'] = self.radical.text()
-        #     self.parent().po.all['extension'] = self.extension.text()
-        #     self.parent().po.sample_number = int(self.arena_number.value())
-        #     self.parent().po.all['first_folder_sample_number'] = self.parent().po.sample_number
-        #     self.parent().po.all['sample_number_per_folder'] = [self.parent().po.sample_number]
-
     def closeEvent(self, event):
+        """
+        Handle the close event for a QWidget.
+        """
         event.accept
-
-
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = FirstWindow(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())
