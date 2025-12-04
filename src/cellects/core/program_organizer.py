@@ -661,7 +661,11 @@ class ProgramOrganizer:
         self.current_combination_id = np.min((self.current_combination_id, len(self.first_image.im_combinations) - 1))
         self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
         self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
-        self.first_image.im_combinations[self.current_combination_id]['converted_image'] = np.round(self.first_image.image).astype(np.uint8)
+        if self.first_image.greyscale is not None:
+            greyscale = self.first_image.greyscale
+        else:
+            greyscale = self.first_image.image
+        self.first_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
         self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
 
     def fast_last_image_segmentation(self, biomask: NDArray[np.uint8] = None, backmask: NDArray[np.uint8] = None):
@@ -710,7 +714,11 @@ class ProgramOrganizer:
         self.current_combination_id = np.min((self.current_combination_id, len(self.last_image.im_combinations) - 1))
         self.last_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_motion']
         self.last_image.im_combinations[self.current_combination_id]['binary_image'] = self.last_image.binary_image
-        self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(self.last_image.image)
+        if self.last_image.greyscale is not None:
+            greyscale = self.last_image.greyscale
+        else:
+            greyscale = self.last_image.image
+        self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
 
     def cropping(self, is_first_image: bool):
         """
@@ -1255,7 +1263,7 @@ class ProgramOrganizer:
             self.last_image.binary_image[self.all['back_mask']] = 0
         for i, arena in enumerate(self.vars['analyzed_individuals']):
             binary = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
-            efficiency_test = self.last_image.all_c_spaces['bgr'] # [self.top[i]:self.bot[i], self.left[i]:self.right[i]]
+            efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i], :]
             if not self.vars['several_blob_per_arena']:
                 binary = keep_one_connected_component(binary)
                 one_row_per_frame = compute_one_descriptor_per_frame(binary[None, :, :],

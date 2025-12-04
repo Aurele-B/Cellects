@@ -729,4 +729,19 @@ def get_newly_explored_area(binary_vid: NDArray[np.uint8]) -> NDArray:
     array([0])
     """
     return ((binary_vid - binary_vid[0, ...]) == 1).reshape(binary_vid.shape[0], - 1).sum(1)
-binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]
+
+def get_contour_width_from_im_shape(im_shape: Tuple) -> int:
+    """
+    Calculate the contour width based on image shape.
+
+    Parameters
+    ----------
+    im_shape : tuple of int, two items
+        The dimensions of the image.
+
+    Returns
+    -------
+    int
+        The calculated contour width.
+    """
+    return np.max((np.round(np.log10(np.max(im_shape)) - 2).astype(int), 1))

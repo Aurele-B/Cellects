@@ -827,16 +827,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.hold_click_flag = True
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
         else:
-            if not self.asking_first_im_parameters_flag and "PCA" in self.csc_dict:
-                if self.step < 2:
-                    popup_img = self.parent().po.first_image.binary_image
-                else:
-                    popup_img = self.parent().po.last_image.binary_image
-                popup_img[np.nonzero(self.back_mask)] = 0
-                popup_img[np.nonzero(self.bio_mask)] = 1
-                self.popup_img = FullScreenImage(popup_img * 255, self.parent().screen_width, self.parent().screen_height)
-            else:
-                self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
+            self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
 
     def get_mouse_move_coordinates(self, event):
@@ -1103,15 +1094,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
         if not self.csc_dict_is_empty:
             self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
-        if self.parent().po.visualize:
-            if self.csc_dict_is_empty:
-                self.message.setText('Select non null value(s) to combine colors')
-                self.message.setStyleSheet("color: rgb(230, 145, 18)")
-            else:
-                self.thread["LastImageAnalysis"].start()
-                self.thread["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
-                self.thread["LastImageAnalysis"].message_when_thread_finished.connect(
-                    self.when_image_analysis_finishes)
+        if self.parent().po.visualize and self.csc_dict_is_empty:
+            self.message.setText('Select non null value(s) to combine colors')
+            self.message.setStyleSheet("color: rgb(230, 145, 18)")
         else:
             self.thread["LastImageAnalysis"].start()
             self.thread["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
@@ -1128,15 +1113,16 @@ class ImageAnalysisWindow(MainTabsType):
         - The `is_first_image_flag` determines which set of image combinations to use.
         """
 
+        if self.is_first_image_flag:
+            im_combinations = self.parent().po.first_image.im_combinations
+        else:
+            im_combinations = self.parent().po.last_image.im_combinations
+        self.init_drawn_image(im_combinations)
         if self.parent().po.visualize:
             if self.parent().po.current_combination_id != self.select_option.currentIndex():
                 self.select_option.setCurrentIndex(self.parent().po.current_combination_id)
         else:
             self.parent().po.current_combination_id = 0
-            if self.is_first_image_flag:
-                im_combinations = self.parent().po.first_image.im_combinations
-            else:
-                im_combinations = self.parent().po.last_image.im_combinations
             if len(im_combinations) > 0:
                 self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
                 if self.is_first_image_flag:
@@ -1235,6 +1221,26 @@ class ImageAnalysisWindow(MainTabsType):
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
 
+    def init_drawn_image(self, im_combinations: list=None):
+        """
+        Initialize the drawn image from a list of image combinations.
+
+        Parameters
+        ----------
+        im_combinations : list or None, optional
+            List of image combinations to initialize the drawn image from.
+            Each combination should be a dictionary containing 'csc' and
+            'converted_image'. If None, the current state is maintained.
+        """
+        if im_combinations is not None and len(im_combinations) > 0:
+            if self.parent().po.current_combination_id + 1 > len(im_combinations):
+                self.parent().po.current_combination_id = 0
+            self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
+            self.parent().po.current_image = np.stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
+                                                    im_combinations[self.parent().po.current_combination_id]['converted_image'],
+                                                    im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
+            self.drawn_image = deepcopy(self.parent().po.current_image)
+
     def option_changed(self):
         """
         Update the current image and related display information based on the selected image segmentation option.
@@ -1246,20 +1252,13 @@ class ImageAnalysisWindow(MainTabsType):
         image display.
         """
         # Update the current image
+        self.parent().po.current_combination_id = self.select_option.currentIndex()
         if self.is_first_image_flag:
             im_combinations = self.parent().po.first_image.im_combinations
         else:
             im_combinations = self.parent().po.last_image.im_combinations
-        self.parent().po.current_combination_id = self.select_option.currentIndex()
+        self.init_drawn_image(im_combinations)
         if im_combinations is not None and len(im_combinations) > 0:
-            if self.parent().po.current_combination_id + 1 > len(im_combinations):
-                self.parent().po.current_combination_id = 0
-            self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
-            self.parent().po.current_image = np.stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
-                                                    im_combinations[self.parent().po.current_combination_id]['converted_image'],
-                                                    im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
-            self.drawn_image = deepcopy(self.parent().po.current_image)
-
             # Update image display
             if self.thread["UpdateImage"].isRunning():
                 self.thread["UpdateImage"].wait()
@@ -1270,8 +1269,7 @@ class ImageAnalysisWindow(MainTabsType):
             # Update the detected shape number
             if self.is_first_image_flag:
                 self.parent().po.vars['convert_for_origin'] = im_combinations[self.parent().po.current_combination_id]["csc"]
-                detected_shape_nb = \
-                self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number']
+                detected_shape_nb = im_combinations[self.parent().po.current_combination_id]['shape_number']
                 if self.parent().po.vars['several_blob_per_arena']:
                     if detected_shape_nb == self.parent().po.sample_number:
                         self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")
@@ -1284,7 +1282,7 @@ class ImageAnalysisWindow(MainTabsType):
                         self.decision_label.setText(
                             f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
                         self.yes.setVisible(False)
-                if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
+                if im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
