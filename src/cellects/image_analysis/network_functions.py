@@ -47,7 +47,7 @@ neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
              (1, -1), (1, 0), (1, 1)]
 neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
-def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int,
+def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int=1,
                             starting_time: int=0, visu: NDArray=None, origin: NDArray[np.uint8]=None,
                             smooth_segmentation_over_time: bool = True, detect_pseudopods: bool = True,
                             save_coord_network: bool = True, show_seg: bool = False):
@@ -272,7 +272,7 @@ class  NetworkDetection:
                 'binary': binary_otsu,
                 'quality': quality_otsu,
                 'filtered': frangi_result,
-                'filter': f'frangi',
+                'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
@@ -285,7 +285,7 @@ class  NetworkDetection:
                     'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filtered': frangi_result,
-                    'filter': f'frangi',
+                    'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
@@ -344,7 +344,7 @@ class  NetworkDetection:
                 'binary': binary_otsu,
                 'quality': quality_otsu,
                 'filtered': sato_result,
-                'filter': f'sato',
+                'filter': f'Sato',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
@@ -359,7 +359,7 @@ class  NetworkDetection:
                     'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filtered': sato_result,
-                    'filter': f'sato',
+                    'filter': f'Sato',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
@@ -427,7 +427,7 @@ class  NetworkDetection:
         performs segmentation using either rolling window or Otsu's thresholding.
         The final network detection result is stored in `self.incomplete_network`.
         """
-        if self.best_result['filter'] == 'frangi':
+        if self.best_result['filter'] == 'Frangi':
             filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'], beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
         else:
             filtered_result = sato(self.greyscale_image, sigmas=self.best_result['sigmas'], black_ridges=self.black_ridges, mode='reflect')
@@ -454,7 +454,7 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
+    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50, keep_one_connected_component: bool=True):
         """
         Detect and extract pseudopods from the image based on given parameters.
 
@@ -528,11 +528,14 @@ class  NetworkDetection:
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
         complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
-        complete_network = keep_one_connected_component(complete_network)
-        without_pseudopods = complete_network.copy()
-        without_pseudopods[true_pseudopods] = 0
-        only_connected_network = keep_one_connected_component(without_pseudopods)
-        self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
+        if keep_one_connected_component:
+            complete_network = keep_one_connected_component(complete_network)
+            without_pseudopods = complete_network.copy()
+            without_pseudopods[true_pseudopods] = 0
+            only_connected_network = keep_one_connected_component(without_pseudopods)
+            self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
+        else:
+            self.pseudopods = true_pseudopods.astype(np.uint8)
 
     def merge_network_with_pseudopods(self):
         """

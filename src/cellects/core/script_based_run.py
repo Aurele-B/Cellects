@@ -40,7 +40,7 @@ def run_image_analysis(po):
         #                                    kmeans_clust_nb=2,
         #                                    biomask=None, backmask=None,
         #                                    color_space_dictionaries=None,
-        #                                    carefully=True)
+        #                                    po.basic=True)
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         po.delineate_each_arena()

@@ -323,11 +323,12 @@ class ImageAnalysisWindow(MainTabsType):
 
         # 5) Add the generate option row
         self.generate_analysis_options = FixedText("Generate analysis options: ", night_mode=self.parent().po.all['night_mode'])
-        self.quickly = PButton("Quickly", night_mode=self.parent().po.all['night_mode'])
-        self.carefully = PButton("Carefully", night_mode=self.parent().po.all['night_mode'])
-        self.quickly.clicked.connect(self.quickly_is_clicked)
-        self.carefully.clicked.connect(self.carefully_is_clicked)
-        self.visualize = PButton('Visualize', night_mode=self.parent().po.all['night_mode'])
+        self.basic = PButton("Basic", night_mode=self.parent().po.all['night_mode'])
+        self.basic.clicked.connect(self.basic_is_clicked)
+        self.network_shaped = PButton("Network-shaped", night_mode=self.parent().po.all['night_mode'])
+        self.network_shaped.clicked.connect(self.network_shaped_is_clicked)
+        self.network_shaped.setVisible(False)
+        self.visualize = PButton('Apply current config', night_mode=self.parent().po.all['night_mode'])
         self.visualize.clicked.connect(self.visualize_is_clicked)
         if self.parent().po.vars['already_greyscale']:
             self.visualize_label = FixedText("Directly: ", night_mode=self.parent().po.all['night_mode'])
@@ -335,8 +336,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.visualize_label = FixedText("Or directly: ", night_mode=self.parent().po.all['night_mode'])
 
         self.sup_param_row1_layout.addWidget(self.generate_analysis_options)
-        self.sup_param_row1_layout.addWidget(self.quickly)
-        self.sup_param_row1_layout.addWidget(self.carefully)
+        self.sup_param_row1_layout.addWidget(self.basic)
+        self.sup_param_row1_layout.addWidget(self.network_shaped)
         self.sup_param_row1_layout.addItem(self.horizontal_space)
         self.sup_param_row1_layout.addItem(self.horizontal_space)
         self.sup_param_row1_layout.addWidget(self.visualize_label)
@@ -661,8 +662,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.current_image = np.stack((image, image, image), axis=2)
 
             self.generate_analysis_options.setVisible(False)
-            self.quickly.setVisible(False)
-            self.carefully.setVisible(False)
+            self.network_shaped.setVisible(False)
+            self.basic.setVisible(False)
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
             self.visualize.setVisible(True)
@@ -932,10 +933,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.available_arena_names = self.available_arena_names[1:]
         self.saved_coord = []
         self.back1_bio2 = 0
-        try:
-            self.thread["UpdateImage"].message_when_thread_finished.disconnect()
-        except RuntimeError:
-            pass
+
+        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
 
     def new_pbutton_on_the_left(self, pbutton_name: str):
         """
@@ -1004,26 +1003,25 @@ class ImageAnalysisWindow(MainTabsType):
                 self.available_arena_names = np.sort(np.concatenate(([line_name], self.available_arena_names)))
             self.thread["UpdateImage"].start()
 
-    def quickly_is_clicked(self):
+    def network_shaped_is_clicked(self):
         """
-        Initiates the quick image analysis and displays a loading message.
+        Sets the GUI state for analyzing a network-shaped image when clicked.
 
-        This function quickly launches the image analysis process, setting up necessary states and messages.
-        It ensures that if this is the first image, a specific analysis path is followed; otherwise,
-        it processes the last image.
+        This method triggers the analysis process for a network-shaped image. It ensures that image analysis is not
+        already running, updates GUI elements accordingly, and starts the appropriate analysis function based on a flag.
         """
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
-            self.parent().po.carefully = False
-            self.parent().po.visualize = True
-            self.row1[0].setCurrentIndex(0)
+            self.parent().po.visualize = False
+            self.parent().po.basic = False
+            self.parent().po.network_shaped = True
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
 
-    def carefully_is_clicked(self):
+    def basic_is_clicked(self):
         """
         Toggle image analysis mode and trigger appropriate image analysis process.
 
@@ -1034,8 +1032,9 @@ class ImageAnalysisWindow(MainTabsType):
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
-            self.parent().po.carefully = True
             self.parent().po.visualize = False
+            self.parent().po.basic = True
+            self.parent().po.network_shaped = False
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1052,6 +1051,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
             self.parent().po.visualize = True
+            self.parent().po.basic = False
+            self.parent().po.network_shaped = False
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1076,10 +1077,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.horizontal_size_changed()
             self.spot_shape_changed()
             self.arena_shape_changed()
-        logging.info(self.parent().po.sample_number)
-        logging.info(self.parent().po.vars['several_blob_per_arena'])
-        logging.info(self.parent().po.all['starting_blob_shape'])
-        logging.info(self.parent().po.vars['arena_shape'])
 
         if self.parent().po.visualize:
             self.save_user_defined_csc()
@@ -1089,7 +1086,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
                 self.is_image_analysis_running = False
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
-            self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
+            self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
             self.thread["FirstImageAnalysis"].start()
             self.thread["FirstImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
             self.thread["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
@@ -1102,14 +1099,15 @@ class ImageAnalysisWindow(MainTabsType):
         and manages thread operations for image analysis. The function does not handle any direct processing but
         prepares the environment by setting variables and starting threads.
         """
+        self.save_user_defined_csc()
+        self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+        if not self.csc_dict_is_empty:
+            self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
         if self.parent().po.visualize:
-            self.save_user_defined_csc()
-            self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
                 self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
             else:
-                self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
                 self.thread["LastImageAnalysis"].start()
                 self.thread["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
                 self.thread["LastImageAnalysis"].message_when_thread_finished.connect(
@@ -1141,11 +1139,10 @@ class ImageAnalysisWindow(MainTabsType):
                 im_combinations = self.parent().po.last_image.im_combinations
             if len(im_combinations) > 0:
                 self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
-
                 if self.is_first_image_flag:
-                    self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
+                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
                 else:
-                    self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
+                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
                 option_number = len(im_combinations)
 
                 if option_number > 1:
@@ -1219,8 +1216,8 @@ class ImageAnalysisWindow(MainTabsType):
 
         elif self.step == 2:
             self.generate_analysis_options.setVisible(color_analysis)
-            self.quickly.setVisible(color_analysis)
-            self.carefully.setVisible(color_analysis)
+            self.network_shaped.setVisible(True)
+            self.basic.setVisible(color_analysis)
             self.visualize.setVisible(True)
 
             self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
@@ -1234,10 +1231,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
             self.complete_image_analysis.setVisible(True)
 
-        try:
-            self.thread["UpdateImage"].message_when_thread_finished.disconnect()
-        except RuntimeError or RuntimeWarning:
-            pass
+        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
 
@@ -1257,7 +1251,6 @@ class ImageAnalysisWindow(MainTabsType):
         else:
             im_combinations = self.parent().po.last_image.im_combinations
         self.parent().po.current_combination_id = self.select_option.currentIndex()
-        logging.info(im_combinations is None)
         if im_combinations is not None and len(im_combinations) > 0:
             if self.parent().po.current_combination_id + 1 > len(im_combinations):
                 self.parent().po.current_combination_id = 0
@@ -1295,6 +1288,10 @@ class ImageAnalysisWindow(MainTabsType):
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
+                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
+                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id]["filter_spec"]
+                    self.parent().po.vars['grid_segmentation'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+                    self.update_filter_display()
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
 
     def generate_csc_editing(self):
@@ -1583,6 +1580,14 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.edit_widget.setLayout(self.edit_layout)
 
+    def update_filter_display(self):
+        self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
+        self.filter1_param1.setValue(self.parent().po.vars['filter_spec']['filter1_param'][0])
+        self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
+        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+        self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
+        self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
+
     def filter1_changed(self):
         """
         Update the UI elements and internal state when the `filter1` selection changes.
@@ -1598,20 +1603,24 @@ class ImageAnalysisWindow(MainTabsType):
         current_filter = self.filter1.currentText()
         self.parent().po.vars['filter_spec']['filter1_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
-        self.filter1_param1_label.setVisible(show_param1)
-        self.filter1_param1.setVisible(show_param1)
+        if self.advanced_mode_cb.isChecked():
+            self.filter1_param1_label.setVisible(show_param1)
+            self.filter1_param1.setVisible(show_param1)
         if show_param1:
             self.filter1_param1_label.setText(filter_dict[current_filter]['Param1']['Name'])
             self.filter1_param1.setMinimum(filter_dict[current_filter]['Param1']['Minimum'])
             self.filter1_param1.setMaximum(filter_dict[current_filter]['Param1']['Maximum'])
-            self.filter1_param1.setValue(filter_dict[current_filter]['Param1']['Default'])
+            if self.filter1_param1.value() < filter_dict[current_filter]['Param1']['Minimum'] or self.filter1_param1.value() > filter_dict[current_filter]['Param1']['Maximum']:
+                self.filter1_param1.setValue(filter_dict[current_filter]['Param1']['Default'])
         if 'Param2' in list(filter_dict[current_filter].keys()):
             self.filter1_param2_label.setText(filter_dict[current_filter]['Param2']['Name'])
             self.filter1_param2.setMinimum(filter_dict[current_filter]['Param2']['Minimum'])
             self.filter1_param2.setMaximum(filter_dict[current_filter]['Param2']['Maximum'])
-            self.filter1_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
-            self.filter1_param2_label.setVisible(True)
-            self.filter1_param2.setVisible(True)
+            if self.filter1_param2.value() < filter_dict[current_filter]['Param2']['Minimum'] or self.filter1_param2.value() > filter_dict[current_filter]['Param2']['Maximum']:
+                self.filter1_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
+            if self.advanced_mode_cb.isChecked():
+                self.filter1_param2_label.setVisible(True)
+                self.filter1_param2.setVisible(True)
         else:
             self.filter1_param2_label.setVisible(False)
             self.filter1_param2.setVisible(False)
@@ -1643,20 +1652,24 @@ class ImageAnalysisWindow(MainTabsType):
         current_filter = self.filter2.currentText()
         self.parent().po.vars['filter_spec']['filter2_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
-        self.filter2_param1_label.setVisible(show_param1)
-        self.filter2_param1.setVisible(show_param1)
+        if self.advanced_mode_cb.isChecked():
+            self.filter2_param1_label.setVisible(show_param1)
+            self.filter2_param1.setVisible(show_param1)
         if show_param1:
             self.filter2_param1_label.setText(filter_dict[current_filter]['Param1']['Name'])
             self.filter2_param1.setMinimum(filter_dict[current_filter]['Param1']['Minimum'])
             self.filter2_param1.setMaximum(filter_dict[current_filter]['Param1']['Maximum'])
-            self.filter2_param1.setValue(filter_dict[current_filter]['Param2']['Default'])
+            if self.filter2_param1.value() < filter_dict[current_filter]['Param1']['Minimum'] or self.filter2_param1.value() > filter_dict[current_filter]['Param1']['Maximum']:
+                self.filter2_param1.setValue(filter_dict[current_filter]['Param1']['Default'])
         if 'Param2' in list(filter_dict[current_filter].keys()):
             self.filter2_param2_label.setText(filter_dict[current_filter]['Param2']['Name'])
             self.filter2_param2.setMinimum(filter_dict[current_filter]['Param2']['Minimum'])
             self.filter2_param2.setMaximum(filter_dict[current_filter]['Param2']['Maximum'])
-            self.filter2_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
-            self.filter2_param2_label.setVisible(True)
-            self.filter2_param2.setVisible(True)
+            if self.filter2_param2.value() < filter_dict[current_filter]['Param2']['Minimum'] or self.filter2_param2.value() > filter_dict[current_filter]['Param2']['Maximum']:
+                self.filter2_param2.setValue(filter_dict[current_filter]['Param2']['Default'])
+            if self.advanced_mode_cb.isChecked():
+                self.filter2_param2_label.setVisible(True)
+                self.filter2_param2.setVisible(True)
         else:
             self.filter2_param2_label.setVisible(False)
             self.filter2_param2.setVisible(False)
@@ -2027,8 +2040,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.advanced_mode_cb.setVisible(False)
             self.advanced_mode_label.setVisible(False)
             self.generate_analysis_options.setVisible(False)
-            self.quickly.setVisible(False)
-            self.carefully.setVisible(False)
+            self.network_shaped.setVisible(False)
+            self.basic.setVisible(False)
             self.visualize.setVisible(False)
             self.visualize_label.setVisible(False)
             self.select_option.setVisible(False)
@@ -2079,10 +2092,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
         self.no.setVisible(True)
-        try:
-            self.thread["UpdateImage"].message_when_thread_finished.disconnect()
-        except RuntimeError:
-            pass
+
+        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -2277,7 +2288,7 @@ class ImageAnalysisWindow(MainTabsType):
 
         """
         self.asking_slower_or_manual_delineation_flag = True
-        self.decision_label.setText(f"Click yes to try a slower but more efficient delineation algorithm, no to do it manually")
+        self.decision_label.setText(f"Click 'yes' to try a slower but more efficient delineation algorithm. Click 'no' to do it manually")
         self.message.setText(f"Clicking no will allow you to draw each arena manually")
 
     def slower_delineation(self):
@@ -2319,8 +2330,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.one_blob_per_arena.setVisible(False)
         self.one_blob_per_arena_label.setVisible(False)
         self.generate_analysis_options.setVisible(False)
-        self.quickly.setVisible(False)
-        self.carefully.setVisible(False)
+        self.network_shaped.setVisible(False)
+        self.basic.setVisible(False)
         self.visualize.setVisible(False)
         self.visualize_label.setVisible(False)
         self.select_option.setVisible(False)
@@ -2348,7 +2359,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.start_last_image()
         else:
             self.asking_last_image_flag = True
-            self.decision_label.setText('Click yes to improve the segmentation using the last image')
+            self.decision_label.setText("Click 'yes' to improve the segmentation using the last image")
             self.message.setText('This is useful when the specimen(s) is more visible.')
             self.starting_differs_from_growing_cb.setVisible(True)
             self.starting_differs_from_growing_label.setVisible(True)
