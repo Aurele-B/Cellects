@@ -37,7 +37,7 @@ import pandas as pd
 from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
-from cellects.utils.formulas import bracket_to_uint8_image_contrast
+from cellects.utils.formulas import bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
 from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
                                               create_empty_videos, write_video)
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
@@ -303,26 +303,20 @@ class UpdateImageThread(QtCore.QThread):
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
             self.parent().imageanalysiswindow.drawn_image = deepcopy(self.parent().po.current_image)
-            if self.parent().imageanalysiswindow.drawn_image.size < 1000000:
-                contour_width = 3
-            else:
-                contour_width = 6
+            contour_width = get_contour_width_from_im_shape(self.parent().imageanalysiswindow.drawn_image.shape)
             # 1) Add the segmentation mask to the image
             if self.parent().imageanalysiswindow.is_first_image_flag:
                 im_combinations = self.parent().po.first_image.im_combinations
                 im_mean = self.parent().po.first_image.image.mean()
             else:
                 im_combinations = self.parent().po.last_image.im_combinations
-                im_mean = self.parent().po.last_image.bgr.mean()
+                im_mean = self.parent().po.last_image.image.mean()
             # If there are image combinations, get the current corresponding binary image
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
-                binary_idx = np.nonzero(get_contours(binary_idx))
-                # cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
-                # binary_idx = binary_idx - cv2.eroded_binary
-                # binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
-                # binary_idx = np.nonzero(binary_idx)
+                binary_idx = cv2.dilate(get_contours(binary_idx), kernel=cross_33, iterations=contour_width)
+                binary_idx = np.nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
                     # Color the segmentation mask in magenta
@@ -572,7 +566,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    color_space_dictionaries=None,
                                                                basic=self.parent().po.basic)
 
-        logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60)} minutes {(default_timer() - tic) % 60} secondes")
+        logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60).astype(int)} minutes {np.round((default_timer() - tic) % 60).astype(int)} secondes")
         self.message_when_thread_finished.emit(True)
 
 
@@ -1049,14 +1043,12 @@ class OneArenaThread(QtCore.QThread):
         self.message_from_thread_starting.emit("Video loading, wait...")
 
         self.set_current_folder()
-        print(self.parent().po.vars['convert_for_motion'])
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
             if not self.parent().po.first_exp_ready_to_run:
                 #Need a look for data when Data to run Cellects quickly.pkl and 1 folder selected amon several
                 continue_analysis = self.pre_processing()
         if continue_analysis:
-            print(self.parent().po.vars['convert_for_motion'])
             memory_diff = self.parent().po.update_available_core_nb()
             if self.parent().po.cores == 0:
                 self.message_from_thread_starting.emit(f"Analyzing one arena requires {memory_diff}GB of additional RAM to run")
