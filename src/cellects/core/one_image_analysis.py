@@ -29,7 +29,9 @@ from skimage.measure import perimeter
 from cellects.image_analysis.morphological_operations import cross_33, Ellipse, spot_size_coefficients
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
-from cellects.utils.utilitarian import split_dict
+from cellects.image_analysis.network_functions import NetworkDetection
+from cellects.utils.formulas import bracket_to_uint8_image_contrast
+from cellects.utils.utilitarian import split_dict, translate_dict
 
 
 class OneImageAnalysis:
@@ -340,7 +342,7 @@ class OneImageAnalysis:
 
     def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
                           spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
-                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, carefully: bool=False):
+                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=False):
         """
         Prepare color space lists, dictionaries and matrices.
 
@@ -353,7 +355,7 @@ class OneImageAnalysis:
             biomask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
             backmask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
             color_space_dictionaries: A list of dictionaries containing color space information. Defaults to None.
-            carefully: A boolean indicating whether to process the data carefully. Defaults to False.
+            basic: A boolean indicating whether to process the data basic. Defaults to False.
 
         Note:
             This method processes the input data to find the first image that matches certain criteria, using various color spaces and masks.
@@ -369,7 +371,7 @@ class OneImageAnalysis:
         if self.image.any():
             self._get_all_color_spaces()
             if color_space_dictionaries is None:
-                if carefully:
+                if basic:
                     colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
                 else:
                     colorspace_list = ["bgr"]
@@ -387,13 +389,13 @@ class OneImageAnalysis:
             self.save_combination_thread = SaveCombinationThread(self)
             get_one_channel_result = True
             combine_channels = False
+            logging.info(f"Try detection with each available color space channel, one by one.")
             for csc_dict in color_space_dictionaries:
-                logging.info(f"Try detection with each color space channel, one by one. Currently analyzing {csc_dict}")
                 list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,
                              sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
                 ProcessFirstImage(list_args)
 
-            if sample_number is not None and carefully:
+            if sample_number is not None and basic:
                 # Try to add csc together
                 possibilities = []
                 if self.saved_csc_nb > 6:
@@ -640,10 +642,10 @@ class OneImageAnalysis:
         self.image = self.im_combinations[current_combination_id]["converted_image"]
         self.validated_shapes = self.im_combinations[current_combination_id]["binary_image"]
 
-    def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, out_of_arenas: NDArray=None,
+    def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, arenas_mask: NDArray=None,
                          ref_image: NDArray=None, subtract_background: NDArray=None, kmeans_clust_nb: int=None,
                          biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None,
-                         color_space_dictionaries: dict=None, carefully: bool=False):
+                         color_space_dictionaries: dict=None, basic: bool=False):
         """
         Find the last image color space configurations that meets given criteria.
 
@@ -651,14 +653,14 @@ class OneImageAnalysis:
             concomp_nb (int): A tuple of two integers representing the minimum and maximum number of connected components.
             total_surfarea (int): The total surface area required for the image.
             max_shape_size (int): The maximum shape size allowed in the image.
-            out_of_arenas (NDArray, optional): A numpy array representing areas outside the field of interest.
+            arenas_mask (NDArray, optional): A numpy array representing areas inside the field of interest.
             ref_image (NDArray, optional): A reference image for comparison.
             subtract_background (NDArray, optional): A numpy array representing the background to be subtracted.
             kmeans_clust_nb (int, optional): The number of clusters for k-means clustering.
             biomask (NDArray[np.uint8], optional): A binary mask for biological structures.
             backmask (NDArray[np.uint8], optional): A binary mask for background areas.
             color_space_dictionaries (dict, optional): Dictionaries of color space configurations.
-            carefully (bool, optional): A flag indicating whether to process colorspaces carefully.
+            basic (bool, optional): A flag indicating whether to process colorspaces basic.
 
         """
         logging.info(f"Start automatic detection of the last image")
@@ -669,9 +671,12 @@ class OneImageAnalysis:
         self.saved_csc_nb = 0
 
         if self.image.any():
+            if arenas_mask is None:
+                arenas_mask = np.ones_like(self.binary_image.shape)
+            out_of_arenas = 1 - arenas_mask
             self._get_all_color_spaces()
             if color_space_dictionaries is None:
-                if carefully:
+                if basic:
                     colorspace_list = TList(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
                 else:
                     colorspace_list = TList(("lab", "hsv"))
@@ -709,7 +714,7 @@ class OneImageAnalysis:
             nb -= 1
             surf = self.binary_image.sum()
             outside_pixels = np.sum(self.binary_image * out_of_arenas)
-            inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+            inside_pixels = np.sum(self.binary_image * arenas_mask)
             in_common = np.sum(ref_image * self.binary_image)
             self.converted_images_list.append(self.image)
             self.saved_images_list.append(self.binary_image)
@@ -740,7 +745,7 @@ class OneImageAnalysis:
                 if surf < total_surfarea:
                     nb, shapes = cv2.connectedComponents(self.binary_image)
                     outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                    inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+                    inside_pixels = np.sum(self.binary_image * arenas_mask)
                     if inside_pixels < outside_pixels:
                         if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
                             in_common = np.sum(ref_image * self.binary_image)
@@ -783,7 +788,7 @@ class OneImageAnalysis:
                 nb, shapes = cv2.connectedComponents(self.binary_image)
                 nb -= 1
                 outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+                inside_pixels = np.sum(self.binary_image * arenas_mask)
                 in_common = np.sum(ref_image * self.binary_image)
                 self.converted_images_list.append(self.image)
                 self.saved_images_list.append(self.binary_image)
@@ -823,7 +828,7 @@ class OneImageAnalysis:
                     if surf < total_surfarea:
                         nb, shapes = cv2.connectedComponents(self.binary_image)
                         outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                        inside_pixels = np.sum(self.binary_image * (1 - out_of_arenas))
+                        inside_pixels = np.sum(self.binary_image * arenas_mask)
                         if outside_pixels < inside_pixels:
                             if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
                                 in_common = np.sum(ref_image * self.binary_image)
@@ -895,6 +900,59 @@ class OneImageAnalysis:
             self.saved_images_list = None
             self.converted_images_list = None
             self.combination_features = None
+
+    def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, biomask=None, backmask=None):
+        """
+        Network Detection Function
+
+        Perform network detection and pseudopod analysis on an image.
+
+        Parameters
+        ----------
+        arenas_mask : NDArray, optional
+            The mask indicating the arena regions in the image.
+        pseudopod_min_size : int, optional
+            The minimum size for pseudopods to be detected.
+        csc_dict : dict, optional
+            A dictionary containing color space conversion parameters. If None,
+            defaults to {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+        biomask : NDArray, optional
+            The mask for biological objects in the image.
+        backmask : NDArray, optional
+            The background mask.
+
+        Notes
+        -----
+        This function modifies the object's state by setting `self.im_combinations`
+        with the results of network detection and pseudopod analysis.
+        """
+        logging.info(f"Start automatic detection of network(s) in the last image")
+        if len(self.bgr.shape) == 3:
+            if csc_dict is None:
+                csc_dict = {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+            self._get_all_color_spaces()
+            # csc_dict = translate_dict(csc_dict)
+            # self.image = combine_color_spaces(csc_dict, self.all_c_spaces)
+            first_dict, second_dict, c_spaces = split_dict(csc_dict)
+            self.image, _, _, first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, all_c_spaces=self.all_c_spaces)
+            # if first_pc_vector is not None:
+            #     csc_dict = {"bgr": first_pc_vector, "logical": 'None'}
+        greyscale = self.image
+        NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
+        NetDet.get_best_network_detection_method()
+        lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask== 0].mean()
+        NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, keep_one_connected_component=False)
+        NetDet.merge_network_with_pseudopods()
+        cc_efficiency_order = np.argsort(NetDet.quality_metrics)
+        self.im_combinations = []
+        for _i in cc_efficiency_order:
+            res_i = NetDet.all_results[_i]
+            self.im_combinations.append({})
+            self.im_combinations[len(self.im_combinations) - 1]["csc"] = csc_dict
+            self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = bracket_to_uint8_image_contrast(res_i['filtered'])
+            self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = res_i['binary']
+            self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= {'filter1_type': res_i['filter'], 'filter1_param': [np.min(res_i['sigmas']), np.max(res_i['sigmas'])], 'filter2_type': "", 'filter2_param': [1., 1.]}
+            self.im_combinations[len(self.im_combinations) - 1]['rolling_window']= res_i['rolling_window']
 
     def get_crop_coordinates(self):
         """

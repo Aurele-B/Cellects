@@ -119,6 +119,7 @@ class ProgramOrganizer:
         self.one_row_per_arena = None
         self.one_row_per_frame = None
         self.not_analyzed_individuals = None
+        self.visualize: bool = True
 
     def update_variable_dict(self):
         """
@@ -199,7 +200,6 @@ class ProgramOrganizer:
                 self.vars = self.all['vars']
                 self.update_variable_dict()
                 logging.info("Success to load the parameters dictionaries from the Cellects folder")
-                logging.info(os.getcwd())
             except Exception as exc:
                 logging.error(f"Initialize default parameters because error: {exc}")
                 default_dicts = DefaultDicts()
@@ -570,7 +570,6 @@ class ProgramOrganizer:
                 if self.reduce_image_dim:
                     self.last_im = self.last_im[:, :, 0]
         self.last_image = OneImageAnalysis(self.last_im)
-
 
     def extract_exif(self):
         """
@@ -1242,6 +1241,9 @@ class ProgramOrganizer:
                                                          self.bot[rep], self.left[rep]:self.right[rep]])
 
     def complete_image_analysis(self):
+        if not self.visualize and len(self.last_image.im_combinations) > 0:
+            self.last_image.binary_image = self.last_image.im_combinations[self.current_combination_id]['binary_image']
+            self.last_image.image = self.last_image.im_combinations[self.current_combination_id]['converted_image']
         self.instantiate_tables()
         if len(self.vars['exif']) > 1:
             self.vars['exif'] = self.vars['exif'][0]
@@ -1266,11 +1268,6 @@ class ProgramOrganizer:
                                                                      self.vars['save_coord_specimen'])
                 coord_network = None
                 coord_pseudopods = None
-                if self.vars['save_coord_network']:
-                    coord_network, coord_pseudopods = detect_network_dynamics(self.last_image.image[None, :, :],
-                                                                              binary[None, :, :], arena, 0,
-                                                                              None, None, False, True,
-                                                                              self.vars['save_coord_network'], False)
                 if self.vars['save_graph']:
                     if coord_network is None:
                         coord_network = np.array(np.nonzero(binary))

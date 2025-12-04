@@ -137,11 +137,13 @@ def translate_dict(old_dict: dict) -> Dict:
     numba_dict = Dict()
     for k, v in old_dict.items():
         if not isinstance(v, str):
+            if k[-1] == '2':
+                k = k[:-1]
             numba_dict[k] = v
     return numba_dict
 
 
-def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict]:
+def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict, list]:
     """
 
     Split a dictionary into two dictionaries based on specific criteria and return their keys.

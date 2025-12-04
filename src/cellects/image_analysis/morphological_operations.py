@@ -1574,6 +1574,8 @@ def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
      [0 0 0 0 0 0 0 0 0 0]
      [0 0 0 0 0 0 0 0 0 0]]
     """
+    if not isinstance(binary_image.dtype, np.uint8):
+        binary_image = binary_image.astype(np.uint8)
     if np.all(binary_image):
         contours = 1 - image_borders(binary_image.shape)
     elif np.any(binary_image):

@@ -82,7 +82,7 @@ class ProcessFirstImage:
                     self.process_binary_image()
                     self.parent.save_combination_features(self)
                     # except RuntimeWarning:
-                    #     logging.info("Make sure that scaling and spot size are correct")
+                    #     Make sure that scaling and spot size are correct
         if combine_channels:
             i = l[3]
             possibilities = l[11]
@@ -118,7 +118,6 @@ class ProcessFirstImage:
                         self.csc_dict = csc_dict.copy()
                         self.unaltered_concomp_nb = combination_features[i, 3]
                         self.parent.save_combination_features(self)
-                        logging.info(str(saved_color_space_list[i]) + "-->" + str(self.csc_dict ))
 
     def kmeans(self, cluster_number: int, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, bio_label=None):
         """

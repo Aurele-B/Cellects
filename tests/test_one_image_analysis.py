@@ -141,11 +141,10 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         oia.find_first_im_csc()
         self.assertEqual(oia.saved_csc_nb, 0)
 
-    def test_find_first_im_csc_with_sample_number_carefully(self):
+    def test_find_first_im_csc_with_sample_number_basic(self):
         """test find_first_im_csc with sample number"""
         sample_number = 6
-        carefully = True
-        self.oia.find_first_im_csc(sample_number=sample_number, carefully=carefully)
+        self.oia.find_first_im_csc(sample_number=sample_number, basic=True)
         self.assertGreater(self.oia.saved_csc_nb, 0)
         self.oia.update_current_images(0)
         self.assertIsInstance(self.oia.validated_shapes, np.ndarray)
@@ -189,7 +188,7 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         biomask = None
         backmask = None
         color_space_dictionaries = None
-        carefully = False
+        basic = False
         self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 1)
 
@@ -203,13 +202,13 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas=zeros_image, ref_image=zeros_image)
         self.assertEqual(oia.saved_csc_nb, 0)
 
-    def test_find_last_im_csc_carefully(self):
-        """test find_last_im_csc carefully"""
+    def test_find_last_im_csc_basic(self):
+        """test find_last_im_csc basic"""
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        carefully = True
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, carefully=carefully)
+        basic = True
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, basic=basic)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 1)
 
     def test_find_last_im_csc_with_backmask(self):
@@ -239,8 +238,8 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
         backmask[:, 0] = 1
         biomask = several_arenas_bin_img
-        carefully = True
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, biomask=biomask, backmask=backmask, carefully=carefully)
+        basic = True
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, biomask=biomask, backmask=backmask, basic=basic)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
     def test_find_last_im_csc_with_kmeans(self):
