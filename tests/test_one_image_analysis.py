@@ -181,7 +181,7 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        out_of_arenas = None
+        arenas_mask = None
         ref_image = None
         subtract_background = None
         kmeans_clust_nb = None
@@ -199,7 +199,7 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         max_shape_size = 10
         zeros_image = np.zeros((3, 3, 3), dtype=np.uint8)
         oia = OneImageAnalysis(zeros_image)
-        oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas=zeros_image, ref_image=zeros_image)
+        oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, arenas_mask=zeros_image + 1, ref_image=zeros_image)
         self.assertEqual(oia.saved_csc_nb, 0)
 
     def test_find_last_im_csc_basic(self):
