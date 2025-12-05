@@ -672,7 +672,7 @@ class OneImageAnalysis:
 
         if self.image.any():
             if arenas_mask is None:
-                arenas_mask = np.ones_like(self.binary_image.shape)
+                arenas_mask = np.ones_like(self.binary_image)
             out_of_arenas = 1 - arenas_mask
             self._get_all_color_spaces()
             if color_space_dictionaries is None:
@@ -696,11 +696,7 @@ class OneImageAnalysis:
                 ref_image = cv2.dilate(ref_image, cross_33)
             else:
                 ref_image = np.ones(self.bgr.shape[:2], dtype=np.uint8)
-            if out_of_arenas is not None:
-                out_of_arenas_threshold = 0.01 * out_of_arenas.sum()
-            else:
-                out_of_arenas = np.zeros(self.bgr.shape[:2], dtype=np.uint8)
-                out_of_arenas_threshold = 1
+            out_of_arenas_threshold = 0.01 * out_of_arenas.sum()
             self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 10), dtype=np.uint32)
             cc_nb_idx, area_idx, out_of_arenas_idx, in_arena_idx, surf_in_common_idx, biosum_idx, backsum_idx = 3, 4, 5, 6, 7, 8, 9
             self.save_combination_thread = SaveCombinationThread(self)
