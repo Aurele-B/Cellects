@@ -22,7 +22,6 @@ from numpy.typing import NDArray
 from psutil import virtual_memory
 from pathlib import Path
 import natsort
-
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.load_display_save import extract_time
 from cellects.image_analysis.network_functions import detect_network_dynamics, extract_graph_dynamics

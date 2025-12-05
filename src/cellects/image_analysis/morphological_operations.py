@@ -2096,3 +2096,51 @@ def create_mask(dims: Tuple, minmax: Tuple, shape: str):
     else:
         mask[minmax[0]:minmax[1], minmax[2]:minmax[3]] = 1
     return mask
+
+def color_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, color: Tuple) -> NDArray:
+    """
+    Apply a color mask to an image based on specified dimensions, min/max coordinates,
+    shape, and color.
+
+    Parameters
+    ----------
+    img : NDArray
+        The input image to be modified.
+    dims : Tuple[int, int]
+        Dimensions of the image (height, width).
+    minmax : Tuple[int, int, int, int]
+        Minimum and maximum coordinates for the mask (y_min, y_max, x_min, x_max).
+    shape : str
+        Shape of the mask to apply ('circle' or other shapes).
+    color : Tuple[int, int, int]
+        RGB color values to apply within the mask.
+
+    Returns
+    -------
+    NDArray
+        The modified image with the color mask applied.
+
+    Examples
+    --------
+    >>> dims=(5, 6, 3)
+    >>> img=np.zeros(dims)
+    >>> minmax=(0, 5, 1, 5)
+    >>> shape = 'circle'
+    >>> color = (255, 0, 0)
+    >>> result = color_img_with_mask(img, dims, minmax, shape, color)
+    >>> print(result)
+    """
+    if shape == 'circle':
+        ellipse = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2]).astype(np.uint8)
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] *= (1 - ellipse)
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] *= (1 - ellipse)
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] *= (1 - ellipse)
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] += ellipse * color[0]
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] += ellipse * color[1]
+        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] += ellipse * color[2]
+    else:
+        mask = np.zeros(dims[:2], dtype=np.uint8)
+        mask[minmax[0]:minmax[1], minmax[2]:minmax[3]] = 1
+        mask = np.nonzero(mask)
+        img[mask[0], mask[1], :] = np.array(color, dtype=np.uint8)
+    return img

@@ -1668,5 +1668,40 @@ class TestCreateMask(CellectsUnitTest):
         # Note: Actual behavior depends on implementation
         self.assertTrue(np.array_equal(result, expected))
 
+
+class TestColorImgWithMask(CellectsUnitTest):
+    """Test suite for color_img_with_mask function."""
+
+    def test_color_circle_normal_case(self):
+        """Test that circle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (1, 4, 1, 5)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        color = (255, 0, 0)  # Red
+
+        # Execute function
+        result = color_img_with_mask(img, dims, minmax, shape, color)
+
+        # Verify result
+        # The circle should modify the red channel in the specified region
+        self.assertEqual((result == 255).sum(), 6)  # 6 pixels should be red
+
+    def test_color_rectangle_normal_case(self):
+        """Test that rectangle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (1, 4, 1, 5)  # y_min, y_max, x_min, x_max
+        shape = 'rectangle'
+        color = (0, 255, 0)  # Green
+
+        # Execute function
+        result = color_img_with_mask(img, dims, minmax, shape, color)
+
+        self.assertTrue((result == 255).sum() == 12)
+
+
 if __name__ == '__main__':
     unittest.main()
