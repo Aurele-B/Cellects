@@ -26,7 +26,7 @@ from numba.typed import Dict as TDict
 from numpy.typing import NDArray
 from typing import Tuple
 from skimage.measure import perimeter
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse, spot_size_coefficients
+from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, spot_size_coefficients
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
 from cellects.image_analysis.network_functions import NetworkDetection
@@ -253,7 +253,7 @@ class OneImageAnalysis:
             self.check_if_image_border_attest_drift_correction()
         self.convert_and_segment(c_space_dict, grid_segmentation=False, allowed_window=self.drift_mask_coord)
         disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
-        disk = np.uint8(Ellipse((disk_size, disk_size)).create())
+        disk = create_ellipse(disk_size, disk_size).astype(np.uint8)
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
         if self.image2 is not None:
             self.subtract_background2 = cv2.morphologyEx(self.image2, cv2.MORPH_OPEN, disk)

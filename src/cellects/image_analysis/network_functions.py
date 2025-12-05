@@ -26,7 +26,7 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
@@ -512,7 +512,7 @@ class  NetworkDetection:
 
         _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
         bin_im = pseudopod_widths >= pseudopod_min_width
-        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
+        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
         bin_im = high_int_in_periphery * dil_bin_im
         nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
         true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]

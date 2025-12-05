@@ -45,7 +45,7 @@ from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
 from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
-from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
+from cellects.image_analysis.morphological_operations import (find_major_incline, create_ellipse, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
@@ -875,7 +875,7 @@ class MotionAnalysis:
             self.pixel_ring_depth = 3
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
-        self.erodila_disk = Ellipse((self.pixel_ring_depth, self.pixel_ring_depth)).create().astype(np.uint8)
+        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth).astype(np.uint8)
         self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
@@ -942,7 +942,7 @@ class MotionAnalysis:
             self.near_periphery = np.zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
-                elliperiphery = Ellipse((self.dims[1] - periphery_width, self.dims[2] - periphery_width)).create()
+                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width)
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
                     self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
