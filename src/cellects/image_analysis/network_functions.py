@@ -454,50 +454,42 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50, keep_one_connected_component: bool=True):
+    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
-        Detect and extract pseudopods from the image based on given parameters.
+        Detect pseudopods in a binary image.
 
-        This method performs a series of morphological operations and distance
-        transformations to identify pseudopods in the image. It uses binary
-        dilation, connected components analysis, and thresholding to isolate
-        pseudopod structures.
+        Identify and process regions that resemble pseudopods based on width, size,
+        and connectivity criteria. This function is used to detect and label areas
+        that are indicative of pseudopod-like structures within a binary image.
 
         Parameters
         ----------
         lighter_background : bool
-            Flag indicating whether the background is lighter than the foreground.
+            Boolean flag to indicate if the background should be considered lighter.
         pseudopod_min_width : int, optional
-            Minimum width of pseudopods to be detected. Default is 5.
+            Minimum width for pseudopods to be considered valid. Default is 5.
         pseudopod_min_size : int, optional
-            Minimum size of pseudopods to be detected. Default is 50.
+            Minimum size for pseudopods to be considered valid. Default is 50.
+        only_one_connected_component : bool, optional
+            Flag to ensure only one connected component is kept. Default is True.
 
-        Attributes (modified)
-        ----------------------
-        self.pseudopods : ndarray
-            Updated to reflect the detected pseudopod regions.
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function modifies internal attributes of the object, specifically setting `self.pseudopods` to an array indicating pseudopod regions.
 
         Examples
         --------
-        >>> possibly_filled_pixels = np.random.randint(0, 2, dims, dtype=np.uint8)
-        >>> possibly_filled_pixels = keep_one_connected_component(possibly_filled_pixels)
-        >>> origin_to_add = np.zeros(dims, dtype=np.uint8)
-        >>> mid = dims[0] // 2
-        >>> ite = 2
-        >>> while not origin_to_add.any():
-        >>>     ite += 1
-        >>>     origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
-        >>> greyscale_image = possibly_filled_pixels.copy()
-        >>> greyscale_image[greyscale_image > 0] = np.random.randint(200, 255, possibly_filled_pixels.sum())
-        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 50, possibly_filled_pixels.size - possibly_filled_pixels.sum())
-        >>> add_rolling_window = False
-        >>> NetDet = NetworkDetection(greyscale_image, possibly_filled_pixels, add_rolling_window, origin_to_add)
-        >>> NetDet.get_best_network_detection_method()
-        >>> lighter_background = True
-        >>> pseudopod_min_width = 1
-        >>> pseudopod_min_size = 3
-        >>> NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
-        >>> print(NetDet.pseudopods)
+        >>> result = detect_pseudopods(True, 5, 50)
+        >>> print(self.pseudopods)
+        array([[0, 1, ..., 0],
+               [0, 0, ..., 0],
+               ...,
+               [0, 1, ..., 0]], dtype=uint8)
+
         """
 
         closed_im = close_holes(self.possibly_filled_pixels)
@@ -528,7 +520,7 @@ class  NetworkDetection:
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
         complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
-        if keep_one_connected_component:
+        if only_one_connected_component:
             complete_network = keep_one_connected_component(complete_network)
             without_pseudopods = complete_network.copy()
             without_pseudopods[true_pseudopods] = 0
