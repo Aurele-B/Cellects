@@ -353,7 +353,6 @@ class UpdateImageThread(QtCore.QThread):
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
                 # Draw the delineation mask of each arena
                 for contour_i in range(len(self.parent().po.top)):
-                    mask = np.zeros(dims[:2], dtype=np.uint8)
                     min_cy = self.parent().po.top[contour_i]
                     max_cy = self.parent().po.bot[contour_i]
                     min_cx = self.parent().po.left[contour_i]
@@ -368,6 +367,7 @@ class UpdateImageThread(QtCore.QThread):
                                     (138, 95, 18, 255),
                                     # (209, 80, 0, 255),  # font color
                                     2)  # font stroke
+                    mask = np.zeros(dims[:2], dtype=np.uint8)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     if self.parent().po.vars['arena_shape'] == 'circle':
@@ -397,29 +397,19 @@ class UpdateImageThread(QtCore.QThread):
                         image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
                         image[min_y:max_y, min_x:max_x, ...] += ellipse
                     else:
-                        mask = np.zeros(dims[:2], dtype=np.uint8)
-                        mask[min_y:max_y, min_x:max_x] = 1
+                        mask = np.zeros(dims[:2], dtype=np.bool_)
+                        mask[min_y:max_y, min_x:max_x] = True
                         mask = np.nonzero(mask)
                         image[mask[0], mask[1], :] = np.array((0, 0, 0), dtype=np.uint8)
                 else:
                     # Dynamic drawing of Cell or Back
                     if self.parent().imageanalysiswindow.back1_bio2 == 2:
-                        if self.parent().po.all['starting_blob_shape'] == 'circle':
-                            ellipse = create_ellipse(max_y - min_y, max_x - min_x)
-                            ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-                            image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
-                            ellipse[:, :, :] *= np.array((17, 160, 212), dtype=np.uint8)
-                            image[min_y:max_y, min_x:max_x, ...] += ellipse
-                        else:
-                            mask = np.zeros(dims[:2], dtype=np.uint8)
-                            mask[min_y:max_y, min_x:max_x] = 1
-                            mask = np.nonzero(mask)
-                            image[mask[0], mask[1], :] = np.array((17, 160, 212), dtype=np.uint8)
+                        color = (17, 160, 212)
+                        mask_shape = self.parent().po.all['starting_blob_shape']
                     else:
-                        mask = np.zeros(dims[:2], dtype=np.uint8)
-                        mask[min_y:max_y, min_x:max_x] = 1
-                        mask = np.nonzero(mask)
-                        image[mask[0], mask[1], :] = np.array((224, 160, 81), dtype=np.uint8)
+                        color = (224, 160, 81)
+                        mask_shape = "rectange"
+                    image = color_img_with_mask(image, dims, (min_y, max_y, min_x, max_x), mask_shape, color)
 
         self.parent().imageanalysiswindow.display_image.update_image(image)
         self.message_when_thread_finished.emit(True)
