@@ -900,39 +900,45 @@ class AdvancedParameters(WindowType):
         remaining_c_spaces = []
         row_number1 = 0
         row_number2 = 0
-        for i, (k, v) in enumerate(self.parent().po.vars['convert_for_motion'].items()):
-            if k != "logical":
-                if k[-1] != "2":
-                    if row_number1 == 0:
-                        row_to_change = self.row1
-                    elif row_number1 == 1:
-                        row_to_change = self.row2
-                    elif row_number1 == 2:
-                        row_to_change = self.row3
+        if "PCA" in self.parent().po.vars['convert_for_motion'].keys():
+            self.row1[0].setCurrentIndex(0)
+            self.row1[0].setVisible(True)
+            for i in range(1, 4):
+                self.row1[i].setVisible(False)
+        else:
+            for i, (k, v) in enumerate(self.parent().po.vars['convert_for_motion'].items()):
+                if k != "logical":
+                    if k[-1] != "2":
+                        if row_number1 == 0:
+                            row_to_change = self.row1
+                        elif row_number1 == 1:
+                            row_to_change = self.row2
+                        elif row_number1 == 2:
+                            row_to_change = self.row3
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number1 += 1
+                        current_row_number = row_number1
                     else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number1 += 1
-                    current_row_number = row_number1
-                else:
-                    if row_number2 == 0:
-                        row_to_change = self.row21
-                    elif row_number2 == 1:
-                        row_to_change = self.row22
-                    elif row_number2 == 2:
-                        row_to_change = self.row23
-                    else:
-                        remaining_c_spaces.append(k + " " + str(v))
-                    row_number2 += 1
-                    current_row_number = row_number2
-                    k = k[:-1]
-                if current_row_number <= 3:
-                    row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
-                    row_to_change[0].setVisible(True)
-                    for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
-                        row_to_change[i1].setValue(v[i2])
-                        row_to_change[i1].setVisible(True)
-                    if current_row_number < 3:
-                        row_to_change[i1 + 1].setVisible(True)
+                        if row_number2 == 0:
+                            row_to_change = self.row21
+                        elif row_number2 == 1:
+                            row_to_change = self.row22
+                        elif row_number2 == 2:
+                            row_to_change = self.row23
+                        else:
+                            remaining_c_spaces.append(k + " " + str(v))
+                        row_number2 += 1
+                        current_row_number = row_number2
+                        k = k[:-1]
+                    if current_row_number <= 3:
+                        row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
+                        row_to_change[0].setVisible(True)
+                        for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
+                            row_to_change[i1].setValue(v[i2])
+                            row_to_change[i1].setVisible(True)
+                        if current_row_number < 3:
+                            row_to_change[i1 + 1].setVisible(True)
 
         # If not all color space combinations are filled, put None and 0 in boxes
         if row_number1 < 3:
