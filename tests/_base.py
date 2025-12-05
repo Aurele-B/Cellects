@@ -2,7 +2,7 @@
 from __future__ import annotations
 import cv2
 import numpy as np
-from cellects.image_analysis.morphological_operations import rhombus_55, Ellipse, cross_33
+from cellects.image_analysis.morphological_operations import rhombus_55, create_ellipse, cross_33
 
 import os
 from pathlib import Path
@@ -21,8 +21,8 @@ class CellectsUnitTest(unittest.TestCase):
 
 binary_video_test = np.zeros((6, 10, 10), dtype=np.uint8)
 binary_video_test[0, :5, :5] = rhombus_55
-binary_video_test[1, :6, :6] = Ellipse((6, 6)).create()
-binary_video_test[2, :7, :7] = Ellipse((7, 7)).create()
+binary_video_test[1, :6, :6] = create_ellipse(6, 6)
+binary_video_test[2, :7, :7] = create_ellipse(7, 7)
 binary_video_test[3, :, :] = np.array([[0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
                             [0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
                             [0, 1, 1, 1, 1, 1, 1, 1, 0, 0],

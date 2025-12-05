@@ -31,7 +31,7 @@ from cellects.utils.utilitarian import insensitive_glob, vectorized_len
 from cellects.core.cellects_paths import CELLECTS_DIR, ALL_VARS_PKL_FILE
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame, compute_one_descriptor_per_colony
-from cellects.image_analysis.morphological_operations import Ellipse, rank_from_top_to_bottom_from_left_to_right, \
+from cellects.image_analysis.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
@@ -1618,7 +1618,7 @@ class ProgramOrganizer:
         cr = ((self.top[i], self.bot[i]),
               (self.left[i], self.right[i]))
         if self.vars['arena_shape'] == 'circle':
-            ellipse = Ellipse((cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])).create()
+            ellipse = create_ellipse(cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])
             ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
             first_visualization *= ellipse
             self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
