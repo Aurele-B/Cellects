@@ -137,8 +137,6 @@ def translate_dict(old_dict: dict) -> Dict:
     numba_dict = Dict()
     for k, v in old_dict.items():
         if not isinstance(v, str):
-            if k[-1] == '2':
-                k = k[:-1]
             numba_dict[k] = v
     return numba_dict
 
