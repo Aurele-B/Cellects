@@ -1881,8 +1881,7 @@ def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, 
         min_side = np.min(zoomed_binary.shape)
         if min_side >= min_im_side:
             if contours:
-                eroded_zoomed_binary = cv2.erode(zoomed_binary, cross_33)
-                zoomed_binary = zoomed_binary - eroded_zoomed_binary
+                zoomed_binary = get_contours(zoomed_binary)
             if zoom_step == 0:
                 max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2
                 side_lengths = 2 ** np.arange(max_power, int(np.log2(min_mesh_side // 2)), -1)
