@@ -96,3 +96,4 @@ if __name__ == "__main__":
     update_markdown("first-analysis/video-tracking.md", VAW)
     update_markdown("advanced/multiple-folders.md", MF)
     update_markdown("advanced/outputs.md", RO)
+    update_markdown("advanced/parameters.md", AP)

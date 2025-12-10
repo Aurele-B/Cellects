@@ -549,3 +549,68 @@ specimen(s).
 """
 # END_TIP
 
+#################################################
+########     Advanced Parameters Window     ########
+#################################################
+
+AP = {}
+AP["Crop_images"] = {}
+AP["Crop_images"]["label"] = "Automatically crop images"
+# START_TIP
+AP["Crop_images"]["tips"] = \
+f"""Uses the first image detection to crop all images and improve arena and last image detection.
+NB:
+- If the analysis fails or the program crashes while running the image analysis window, unselecting
+this option may help.
+"""
+# END_TIP
+
+AP["Subtract_background"] = {}
+AP["Subtract_background"]["label"] = "Subtract background"
+# START_TIP
+AP["Subtract_background"]["tips"] = \
+f"""Takes the first image and subtracts it from every following images. This an either improve or
+degrade detection depending on the dataset.
+"""
+# END_TIP
+
+AP["Keep_drawings"] = {}
+AP["Keep_drawings"]["label"] = "Keep Cell and Back drawings for all folders"
+# START_TIP
+AP["Keep_drawings"]["tips"] = \
+f"""During the first image analysis, if the user drew cell and back to help detection, this option save
+and use this information for all folders. In summary:
+- **Checked** → keep this information for all folders
+- **Unchecked** → only use it for the current folder
+"""
+# END_TIP
+
+AP["Correct_errors_around_initial"] = {}
+AP["Correct_errors_around_initial"]["label"] = "Correct errors around initial specimen's position"
+# START_TIP
+AP["Correct_errors_around_initial"]["tips"] = \
+f"""Apply an algorithm allowing to correct missing detection around the initial position of the
+specimen.  This option is useful when there are important color variations around that position.
+This occurs, for instance,  when the width or diffusion of a nutritive patch blurs a normally
+transparent medium.  Select this algorithm only if you realized that detection is less efficient
+there. Technically, this algorithm works as follows:
+- It detects potential gaps around the initial position of the specimen.
+- It monitors the growth speed nearby.
+- It fills these gaps in the same way growth occurs in nearby pixels.
+NB:
+- ⚠️ Do not use if the substrate has the same opacity everywhere (i.e. no difference between
+starting and growth regions).
+"""
+# END_TIP
+
+AP["Prevent_fast_growth_near_periphery"] = {}
+AP["Prevent_fast_growth_near_periphery"]["label"] = "Prevent fast growth near periphery"
+# START_TIP
+AP["Prevent_fast_growth_near_periphery"]["tips"] = \
+f"""During video analysis, the borders of the arena may be wrongly detected as part of the specimen(s),
+this option helps to avoid this issue.
+- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery (if
+checked)
+- **Unchecked** → Do not change the detection.
+"""
+# END_TIP
