@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+########################################
+#########     First Window     #########
+########################################
+
 FW = dict()
 FW["Image_list_or_videos"] = {}
 FW["Image_list_or_videos"]["label"] = "Image list or videos"
@@ -96,6 +100,9 @@ list of folders (Fig. 10) if applicable.
 """
 # END_TIP
 
+#######################################
+######### ImageAnalysisWindow #########
+#######################################
 
 IAW = dict()
 IAW["Image_number"] = {}
@@ -247,8 +254,77 @@ IAW["Spot_size"] = {}
 IAW["Spot_size"]["label"] = "Set spot size"
 # START_TIP
 IAW["Spot_size"]["tips"] = \
-f"""Initial horizontal size of the specimen(s) (in mm).   If similar across all specimens, this can also
+f"""Initial horizontal size of the specimen(s) (in mm). If similar across all specimens, this can also
 be used as a scale.
+"""
+# END_TIP
+
+IAW["Video_delimitation"] = {}
+IAW["Video_delimitation"]["label"] = "Video delimitation"
+# START_TIP
+IAW["Video_delimitation"]["tips"] = \
+f"""After validating the initial detection, the result of the automatic video delimitation appears in
+blue in the  center of the window.   If correct, click *Yes*.   If incorrect, click *No*, and
+Cellects will suggest:
+- A slower, more efficient algorithm
+- Or a manual delineation option
+"""
+# END_TIP
+
+IAW["Last_image_question"] = {}
+IAW["Last_image_question"]["label"] = "Last image question"
+# START_TIP
+IAW["Last_image_question"]["tips"] = \
+f"""If the user thinks that parameters used on the first image might not work on later images, they can
+fine
+-tune them using the last image.
+- Clicking *Yes* → allows testing on the last image before moving on.
+- Clicking *No* → goes directly to video tracking.
+"""
+# END_TIP
+
+IAW["Start_differs_from_arena"] = {}
+IAW["Start_differs_from_arena"]["label"] = "Check if the medium at starting position differs from the rest of the arena"
+# START_TIP
+IAW["Start_differs_from_arena"]["tips"] = \
+f"""If the substrate changes between starting and growing areas (e.g. nutritive gel vs transparent
+agar), keep this checked. If the substrate is homogeneous everywhere, uncheck this option. This
+option is only relevant for experiments in which the medium on which the specimen grow does not have
+the same optic properties at the position of the specimen(s) at the first frame and at their
+positions later on.
+"""
+# END_TIP
+
+IAW["Save_image_analysis"] = {}
+IAW["Save_image_analysis"]["label"] = "Save image analysis"
+# START_TIP
+IAW["Save_image_analysis"]["tips"] = \
+f"""Complete the analysis of the current image. Clicking this button is useful to analyze only one
+image.  To analyze video(s), click *Next*.
+NB:
+- When there should be only one specimen per arena, keeps the largest connected component.
+- Compute and save (.csv) all descriptors selected in the Required output window on the current
+image.
+- Save a validation image to assess the efficiency of the segmentation.
+"""
+# END_TIP
+
+
+#################################################
+#########     Video analysis Window     #########
+#################################################
+
+VAW = {}
+VAW["Save_image_analysis"]["label"] = "Save image analysis"
+# START_TIP
+VAW["Save_image_analysis"]["tips"] = \
+f"""Complete the analysis of the current image. Clicking this button is useful to analyze only one
+image.  To analyze video(s), click *Next*.
+NB:
+- When there should be only one specimen per arena, keeps the largest connected component.
+- Compute and save (.csv) all descriptors selected in the Required output window on the current
+image.
+- Save a validation image to assess the efficiency of the segmentation.
 """
 # END_TIP
 
