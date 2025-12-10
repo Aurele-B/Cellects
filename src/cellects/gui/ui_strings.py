@@ -476,3 +476,76 @@ parameters later on.
 """
 # END_TIP
 
+#################################################
+########     Multiple folders Window     ########
+#################################################
+
+MF = {}
+MF["Check_to_select_all_folders"] = {}
+MF["Check_to_select_all_folders"]["label"] = "Check to select all folders"
+# START_TIP
+MF["Check_to_select_all_folders"]["tips"] = \
+f"""Select this option to run the analysis on all folders containing images matching the *Image prefix*
+and *Images extension* patterns. Otherwise, use Ctrl/Cmd to select any folder to analyze.
+NB:
+- This selection only has consequences when one use the *Run All* functionality.
+- To keep and use some masks (e.g. representing the background or the starting pixels of the
+specimen(s)) on every selected folder, use the *Keep Cell and Back drawing for all folders* option
+in *Advanced parameters*.
+"""
+# END_TIP
+
+#################################################
+########     Required Output Window     ########
+#################################################
+
+RO = {}
+RO["coord_specimen"] = {}
+RO["coord_specimen"]["label"] = "Pixels covered by the specimen(s)"
+# START_TIP
+RO["coord_specimen"]["tips"] = \
+f"""Save a .npy file containing the coordinates (t, y, x) of presence of the specimen(s), as detected
+with the current parameters.
+NB:
+- Depending on the number of frames, these files may take a lot a memory.
+"""
+# END_TIP
+
+RO["Graph"] = {}
+RO["Graph"]["label"] = "Graph of the specimen(s) (or network)"
+# START_TIP
+RO["Graph"]["tips"] = \
+f"""Compute the geometrical graph describing the specimen as it is detected with the current parameters.
+Cellects compute the graph of each frame on the skeleton of the largest connected component.  If the
+user also ask Cellects to detect a network inside the specimen(s), the graph will be computed on
+this detected network. The graph is saved as two .csv files:
+- One for the vertices containing their coordinates (t, y, x), their id, whether they are tips,
+whether they are part of the specimen area at the beginning of the video, and whether they are part
+of a small cluster of vertices.
+- One for the edges containing their id, the id of their two vertices, their lengths, their average
+width and intensity.
+NB:
+- Depending on the number of frames, these files may take a lot a memory.
+- Selecting both network and graph detection is only useful for organisms having a distinguishable
+network within their main body (e.g. Physarum polycephalum)
+"""
+# END_TIP
+
+RO["coord_oscillating"] = {}
+RO["coord_oscillating"]["label"] = "Oscillating areas in the specimen(s)"
+# START_TIP
+RO["coord_oscillating"]["tips"] = \
+f"""Compute and save the coordinates (t, y, x) of areas oscillating synchronously in the specimen(s).
+This algorithm save two .npy file: one for thickening areas and one for slimming areas.
+"""
+# END_TIP
+
+RO["coord_network"] = {}
+RO["coord_network"]["label"] = "Network in the specimen(s)"
+# START_TIP
+RO["coord_network"]["tips"] = \
+f"""Detect and save (as .npy file) the coordinate (t, y, x) of a distinguishable network in the
+specimen(s).
+"""
+# END_TIP
+

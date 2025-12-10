@@ -94,3 +94,5 @@ if __name__ == "__main__":
     update_markdown("first-analysis/data-localisation.md", FW)
     update_markdown("first-analysis/image-analysis.md", IAW)
     update_markdown("first-analysis/video-tracking.md", VAW)
+    update_markdown("advanced/multiple-folders.md", MF)
+    update_markdown("advanced/outputs.md", RO)
