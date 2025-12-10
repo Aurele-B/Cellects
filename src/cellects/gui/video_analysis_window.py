@@ -285,7 +285,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.post_processing.clicked.connect(self.post_processing_is_clicked)
         self.second_step_layout.addWidget(self.post_processing)
 
-        self.save_one_result = PButton('Save One Result', night_mode=self.parent().po.all['night_mode'])
+        self.save_one_result = PButton('Save one result', night_mode=self.parent().po.all['night_mode'])
         self.save_one_result.clicked.connect(self.save_one_result_is_clicked)
         self.second_step_layout.addWidget(self.save_one_result)
 

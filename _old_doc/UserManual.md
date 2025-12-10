@@ -104,7 +104,7 @@ For instance, setting “exp_” as image prefix and “.jpg” as image extensi
 files whose name starts with “exp_”. 
 The rest of the labeling should be a number indicating the order in which the images were taken.
 
-Additional note:
+NB:
 - Image prefix is optional
 - If every .jpg files start with IMG_ but the folder(s) also contains other .jpg files (e.g. named info.jpg), 
 the user can exclude all .jpg files that do not start with IMG_ by typing “IMG_” in the *Image prefix* field. 
@@ -121,7 +121,7 @@ to analyze.
 The *Arena number per folder* tells how many arenas are present in the images. 
 Then it will store and analyze the video for each arena separately.
 
-Additional note:
+NB:
 - If there are several folders to analyze at once, the user can provide a different arena number for each folder
   (see Fig. 10: the several folder window).
 
@@ -161,7 +161,7 @@ Cellects can determine this scale using the width (horizontal size) of the image
 on the first image (when they share the same width, 
 Cellects can use the average pixel width of all specimens to get the scale). 
 
-Additional notes:
+NB:
 - As using the width of the specimens decreases the first image detection efficiency, we recommend choosing the width of the image. However, if the width of the specimens is known with more accuracy than the width of the image, we recommend choosing the width of the specimens.
 - By default, distances and surfaces are in pixels (Cellects store the size of one pixel in a file called software_settings.csv). They can automatically be converted in mm (²) by checking the corresponding checkbox in the advanced parameters window (see Fig. 8).
 
@@ -178,7 +178,7 @@ of the specimens or of the background. Each drawing will also appear (with a num
 If the user clicks on one of these numbered drawings, the corresponding selected area disappears, 
 enabling the user to correct mistakes.
 
-Additional note:
+NB:
 - If the user wishes to analyze several folders, the *Select and draw* option will only work for the first. 
   If each folder requires using this option, the user has to analyze each folder separately.
 
@@ -219,7 +219,7 @@ selected by Cellects to analyze the image. By taking note of the parameters that
 use Cellects more quickly via the *Visualize* button, which directly displays the result produced by the parameters 
 stored by the software and modifiable by the user.
 
-Additional notes:
+NB:
 - Clicking on the *Quickly* or *Carefully* (or *Visualize*) button will make an orange working message appear. 
 Once that message disappears, new option(s) are generated and the image in the center changes accordingly (See Fig. 3).
 - If the user already used Cellects, the advanced mode will be faster. Once that option is checked, 
@@ -330,7 +330,7 @@ without any temporal dynamics.
 - The T and S option is the logical result of the threshold option AND the slope option.
 - The T or S option is the logical result of the threshold option OR the slope option.
 
-Additional note:
+NB:
 - When the Heterogeneous background has been checked in the image analysis window, 
 only the frame option remains available.
 
@@ -412,7 +412,7 @@ and finally click on the *Save one result* button (Fig. 7) to replace the saved 
 ### Automatically crop images
 This parameter uses the first image detection to crop all images and improve arena and last image detection. 
 
-Additional note:
+NB:
 
 If the analysis fails or the program crashes while running the image analysis window, 
 unselecting that option may solve the problem.
@@ -493,7 +493,7 @@ especially if the user opens other applications while Cellects is running.
 ### Lose accuracy to save RAM
 Apply this algorithm when there the computer does not have enough RAM to run the analysis. 
 
-Additional note:
+NB:
 
 - When applied, this algorithm types the video in uint8 (instead of =np.float64) to save RAM but results in a slight loss of precision.
 
@@ -565,7 +565,7 @@ In this window, the user can adjust the number of arenas for each folder.
 Before clicking *Next*, all folders to analyze must be selected (Ctrl/Cmd + Click to make multiple selections). 
 Click the *Next* button to go to the image analysis window (Fig. 2) of the first selected folder.
 
-Additional notes:
+NB:
 
 - If the *Select and draw* option is necessary to analyze the first image of more than one folder, 
 the user must analyze them separately. In that case, click *Previous* and change the path to select only one sub-folder. 

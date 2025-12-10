@@ -41,7 +41,7 @@ Cellects offers five analysis options for video tracking:
 - **T and S option** → logical AND of threshold and slope options.  
 - **T or S option** → logical OR of threshold and slope options.  
 
-Additional note:  
+NB:  
 - When *Heterogeneous background* has been checked in the image analysis window, only the *Frame* option remains available.
 
 ---
