@@ -189,16 +189,16 @@ class AdvancedParameters(WindowType):
         # II/C/ Create widgets
         self.all_specimens_have_same_direction = Checkbox(self.parent().po.all['all_specimens_have_same_direction'])
         # self.all_specimens_have_same_direction.stateChanged.connect(self.all_specimens_have_same_direction_changed)
-        self.all_specimens_have_same_direction_label = FixedText('All specimens have the same direction',
-                                                         tip="This parameter only affects the slow algorithm of automatic arena detection.\nChecking it will improve the chances to correctly detect arenas when\n all cells move in the same direction",
+        self.all_specimens_have_same_direction_label = FixedText(AP["Specimens_have_same_direction"]["label"],
+                                                         tip=AP["Specimens_have_same_direction"]["tips"],
                                                          night_mode=self.parent().po.all['night_mode'])
 
 
         connect_distant_shape = self.parent().po.all['connect_distant_shape_during_segmentation']
         self.connect_distant_shape_during_segmentation = Checkbox(connect_distant_shape)
         self.connect_distant_shape_during_segmentation.stateChanged.connect(self.do_distant_shape_int_changed)
-        self.connect_distant_shape_label = FixedText('Connect distant shapes',
-                                                         tip="Allows a homemade algorithm allowing to\nprogressively (i.e. at the growth rate speed of neighboring pixels)\nconnect distant shapes to original shape(s)\nWarning: this option can drastically increase the duration of the analysis",
+        self.connect_distant_shape_label = FixedText(AP["Connect_distant_shapes"]["label"],
+                                                         tip=AP["Connect_distant_shapes"]["tips"],
                                                          night_mode=self.parent().po.all['night_mode'])
         self.detection_range_factor = Spinbox(min=0, max=1000000,
                                                       val=self.parent().po.vars['detection_range_factor'],
@@ -302,12 +302,13 @@ class AdvancedParameters(WindowType):
                                                     tip="In mm². All appearing cell/colony lesser than this value will be considered as noise",
                                                     night_mode=self.parent().po.all['night_mode'])
         self.do_automatic_size_thresholding = Checkbox(self.parent().po.all['automatic_size_thresholding'])
-        self.do_automatic_size_thresholding_label = FixedText('Automatic size threshold for appearance/motion',
+        self.do_automatic_size_thresholding_label = FixedText(AP["Appearance_size_threshold"]["label"],
+                                                              tip=AP["Appearance_size_threshold"]["tips"],
                                                               night_mode=self.parent().po.all['night_mode'])
         self.do_automatic_size_thresholding.stateChanged.connect(self.do_automatic_size_thresholding_changed)
         self.appearing_selection = Combobox(["largest", "most_central"], night_mode=self.parent().po.all['night_mode'])
-        self.appearing_selection_label = FixedText('Appearance detection method',
-                                                   tip="When specimen(s) are invisible at the beginning of the experiment and appear progressively",
+        self.appearing_selection_label = FixedText(AP["Appearance_detection_method"]["label"],
+                                                   tip=AP["Appearance_detection_method"]["tips"],
                                                    night_mode=self.parent().po.all['night_mode'])
         self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
         self.appearing_selection.setFixedWidth(190)
