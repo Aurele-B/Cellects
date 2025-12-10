@@ -26,6 +26,7 @@ from cellects.core.cellects_threads import (
     GetFirstImThread, GetLastImThread, FirstImageAnalysisThread,
     CropScaleSubtractDelineateThread, UpdateImageThread, CompleteImageAnalysisThread,
     LastImageAnalysisThread, SaveManualDelineationThread, PrepareVideoAnalysisThread)
+from cellects.gui.ui_strings import IAW
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
@@ -117,8 +118,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
 
         ## Title
-        self.image_number_label = FixedText('Image number',
-                                            tip="Change this number if cells are invisible on the first image, never otherwise\nIf they cannot be seen on the first image, increase this number and read until all cells have appeared.",
+        self.image_number_label = FixedText(IAW["Image_number"]["label"],
+                                            tip=IAW["Image_number"]["tips"],
                                             night_mode=self.parent().po.all['night_mode'])
         self.image_number_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'], val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
@@ -132,19 +133,19 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
         self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
-        self.one_blob_per_arena_label = FixedText("One cell/colony per arena", valign="c",
-                                                  tip="Check if there is always only one cell/colony per arena.\nUncheck if each experimental arena can contain several disconnected cells/colonies.",
+        self.one_blob_per_arena_label = FixedText(IAW["several_blob_per_arena"]["label"], valign="c",
+                                                  tip=IAW["several_blob_per_arena"]["tips"],
                                                   night_mode=self.parent().po.all['night_mode'])
 
 
-        self.scale_with_label = FixedText('Scale with:', valign="c",
-                                        tip="What, on the image, should be considered to calculate pixel size in mm",
+        self.scale_with_label = FixedText(IAW["Scale_with"]["label"] + ':', valign="c",
+                                        tip=IAW["Scale_with"]["tips"],
                                         night_mode=self.parent().po.all['night_mode'])
         self.scale_with = Combobox(["Image horizontal size", "Cell(s) horizontal size"], night_mode=self.parent().po.all['night_mode'])
         self.scale_with.setFixedWidth(280)
         self.scale_with.setCurrentIndex(self.parent().po.all['scale_with_image_or_cells'])
-        self.scale_size_label = FixedText('Scale size:', valign="c",
-                                          tip="True size (in mm) of the item(s) used for scaling",
+        self.scale_size_label = FixedText(IAW["Scale_size"]["label"] + ':', valign="c",
+                                          tip=IAW["Scale_size"]["tips"],
                                           night_mode=self.parent().po.all['night_mode'])
         if self.parent().po.all['scale_with_image_or_cells'] == 0:
             self.horizontal_size = Spinbox(min=0, max=100000,
@@ -188,16 +189,18 @@ class ImageAnalysisWindow(MainTabsType):
         # 2)a) the user drawn lines
         self.user_drawn_lines_widget = QtWidgets.QWidget()
         self.user_drawn_lines_layout = QtWidgets.QVBoxLayout()
-        self.user_drawn_lines_label = FixedText("Select and draw:",
-                                                tip='By holding down mouse button on the image',
+        self.user_drawn_lines_label = FixedText(IAW["Select_and_draw"]["label"] + ":",
+                                                tip=IAW["Select_and_draw"]["tips"],
                                                 night_mode=self.parent().po.all['night_mode'])
         self.user_drawn_lines_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.user_drawn_lines_layout.addWidget(self.user_drawn_lines_label)
         self.pbuttons_widget = QtWidgets.QWidget()
         self.pbuttons_layout = QtWidgets.QHBoxLayout()
-        self.cell = PButton("Cell", False, night_mode=self.parent().po.all['night_mode'])
+        self.cell = PButton("Cell", False, tip=IAW["Draw_buttons"]["tips"],
+                            night_mode=self.parent().po.all['night_mode'])
         self.cell.setFixedWidth(150)
-        self.background = PButton("Back", False, night_mode=self.parent().po.all['night_mode'])
+        self.background = PButton("Back", False, tip=IAW["Draw_buttons"]["tips"],
+                                  night_mode=self.parent().po.all['night_mode'])
         self.background.setFixedWidth(150)
         self.cell.clicked.connect(self.cell_is_clicked)
         self.background.clicked.connect(self.background_is_clicked)
@@ -275,14 +278,15 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row2_widget = QtWidgets.QWidget()
         self.sup_param_row2_layout = QtWidgets.QHBoxLayout()
 
-        self.arena_shape_label = FixedText("Arena shape", night_mode=self.parent().po.all['night_mode'])
+        self.arena_shape_label = FixedText(IAW["Arena_shape"]["label"], tip=IAW["Arena_shape"]["tips"],
+                                           night_mode=self.parent().po.all['night_mode'])
         self.arena_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
         self.arena_shape.setFixedWidth(160)
         self.arena_shape.setCurrentText(self.parent().po.vars['arena_shape'])
         self.arena_shape.currentTextChanged.connect(self.arena_shape_changed)
         self.set_spot_shape = Checkbox(self.parent().po.all['set_spot_shape'])
         self.set_spot_shape.stateChanged.connect(self.set_spot_shape_check)
-        self.spot_shape_label = FixedText("Set spot shape", tip="horizontal size in mm", night_mode=self.parent().po.all['night_mode'])
+        self.spot_shape_label = FixedText(IAW["Spot_shape"]["label"], tip=IAW["Spot_shape"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.spot_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
         self.spot_shape.setFixedWidth(160)
         if self.parent().po.all['starting_blob_shape'] is None:
@@ -292,7 +296,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_shape.currentTextChanged.connect(self.spot_shape_changed)
         self.set_spot_size = Checkbox(self.parent().po.all['set_spot_size'])
         self.set_spot_size.stateChanged.connect(self.set_spot_size_check)
-        self.spot_size_label = FixedText("Set spot size", night_mode=self.parent().po.all['night_mode'])
+        self.spot_size_label = FixedText(IAW["Spot_size"]["label"], tip=IAW["Spot_size"]["tips"],
+                                         night_mode=self.parent().po.all['night_mode'])
         self.spot_size = Spinbox(min=0, max=100000, val=self.parent().po.all['starting_blob_hsize_in_mm'], decimals=2,
                                  night_mode=self.parent().po.all['night_mode'])
         self.spot_size.valueChanged.connect(self.spot_size_changed)
@@ -322,7 +327,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_size.setVisible(False)
 
         # 5) Add the generate option row
-        self.generate_analysis_options = FixedText("Generate analysis options: ", night_mode=self.parent().po.all['night_mode'])
+        self.generate_analysis_options = FixedText(IAW["Generate_analysis_options"]["label"] + ": ",
+                                                   tip=IAW["Generate_analysis_options"]["tips"],
+                                                   night_mode=self.parent().po.all['night_mode'])
         self.basic = PButton("Basic", night_mode=self.parent().po.all['night_mode'])
         self.basic.clicked.connect(self.basic_is_clicked)
         self.network_shaped = PButton("Network-shaped", night_mode=self.parent().po.all['night_mode'])
@@ -350,7 +357,8 @@ class ImageAnalysisWindow(MainTabsType):
         # 6) Open the choose best option row layout
         self.options_row_widget = QtWidgets.QWidget()
         self.options_row_layout = QtWidgets.QHBoxLayout()
-        self.select_option_label = FixedText('Select option to read', tip='Select the option allowing the best segmentation between the cell and the background',
+        self.select_option_label = FixedText(IAW["Select_option_to_read"]["label"],
+                                             tip=IAW["Select_option_to_read"]["tips"],
                                              night_mode=self.parent().po.all['night_mode'])
         self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
         if self.parent().po.vars['color_number'] == 2:
@@ -741,12 +749,12 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter1_param2_label.setVisible(has_param2)
 
         # Check whether filter 2 and its potential parameters should be visible
-        self.filter2.setVisible(is_checked and at_least_one_line_drawn)
-        self.filter2_label.setVisible(is_checked and at_least_one_line_drawn)
-        has_param1 = is_checked and at_least_one_line_drawn and 'Param1' in filter_dict[self.filter2.currentText()]
+        self.filter2.setVisible(is_checked and display_logical)
+        self.filter2_label.setVisible(is_checked and display_logical)
+        has_param1 = is_checked and display_logical and 'Param1' in filter_dict[self.filter2.currentText()]
         self.filter2_param1.setVisible(has_param1)
         self.filter2_param1_label.setVisible(has_param1)
-        has_param2 = is_checked and at_least_one_line_drawn and 'Param2' in filter_dict[self.filter2.currentText()]
+        has_param2 = is_checked and display_logical and 'Param2' in filter_dict[self.filter2.currentText()]
         self.filter2_param2.setVisible(has_param2)
         self.filter2_param2_label.setVisible(has_param2)
 
@@ -1316,8 +1324,8 @@ class ImageAnalysisWindow(MainTabsType):
                             "QCheckBox:margin-left {0%}"
                             "QCheckBox:margin-right {0%}")
         self.advanced_mode_cb.stateChanged.connect(self.advanced_mode_check)
-        self.advanced_mode_label = FixedText('Advanced mode', halign='l',
-                                             tip="Display the color space combination corresponding to the selected option",
+        self.advanced_mode_label = FixedText(IAW["Advanced_mode"]["label"], halign='l',
+                                             tip=IAW["Advanced_mode"]["tips"],
                                              night_mode=self.parent().po.all['night_mode'])
         self.advanced_mode_label.setAlignment(QtCore.Qt.AlignTop)
         self.advanced_mode_layout.addWidget(self.advanced_mode_cb)

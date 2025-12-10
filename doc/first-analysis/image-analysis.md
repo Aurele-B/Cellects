@@ -7,80 +7,113 @@
 
 ---
 
-## Image number
-Which image should be analyzed first? In most cases, it should be the first.  
-Changing this number is only useful when cells are invisible on the first image 
-(e.g. in the case of appearing colonies of bacteria).  
-In that case, select an image showing visible cells in order to enable Cellects to find them.
+<!-- START_Image_number -->
+## Image number:
+Selects the image number to analyze. This number should only be changed when specimen(s) are
+invisible on the first image (e.g. in the case of appearing colonies of bacteria), never otherwise.
+When the specimen(s) are invisible, read more advanced images until some material can be detected.
+NB:
+- When the data is stored as images, this image number comes from the alphanumerical sorting of the
+original image labeling.
+
+<!-- END_Image_number -->
 
 ---
 
-## One cell or colony per arena
-This option is automatically selected. If there is only one cell (or connected colony) per arena, leave this as it is.  
-If there already are (or will be) several cells (or colonies) per arena, unselect this option.
+<!-- START_several_blob_per_arena -->
+## One specimen per arena:
+Should be selected if there is only one specimen (e.g. a cell or a connected colony) per arena.   If
+there already are (or will be) several specimen(s) per arena, unselect this option.
+NB:
+- This option is selected by default.
+
+<!-- END_several_blob_per_arena -->
 
 ---
 
-## Scale with
-The *Scale with* option gives a scale to the image.  
-Cellects can determine this scale using the width (horizontal size) of the image or the width of the specimens 
-on the first image (when they share the same width, Cellects can use the average pixel width of all specimens to get the scale).  
+<!-- START_Scale_with -->
+## Scale with:
+Set how the true pixel size (in mm) should be computed. to calculate pixel size  Cellects can
+determine this scale using the width (horizontal size) of the image or the width of the specimens on
+the first image (ideally in cases where they share the same width).
+NB:
+- Cellects' advanced parameters include the possibility to disable this scaling and get all outputs
+in pixels.
+- Using the width of the specimens decreases the first image detection efficiency, we recommend
+choosing the width of the image.
+- However, if the width of the specimens is known with more accuracy than the width of the image,
+choose the width of the specimens.
+- By default, distances and surfaces are in pixels (Cellects stores the size of one pixel in a file
+called `software_settings.csv`).
 
-Additional notes:
-- Using the width of the specimens decreases the first image detection efficiency, we recommend choosing the width of the image.  
-- However, if the width of the specimens is known with more accuracy than the width of the image, choose the width of the specimens.  
-- By default, distances and surfaces are in pixels (Cellects stores the size of one pixel in a file called `software_settings.csv`).  
-  They can automatically be converted in mm² by checking the corresponding checkbox in the advanced parameters window (see Fig. 8).
+<!-- END_Scale_with -->
 
 ---
 
-## Scale size
-The *Scale size* is the length (in mm) of the item(s) used for scaling. 
+<!-- START_Scale_size -->
+## Scale size:
+The *Scale size* is the length (in mm) of the item(s) used for scaling.
+
+<!-- END_Scale_size -->
 
 ---
 
-## Select and draw
-*Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are specimens (Cell) 
-and others are background (Back).  
-
-To use that tool, the user must click once on the *Cell* button (to draw a part of the image containing specimens) or 
-on the *Back* button (to draw a part of the image containing background).  
-The color of the clicked button changes and the user can click and move the cursor on the image to draw the position 
-of the specimens or of the background. Each drawing will also appear (with a number) below the corresponding button.  
-If the user clicks on one of these numbered drawings, the corresponding selected area disappears, 
-enabling the user to correct mistakes.
-
-Additional note:
-- If the user wishes to analyze several folders, the *Select and draw* option will only work for the first.  
+<!-- START_Select_and_draw -->
+## Select and draw:
+*Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are
+specimens *Cell* and others are background *Back*. To use that tool, the user must click once on the
+*Cell* button (to draw a part of the image containing specimens) or  on the *Back* button (to draw a
+part of the image containing background). The color of the clicked button changes and the user can
+click and move the cursor on the image to draw the position  of the specimens or of the background.
+Each drawing will also appear (with a number) below the corresponding button. If the user clicks on
+one of these numbered drawings, the corresponding selected area disappears, enabling the user to
+correct mistakes.
+NB:
+- If the user wishes to analyze several folders, the *Select and draw* option will only work for the
+first.
 - If each folder requires using this option, the user has to analyze each folder separately.
 
----
-
-## Advanced mode
-The *Advanced mode* allows Cellects to use a previously working set of parameters.  
-
-Once generated, selecting these options with *Advanced mode* activated allow to:
-- See the color space combination corresponding to the displayed image.  
-- Try a new color space combination by mixing two good options.  
-- Use a logical operator (AND/OR) between results of two color space combinations.  
-- Apply grid segmentation using Otsu thresholding.  
-- Use more than two colors with a k-means categorization.  
-
-This option is powerful but should only be used by advanced users.
+<!-- END_Select_and_draw -->
 
 ---
 
-## Generate analysis option
-Cellects suggests two algorithms to automatically find the best parameters to detect specimens on the first image:  
+<!-- START_Draw_buttons -->
+## Draw buttons:
+Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding
+down the mouse button.
 
-- **Quickly** → suggests options in a few minutes.  
-- **Carefully** → browses more possibilities, takes longer.  
+<!-- END_Draw_buttons -->
 
-Alternatively, the user can select *Advanced mode* to view or modify the parameters selected by Cellects.  
+---
 
-Additional notes:
-- Clicking on *Quickly* or *Carefully* (or *Visualize*) will make an orange working message appear.  
-- If the user already used Cellects, the advanced mode will be faster.  
+<!-- START_Advanced_mode -->
+## Advanced mode:
+The *Advanced mode* allows the user to fine tune the image analysis parameters. This can be useful
+to use previously working set of parameters on similar images, or to test the available methods
+directly. Even when some analysis option are generated, selecting this option can be useful to
+access:
+- The color space combination corresponding to the displayed image.
+- Various filter to apply on the image before segmentation.
+- Other results by adding good channels together or mixing two good options using a logical operator
+between them.
+- The grid segmentation algorithm.
+- The kmeans segmentation algorithm.
+
+<!-- END_Advanced_mode -->
+
+---
+
+<!-- START_Generate_analysis_options -->
+## Generate analysis options:
+Cellects suggests an algorithms to automatically find the best parameters to detect specimens on the
+first image:
+- **Basic** → suggests options in a few minutes.   Alternatively, the user can select *Advanced
+mode* to view or modify the parameters selected by Cellects.
+NB:
+- Clicking on *Basic* (or *Apply current config*) will provoke the display of a working message (in
+orange).
+
+<!-- END_Generate_analysis_options -->
 
 <figure>
   <img src="/static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
@@ -89,36 +122,48 @@ Additional notes:
 
 ---
 
-## Select option to read
-The drop-down menu on the left of *Select option to read* allows the user to visualize directly the result of 
-the analysis corresponding to each option.  
+<!-- START_Select_option_to_read -->
+## Select option to read:
+Select the option allowing the best segmentation. This dropdown menu appears after generating
+analysis options. Each available option allows the user to directly assess their quality.  For
+instance, if option 1 generate a message informing the user that this option detected 6 distinct
+spots in 6 arenas and these correspond to the user's expectations they should click the *Yes*
+button.  Otherwise, Cellects offers several ways to improve the analysis:
+- Setting the *arena shape*, the *spot shape*, or the *spot size*.
+- Drawing more specimens or background using *Select and draw*.
+- Tuning the advanced mode to set up other methods manually.
+-> Each of these options can then be tested using the *Apply current config* button.
+NB: Once the magenta/pink contours correspond to the right position of all cells and the right
+number of detected spots, the user can click the *Yes* button. After clicking, an orange working
+message appears, and Cellects automatically looks for the coordinates of the contour of each arena.
 
-For instance, in Fig. 3, the central image displays the result of option 1 and a message below informs the user that this option detected 6 distinct spots in 6 arenas.  
-Since these two numbers are equal, there is only one specimen per arena, so the user should click the *Yes* button.  
-
-Otherwise, the user can improve the analysis by setting the *arena shape*, the *spot shape*, or the *spot size*.  
-The user can also draw more specimens or background using *Select and draw*, or use *Visualize* to set up manually a color space combination.
-
-Once the magenta/pink contours correspond to the right position of all cells and the right number of detected spots, 
-the user can click the *Yes* button.  
-
-After clicking, an orange working message appears, and Cellects automatically looks for the coordinates of the contour of each arena.  
-
----
-
-## Arena shape
-Tells whether the specimen(s) can move in a circular or rectangular arena.
+<!-- END_Select_option_to_read -->
 
 ---
 
-## Spot shape
+<!-- START_Arena_shape -->
+## Arena shape:
+Specifies whether the specimen(s) can move in a circular or rectangular arena.
+
+<!-- END_Arena_shape -->
+
+---
+
+<!-- START_Spot_shape -->
+## Set spot shape:
 Initial shape of the specimen(s) inside arena(s).
 
+<!-- END_Spot_shape -->
+
 ---
 
-## Spot size
-Initial horizontal size of the specimen(s).  
+<!-- START_Spot_size -->
+## Set spot size:
+
+Initial horizontal size of the specimen(s) (in mm).  
 If similar across all specimens, this can also be used as a scale.
+
+<!-- END_Spot_size -->
 
 ---
 

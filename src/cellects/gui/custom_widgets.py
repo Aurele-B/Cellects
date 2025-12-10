@@ -219,7 +219,7 @@ class InsertImage(QtWidgets.QLabel):
 
 
 class PButton(QtWidgets.QPushButton):
-    def __init__(self, text, fade=True, night_mode=False):
+    def __init__(self, text, fade=True, tip=None, night_mode=False):
         """
 
         self.setStyleSheet("background-color: rgb(107, 145, 202);\n"
@@ -230,6 +230,7 @@ class PButton(QtWidgets.QPushButton):
         """
         super().__init__()
         self.setText(text)
+        self.setToolTip(tip)
         self.night_mode_switch(night_mode)
         self.setFont(buttonfont)
         # self.setStyleSheet("background-color: rgb(50,50,65);\n" #50,50,65 150, 150, 150 153, 204, 205    122, 0, 61   30, 144, 220
