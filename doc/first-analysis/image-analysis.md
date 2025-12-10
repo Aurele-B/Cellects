@@ -159,21 +159,22 @@ Initial shape of the specimen(s) inside arena(s).
 
 <!-- START_Spot_size -->
 ## Set spot size:
-
-Initial horizontal size of the specimen(s) (in mm).  
-If similar across all specimens, this can also be used as a scale.
+Initial horizontal size of the specimen(s) (in mm). If similar across all specimens, this can also
+be used as a scale.
 
 <!-- END_Spot_size -->
 
 ---
 
-## Video delimitation
-After validating the initial detection, the result of the automatic video delimitation appears in blue in the center of the window (see Fig. 4).  
+<!-- START_Video_delimitation -->
+## Video delimitation:
+After validating the initial detection, the result of the automatic video delimitation appears in
+blue in the  center of the window.   If correct, click *Yes*.   If incorrect, click *No*, and
+Cellects will suggest:
+- A slower, more efficient algorithm
+- Or a manual delineation option
 
-If correct, click *Yes*.  
-If incorrect, click *No*, and Cellects will suggest:
-- A slower, more efficient algorithm  
-- Or a manual delineation option  
+<!-- END_Video_delimitation -->
 
 <figure>
   <img src="/static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
@@ -182,14 +183,40 @@ If incorrect, click *No*, and Cellects will suggest:
 
 ---
 
-## Last image question
-If the user thinks that parameters used on the first image might not work on later images, they can fine-tune them using the last image.  
-
-- Clicking *Yes* → allows testing on the last image before moving on.  
+<!-- START_Last_image_question -->
+## Last image question:
+If the user thinks that parameters used on the first image might not work on later images, they can
+fine
+-tune them using the last image.
+- Clicking *Yes* → allows testing on the last image before moving on.
 - Clicking *No* → goes directly to video tracking.
+
+<!-- END_Last_image_question -->
 
 ---
 
-## Check if the starting area differs from growing area
-If the substrate changes between starting and growing areas (e.g. oat gel vs transparent agar), keep this checked.  
-If the substrate is homogeneous everywhere, uncheck this option.
+<!-- START_Start_differs_from_arena -->
+## Check if the medium at starting position differs from the rest of the arena:
+If the substrate changes between starting and growing areas (e.g. nutritive gel vs transparent
+agar), keep this checked. If the substrate is homogeneous everywhere, uncheck this option. This
+option is only relevant for experiments in which the medium on which the specimen grow does not have
+the same optic properties at the position of the specimen(s) at the first frame and at their
+positions later on.
+
+<!-- END_Start_differs_from_arena -->
+
+---
+
+<!-- START_Save_image_analysis -->
+## Save image analysis:
+Complete the analysis of the current image. Clicking this button is useful to analyze only one
+image.  To analyze video(s), click *Next*.
+NB:
+- When there should be only one specimen per arena, keeps the largest connected component.
+- Compute and save (.csv) all descriptors selected in the Required output window on the current
+image.
+- Save a validation image to assess the efficiency of the segmentation.
+
+<!-- END_Save_image_analysis -->
+
+---

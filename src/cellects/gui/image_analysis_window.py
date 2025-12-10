@@ -404,7 +404,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.special_cases_layout = QtWidgets.QHBoxLayout()
         self.starting_differs_from_growing_cb = Checkbox(self.parent().po.vars['origin_state'] == 'constant')
         self.starting_differs_from_growing_cb.stateChanged.connect(self.starting_differs_from_growing_check)
-        self.starting_differs_from_growing_label = FixedText("Check if the starting area differs from the growing area", tip="This option is only relevant for experiments in which the medium\n(e.g. agar) on which the cells grow is heterogeneous.\nMore precisely when the exploration areas on which the cells will grow and/or move\nare not the same color as the one they were initially on.", night_mode=self.parent().po.all['night_mode'])
+        self.starting_differs_from_growing_label = FixedText(IAW["Start_differs_from_arena"]["label"],
+                                                             tip=IAW["Start_differs_from_arena"]["tips"],
+                                                             night_mode=self.parent().po.all['night_mode'])
         self.starting_differs_from_growing_cb.setVisible(False)
         self.starting_differs_from_growing_label.setVisible(False)
         self.special_cases_layout.addWidget(self.starting_differs_from_growing_cb)
@@ -421,7 +423,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.previous.clicked.connect(self.previous_is_clicked)
         self.data_tab.clicked.connect(self.data_is_clicked)
         self.video_tab.clicked.connect(self.video_is_clicked)
-        self.complete_image_analysis = PButton("Save image analysis", night_mode=self.parent().po.all['night_mode'])
+        self.complete_image_analysis = PButton(IAW["Save_image_analysis"]["label"],
+                                               tip=IAW["Save_image_analysis"]["tips"],
+                                               night_mode=self.parent().po.all['night_mode'])
         self.complete_image_analysis.setVisible(False)
         self.complete_image_analysis.clicked.connect(self.complete_image_analysis_is_clicked)
         self.next = PButton("Next", night_mode=self.parent().po.all['night_mode'])
@@ -2094,6 +2098,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_shape.setVisible(True)
 
         self.decision_label.setText('Is arena delineation correct?')
+        self.decision_label.setToolTip(IAW["Video_delimitation"]["tips"])
         self.decision_label.setVisible(True)
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
@@ -2173,6 +2178,7 @@ class ImageAnalysisWindow(MainTabsType):
 
             # Is automatic Video delineation correct?
             elif self.asking_delineation_flag:
+                self.decision_label.setToolTip("")
                 if not is_yes:
                     self.asking_slower_or_manual_delineation()
                 else:
@@ -2210,6 +2216,7 @@ class ImageAnalysisWindow(MainTabsType):
                             f"{self.arena_masks_number} arenas are drawn over the {self.parent().po.sample_number} expected")
 
             elif self.asking_last_image_flag:
+                self.decision_label.setToolTip("")
                 self.parent().po.first_image.im_combinations = None
                 self.select_option.clear()
                 self.arena_shape.setVisible(False)
@@ -2366,6 +2373,7 @@ class ImageAnalysisWindow(MainTabsType):
         else:
             self.asking_last_image_flag = True
             self.decision_label.setText("Click 'yes' to improve the segmentation using the last image")
+            self.decision_label.setToolTip(IAW["Last_image_question"]["tips"])
             self.message.setText('This is useful when the specimen(s) is more visible.')
             self.starting_differs_from_growing_cb.setVisible(True)
             self.starting_differs_from_growing_label.setVisible(True)
