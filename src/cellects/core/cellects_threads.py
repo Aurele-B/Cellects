@@ -35,7 +35,7 @@ from numba.typed import Dict as TDict
 import numpy as np
 import pandas as pd
 from PySide6 import QtCore
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, get_contours
+from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
 from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
@@ -282,6 +282,7 @@ class UpdateImageThread(QtCore.QThread):
                 self.parent().imageanalysiswindow.display_image.update_image_scaling_factors()
                 sf = self.parent().imageanalysiswindow.display_image.scaling_factors
                 idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=sf, dims=dims)
+                minmax = min_y, max_y, min_x, max_x
 
         if len(self.parent().imageanalysiswindow.temporary_mask_coord) == 0:
             # not_load
@@ -314,7 +315,6 @@ class UpdateImageThread(QtCore.QThread):
                     # Color the segmentation mask in pink
                     self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                mask = np.zeros(dims[:2], dtype=np.uint8)
                 if self.parent().imageanalysiswindow.back1_bio2 == 0:
                     mask_shape = self.parent().po.vars['arena_shape']
                 elif self.parent().imageanalysiswindow.back1_bio2 == 1:
@@ -322,7 +322,7 @@ class UpdateImageThread(QtCore.QThread):
                 elif self.parent().imageanalysiswindow.back1_bio2 == 2:
                     mask_shape = self.parent().po.all['starting_blob_shape']
                 # Save the user drawn mask
-                mask = create_mask(dims, (min_y, max_y, min_x, max_x), mask_shape)
+                mask = create_mask(dims, minmax, mask_shape)
                 mask = np.nonzero(mask)
 
                 if self.parent().imageanalysiswindow.back1_bio2 == 1:
@@ -348,7 +348,7 @@ class UpdateImageThread(QtCore.QThread):
 
             self.parent().imageanalysiswindow.drawn_image[bio_coord[0], bio_coord[1], :] = np.array((17, 160, 212), dtype=np.uint8)
 
-            image = self.parent().imageanalysiswindow.drawn_image
+            image = self.parent().imageanalysiswindow.drawn_image.copy()
             # 3) The automatically detected video contours
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
                 # Draw the delineation mask of each arena
@@ -367,50 +367,27 @@ class UpdateImageThread(QtCore.QThread):
                                     (138, 95, 18, 255),
                                     # (209, 80, 0, 255),  # font color
                                     2)  # font stroke
-                    mask = np.zeros(dims[:2], dtype=np.uint8)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = create_ellipse(max_cy - min_cy, max_cx - min_cx).astype(np.uint8)
-                        ellipse = cv2.morphologyEx(ellipse, cv2.MORPH_GRADIENT, cross_33)
-                        mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
-                    else:
-                        mask[(min_cy, max_cy - 1), min_cx:max_cx] = 1
-                        mask[min_cy:max_cy, (min_cx, max_cx - 1)] = 1
-                    mask = cv2.dilate(mask, kernel=cross_33, iterations=contour_width)
-
-                    mask = np.nonzero(mask)
-                    image[mask[0], mask[1], :] = np.array((138, 95, 18), dtype=np.uint8)# self.parent().po.vars['contour_color']
-
+                    image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
+                                               self.parent().po.vars['arena_shape'], (138, 95, 18), True, contour_width)
         else: #load
             if user_input:
                 # III/ If this thread runs from user input: update the drawn_image according to the current user input
                 # Just add the mask to drawn_image as quick as possible
                 # Add user defined masks
                 # Take the drawn image and add the temporary mask to it
-                image = deepcopy(self.parent().imageanalysiswindow.drawn_image)
-                if self.parent().imageanalysiswindow.back1_bio2 == 0:
-                    # Dynamic drawing of the arena outline
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = create_ellipse(max_y - min_y, max_x - min_x)
-                        ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-                        image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
-                        image[min_y:max_y, min_x:max_x, ...] += ellipse
-                    else:
-                        mask = np.zeros(dims[:2], dtype=np.bool_)
-                        mask[min_y:max_y, min_x:max_x] = True
-                        mask = np.nonzero(mask)
-                        image[mask[0], mask[1], :] = np.array((0, 0, 0), dtype=np.uint8)
+                image = self.parent().imageanalysiswindow.drawn_image.copy()
+                if self.parent().imageanalysiswindow.back1_bio2 == 2:
+                    color = (17, 160, 212)
+                    mask_shape = self.parent().po.all['starting_blob_shape']
+                elif self.parent().imageanalysiswindow.back1_bio2 == 1:
+                    color = (224, 160, 81)
+                    mask_shape = "rectangle"
                 else:
-                    # Dynamic drawing of Cell or Back
-                    if self.parent().imageanalysiswindow.back1_bio2 == 2:
-                        color = (17, 160, 212)
-                        mask_shape = self.parent().po.all['starting_blob_shape']
-                    else:
-                        color = (224, 160, 81)
-                        mask_shape = "rectange"
-                    image = color_img_with_mask(image, dims, (min_y, max_y, min_x, max_x), mask_shape, color)
-
+                    color = (0, 0, 0)
+                    mask_shape = self.parent().po.all['arena_shape']
+                image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.parent().imageanalysiswindow.display_image.update_image(image)
         self.message_when_thread_finished.emit(True)
 
@@ -1531,7 +1508,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
         # self.parent().po.motion = None
-        self.message_from_thread.emit("")
+        self.message_from_thread.emit(f"Arena n°{self.parent().po.all['arena']}: analysis finished.")
 
 
 class WriteVideoThread(QtCore.QThread):

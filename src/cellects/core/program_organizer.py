@@ -35,7 +35,7 @@ from cellects.image_analysis.morphological_operations import create_ellipse, ran
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.utils.load_display_save import read_and_rotate
-from cellects.image_analysis.morphological_operations import shape_selection
+from cellects.image_analysis.morphological_operations import shape_selection, draw_img_with_mask
 
 
 class ProgramOrganizer:
@@ -1370,15 +1370,15 @@ class ProgramOrganizer:
 
         # 2) Create a table of the dimensions of each video
         # Add 10% to the necessary memory to avoid problems
-        necessary_memory = img_nb * np.multiply((self.bot - self.top).astype(np.uint64), (self.right - self.left).astype(np.uint64)).sum() * 8 * 1.16415e-10
+        necessary_memory = img_nb * np.multiply((self.bot - self.top - 1).astype(np.uint64), (self.right - self.left - 1).astype(np.uint64)).sum() * 8 * 1.16415e-10
         if in_colors:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left,
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top - 1, self.right - self.left - 1,
                  np.repeat(3, self.first_image.shape_number)))
             necessary_memory *= 3
         else:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left))
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top - 1, self.right - self.left - 1))
         use_list_of_vid = True
         if np.all(sizes[0, :] == sizes):
             use_list_of_vid = False
@@ -1582,6 +1582,8 @@ class ProgramOrganizer:
         self.update_output_list()
         logging.info("Instantiate results tables and validation images")
         self.fractal_box_sizes = None
+        self.one_row_per_arena = None
+        self.one_row_per_frame = None
         if self.vars['already_greyscale']:
             if len(self.first_image.bgr.shape) == 2:
                 self.first_image.bgr = np.stack((self.first_image.bgr, self.first_image.bgr, self.first_image.bgr), axis=2).astype(np.uint8)
@@ -1614,22 +1616,29 @@ class ProgramOrganizer:
         If `arena_shape` is 'circle', the visualization will be masked by an ellipse.
 
         """
-        cr = ((self.top[i], self.bot[i]),
-              (self.left[i], self.right[i]))
-        if self.vars['arena_shape'] == 'circle':
-            ellipse = create_ellipse(cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])
-            ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-            first_visualization *= ellipse
-            self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-            self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
-            if last_visualization is not None:
-                last_visualization *= ellipse
-                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
-        else:
-            self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
-            if last_visualization is not None:
-                self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
+        minmax = (self.top[i], self.bot[i] - 1, self.left[i], self.right[i] - 1)
+        self.first_image.bgr = draw_img_with_mask(self.first_image.bgr, self.first_image.bgr.shape[:2], minmax,
+                                                  self.vars['arena_shape'], first_visualization)
+        if last_visualization is not None:
+            self.last_image.bgr = draw_img_with_mask(self.last_image.bgr, self.last_image.bgr.shape[:2], minmax,
+                                                      self.vars['arena_shape'], last_visualization)
+
+        # cr = ((self.top[i], self.bot[i]),
+        #       (self.left[i], self.right[i]))
+        # if self.vars['arena_shape'] == 'circle':
+        #     ellipse = create_ellipse(cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])
+        #     ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
+        #     first_visualization *= ellipse
+        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
+        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
+        #     if last_visualization is not None:
+        #         last_visualization *= ellipse
+        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
+        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
+        # else:
+        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
+        #     if last_visualization is not None:
+        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
 
 
     def save_tables(self, with_last_image: bool=True):
