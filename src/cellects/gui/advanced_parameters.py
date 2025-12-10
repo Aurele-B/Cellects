@@ -26,6 +26,7 @@ from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Spinbox, Combobox, Checkbox, FixedText)
+from cellects.gui.ui_strings import AP
 
 
 class AdvancedParameters(WindowType):
@@ -121,25 +122,26 @@ class AdvancedParameters(WindowType):
         self.general_param_box_widget.setStyleSheet(boxstylesheet)
         # I/C/ Create widgets
         self.automatically_crop = Checkbox(self.parent().po.all['automatically_crop'])
-        self.automatically_crop_label = FixedText('Automatically crop images', tip="If more than one cell shape are (or may appear) in each arena", night_mode=self.parent().po.all['night_mode'])
+        self.automatically_crop_label = FixedText(AP["Crop_images"]["label"], tip=AP["Crop_images"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
 
         self.subtract_background = Checkbox(self.parent().po.vars['subtract_background'])
         self.subtract_background.stateChanged.connect(self.subtract_background_check)
-        self.subtract_background_label = FixedText('Subtract background', tip="Apply an algorithm allowing to remove a potential brightness gradient from images during analysis", night_mode=self.parent().po.all['night_mode'])
+        self.subtract_background_label = FixedText(AP["Subtract_background"]["label"], tip=AP["Subtract_background"]["tips"], night_mode=self.parent().po.all['night_mode'])
 
         self.keep_cell_and_back_for_all_folders = Checkbox(self.parent().po.all['keep_cell_and_back_for_all_folders'])
-        self.keep_cell_and_back_for_all_folders_label = FixedText('Keep Cell and Back drawings for all folders',
-                                               tip="During the first image analysis, if the user drew cell and back to help detection\n- Keep this information for all folders (if checked)\n- Only use this information for the current folder (if unchecked)",
+        self.keep_cell_and_back_for_all_folders_label = FixedText(AP["Keep_drawings"]["label"],
+                                               tip=AP["Keep_drawings"]["tips"],
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.correct_errors_around_initial = Checkbox(self.parent().po.vars['correct_errors_around_initial'])
-        self.correct_errors_around_initial_label = FixedText('Correct errors around initial shape',
-                                               tip="Apply an algorithm allowing to correct some failure around the initial shape\nThese errors are most likely due to color variations\n themselves due to substrate width differences crossed by light\naround initial cell lying on an opaque substrate",
+        self.correct_errors_around_initial_label = FixedText(AP["Correct_errors_around_initial"]["label"],
+                                               tip=AP["Correct_errors_around_initial"]["tips"],
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery = Checkbox(self.parent().po.vars['prevent_fast_growth_near_periphery'])
-        self.prevent_fast_growth_near_periphery_label = FixedText('Prevent fast growth near periphery',
-                                               tip="During video analysis, the borders of the arena may create wrong detection\n- Remove the detection of the specimen(s) that move too fast near periphery (if checked)\n- Do not change the detection (if unchecked)",
+        self.prevent_fast_growth_near_periphery_label = FixedText(AP["Prevent_fast_growth_near_periphery"]["label"],
+                                               tip=AP["Prevent_fast_growth_near_periphery"]["tips"],
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery.stateChanged.connect(self.prevent_fast_growth_near_periphery_check)
