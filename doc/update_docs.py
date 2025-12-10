@@ -93,3 +93,4 @@ if __name__ == "__main__":
     process_tips_in_file("../src/cellects/gui/UI_strings.py")
     update_markdown("first-analysis/data-localisation.md", FW)
     update_markdown("first-analysis/image-analysis.md", IAW)
+    update_markdown("first-analysis/video-tracking.md", VAW)

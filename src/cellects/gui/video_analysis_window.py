@@ -24,6 +24,7 @@ from cellects.core.cellects_threads import (
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
+from cellects.gui.ui_strings import FW, VAW
 
 
 class VideoAnalysisWindow(MainTabsType):
@@ -116,8 +117,8 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.arena_widget = QtWidgets.QWidget()
         self.arena_layout = QtWidgets.QHBoxLayout()
-        self.arena_label = FixedText('Arena to analyze:',
-                                       tip="Among selected folders, choose a arena from the first folder\nThen, click on *Quick (or *Full) detection* to load and analyse one arena\nFinally, click on *Read* to see the resulting analysis\n\nSupplementary information:\nLoading will be faster if videos are already saved as ind_*.npy\n*Post processing* automatically runs *Detection* and *Detection* automatically runs *Load One arena*\nEach being faster than the previous one",
+        self.arena_label = FixedText(VAW["Arena_to_analyze"]["label"] + ':',
+                                       tip=VAW["Arena_to_analyze"]["tips"],
                                        night_mode=self.parent().po.all['night_mode'])
         sample_size = self.parent().po.all['sample_number_per_folder'][0]
         if self.parent().po.all['arena'] > sample_size:
@@ -142,8 +143,8 @@ class VideoAnalysisWindow(MainTabsType):
             self.parent().po.vars['repeat_video_smoothing'] = self.parent().po.vars['iterate_smoothing']
         self.maximal_growth_factor = Spinbox(min=0, max=0.5, val=self.parent().po.vars['maximal_growth_factor'],
                                             decimals=3, night_mode=self.parent().po.all['night_mode'])
-        self.maximal_growth_factor_label = FixedText('Maximal growth factor:',
-                                                    tip="This factor should be tried and increased (resp. decreases)\nif the analysis underestimates (resp. overestimates) the cell size.\nThe maximal growth factor is a proportion of pixels in the image. \nIt tells Cellects how much the cell(s) can possibly move or grow from one image to the next.\nIn other words, this is the upper limit of the proportion of the image\nthat can change from being the background to being covered by the cell(s).",
+        self.maximal_growth_factor_label = FixedText(VAW["Maximal_growth_factor"]["label"] + ':',
+                                                    tip=VAW["Maximal_growth_factor"]["tips"],
                                                     night_mode=self.parent().po.all['night_mode'])
         self.maximal_growth_factor.valueChanged.connect(self.maximal_growth_factor_changed)
         self.growth_per_frame_layout.addWidget(self.maximal_growth_factor_label)
@@ -155,8 +156,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.iterate_layout = QtWidgets.QHBoxLayout()
         self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.parent().po.vars['repeat_video_smoothing'],
                                          night_mode=self.parent().po.all['night_mode'])
-        self.repeat_video_smoothing_label = FixedText('Repeat video smoothing:',
-                                                 tip="Increase (with steps of 1) if video noise is the source of detection failure",
+        self.repeat_video_smoothing_label = FixedText(VAW["Temporal_smoothing"]["label"] + ':',
+                                                 tip=VAW["Temporal_smoothing"]["tips"],
                                                  night_mode=self.parent().po.all['night_mode'])
         self.repeat_video_smoothing.valueChanged.connect(self.repeat_video_smoothing_changed)
         self.iterate_layout.addWidget(self.repeat_video_smoothing_label)
@@ -165,8 +166,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.left_options_layout.addWidget(self.iterate_widget)
 
 
-        self.select_option_label = FixedText('Segmentation method:',
-                                             tip='Select the option allowing the best cell delimitation.',
+        self.select_option_label = FixedText(VAW["Segmentation_method"]["label"] + ':',
+                                             tip=VAW["Segmentation_method"]["tips"],
                                              night_mode=self.parent().po.all['night_mode'])
         self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
         self.select_option_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
@@ -208,7 +209,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.right_options_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
         self.compute_all_options_label = FixedText('Compute all options',
-                                                   tip='Uncheck to do a Post processing on only one option and earn computation time\nSelecting one of the remaining options will display the result from a Detection',
+                                                   tip=VAW["Segmentation_method"]["tips"],
                                                    night_mode=self.parent().po.all['night_mode'])
         self.compute_all_options_cb = Checkbox(self.parent().po.all['compute_all_options'])
         self.compute_all_options_cb.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
@@ -229,11 +230,13 @@ class VideoAnalysisWindow(MainTabsType):
         self.all_options_row_widget.setLayout(self.all_options_row_layout)
         self.right_options_layout.addWidget(self.all_options_row_widget)
 
-        self.load_one_arena = PButton('Load One arena', night_mode=self.parent().po.all['night_mode'])
+        self.load_one_arena = PButton(VAW["Load_one_arena"]["label"], tip=VAW["Load_one_arena"]["tips"],
+                                      night_mode=self.parent().po.all['night_mode'])
         self.load_one_arena.clicked.connect(self.load_one_arena_is_clicked)
-        self.detection = PButton('Detection', night_mode=self.parent().po.all['night_mode'])
+        self.detection = PButton(VAW["Detection"]["label"], tip=VAW["Detection"]["tips"],
+                                 night_mode=self.parent().po.all['night_mode'])
         self.detection.clicked.connect(self.detection_is_clicked)
-        self.read = PButton('Read', night_mode=self.parent().po.all['night_mode'])
+        self.read = PButton(VAW["Read"]["label"], tip=VAW["Read"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
         self.read.setVisible(False)
         self.right_options_layout.addWidget(self.load_one_arena, alignment=QtCore.Qt.AlignCenter)
@@ -270,8 +273,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.do_fading.stateChanged.connect(self.do_fading_check)
         self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
                                night_mode=self.parent().po.all['night_mode'])
-        self.fading_label = FixedText('Fading detection',
-                                       tip="Set a value between -1 and 1\nnear - 1: it will never detect when the cell leaves an area\nnear 1: it may stop detecting cell (because cell will be considered left from any area)",
+        self.fading_label = FixedText(VAW["Fading_detection"]["label"],
+                                       tip=VAW["Fading_detection"]["tips"],
                                        night_mode=self.parent().po.all['night_mode'])
         self.fading.valueChanged.connect(self.fading_changed)
         self.fading_layout.addWidget(self.do_fading)
@@ -281,11 +284,13 @@ class VideoAnalysisWindow(MainTabsType):
         self.fading_widget.setLayout(self.fading_layout)
         self.second_step_layout.addWidget(self.fading_widget)
 
-        self.post_processing = PButton('Post processing', night_mode=self.parent().po.all['night_mode'])
+        self.post_processing = PButton(VAW["Post_processing"]["label"], tip=VAW["Post_processing"]["tips"],
+                                       night_mode=self.parent().po.all['night_mode'])
         self.post_processing.clicked.connect(self.post_processing_is_clicked)
         self.second_step_layout.addWidget(self.post_processing)
 
-        self.save_one_result = PButton('Save one result', night_mode=self.parent().po.all['night_mode'])
+        self.save_one_result = PButton(VAW["Save_one_result"]["label"], tip=VAW["Save_one_result"]["tips"],
+                                       night_mode=self.parent().po.all['night_mode'])
         self.save_one_result.clicked.connect(self.save_one_result_is_clicked)
         self.second_step_layout.addWidget(self.save_one_result)
 
@@ -303,17 +308,20 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_options_layout = QtWidgets.QHBoxLayout()
         self.last_options_layout.addItem(self.horizontal_space)
 
-        self.advanced_parameters = PButton('Advanced Parameters', night_mode=self.parent().po.all['night_mode'])
+        self.advanced_parameters = PButton(FW["Advanced_parameters"]["label"], tip=FW["Advanced_parameters"]["tips"],
+                                           night_mode=self.parent().po.all['night_mode'])
         self.advanced_parameters.clicked.connect(self.advanced_parameters_is_clicked)
         self.last_options_layout.addWidget(self.advanced_parameters)
 
         #  Required Outputs widget
-        self.required_outputs = PButton('Required Outputs', night_mode=self.parent().po.all['night_mode'])
+        self.required_outputs = PButton(FW["Required_outputs"]["label"], tip=FW["Required_outputs"]["tips"],
+                                        night_mode=self.parent().po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         self.last_options_layout.addWidget(self.required_outputs)
 
         #  Save all choices widget
-        self.save_all_vars = PButton('Save all choices', night_mode=self.parent().po.all['night_mode'])
+        self.save_all_vars = PButton(FW["Save_all_choices"]["label"], tip=FW["Save_all_choices"]["tips"],
+                                     night_mode=self.parent().po.all['night_mode'])
         self.save_all_vars.clicked.connect(self.save_current_settings)
         self.last_options_layout.addWidget(self.save_all_vars)
 
@@ -331,7 +339,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.previous = PButton('Previous', night_mode=self.parent().po.all['night_mode'])
         self.previous.clicked.connect(self.previous_is_clicked)
 
-        self.run_all = PButton('Run All', night_mode=self.parent().po.all['night_mode'])
+        self.run_all = PButton(VAW["Run_All"]["label"], tip=VAW["Run_All"]["tips"],
+                               night_mode=self.parent().po.all['night_mode'])
         self.run_all.clicked.connect(self.run_all_is_clicked)
 
         # Open last row widget

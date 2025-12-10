@@ -315,16 +315,164 @@ image.
 #################################################
 
 VAW = {}
-VAW["Save_image_analysis"]["label"] = "Save image analysis"
+VAW["Arena_to_analyze"] = {}
+VAW["Arena_to_analyze"]["label"] = "Arena to analyze"
 # START_TIP
-VAW["Save_image_analysis"]["tips"] = \
-f"""Complete the analysis of the current image. Clicking this button is useful to analyze only one
-image.  To analyze video(s), click *Next*.
+VAW["Arena_to_analyze"]["tips"] = \
+f"""This arena number allows the user to load one particular arena in the current folder. Typically, the
+user can choose an arena, click on *Detection* to load and analyse one arena and *Read* the
+resulting analysis.
 NB:
-- When there should be only one specimen per arena, keeps the largest connected component.
-- Compute and save (.csv) all descriptors selected in the Required output window on the current
-image.
-- Save a validation image to assess the efficiency of the segmentation.
+- Cellects automatically names the arena according to their position in the image, from left to
+right and from top to bottom.
+- If there is only one arena, this number should be one.
+- *Post processing* automatically runs *Detection* and *Detection* automatically runs *Load One
+arena*
+- Loading will be faster if videos are already saved as ind_*.npy.
+"""
+# END_TIP
+
+VAW["Maximal_growth_factor"] = {}
+VAW["Maximal_growth_factor"]["label"] = "Maximal growth factor"
+# START_TIP
+VAW["Maximal_growth_factor"]["tips"] = \
+f"""The maximal growth factor is a proportion of pixels in the image and indicates how far the specimen
+can possibly move or grow from one image to the next. This factor should be:
+- Increased if the analysis underestimates the specimen size.
+- Decreased if the analysis overestimates the specimen size.
+NB:
+- Precisely, this is  the upper limit of the proportion of the image that is allowed to be covered
+by the specimen  between two frames.
+"""
+# END_TIP
+
+VAW["Segmentation_method"] = {}
+VAW["Segmentation_method"]["label"] = "Segmentation method"
+# START_TIP
+VAW["Segmentation_method"]["tips"] = \
+f"""Cellects includes five video tracking options:
+- **Frame option**: applies the algorithm used during the image analysis window, frame by frame,
+without temporal dynamics.
+- **Threshold option**: compares pixel intensity with the average intensity of the whole image at
+each time step.
+- **Slope option**: compares slope of the pixel intensity with an automatically defined slope
+threshold.
+- **T and S option**: logical AND of threshold and slope options.
+- **T or S option**: logical OR of threshold and slope options.
+NB:
+- Selecting the *Compute all options* before dunning *Detection* allows the comparison of these
+methods. Once the analysis completed, select one option and click *Read*.
+- Computing only one option is faster and requires less memory.
+- When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
+window, only the *Frame* option remains available.
+"""
+# END_TIP
+
+VAW["Load_one_arena"] = {}
+VAW["Load_one_arena"]["label"] = "Load one arena"
+# START_TIP
+VAW["Load_one_arena"]["tips"] = \
+f"""Clicking this button loads the arena corresponding to the *Arena to analyze*. The center of the
+window then displays the first frame of the video of that arena. Click *Read* to check the full
+video.
+"""
+# END_TIP
+
+VAW["Detection"] = {}
+VAW["Detection"]["label"] = "Detection"
+# START_TIP
+VAW["Detection"]["tips"] = \
+f"""*Detection* runs one (or all) segmentation method on one arena. Once finished, click *Read* to see
+the detection result.  If correct, answer *Done* to *Step 1: Tune parameters to improve Detection*,
+and check the effect of *Post
+-processing*.
+"""
+# END_TIP
+
+VAW["Read"] = {}
+VAW["Read"]["label"] = "Read"
+# START_TIP
+VAW["Read"]["tips"] = \
+f"""Clicking *Read* starts the video display corresponding to the current state of the analysis.
+"""
+# END_TIP
+
+VAW["Fading_detection"] = {}
+VAW["Fading_detection"]["label"] = "Fading detection"
+# START_TIP
+VAW["Fading_detection"]["tips"] = \
+f"""*Fading detection* monitors how the specimen(s) leave some areas. This is useful when the specimens
+not only grow but also move. Uncheck this option otherwise. When the specimen(s) may leave
+previously covered areas, set a value between one and minus one to control the strength of that
+detection.
+- Near minus one: The algorithm will almost never detect when the specimen(s) leave an area.
+- Near one: The algorithm may wrongly remove detection everywhere.
+"""
+# END_TIP
+
+VAW["Post_processing"] = {}
+VAW["Post_processing"]["label"] = "Post processing"
+# START_TIP
+VAW["Post_processing"]["tips"] = \
+f"""*Postprocessing* applies the chosen detection algorithm to the video, on top of additional
+algorithms to improve it:
+- Standard binary image operations: opening, closing, logical ops.
+- *Fading detection*: when specimen(s) may leave areas (optional).
+- *Correct errors around initial shape*: when the contour of the initial position of the specimen is
+hard to detect (optional).
+- *Connect distant shapes*: when the specimen's heterogeneity create wrong disconnections in the
+video detection (optional).
+- *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
+detected as specimen (optional). Once Post
+-processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced parameters to
+improve Post
+-processing*, and then *Run All* arenas.
+"""
+# END_TIP
+
+VAW["Save_one_result"] = {}
+VAW["Save_one_result"]["label"] = "Save one result"
+# START_TIP
+VAW["Save_one_result"]["tips"] = \
+f"""Complete the analysis of the current video. Clicking this button is useful to analyze only one
+video. Click *Run All* to analyze all arenas of the current folder. Both options should be done only
+once *Postprocessing* gave a satisfying result. Saving one result includes:
+- Computing and saving (.csv) all descriptors selected in the Required output window on all frames
+of the current video.
+- Save one validation video to assess the efficiency of the segmentation on all frames.
+- Save the software settings to remember all current parameters.
+NB:
+- If most arenas analyzed well, but some failed, the user can: reanalyze every arena by adjust some
+parameters to fix  any specific problem and click *Save one result* to replace the saved results for
+that arena.
+- This option modifies the specific row and validation video corresponding to that modified arena.
+"""
+# END_TIP
+
+VAW["Run_All"] = {}
+VAW["Run_All"]["label"] = "Run All"
+# START_TIP
+VAW["Run_All"]["tips"] = \
+f"""If detection with *Postprocessing* leads to a satisfying result for one arena,   the user can apply
+the current parameters to all arenas.
+-> Clicking *Run All* will:
+- Write the uncompressed video of each arena to the folder (can take a lot of space)
+- Analyze videos one by one (Fig. 7)
+- Compute and save all descriptors selected in the *Required output* window on all frames of the
+current video.
+- Save one validation video to assess the efficiency of the segmentation on all frames.
+- Save two validation images (after 1/10 of total time and at the last image) to assess the
+efficiency of the segmentation.
+- Save the software settings to remember all current parameters.
+"""
+# END_TIP
+
+VAW["Save_all_choices"] = {}
+VAW["Save_all_choices"]["label"] = "Save all choices"
+# START_TIP
+VAW["Save_all_choices"]["tips"] = \
+f"""Clicking the *Save all choices* write or updates config files to redo an analysis with the same
+parameters later on.
 """
 # END_TIP
 
