@@ -14,6 +14,7 @@ import numpy as np
 from PySide6 import QtWidgets, QtCore
 from cellects.core.cellects_threads import LoadFirstFolderIfSeveralThread
 from cellects.gui.custom_widgets import (WindowType, PButton, FixedText)
+from cellects.gui.ui_strings import MF
 
 
 class IfSeveralFoldersWindow(WindowType):
@@ -78,7 +79,7 @@ class IfSeveralFoldersWindow(WindowType):
         # 1) add a check box allowing to select every folders
         self.cb_layout = QtWidgets.QHBoxLayout()
         self.cb_widget = QtWidgets.QWidget()
-        self.cb_label = FixedText('Check to select all folders:', tip="Otherwise, use Ctrl/Cmd to select the folders to analyze", night_mode=self.parent().po.all['night_mode'])
+        self.cb_label = FixedText(MF["Check_to_select_all_folders"]["label"] + ':', tip=MF["Check_to_select_all_folders"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.cb = QtWidgets.QCheckBox()
         self.cb.setChecked(True)
         self.cb.clicked.connect(self.checked)
@@ -116,7 +117,8 @@ class IfSeveralFoldersWindow(WindowType):
         self.shortcuts_layout = QtWidgets.QHBoxLayout()
         self.Video_analysis_window = PButton("Video tracking window", night_mode=self.parent().po.all['night_mode'])
         self.Video_analysis_window.clicked.connect(self.Video_analysis_window_is_clicked)
-        self.Run_all_directly = PButton("Run all directly", night_mode=self.parent().po.all['night_mode'])
+        self.Run_all_directly = PButton("Run all directly", tip=VAW["Run_All"]["tips"],
+                                        night_mode=self.parent().po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Video_analysis_window.setVisible(False)
         self.Run_all_directly.setVisible(False)
