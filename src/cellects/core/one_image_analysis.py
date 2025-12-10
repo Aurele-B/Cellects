@@ -742,7 +742,7 @@ class OneImageAnalysis:
                     nb, shapes = cv2.connectedComponents(self.binary_image)
                     outside_pixels = np.sum(self.binary_image * out_of_arenas)
                     inside_pixels = np.sum(self.binary_image * arenas_mask)
-                    if inside_pixels < outside_pixels:
+                    if outside_pixels < inside_pixels:
                         if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
                             in_common = np.sum(ref_image * self.binary_image)
                             if in_common > 0:
