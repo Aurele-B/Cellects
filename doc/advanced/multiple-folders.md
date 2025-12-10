@@ -13,11 +13,13 @@ The window of **Figure 10** appears after the first window when the selected fol
 
 <!-- START_Check_to_select_all_folders -->
 ## Check to select all folders:
-Select this option to run the analysis on all folders containing images matching the *Image prefix* and *Images extension* patterns.
-Otherwise, use Ctrl/Cmd to select any folder to analyze.
+Select this option to run the analysis on all folders containing images matching the *Image prefix*
+and *Images extension* patterns. Otherwise, use Ctrl/Cmd to select any folder to analyze.
 NB:
 - This selection only has consequences when one use the *Run All* functionality.
-- To keep and use some masks (e.g. representing the background or the starting pixels of the specimen(s)) on every selected folder, use the *Keep Cell and Back drawing for all folders* option in *Advanced parameters*.
+- To keep and use some masks (e.g. representing the background or the starting pixels of the
+specimen(s)) on every selected folder, use the *Keep Cell and Back drawing for all folders* option
+in *Advanced parameters*.
 
 <!-- END_Check_to_select_all_folders -->
 

@@ -95,16 +95,17 @@ class RequiredOutput(WindowType):
 
         # I/C/ Create widgets
         self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
-        self.save_coord_specimen_label = FixedText('Pixels covered by the specimen(s)', tip="",
+        self.save_coord_specimen_label = FixedText(RO["coord_specimen"]["label"], tip=RO["coord_specimen"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_graph = Checkbox(self.parent().po.vars['save_graph'])
-        self.save_graph_label = FixedText('Graph of the specimen(s) (or network)', tip="Compute the graph of the space occupied by the specimen(s).\nOr the graph of the network in the specimen(s) if selected.",
+        self.save_graph_label = FixedText(RO["Graph"]["label"], tip=RO["Graph"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
-        self.save_coord_thickening_slimming_label = FixedText('Oscillating areas in the specimen(s)', tip="",
+        self.save_coord_thickening_slimming_label = FixedText(RO["coord_oscillating"]["label"],
+                                                              tip=RO["coord_oscillating"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
         self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
-        self.save_coord_network_label = FixedText('Network in the specimen(s)', tip="",
+        self.save_coord_network_label = FixedText(RO["coord_network"]["label"], tip=RO["coord_network"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
