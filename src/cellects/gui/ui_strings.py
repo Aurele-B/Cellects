@@ -609,8 +609,61 @@ AP["Prevent_fast_growth_near_periphery"]["label"] = "Prevent fast growth near pe
 AP["Prevent_fast_growth_near_periphery"]["tips"] = \
 f"""During video analysis, the borders of the arena may be wrongly detected as part of the specimen(s),
 this option helps to avoid this issue.
-- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery (if
-checked)
+- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery.
 - **Unchecked** → Do not change the detection.
+"""
+# END_TIP
+
+AP["Connect_distant_shapes"] = {}
+AP["Connect_distant_shapes"]["label"] = "Connect distant shapes"
+# START_TIP
+AP["Connect_distant_shapes"]["tips"] = \
+f"""This error correcting algorithm makes dynamic connections between parts of the specimen.  It can
+only be used when there can only be one connected specimen per arena. This is useful when the
+specimen's heterogeneity create wrong disconnections and the detection is smaller than the true
+specimen. Technically, this algorithm works as follows:
+- It detects areas that are disconnected from the main detected area.
+- It monitors the growth speed close to this disconnected area.
+- It connects this area with the main area in the same way growth occurs in nearby pixels.
+NB:
+- This option can drastically increase the duration of the analysis.
+- It is useful when the specimen color is close to the background and causes disconnections.
+"""
+# END_TIP
+
+AP["Specimens_have_same_direction"] = {}
+AP["Specimens_have_same_direction"]["label"] = "All specimens have the same direction"
+# START_TIP
+AP["Specimens_have_same_direction"]["tips"] = \
+f"""Selecting this algorithm improves automatic arena detection when all specimens move in the same
+direction.
+- **Checked** → Improve the chances to correctly detect arenas when specimen(s) move strongly and in
+the same direction.
+- **Unchecked** → Use the fastest automatic arena detection algorithm, based on the distances
+between the centroids of the specimen(s) at the beginning of the video.
+"""
+# END_TIP
+
+AP["Appearance_size_threshold"] = {}
+AP["Appearance_size_threshold"]["label"] = "Appearance size threshold (automatic if checked)"
+# START_TIP
+AP["Appearance_size_threshold"]["tips"] = \
+f"""Defines the minimal size threshold (in pixels) for considering an appearing shape as a specimen
+(e.g. bacterial colony).
+- **Checked** → Automatically determine the threshold.
+- **Unchecked** → Allow the user to set the threshold.
+"""
+# END_TIP
+
+AP["Appearance_detection_method"] = {}
+AP["Appearance_detection_method"]["label"] = "Appearance detection method"
+# START_TIP
+AP["Appearance_detection_method"]["tips"] = \
+f"""Two methods available:
+- **Largest** → According to the size of the detected components.
+- **Most central** → According to the distance to the center of the arena.
+NB:
+- Only useful when specimen(s) are invisible at the beginning of the experiment and appear
+progressively.
 """
 # END_TIP

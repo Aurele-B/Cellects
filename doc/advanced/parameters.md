@@ -58,35 +58,64 @@ starting and growth regions).
 
 <!-- START_Prevent_fast_growth_near_periphery -->
 ## Prevent fast growth near periphery:
-During video analysis, the borders of the arena may be wrongly detected as part of the specimen(s), this option helps to avoid this issue.
-- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery (if checked)
+During video analysis, the borders of the arena may be wrongly detected as part of the specimen(s),
+this option helps to avoid this issue.
+- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery.
 - **Unchecked** → Do not change the detection.
 
 <!-- END_Prevent_fast_growth_near_periphery -->
 
 ---
 
-<!-- START_ -->
-<!-- END_ -->
-## Connect distant shapes
-Useful when the specimen color is close to the background and causes disconnections.  
-Reconnects disconnected parts of a specimen to the main shape dynamically.  
+<!-- START_Connect_distant_shapes -->
+## Connect distant shapes:
+This error correcting algorithm makes dynamic connections between parts of the specimen.  It can
+only be used when there can only be one connected specimen per arena. This is useful when the
+specimen's heterogeneity create wrong disconnections and the detection is smaller than the true
+specimen. Technically, this algorithm works as follows:
+- It detects areas that are disconnected from the main detected area.
+- It monitors the growth speed close to this disconnected area.
+- It connects this area with the main area in the same way growth occurs in nearby pixels.
+NB:
+- This option can drastically increase the duration of the analysis.
+- It is useful when the specimen color is close to the background and causes disconnections.
+
+<!-- END_Connect_distant_shapes -->
 
 ---
 
-<!-- START_ -->
-<!-- END_ -->
-## All specimens have the same direction
-Improves automatic arena detection when all specimens move in the same direction.  
-Uncheck only if specimens move strongly and in many directions.
+<!-- START_Specimens_have_same_direction -->
+## All specimens have the same direction:
+Selecting this algorithm improves automatic arena detection when all specimens move in the same
+direction.
+- **Checked** → Improve the chances to correctly detect arenas when specimen(s) move strongly and in
+the same direction.
+- **Unchecked** → Use the fastest automatic arena detection algorithm, based on the distances
+between the centroids of the specimen(s) at the beginning of the video.
+
+<!-- END_Specimens_have_same_direction -->
 
 ---
 
-<!-- START_ -->
-<!-- END_ -->
-## Appearing cell/colony parameters
-Defines the minimal size threshold (in pixels) for considering an appearing shape as a colony.  
-Two methods available: detection by **size** or by **position** in the arena.
+<!-- START_Appearance_size_threshold -->
+## Appearance size threshold (automatic if checked):
+Defines the minimal size threshold (in pixels) for considering an appearing shape as a specimen (e.g. bacterial colony).  
+- **Checked** → Automatically determine the threshold.
+- **Unchecked** → Allow the user to set the threshold.
+
+<!-- END_Appearance_size_threshold -->
+
+---
+
+<!-- START_Appearance_detection_method -->
+## Appearance detection method:
+Two methods available:
+- **Largest** → According to the size of the detected components.
+- **Most central** → According to the distance to the center of the arena.
+NB:
+- Only useful when specimen(s) are invisible at the beginning of the experiment and appear progressively.
+
+<!-- END_Appearance_detection_method -->
 
 ---
 
