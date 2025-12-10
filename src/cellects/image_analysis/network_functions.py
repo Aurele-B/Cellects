@@ -590,7 +590,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
         origin_contours = None
     vertex_table = None
     for t in np.arange(starting_time, dims[0]): # t=320   Y, X = 729, 554
-        tic = timer()
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
         computed_network[net_t[0], net_t[1]] = 1
@@ -604,7 +603,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             pad_network = add_padding([computed_network])[0]
             pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
                                                                                            pad_origin_centroid)
-
             edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
             edge_id.run_edge_identification()
             if pad_origin_contours is not None:
@@ -614,7 +612,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
                 growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
             edge_id.make_vertex_table(origin_contours, growing_areas)
             edge_id.make_edge_table(converted_video[t, ...])
-
             edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
             edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
             if vertex_table is None:
@@ -623,7 +620,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             else:
                 vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
                 edge_table = np.vstack((edge_table, edge_id.edge_table))
-        # print(f"{t} took: {timer() - tic} seconds")
 
     vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                        "vertex_connected"])
@@ -1500,7 +1496,7 @@ class EdgeIdentification:
         explored_connexions_per_vertex = 0  # the maximal edge number that can connect a vertex
         new_connexions = True
         while new_connexions and explored_connexions_per_vertex < 5 and np.any(cropped_non_tip_vertices) and np.any(starting_vertices_coord):
-            # print(new_connexions)
+
             explored_connexions_per_vertex += 1
             # 1. Find the ith closest vertex to each focal vertex
             ending_vertices_coord, new_edge_lengths, new_edge_pix_coord = _find_closest_vertices(
@@ -1673,7 +1669,7 @@ class EdgeIdentification:
 
     def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
         """
-        Generate a vertex table for the vertices.
+        Generate a table for the vertices.
 
         This method constructs and returns a 2D NumPy array holding information
         about all vertices. Each row corresponds to one vertex identified either
@@ -1747,6 +1743,7 @@ class EdgeIdentification:
             v1_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[0], :2][0]#
             v2_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[1], :2][0]#
             v1_width, v2_width = self.distances[v1_coord[0], v1_coord[1]], self.distances[v2_coord[0], v2_coord[1]]
+
             if not np.isnan(v1_width):
                 pix_widths = np.append(pix_widths, v1_width)
             if not np.isnan(v2_width):
@@ -2063,7 +2060,6 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
         new_edge_im[new_edge[:, 0], new_edge[:, 1]] = 1
         if not np.any(new_edge_im * pad_net_contour) and not np.any(new_edge_im * skeleton_without_vertices):# and not np.any(new_edge_im * holed_skeleton):
             with_central_contour[new_edge[:, 0], new_edge[:, 1]] = 1
-
     # Add dilated contour
     pad_origin_contours = get_contours(pad_origin)
     with_central_contour *= (1 - pad_origin)
@@ -2094,15 +2090,31 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
 
     dil_pad_origin_contours = cv2.dilate(pad_origin_contours, cross_33, iterations=1)
     new_pad_origin_contours = dil_pad_origin_contours * new_skeleton
+    new_pad_origin_contours += pad_origin
+    new_pad_origin_contours[new_pad_origin_contours > 0] = 1
+    new_pad_origin_contours = get_contours(new_pad_origin_contours)
     nb, sh = cv2.connectedComponents(new_pad_origin_contours)
-    while nb > 2:
-        dil_pad_origin_contours = cv2.dilate(dil_pad_origin_contours, cross_33, iterations=1)
-        new_pad_origin_contours = dil_pad_origin_contours * new_skeleton
+
+    new_skeleton[new_pad_origin_contours > 0] = 1
+    if nb > 2:
+        new_pad_origin_contours = cv2.morphologyEx(new_pad_origin_contours, cv2.MORPH_CLOSE, square_33, iterations=1)
         nb, sh = cv2.connectedComponents(new_pad_origin_contours)
+        current_contour_coord = np.argwhere(new_pad_origin_contours)
+        cnv4, cnv8 = get_neighbor_comparisons(new_pad_origin_contours)
+        potential_tips = get_terminations_and_their_connected_nodes(new_pad_origin_contours, cnv4, cnv8)
+        tips_coord = np.transpose(np.array(np.nonzero(potential_tips)))
+        ending_vertices_coord, edge_lengths, edges_coords = _find_closest_vertices(pad_origin, current_contour_coord, tips_coord)
+        new_potentials = np.unique(edges_coords[:, 2])
+        for new_pot in new_potentials:
+            edge_coord = edges_coords[edges_coords[:, 2] == new_pot, :2]
+            test = new_pad_origin_contours.copy()
+            test[edge_coord[:, 0], edge_coord[:, 1]] = 1
+            new_nb, sh = cv2.connectedComponents(test)
+            if new_nb < nb:
+                new_pad_origin_contours[edge_coord[:, 0], edge_coord[:, 1]] = 1
+
     pad_origin_contours = new_pad_origin_contours
-    pad_distances[pad_origin_contours > 0] = np.nan # pad_distances.max() + 1 #
-    # test1 = ((pad_distances > 0) * (1 - new_skeleton)).sum() == 0
-    # test2 = ((1 - (pad_distances > 0)) *  new_skeleton).sum() == 0
+    pad_distances[pad_origin_contours > 0] = np.nan
 
     return new_skeleton, pad_distances, pad_origin_contours
 
