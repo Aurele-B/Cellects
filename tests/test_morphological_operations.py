@@ -1669,38 +1669,99 @@ class TestCreateMask(CellectsUnitTest):
         self.assertTrue(np.array_equal(result, expected))
 
 
-class TestColorImgWithMask(CellectsUnitTest):
-    """Test suite for color_img_with_mask function."""
+class TestDrawImgWithMask(CellectsUnitTest):
+    """Test suite for draw_img_with_mask function."""
 
-    def test_color_circle_normal_case(self):
+    def test_draw_1_pixel_mask(self):
         """Test that circle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (3, 3, 3)
+        img = np.zeros(dims)
+        minmax = (1, 2, 1, 2)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertEqual(result[1, 1, 0], 255.)
+
+    def test_draw_circle_normal_case(self):
+        """Test that circle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (7, 7, 3)
+        img = np.zeros(dims)
+        minmax = (1, 6, 1, 6)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertEqual((result[:, :, 0] == 255).sum(), 13)
+
+    def test_draw_circle_edge_case1(self):
+        """Test with circle of the same size of the image."""
         # Setup test data
         dims = (5, 6, 3)
         img = np.zeros(dims)
-        minmax = (1, 4, 1, 5)  # y_min, y_max, x_min, x_max
+        minmax = (0, 5, 0, 6)  # y_min, y_max, x_min, x_max
         shape = 'circle'
-        color = (255, 0, 0)  # Red
+        drawing = (255, 0, 0)  # Red
 
         # Execute function
-        result = color_img_with_mask(img, dims, minmax, shape, color)
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
 
         # Verify result
-        # The circle should modify the red channel in the specified region
-        self.assertEqual((result == 255).sum(), 6)  # 6 pixels should be red
+        self.assertEqual((result[:, :, 0] == 255).sum(), 18)
 
-    def test_color_rectangle_normal_case(self):
+    def test_draw_rectangle_normal_case(self):
         """Test that rectangle mask is applied correctly to normal image."""
         # Setup test data
         dims = (5, 6, 3)
         img = np.zeros(dims)
         minmax = (1, 4, 1, 5)  # y_min, y_max, x_min, x_max
         shape = 'rectangle'
-        color = (0, 255, 0)  # Green
+        draw = (0, 255, 0)  # Green
 
         # Execute function
-        result = color_img_with_mask(img, dims, minmax, shape, color)
+        result = draw_img_with_mask(img, dims, minmax, shape, draw)
 
-        self.assertTrue((result == 255).sum() == 12)
+        self.assertTrue(result.shape == dims)
+        self.assertTrue((result[:, :, 1] == 255).sum() == 12)
+
+    def test_draw_rectangle_edge_case1(self):
+        """Test with rectangle of the same size of the image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (0, 5, 0, 6)  # y_min, y_max, x_min, x_max
+        shape = 'rectangle'
+        drawing = (255, 255, 255)
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertTrue(result.shape == dims)
+        self.assertTrue((result == 255).sum() == img.size)
+
+    def test_draw_circle_borders(self):
+        """Test with the contour of a circle as mask."""
+        # Setup test data
+        dims = (7, 7, 3)
+        img = np.zeros(dims)
+        minmax = (1, 7, 2, 7)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing, only_contours=True, dilate_mask=1)
+
+        # Verify result
+        self.assertEqual((result[:, :, 0] == 255).sum(), 27)
 
 
 if __name__ == '__main__':

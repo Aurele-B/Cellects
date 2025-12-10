@@ -37,7 +37,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
-from cellects.utils.formulas import moving_average
+from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
 from skimage.filters import threshold_otsu
 from skimage.measure import label
 from scipy.stats import linregress
@@ -1493,13 +1493,15 @@ def create_ellipse(vsize_in, hsize_in):
     hr = vsize // 2
 
     result = np.empty((vsize, hsize), dtype=np.bool_)
-
-    for i in range(vsize):
-        for j in range(hsize):
-            x = i
-            y = j
-            lhs = ((x - hr) ** 2 / (hr ** 2)) + ((y - vr) ** 2 / (vr ** 2))
-            result[i, j] = lhs <= 1
+    if vr > 0 and hr > 0:
+        for i in range(vsize):
+            for j in range(hsize):
+                x = i
+                y = j
+                lhs = ((x - hr) ** 2 / (hr ** 2)) + ((y - vr) ** 2 / (vr ** 2))
+                result[i, j] = lhs <= 1
+    else:
+        result[0, 0] = True
     return result
 
 rhombus_55 = create_ellipse(5, 5).astype(np.uint8)
@@ -2097,10 +2099,11 @@ def create_mask(dims: Tuple, minmax: Tuple, shape: str):
         mask[minmax[0]:minmax[1], minmax[2]:minmax[3]] = 1
     return mask
 
-def color_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, color: Tuple) -> NDArray:
+def draw_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, drawing: Tuple, only_contours: bool=False,
+                       dilate_mask: int=0) -> NDArray:
     """
-    Apply a color mask to an image based on specified dimensions, min/max coordinates,
-    shape, and color.
+    Apply a mask to an image based on specified dimensions, min/max coordinates,
+    shape, and drawing.
 
     Parameters
     ----------
@@ -2112,13 +2115,13 @@ def color_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, col
         Minimum and maximum coordinates for the mask (y_min, y_max, x_min, x_max).
     shape : str
         Shape of the mask to apply ('circle' or other shapes).
-    color : Tuple[int, int, int]
-        RGB color values to apply within the mask.
+    drawing : Tuple[int, int, int] or np.ndarray
+        RGB color values or an image to apply within the mask .
 
     Returns
     -------
     NDArray
-        The modified image with the color mask applied.
+        The modified image with the mask applied.
 
     Examples
     --------
@@ -2131,16 +2134,25 @@ def color_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, col
     >>> print(result)
     """
     if shape == 'circle':
-        ellipse = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2]).astype(np.uint8)
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] *= (1 - ellipse)
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] *= (1 - ellipse)
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] *= (1 - ellipse)
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] += ellipse * color[0]
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] += ellipse * color[1]
-        img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] += ellipse * color[2]
+        mask = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2]).astype(np.uint8)
+        if only_contours:
+            mask = get_contours(mask)
     else:
-        mask = np.zeros(dims[:2], dtype=np.uint8)
-        mask[minmax[0]:minmax[1], minmax[2]:minmax[3]] = 1
-        mask = np.nonzero(mask)
-        img[mask[0], mask[1], :] = np.array(color, dtype=np.uint8)
+        if only_contours:
+            mask = 1 - image_borders((minmax[1] - minmax[0], minmax[3] - minmax[2]))
+        else:
+            mask = np.ones((minmax[1] - minmax[0], minmax[3] - minmax[2]), np.uint8)
+    if dilate_mask:
+        mask = cv2.dilate(mask, kernel=cross_33, iterations=dilate_mask)
+    anti_mask = 1 - mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] *= anti_mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] *= anti_mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] *= anti_mask
+    if isinstance(drawing, np.ndarray):
+        if drawing.dtype != np.uint8:
+            drawing = bracket_to_uint8_image_contrast(drawing)
+        drawing = [drawing[:, :, 0], drawing[:, :, 1], drawing[:, :, 2]]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] += mask * drawing[0]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] += mask * drawing[1]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] += mask * drawing[2]
     return img
