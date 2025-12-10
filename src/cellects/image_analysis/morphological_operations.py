@@ -2102,36 +2102,46 @@ def create_mask(dims: Tuple, minmax: Tuple, shape: str):
 def draw_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, drawing: Tuple, only_contours: bool=False,
                        dilate_mask: int=0) -> NDArray:
     """
-    Apply a mask to an image based on specified dimensions, min/max coordinates,
-    shape, and drawing.
+
+    Draw an image with a mask and optional contours.
+
+    Draws a subregion of the input image using a specified shape (circle or rectangle),
+    which can be dilated. The mask can be limited to contours only, and an optional
+    drawing (overlay) can be applied within the masked region.
 
     Parameters
     ----------
     img : NDArray
-        The input image to be modified.
+        The input image to draw on.
     dims : Tuple[int, int]
-        Dimensions of the image (height, width).
+        Dimensions of the subregion (width, height).
     minmax : Tuple[int, int, int, int]
-        Minimum and maximum coordinates for the mask (y_min, y_max, x_min, x_max).
+        Coordinates of the subregion (x_start, x_end, y_start, y_end).
     shape : str
-        Shape of the mask to apply ('circle' or other shapes).
-    drawing : Tuple[int, int, int] or np.ndarray
-        RGB color values or an image to apply within the mask .
+        Shape of the mask to draw ('circle' or 'rectangle').
+    drawing : Tuple[NDArray, NDArray, NDArray]
+        Optional drawing (overlay) to apply within the masked region.
+    only_contours : bool, optional
+        If True, draw only the contours of the shape. Default is False.
+    dilate_mask : int, optional
+        Number of iterations for dilating the mask. Default is 0.
 
     Returns
     -------
     NDArray
-        The modified image with the mask applied.
+        The modified image with the applied mask and drawing.
+
+    Notes
+    -----
+    This function assumes that the input image is in BGR format (OpenCV style).
 
     Examples
     --------
-    >>> dims=(5, 6, 3)
-    >>> img=np.zeros(dims)
-    >>> minmax=(0, 5, 1, 5)
-    >>> shape = 'circle'
-    >>> color = (255, 0, 0)
-    >>> result = color_img_with_mask(img, dims, minmax, shape, color)
-    >>> print(result)
+    >>> dim = (100, 100, 3)
+    >>> img = np.zeros(dim)
+    >>> result = draw_img_with_mask(img, dim, (50, 75, 50, 75), 'circle', (0, 255, 0))
+    >>> print((result == 255).sum())
+    441
     """
     if shape == 'circle':
         mask = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2]).astype(np.uint8)
