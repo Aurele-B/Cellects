@@ -771,7 +771,7 @@ class AdvancedParameters(WindowType):
         self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
-        self.logical_operator_label = FixedText(IAW["Color_combination"]["label"], halign='c', tip=IAW["Color_combination"]["tips"],
+        self.logical_operator_label = FixedText(IAW["Logical_operator"]["label"], halign='c', tip=IAW["Logical_operator"]["tips"],
                                                 night_mode=self.parent().po.all['night_mode'])
         self.row21 = self.one_csc_editing()
         self.row21[4].clicked.connect(self.display_row22)

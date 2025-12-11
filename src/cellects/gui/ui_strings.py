@@ -10,7 +10,7 @@ FW["Image_list_or_videos"]["label"] = "Image list or videos"
 # START_TIP
 FW["Image_list_or_videos"]["tips"] = \
 f"""The *Image list or video* option indicates whether the data have been stored as an image stack (i.e.
-a set of files, each of them containing a single image) or as a video. Images must be named
+a set of files where each file contains a single image) or as a video. Images must be named
 alphanumerically so the program can read them in the right order.
 """
 # END_TIP
@@ -19,15 +19,13 @@ FW["Image_prefix_and_extension"] = {}
 FW["Image_prefix_and_extension"]["label"] = "Image prefix and extension"
 # START_TIP
 FW["Image_prefix_and_extension"]["tips"] = \
-f"""The *Images prefix* and *Images extension* fields allow Cellects to only consider relevant data. For
-instance, setting 'exp_' as image prefix and '.jpg' as image extension will cause Cellects to only
-consider JPG files whose name starts with 'exp_'. The rest of the labeling should be a number
-indicating  the order in which the images were taken.
+f"""The *Images prefix* and *Images extension* fields allow Cellects to consider relevant data. For
+example, setting 'exp_' as image prefix and '.jpg' as image extension will cause Cellects to only
+consider JPG files whose name starts with 'exp_'. Remaining labels should indicate the order in which images were taken.
 NB:
 - Image prefix is optional
-- If every .jpg files start with IMG_ but the folder(s) also contains other .jpg files (e.g. named
-info.jpg),  the user can exclude all .jpg files that do not start with IMG_ by typing “IMG_” in the
-*Image prefix* field.  Cellects accepts all the following formats: bmp, dib, exr, exr, hdr, jp2,
+- If every .jpg files start with IMG_ but other .jpg files exist, use the prefix to exclude irrelevant files.
+- Supported formats: bmp, dib, exr, exr, hdr, jp2,
 jpe, jpeg, jpg, pbm, pfm, pgm, pic, png,  pnm, ppm, ras, sr, tif, tiff, webp, cr2, cr3, nef, arw,
 sr2, raf, prf, rw2, pef, dng, 3fr, iiq.
 """
@@ -37,10 +35,9 @@ FW["Folder"] = {}
 FW["Folder"]["label"] = "Folder"
 # START_TIP
 FW["Folder"]["tips"] = \
-f"""The *Folder* field must contain the computer path toward the folder(s) for Cellects to be able to
-run the analysis.  The user can copy/paste this path into the field or navigate to the folder using
-the *Browse* push button.  If the user wants to analyze several folders at once, the chosen path
-must lead to the folder containing all folders  to analyze.
+f"""The *Folder* field must specify the directory path to the folder(s) for Cellects to be able to
+run the analysis. The user can copy/paste this path into the field or navigate to the folder using
+the *Browse* push button. For batch analysis, provide a path leading directly to the parent folder containing all subfolders.
 """
 # END_TIP
 
@@ -48,11 +45,9 @@ FW["Arena_number_per_folder"] = {}
 FW["Arena_number_per_folder"]["label"] = "Arena number per folder"
 # START_TIP
 FW["Arena_number_per_folder"]["tips"] = \
-f"""The *Arena number per folder* tells how many arenas are present in the images. Then it will store
-and analyze the  video for each arena separately.
+f"""The *Arena number per folder* specifies how many arenas are present in the images. Cellects will process and analyze each arena separately.
 NB:
-- If there are several folders to analyze at once, the user can provide a different arena number for
-each folder (see Fig. 10: the several folder window).
+- For batch processing, assign different arena counts for each subfolder (see Fig. 10: the several folder window).
 """
 # END_TIP
 
@@ -60,7 +55,7 @@ FW["Browse"] = {}
 FW["Browse"]["label"] = "Browse"
 # START_TIP
 FW["Browse"]["tips"] = \
-f"""Clicking the *Browse* button helps to find and open a folder to analyze.
+f"""Clicking the *Browse* button opens a dialog to select a folder for analysis.
 """
 # END_TIP
 
@@ -86,8 +81,7 @@ FW["Run_all_directly"] = {}
 FW["Run_all_directly"]["label"] = "Run all directly"
 # START_TIP
 FW["Run_all_directly"]["tips"] = \
-f"""This option appear when the user already did the image analysis for the current folder.  It is a
-shortcut to skip the image analysis and to directly run and fine tune the video tracking.
+f"""This option appears when image analysis has already been performed for the current folder. It is a shortcut to bypass the image analysis step and proceed directly to video tracking refinement.
 """
 # END_TIP
 
@@ -110,11 +104,11 @@ IAW["Image_number"]["label"] = "Image number"
 # START_TIP
 IAW["Image_number"]["tips"] = \
 f"""Selects the image number to analyze. This number should only be changed when specimen(s) are
-invisible on the first image (e.g. in the case of appearing colonies of bacteria), never otherwise.
+invisible on the first image (e.g., in the case of appearing colonies of bacteria), never otherwise.
 When the specimen(s) are invisible, read more advanced images until some material can be detected.
 NB:
-- When the data is stored as images, this image number comes from the alphanumerical sorting of the
-original image labeling.
+- When the data is stored as images, this image number comes from alphanumerical sorting of
+original image labels.
 """
 # END_TIP
 
@@ -122,8 +116,8 @@ IAW["several_blob_per_arena"] = {}
 IAW["several_blob_per_arena"]["label"] = "One specimen per arena"
 # START_TIP
 IAW["several_blob_per_arena"]["tips"] = \
-f"""Should be selected if there is only one specimen (e.g. a cell or a connected colony) per arena.   If
-there already are (or will be) several specimen(s) per arena, unselect this option.
+f"""Select this option if there is only one specimen (e.g., a cell or connected colony) per arena.
+If multiple specimens exist (or will be present) in an arena, unselect this option.
 NB:
 - This option is selected by default.
 """
@@ -133,18 +127,13 @@ IAW["Scale_with"] = {}
 IAW["Scale_with"]["label"] = "Scale with"
 # START_TIP
 IAW["Scale_with"]["tips"] = \
-f"""Set how the true pixel size (in mm) should be computed. to calculate pixel size  Cellects can
-determine this scale using the width (horizontal size) of the image or the width of the specimens on
-the first image (ideally in cases where they share the same width).
+f"""Specify how to compute true pixel size (in mm). Cellects can determine this scale using: 
+- Image width (horizontal dimension)
+- Specimen width on first image (usable when specimens share consistent width)
 NB:
-- Cellects' advanced parameters include the possibility to disable this scaling and get all outputs
-in pixels.
-- Using the width of the specimens decreases the first image detection efficiency, we recommend
-choosing the width of the image.
-- However, if the width of the specimens is known with more accuracy than the width of the image,
-choose the width of the specimens.
-- By default, distances and surfaces are in pixels (Cellects stores the size of one pixel in a file
-called `software_settings.csv`).
+- Advanced parameters allow disabling scaling and outputting in pixels.
+- Using specimen width reduces initial detection efficiency. We recommend using image width unless specimen dimensions are known with higher accuracy than imaging equipment.
+- Pixel size is stored in a file named `software_settings.csv`.
 """
 # END_TIP
 
@@ -152,7 +141,9 @@ IAW["Scale_size"] = {}
 IAW["Scale_size"]["label"] = "Scale size"
 # START_TIP
 IAW["Scale_size"]["tips"] = \
-f"""The *Scale size* is the length (in mm) of the item(s) used for scaling.
+f"""The *Scale size* is the actual length (in mm) corresponding to scaling reference.
+NB:
+- This value enables conversion from pixel coordinates to physical dimensions.
 """
 # END_TIP
 
@@ -160,18 +151,14 @@ IAW["Select_and_draw"] = {}
 IAW["Select_and_draw"]["label"] = "Select and draw"
 # START_TIP
 IAW["Select_and_draw"]["tips"] = \
-f"""*Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are
-specimens *Cell* and others are background *Back*. To use that tool, the user must click once on the
-*Cell* button (to draw a part of the image containing specimens) or  on the *Back* button (to draw a
-part of the image containing background). The color of the clicked button changes and the user can
-click and move the cursor on the image to draw the position  of the specimens or of the background.
-Each drawing will also appear (with a number) below the corresponding button. If the user clicks on
-one of these numbered drawings, the corresponding selected area disappears, enabling the user to
-correct mistakes.
+f"""*Select and draw* allows the user to inform Cellects about specimen (*Cell*) and background (*Back*) areas in images.
+To use, click *Cell* or *Back* button (button color changes), then:
+- Click and drag mouse on image to mark corresponding area
+- Numbered drawings appear below buttons for reference
+- (if needed) Click numbered drawing to remove selection.
 NB:
-- If the user wishes to analyze several folders, the *Select and draw* option will only work for the
-first.
-- If each folder requires using this option, the user has to analyze each folder separately.
+- By default, this tool only works for the first folder when analyzing multiple folders. Advanced parameters include an option to use these same masks in multiple folders.
+- To apply saved masks (e.g., background or specimen initiation regions) across selected folders, enable *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 """
 # END_TIP
 
@@ -179,8 +166,7 @@ IAW["Draw_buttons"] = {}
 IAW["Draw_buttons"]["label"] = "Draw buttons"
 # START_TIP
 IAW["Draw_buttons"]["tips"] = \
-f"""Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding
-down the mouse button.
+f"""Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding mouse on the image.
 """
 # END_TIP
 
@@ -188,16 +174,13 @@ IAW["Advanced_mode"] = {}
 IAW["Advanced_mode"]["label"] = "Advanced mode"
 # START_TIP
 IAW["Advanced_mode"]["tips"] = \
-f"""The *Advanced mode* allows the user to fine tune the image analysis parameters. This can be useful
-to use previously working set of parameters on similar images, or to test the available methods
-directly. Even when some analysis option are generated, selecting this option can be useful to
-access:
-- The color space combination corresponding to the displayed image.
-- Various filter to apply on the image before segmentation.
-- Other results by adding good channels together or mixing two good options using a logical operator
-between them.
-- The grid segmentation algorithm.
-- The kmeans segmentation algorithm.
+f"""The *Advanced mode* enables fine-tuning of image analysis parameters for:
+- Custom color space combinations (e.g., HSV, HLS)
+- Applying filters before segmentation
+- Combining segmentations using logical operators
+- Accessing rolling window and Kmeans algorithms
+NB:
+- Useful for reusing validated parameter sets or testing alternative methods.
 """
 # END_TIP
 
@@ -214,12 +197,11 @@ image by 3 colors,  they transform it into 3 different visual properties
 """
 # END_TIP
 
-IAW["Color_combination"] = {}
-IAW["Color_combination"]["label"] = "Logical operator"
+IAW["Logical_operator"] = {}
+IAW["Logical_operator"]["label"] = "Logical operator"
 # START_TIP
-IAW["Color_combination"]["tips"] = \
-f"""The logical operator to apply between the result of two distinct segmentations. For instance, using
-two filters or two color space combinations.
+IAW["Logical_operator"]["tips"] = \
+f"""The *Logical operator* defines how to combine results from distinct segmentations (e.g., merging the segmentation resulting from a specific color space transformation and filtering with a different one). Supported operators: AND, OR, XOR.
 """
 # END_TIP
 
@@ -227,7 +209,9 @@ IAW["Filter"] = {}
 IAW["Filter"]["label"] = "Filter"
 # START_TIP
 IAW["Filter"]["tips"] = \
-f"""The filter to apply to the image before segmentation
+f"""Apply a filter to preprocess images before segmentation.
+NB:
+- Filtering can improve segmentation accuracy by emphasizing relevant image features.
 """
 # END_TIP
 
@@ -235,8 +219,8 @@ IAW["Rolling_window_segmentation"] = {}
 IAW["Rolling_window_segmentation"]["label"] = "Rolling window segmentation"
 # START_TIP
 IAW["Rolling_window_segmentation"]["tips"] = \
-f"""Segment small squares of the images to detect local intensity valleys This method segment the image
-locally using otsu thresholding on a rolling window
+f"""Segments image regions using a rolling window approach to detect local intensity valleys.
+The method applies Otsu's thresholding locally on each window.
 """
 # END_TIP
 
@@ -244,8 +228,7 @@ IAW["Kmeans"] = {}
 IAW["Kmeans"]["label"] = "Kmeans"
 # START_TIP
 IAW["Kmeans"]["tips"] = \
-f"""The Kmeans algorithm will split the image into categories (a number between 2 and 5) and find the
-one corresponding to the specimen(s)
+f"""The *Kmeans* algorithm clusters pixels into a specified number of categories (2-5) to identify specimen regions within the image.
 """
 # END_TIP
 
@@ -253,13 +236,9 @@ IAW["Generate_analysis_options"] = {}
 IAW["Generate_analysis_options"]["label"] = "Generate analysis options"
 # START_TIP
 IAW["Generate_analysis_options"]["tips"] = \
-f"""Cellects suggests an algorithms to automatically find the best parameters to detect specimens on the
-first image:
-- **Basic** → suggests options in a few minutes.   Alternatively, the user can select *Advanced
-mode* to view or modify the parameters selected by Cellects.
-NB:
-- Clicking on *Basic* (or *Apply current config*) will provoke the display of a working message (in
-orange).
+f"""Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the first or last image:
+- **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode* to review or modify more specific settings.
+NB: Selecting *Basic* (or *Apply current config*) will trigger an orange working message during processing.
 """
 # END_TIP
 
@@ -267,18 +246,14 @@ IAW["Select_option_to_read"] = {}
 IAW["Select_option_to_read"]["label"] = "Select option to read"
 # START_TIP
 IAW["Select_option_to_read"]["tips"] = \
-f"""Select the option allowing the best segmentation. This dropdown menu appears after generating
-analysis options. Each available option allows the user to directly assess their quality.  For
-instance, if option 1 generate a message informing the user that this option detected 6 distinct
-spots in 6 arenas and these correspond to the user's expectations they should click the *Yes*
-button.  Otherwise, Cellects offers several ways to improve the analysis:
-- Setting the *arena shape*, the *spot shape*, or the *spot size*.
-- Drawing more specimens or background using *Select and draw*.
-- Tuning the advanced mode to set up other methods manually.
--> Each of these options can then be tested using the *Apply current config* button.
-NB: Once the magenta/pink contours correspond to the right position of all cells and the right
-number of detected spots, the user can click the *Yes* button. After clicking, an orange working
-message appears, and Cellects automatically looks for the coordinates of the contour of each arena.
+f"""Choose the option producing optimal segmentation results. This menu appears after generating analysis options, allowing direct quality assessment.
+For example, if Option 1 shows correct detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis via:
+- Adjusting arena/spot shapes or sizes
+- Using *Select and draw* to annotate specimens/background
+- Manual configuration in advanced mode
+→ Test changes with *Apply current config*
+NB: 
+- Confirm when magenta/pink contours match expected positions and counts.
 """
 # END_TIP
 
@@ -294,7 +269,7 @@ IAW["Spot_shape"] = {}
 IAW["Spot_shape"]["label"] = "Set spot shape"
 # START_TIP
 IAW["Spot_shape"]["tips"] = \
-f"""Initial shape of the specimen(s) inside arena(s).
+f"""Defines the expected shape of specimens within arenas.
 """
 # END_TIP
 
@@ -311,11 +286,10 @@ IAW["Video_delimitation"] = {}
 IAW["Video_delimitation"]["label"] = "Video delimitation"
 # START_TIP
 IAW["Video_delimitation"]["tips"] = \
-f"""After validating the initial detection, the result of the automatic video delimitation appears in
-blue in the  center of the window.   If correct, click *Yes*.   If incorrect, click *No*, and
-Cellects will suggest:
-- A slower, more efficient algorithm
-- Or a manual delineation option
+f"""After confirming initial detection, automatic video delimitation results appear in blue. 
+Click *Yes* if accurate or *No* for:
+- A slower, higher precision algorithm.
+- Manual delineation option.
 """
 # END_TIP
 
@@ -323,11 +297,9 @@ IAW["Last_image_question"] = {}
 IAW["Last_image_question"]["label"] = "Last image question"
 # START_TIP
 IAW["Last_image_question"]["tips"] = \
-f"""If the user thinks that parameters used on the first image might not work on later images, they can
-fine
--tune them using the last image.
-- Clicking *Yes* → allows testing on the last image before moving on.
-- Clicking *No* → goes directly to video tracking.
+f"""If parameters might fail on later images, test them first on the final frame:
+- *Yes* → validates with last image before tracking.
+- *No* → proceeds directly to video analysis.
 """
 # END_TIP
 
@@ -335,11 +307,8 @@ IAW["Start_differs_from_arena"] = {}
 IAW["Start_differs_from_arena"]["label"] = "Check if the medium at starting position differs from the rest of the arena"
 # START_TIP
 IAW["Start_differs_from_arena"]["tips"] = \
-f"""If the substrate changes between starting and growing areas (e.g. nutritive gel vs transparent
-agar), keep this checked. If the substrate is homogeneous everywhere, uncheck this option. This
-option is only relevant for experiments in which the medium on which the specimen grow does not have
-the same optic properties at the position of the specimen(s) at the first frame and at their
-positions later on.
+f"""Enable if the substrate differs between initial position and arena growth area (e.g., nutritive gel 
+vs. agar). Disable for homogeneous substrates.
 """
 # END_TIP
 
@@ -347,13 +316,10 @@ IAW["Save_image_analysis"] = {}
 IAW["Save_image_analysis"]["label"] = "Save image analysis"
 # START_TIP
 IAW["Save_image_analysis"]["tips"] = \
-f"""Complete the analysis of the current image. Clicking this button is useful to analyze only one
-image.  To analyze video(s), click *Next*.
+f"""Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze video(s), click *Next*.
 NB:
-- When there should be only one specimen per arena, keeps the largest connected component.
-- Compute and save (.csv) all descriptors selected in the Required output window on the current
-image.
-- Save a validation image to assess the efficiency of the segmentation.
+- When analyzing a single specimen per arena, keeps the largest connected component.
+- Saves all selected descriptors in .csv format for the current image and generates a validation image to assess segmentation accuracy.
 """
 # END_TIP
 
@@ -362,21 +328,17 @@ image.
 #########     Video analysis Window     #########
 #################################################
 
-VAW = {}
+VAW = dict()
 VAW["Arena_to_analyze"] = {}
 VAW["Arena_to_analyze"]["label"] = "Arena to analyze"
 # START_TIP
 VAW["Arena_to_analyze"]["tips"] = \
-f"""This arena number allows the user to load one particular arena in the current folder. Typically, the
-user can choose an arena, click on *Detection* to load and analyse one arena and *Read* the
-resulting analysis.
+f"""This arena number selects a specific arena in the current folder. The user can choose an arena, click *Detection* to load and analyze it, then *Read* results.
 NB:
-- Cellects automatically names the arena according to their position in the image, from left to
-right and from top to bottom.
-- If there is only one arena, this number should be one.
-- *Post processing* automatically runs *Detection* and *Detection* automatically runs *Load One
-arena*
-- Loading will be faster if videos are already saved as ind_*.npy.
+- Cellects automatically names the arena by their position (left-to-right, top-to-bottom).
+- For single-arena setups, use 1.
+- *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
+- Loading speeds improve if videos are pre-saved as ind_*.npy.
 """
 # END_TIP
 
@@ -384,13 +346,12 @@ VAW["Maximal_growth_factor"] = {}
 VAW["Maximal_growth_factor"]["label"] = "Maximal growth factor"
 # START_TIP
 VAW["Maximal_growth_factor"]["tips"] = \
-f"""The maximal growth factor is a proportion of pixels in the image and indicates how far the specimen
-can possibly move or grow from one image to the next. This factor should be:
-- Increased if the analysis underestimates the specimen size.
-- Decreased if the analysis overestimates the specimen size.
+f"""This is the maximum allowable proportion of image area that may be covered by specimen movement between frames.
+Adjust accordingly:
+- Increase if specimen size is underestimated.
+- Decrease if specimen size is overestimated.
 NB:
-- Precisely, this is  the upper limit of the proportion of the image that is allowed to be covered
-by the specimen  between two frames.
+- Precisely, this defines an upper bound on relative coverage changes between sequential images.
 """
 # END_TIP
 
@@ -398,12 +359,10 @@ VAW["Temporal_smoothing"] = {}
 VAW["Temporal_smoothing"]["label"] = "Temporal smoothing"
 # START_TIP
 VAW["Temporal_smoothing"]["tips"] = \
-f"""The number of times the video will be smoothed. This is useful to accurately detect variations in
-pixel slopes. Temporal smoothing reduces variations from noise  and reveals trends occurring at
-larger time scales. Technically, Cellects smoothes pixels curves using a rolling window over time.
+f"""Applies temporal smoothing to reduce noise and highlight long-term trends by averaging pixel intensity changes. Use when analyzing slope-based segmentation results.
 NB:
-- This algorithm is only useful when segmenting with pixel intensity slopes.
-- Repeating this algorithm many times makes all pixels constants and prevent any detection.
+- This uses a moving window algorithm on pixel intensity curves over time.
+- Excessive iterations produce constant values, preventing accurate detection.
 """
 # END_TIP
 
@@ -412,17 +371,15 @@ VAW["Segmentation_method"]["label"] = "Segmentation method"
 # START_TIP
 VAW["Segmentation_method"]["tips"] = \
 f"""Cellects includes five video tracking options:
-- **Frame option**: applies the algorithm used during the image analysis window, frame by frame,
-without temporal dynamics.
-- **Threshold option**: compares pixel intensity with the average intensity of the whole image at
+- **Frame option**: Applies the image analysis algorithm frame by frame, without temporal dynamics.
+- **Threshold option**: Compares pixel intensity with the average intensity of the whole image at
 each time step.
-- **Slope option**: compares slope of the pixel intensity with an automatically defined slope
-threshold.
+- **Slope option**: Compares pixel intensity slopes with an automatically defined threshold.
 - **T and S option**: logical AND of threshold and slope options.
 - **T or S option**: logical OR of threshold and slope options.
 NB:
-- Selecting the *Compute all options* before dunning *Detection* allows the comparison of these
-methods. Once the analysis completed, select one option and click *Read*.
+- Selecting the *Compute all options* before dunning *Detection* allows method comparison. 
+Once analysis completes. Once the analysis completed, select one option and click *Read*.
 - Computing only one option is faster and requires less memory.
 - When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
 window, only the *Frame* option remains available.
@@ -433,9 +390,8 @@ VAW["Load_one_arena"] = {}
 VAW["Load_one_arena"]["label"] = "Load one arena"
 # START_TIP
 VAW["Load_one_arena"]["tips"] = \
-f"""Clicking this button loads the arena corresponding to the *Arena to analyze*. The center of the
-window then displays the first frame of the video of that arena. Click *Read* to check the full
-video.
+f"""Clicking this button loads the arena associated with *Arena to analyze*.
+The center of the window displays the first frame of that arena's video. Click *Read* to review the full video.
 """
 # END_TIP
 
@@ -443,10 +399,9 @@ VAW["Detection"] = {}
 VAW["Detection"]["label"] = "Detection"
 # START_TIP
 VAW["Detection"]["tips"] = \
-f"""*Detection* runs one (or all) segmentation method on one arena. Once finished, click *Read* to see
-the detection result.  If correct, answer *Done* to *Step 1: Tune parameters to improve Detection*,
-and check the effect of *Post
--processing*.
+f"""*Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read* 
+to view the detection result. If correct, answer *Done* to proceed with tuning parameters for 
+post processing.
 """
 # END_TIP
 
@@ -462,12 +417,11 @@ VAW["Fading_detection"] = {}
 VAW["Fading_detection"]["label"] = "Fading detection"
 # START_TIP
 VAW["Fading_detection"]["tips"] = \
-f"""*Fading detection* monitors how the specimen(s) leave some areas. This is useful when the specimens
-not only grow but also move. Uncheck this option otherwise. When the specimen(s) may leave
-previously covered areas, set a value between one and minus one to control the strength of that
-detection.
-- Near minus one: The algorithm will almost never detect when the specimen(s) leave an area.
-- Near one: The algorithm may wrongly remove detection everywhere.
+f"""*Fading detection* monitors when specimens leave previously occupied areas, useful for 
+moving organisms rather than static growth. Uncheck this option if not needed. Set a value 
+between minus one and one to control sensitivity:
+- Near minus one: Minimal false removal of specimen traces.
+- Near one: High risk of over-removal from all areas.
 """
 # END_TIP
 
@@ -475,19 +429,18 @@ VAW["Post_processing"] = {}
 VAW["Post_processing"]["label"] = "Post processing"
 # START_TIP
 VAW["Post_processing"]["tips"] = \
-f"""*Postprocessing* applies the chosen detection algorithm to the video, on top of additional
-algorithms to improve it:
-- Standard binary image operations: opening, closing, logical ops.
-- *Fading detection*: when specimen(s) may leave areas (optional).
+f"""*Post-processing* applies detection algorithms with additional enhancements:
+- Binary operations: opening, closing, logical ops.
+- Fading detection* tracking: when specimen(s) may leave areas (optional).
 - *Correct errors around initial shape*: when the contour of the initial position of the specimen is
 hard to detect (optional).
 - *Connect distant shapes*: when the specimen's heterogeneity create wrong disconnections in the
 video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
-detected as specimen (optional). Once Post
--processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced parameters to
-improve Post
--processing*, and then *Run All* arenas.
+detected as specimen (optional). 
+NB:
+Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced parameters to
+improve Post processing*, and then *Run All* arenas.
 """
 # END_TIP
 
@@ -495,18 +448,13 @@ VAW["Save_one_result"] = {}
 VAW["Save_one_result"]["label"] = "Save one result"
 # START_TIP
 VAW["Save_one_result"]["tips"] = \
-f"""Complete the analysis of the current video. Clicking this button is useful to analyze only one
-video. Click *Run All* to analyze all arenas of the current folder. Both options should be done only
-once *Postprocessing* gave a satisfying result. Saving one result includes:
-- Computing and saving (.csv) all descriptors selected in the Required output window on all frames
-of the current video.
-- Save one validation video to assess the efficiency of the segmentation on all frames.
-- Save the software settings to remember all current parameters.
+f"""Complete the current video analysis by clicking this button for single-arena processing.
+Saving includes:
+- Calculating all selected descriptors (.csv) per frame.
+- Generating validation videos for detection verification.
+- Storing configuration parameters for reproducibility.
 NB:
-- If most arenas analyzed well, but some failed, the user can: reanalyze every arena by adjust some
-parameters to fix  any specific problem and click *Save one result* to replace the saved results for
-that arena.
-- This option modifies the specific row and validation video corresponding to that modified arena.
+- This action will overwrite results and validation data for the current arena.
 """
 # END_TIP
 
@@ -514,17 +462,12 @@ VAW["Run_All"] = {}
 VAW["Run_All"]["label"] = "Run All"
 # START_TIP
 VAW["Run_All"]["tips"] = \
-f"""If detection with *Postprocessing* leads to a satisfying result for one arena,   the user can apply
-the current parameters to all arenas.
--> Clicking *Run All* will:
-- Write the uncompressed video of each arena to the folder (can take a lot of space)
-- Analyze videos one by one (Fig. 7)
-- Compute and save all descriptors selected in the *Required output* window on all frames of the
-current video.
-- Save one validation video to assess the efficiency of the segmentation on all frames.
-- Save two validation images (after 1/10 of total time and at the last image) to assess the
-efficiency of the segmentation.
-- Save the software settings to remember all current parameters.
+f"""Apply validated parameters to all arenas by clicking *Run All*. This action:
+- Generates full-resolution video outputs (storage-intensive)
+- Processes videos sequentially with real-time visualization
+- Calculates selected descriptors for each frame
+- Produces validation content at multiple intervals
+- Preserves current configuration settings
 """
 # END_TIP
 
@@ -532,8 +475,7 @@ VAW["Save_all_choices"] = {}
 VAW["Save_all_choices"]["label"] = "Save all choices"
 # START_TIP
 VAW["Save_all_choices"]["tips"] = \
-f"""Clicking the *Save all choices* write or updates config files to redo an analysis with the same
-parameters later on.
+f"""Clicking *Save all choices* writes/updates configuration files to preserve analysis parameters for future replication.
 """
 # END_TIP
 
@@ -541,18 +483,17 @@ parameters later on.
 ########     Multiple folders Window     ########
 #################################################
 
-MF = {}
+MF = dict()
 MF["Check_to_select_all_folders"] = {}
 MF["Check_to_select_all_folders"]["label"] = "Check to select all folders"
 # START_TIP
 MF["Check_to_select_all_folders"]["tips"] = \
 f"""Select this option to run the analysis on all folders containing images matching the *Image prefix*
-and *Images extension* patterns. Otherwise, use Ctrl/Cmd to select any folder to analyze.
+and *Images extension*. Otherwise, use Ctrl/Cmd to select specific folders for analysis.
 NB:
-- This selection only has consequences when one use the *Run All* functionality.
-- To keep and use some masks (e.g. representing the background or the starting pixels of the
-specimen(s)) on every selected folder, use the *Keep Cell and Back drawing for all folders* option
-in *Advanced parameters*.
+- This setting affects only the *Run All* functionality.  
+- To apply saved masks (e.g., background or specimen initiation regions) across selected folders, enable 
+  *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 """
 # END_TIP
 
@@ -560,15 +501,14 @@ in *Advanced parameters*.
 ########     Required Output Window     ########
 #################################################
 
-RO = {}
+RO = dict()
 RO["coord_specimen"] = {}
 RO["coord_specimen"]["label"] = "Pixels covered by the specimen(s)"
 # START_TIP
 RO["coord_specimen"]["tips"] = \
-f"""Save a .npy file containing the coordinates (t, y, x) of presence of the specimen(s), as detected
-with the current parameters.
+f"""Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current parameters.
 NB:
-- Depending on the number of frames, these files may take a lot a memory.
+- These files may consume significant memory depending on the total frame count.
 """
 # END_TIP
 
@@ -576,19 +516,14 @@ RO["Graph"] = {}
 RO["Graph"]["label"] = "Graph of the specimen(s) (or network)"
 # START_TIP
 RO["Graph"]["tips"] = \
-f"""Compute the geometrical graph describing the specimen as it is detected with the current parameters.
-Cellects compute the graph of each frame on the skeleton of the largest connected component.  If the
-user also ask Cellects to detect a network inside the specimen(s), the graph will be computed on
-this detected network. The graph is saved as two .csv files:
-- One for the vertices containing their coordinates (t, y, x), their id, whether they are tips,
-whether they are part of the specimen area at the beginning of the video, and whether they are part
-of a small cluster of vertices.
-- One for the edges containing their id, the id of their two vertices, their lengths, their average
-width and intensity.
+f"""Compute a geometrical graph describing the specimen based on current detection parameters. 
+Cellects generates this graph using the skeleton of the largest connected component per frame. 
+If network detection is enabled, it will be computed on the detected network instead. The output includes:
+- A .csv file for vertices with coordinates (t, y, x), IDs, tip status, part of the specimen's initial position, connection status with other vertices.
+- A .csv file for edges with IDs, vertex pairs, lengths, average width, and intensity.
 NB:
-- Depending on the number of frames, these files may take a lot a memory.
-- Selecting both network and graph detection is only useful for organisms having a distinguishable
-network within their main body (e.g. Physarum polycephalum)
+- These files may consume significant memory depending on the total frame count.
+- Network and graph detection together are relevant only for organisms with a distinct internal network (e.g., *Physarum polycephalum*).
 """
 # END_TIP
 
@@ -596,8 +531,8 @@ RO["coord_oscillating"] = {}
 RO["coord_oscillating"]["label"] = "Oscillating areas in the specimen(s)"
 # START_TIP
 RO["coord_oscillating"]["tips"] = \
-f"""Compute and save the coordinates (t, y, x) of areas oscillating synchronously in the specimen(s).
-This algorithm save two .npy file: one for thickening areas and one for slimming areas.
+f"""Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s). 
+Two files are generated: one for thickening regions and one for slimming regions.
 """
 # END_TIP
 
@@ -605,24 +540,23 @@ RO["coord_network"] = {}
 RO["coord_network"]["label"] = "Network in the specimen(s)"
 # START_TIP
 RO["coord_network"]["tips"] = \
-f"""Detect and save (as .npy file) the coordinate (t, y, x) of a distinguishable network in the
+f"""Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
 specimen(s).
 """
 # END_TIP
 
-#################################################
+####################################################
 ########     Advanced Parameters Window     ########
-#################################################
+####################################################
 
-AP = {}
+AP = dict()
 AP["Crop_images"] = {}
 AP["Crop_images"]["label"] = "Automatically crop images"
 # START_TIP
 AP["Crop_images"]["tips"] = \
-f"""Uses the first image detection to crop all images and improve arena and last image detection.
+f"""Uses initial image detection to crop all images and improve arena/last image detection. 
 NB:
-- If the analysis fails or the program crashes while running the image analysis window, unselecting
-this option may help.
+- Unselect this option if analysis fails or crashes during image analysis.
 """
 # END_TIP
 
@@ -630,8 +564,7 @@ AP["Subtract_background"] = {}
 AP["Subtract_background"]["label"] = "Subtract background"
 # START_TIP
 AP["Subtract_background"]["tips"] = \
-f"""Takes the first image and subtracts it from every following images. This an either improve or
-degrade detection depending on the dataset.
+f"""Takes the first image and subtracts it from subsequent images. This can improve or degrade detection depending on dataset characteristics.
 """
 # END_TIP
 
@@ -639,10 +572,9 @@ AP["Keep_drawings"] = {}
 AP["Keep_drawings"]["label"] = "Keep Cell and Back drawings for all folders"
 # START_TIP
 AP["Keep_drawings"]["tips"] = \
-f"""During the first image analysis, if the user drew cell and back to help detection, this option save
-and use this information for all folders. In summary:
-- **Checked** → keep this information for all folders
-- **Unchecked** → only use it for the current folder
+f"""During initial image analysis, if the user drew cell/back regions to assist detection, this option saves and uses these annotations across all folders. In summary:
+- **Checked** → retain annotations for all folders
+- **Unchecked** → apply only to current folder
 """
 # END_TIP
 
@@ -650,16 +582,12 @@ AP["Correct_errors_around_initial"] = {}
 AP["Correct_errors_around_initial"]["label"] = "Correct errors around initial specimen's position"
 # START_TIP
 AP["Correct_errors_around_initial"]["tips"] = \
-f"""Apply an algorithm allowing to correct missing detection around the initial position of the
-specimen.  This option is useful when there are important color variations around that position.
-This occurs, for instance,  when the width or diffusion of a nutritive patch blurs a normally
-transparent medium.  Select this algorithm only if you realized that detection is less efficient
-there. Technically, this algorithm works as follows:
-- It detects potential gaps around the initial position of the specimen.
-- It monitors the growth speed nearby.
-- It fills these gaps in the same way growth occurs in nearby pixels.
+f"""Applies an algorithm to correct detection errors near the initial specimen position due to color variations (e.g., from nutrient patches). Technical workflow:
+- Identifies potential gaps around initial position
+- Monitors local growth velocity 
+- Fills gaps using growth patterns from adjacent pixels 
 NB:
-- ⚠️ Do not use if the substrate has the same opacity everywhere (i.e. no difference between
+- ⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no difference between
 starting and growth regions).
 """
 # END_TIP
@@ -668,10 +596,9 @@ AP["Prevent_fast_growth_near_periphery"] = {}
 AP["Prevent_fast_growth_near_periphery"]["label"] = "Prevent fast growth near periphery"
 # START_TIP
 AP["Prevent_fast_growth_near_periphery"]["tips"] = \
-f"""During video analysis, the borders of the arena may be wrongly detected as part of the specimen(s),
-this option helps to avoid this issue.
-- **Checked** → Remove the detection of the specimen(s) that move too fast near periphery.
-- **Unchecked** → Do not change the detection.
+f"""During video analysis, prevents false specimen detection at arena borders by filtering rapid periphery growth.
+- **Checked** → Exclude fast-moving detections near boundaries 
+- **Unchecked** → Use standard detection criteria 
 """
 # END_TIP
 
@@ -679,16 +606,14 @@ AP["Connect_distant_shapes"] = {}
 AP["Connect_distant_shapes"]["label"] = "Connect distant shapes"
 # START_TIP
 AP["Connect_distant_shapes"]["tips"] = \
-f"""This error correcting algorithm makes dynamic connections between parts of the specimen.  It can
-only be used when there can only be one connected specimen per arena. This is useful when the
-specimen's heterogeneity create wrong disconnections and the detection is smaller than the true
-specimen. Technically, this algorithm works as follows:
-- It detects areas that are disconnected from the main detected area.
-- It monitors the growth speed close to this disconnected area.
-- It connects this area with the main area in the same way growth occurs in nearby pixels.
+f"""Algorithm for connecting disjoint specimen regions in cases where there should be only one connected specimen per arena. 
+This is useful when the specimen's heterogeneity create wrong disconnections and the detection is smaller than the true
+specimen. Technical implementation:
+- Identifies disconnected subregions 
+- Analyzes local growth dynamics 
+- Recreates connections using spatially consistent growth patterns 
 NB:
-- This option can drastically increase the duration of the analysis.
-- It is useful when the specimen color is close to the background and causes disconnections.
+- Increases analysis time substantially.
 """
 # END_TIP
 
@@ -696,12 +621,9 @@ AP["Specimens_have_same_direction"] = {}
 AP["Specimens_have_same_direction"]["label"] = "All specimens have the same direction"
 # START_TIP
 AP["Specimens_have_same_direction"]["tips"] = \
-f"""Selecting this algorithm improves automatic arena detection when all specimens move in the same
-direction.
-- **Checked** → Improve the chances to correctly detect arenas when specimen(s) move strongly and in
-the same direction.
-- **Unchecked** → Use the fastest automatic arena detection algorithm, based on the distances
-between the centroids of the specimen(s) at the beginning of the video.
+f"""Select to optimize arena detection for specimens moving move in the same direction.
+- **Checked** → Uses motion pattern analysis for arena localization.
+- **Unchecked** → Employs standard centroid-based algorithm.
 """
 # END_TIP
 
@@ -709,10 +631,9 @@ AP["Appearance_size_threshold"] = {}
 AP["Appearance_size_threshold"]["label"] = "Appearance size threshold (automatic if checked)"
 # START_TIP
 AP["Appearance_size_threshold"]["tips"] = \
-f"""Defines the minimal size threshold (in pixels) for considering an appearing shape as a specimen
-(e.g. bacterial colony).
-- **Checked** → Automatically determine the threshold.
-- **Unchecked** → Allow the user to set the threshold.
+f"""Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
+- **Checked** → Automatic threshold calculation.
+- **Unchecked** → Manual user-defined threshold.
 """
 # END_TIP
 
@@ -720,12 +641,11 @@ AP["Appearance_detection_method"] = {}
 AP["Appearance_detection_method"]["label"] = "Appearance detection method"
 # START_TIP
 AP["Appearance_detection_method"]["tips"] = \
-f"""Two methods available:
-- **Largest** → According to the size of the detected components.
-- **Most central** → According to the distance to the center of the arena.
+f"""Selection criteria for initial specimen detection:
+- Largest: Based on component size metric.
+- Most central: Based on arena center proximity.
 NB:
-- Only useful when specimen(s) are invisible at the beginning of the experiment and appear
-progressively.
+- Applicable only to progressively emerging specimens.
 """
 # END_TIP
 
@@ -733,9 +653,9 @@ AP["Mesh_side_length"] = {}
 AP["Mesh_side_length"]["label"] = "Mesh side length"
 # START_TIP
 AP["Mesh_side_length"]["tips"] = \
-f"""The length of one side (in pixels) of the rolling window.
+f"""Pixel dimension for analysis window size.
 NB:
-- Cannot be larger than the smaller side of the image.
+- Must not exceed minimum image dimension 
 """
 # END_TIP
 
@@ -743,9 +663,9 @@ AP["Mesh_step_length"] = {}
 AP["Mesh_step_length"]["label"] = "Mesh step"
 # START_TIP
 AP["Mesh_step_length"]["tips"] = \
-f"""The size of the step (in pixels) between two positioning of the rolling window.
+f"""The size of the step (in pixels) between consecutive rolling window positions.
 NB:
-- Should not be larger than the mesh side length to cover all pixels.
+- Must not exceed the mesh side length to ensure full coverage of the image.
 """
 # END_TIP
 
@@ -753,7 +673,7 @@ AP["Mesh_minimal_intensity_variation"] = {}
 AP["Mesh_minimal_intensity_variation"]["label"] = "Mesh minimal intensity variation"
 # START_TIP
 AP["Mesh_minimal_intensity_variation"]["tips"] = \
-f"""The minimal variation in intensity to consider that a given window do contain the specimen(s).
+f"""The minimal variation in intensity to consider that a given window does contain the specimen(s).
 NB:
 - This threshold is an intensity value ranging from 0 to 255 (generally small).
 - Correspond to the level of noise in the background.
@@ -764,7 +684,7 @@ AP["Expected_oscillation_period"] = {}
 AP["Expected_oscillation_period"]["label"] = "Expected oscillation period"
 # START_TIP
 AP["Expected_oscillation_period"]["tips"] = \
-f"""The period (in minutes) of the biological oscillations to detect within the specimen(s). Computation
+f"""The period (in minutes) of biological oscillations to detect within the specimen(s). Computation
 is based on luminosity variations.
 """
 # END_TIP
@@ -774,8 +694,7 @@ AP["Minimal_oscillating_cluster_size"]["label"] = "Minimal oscillating cluster s
 # START_TIP
 AP["Minimal_oscillating_cluster_size"]["tips"] = \
 f"""When looking for oscillatory patterns, Cellects detects connected components that are thickening or
-slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
-connected group of pixels. This threshold is useful to filter out small noisy oscillations.
+slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these groups of connected pixels. This threshold is useful to filter out small noisy oscillations.
 """
 # END_TIP
 
@@ -784,8 +703,8 @@ AP["Spatio_temporal_scaling"]["label"] = "Spatio-temporal scaling"
 # START_TIP
 AP["Spatio_temporal_scaling"]["tips"] = \
 f"""Defines the spatiotemporal scale of the dataset:
-- Time between images or frames (minutes)
-- Option to convert areas/distances from pixels to mm/mm²
+- Time between images or frames (minutes).
+- An option to convert areas/distances from pixels to mm/mm².
 """
 # END_TIP
 
@@ -794,7 +713,7 @@ AP["Parallel_analysis"]["label"] = "Run analysis in parallel"
 # START_TIP
 AP["Parallel_analysis"]["tips"] = \
 f"""Allow the use of more than one core of the computer processor.
-- **Checked** → A use multiple CPU cores to analyze arenas in parallel (faster).
+- **Checked** → Uses multiple CPU cores to analyze arenas in parallel (faster).
 - **Unchecked** → Single core analysis.
 """
 # END_TIP
@@ -803,8 +722,7 @@ AP["Proc_max_core_nb"] = {}
 AP["Proc_max_core_nb"]["label"] = "Proc max core number"
 # START_TIP
 AP["Proc_max_core_nb"]["tips"] = \
-f"""Maximum number of logical CPU cores to use during analysis. Default is the available number of cores
-minus one.
+f"""Maximum number of logical CPU cores to use during analysis. The default value is set to the total number of available CPU cores minus one.
 """
 # END_TIP
 
@@ -812,8 +730,7 @@ AP["Minimal_RAM_let_free"] = {}
 AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free"
 # START_TIP
 AP["Minimal_RAM_let_free"]["tips"] = \
-f"""Amount of RAM to leave available for other programs.   Setting to `0` gives Cellects all memory, but
-increases crash risk if other apps are open.
+f"""Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all memory, but increases crash risk if other apps are open.
 """
 # END_TIP
 
@@ -821,8 +738,7 @@ AP["Lose_accuracy_to_save_RAM"] = {}
 AP["Lose_accuracy_to_save_RAM"]["label"] = "Lose accuracy to save RAM"
 # START_TIP
 AP["Lose_accuracy_to_save_RAM"]["tips"] = \
-f"""For low
--memory systems:
+f"""For low memory systems:
 - Converts video from `np.float64` to `uint8`
 - Saves RAM at the cost of a slight precision loss
 """
@@ -841,10 +757,10 @@ AP["Keep_unaltered_videos"]["label"] = 'Keep unaltered videos'
 # START_TIP
 AP["Keep_unaltered_videos"]["tips"] = \
 f"""Keeps unaltered `.npy` videos in hard drive.
-- **Checked** → Running the same analysis will be faster.
+- **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.
 NB:
-- Larges files: it is recommended to remove them once analysis is entirely finalized.
+- Large files: it is recommended to remove them once analysis is entirely finalized.
 """
 # END_TIP
 
@@ -852,7 +768,7 @@ AP["Save_processed_videos"] = {}
 AP["Save_processed_videos"]["label"] = 'Save processed videos'
 # START_TIP
 AP["Save_processed_videos"]["tips"] = \
-f"""Saves lightweight processed validation videos (recommended over unaltered videos).   These videos
+f"""Saves lightweight processed validation videos (recommended over unaltered videos). These videos
 assess analysis accuracy and can be read in standard video players.
 """
 # END_TIP
@@ -861,8 +777,7 @@ AP["Csc_for_video_analysis"] = {}
 AP["Csc_for_video_analysis"]["label"] = 'Color space combination for video analysis'
 # START_TIP
 AP["Csc_for_video_analysis"]["tips"] = \
-f"""Advanced option to change RGB processing directly in the video tracking window.   Useful to test new
-color spaces without redoing image analysis.
+f"""Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new color spaces without (re)running image analysis.
 """
 # END_TIP
 
@@ -878,7 +793,7 @@ AP["Reset_all_settings"] = {}
 AP["Reset_all_settings"]["label"] = 'Reset all settings'
 # START_TIP
 AP["Reset_all_settings"]["tips"] = \
-f"""Useful when the software freeze with no apparent reason. To reset all settings, it removes the
+f"""Useful when the software freezes with no apparent reason. To reset all settings, it removes the
 config file in the  current folder as well as the config file in the software folder. Then, it
 retrieves and saves the default parameters.
 """
