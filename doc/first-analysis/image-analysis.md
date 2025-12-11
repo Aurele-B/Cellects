@@ -103,6 +103,41 @@ between them.
 
 ---
 
+<!-- START_Color_combination -->
+## Logical operator:
+The logical operator to apply between the result of two distinct segmentations. For instance, using
+two filters or two color space combinations.
+
+<!-- END_Color_combination -->
+
+---
+
+<!-- START_Filter -->
+## Filter:
+The filter to apply to the image before segmentation
+
+<!-- END_Filter -->
+
+---
+
+<!-- START_Rolling_window_segmentation -->
+## Rolling window segmentation:
+Segment small squares of the images to detect local intensity valleys This method segment the image
+locally using otsu thresholding on a rolling window
+
+<!-- END_Rolling_window_segmentation -->
+
+---
+
+<!-- START_Kmeans -->
+## Kmeans:
+The Kmeans algorithm will split the image into categories (a number between 2 and 5) and find the
+one corresponding to the specimen(s)
+
+<!-- END_Kmeans -->
+
+---
+
 <!-- START_Generate_analysis_options -->
 ## Generate analysis options:
 Cellects suggests an algorithms to automatically find the best parameters to detect specimens on the

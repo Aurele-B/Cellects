@@ -201,6 +201,54 @@ between them.
 """
 # END_TIP
 
+IAW["Color_combination"] = {}
+IAW["Color_combination"]["label"] = "Color combination"
+# START_TIP
+IAW["Color_combination"]["tips"] = \
+f"""Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
+image by 3 colors,  they transform it into 3 different visual properties
+- hsv: hue (color), saturation, value (lightness)
+- hls: hue (color), lightness, saturation
+- lab: Lightness, Red/Green, Blue/Yellow
+- luv and yuv: l and y are Lightness, u and v are related to colors
+"""
+# END_TIP
+
+IAW["Color_combination"] = {}
+IAW["Color_combination"]["label"] = "Logical operator"
+# START_TIP
+IAW["Color_combination"]["tips"] = \
+f"""The logical operator to apply between the result of two distinct segmentations. For instance, using
+two filters or two color space combinations.
+"""
+# END_TIP
+
+IAW["Filter"] = {}
+IAW["Filter"]["label"] = "Filter"
+# START_TIP
+IAW["Filter"]["tips"] = \
+f"""The filter to apply to the image before segmentation
+"""
+# END_TIP
+
+IAW["Rolling_window_segmentation"] = {}
+IAW["Rolling_window_segmentation"]["label"] = "Rolling window segmentation"
+# START_TIP
+IAW["Rolling_window_segmentation"]["tips"] = \
+f"""Segment small squares of the images to detect local intensity valleys This method segment the image
+locally using otsu thresholding on a rolling window
+"""
+# END_TIP
+
+IAW["Kmeans"] = {}
+IAW["Kmeans"]["label"] = "Kmeans"
+# START_TIP
+IAW["Kmeans"]["tips"] = \
+f"""The Kmeans algorithm will split the image into categories (a number between 2 and 5) and find the
+one corresponding to the specimen(s)
+"""
+# END_TIP
+
 IAW["Generate_analysis_options"] = {}
 IAW["Generate_analysis_options"]["label"] = "Generate analysis options"
 # START_TIP
@@ -343,6 +391,19 @@ can possibly move or grow from one image to the next. This factor should be:
 NB:
 - Precisely, this is  the upper limit of the proportion of the image that is allowed to be covered
 by the specimen  between two frames.
+"""
+# END_TIP
+
+VAW["Temporal_smoothing"] = {}
+VAW["Temporal_smoothing"]["label"] = "Temporal smoothing"
+# START_TIP
+VAW["Temporal_smoothing"]["tips"] = \
+f"""The number of times the video will be smoothed.
+This is useful to accurately detect variations in pixel slopes. Temporal smoothing reduces variations from noise 
+and reveals trends occurring at larger time scales. Technically, Cellects smoothes pixels curves using a rolling window over time.
+NB: 
+- This algorithm is only useful when segmenting with pixel intensity slopes.
+- Repeating this algorithm many times makes all pixels constants and prevent any detection.
 """
 # END_TIP
 
@@ -665,5 +726,160 @@ f"""Two methods available:
 NB:
 - Only useful when specimen(s) are invisible at the beginning of the experiment and appear
 progressively.
+"""
+# END_TIP
+
+AP["Mesh_side_length"] = {}
+AP["Mesh_side_length"]["label"] = "Mesh side length"
+# START_TIP
+AP["Mesh_side_length"]["tips"] = \
+f"""The length of one side (in pixels) of the rolling window.
+NB:
+- Cannot be larger than the smaller side of the image.
+"""
+# END_TIP
+
+AP["Mesh_step_length"] = {}
+AP["Mesh_step_length"]["label"] = "Mesh step"
+# START_TIP
+AP["Mesh_step_length"]["tips"] = \
+f"""The size of the step (in pixels) between two positioning of the rolling window.
+NB:
+- Should not be larger than the mesh side length to cover all pixels.
+"""
+# END_TIP
+
+AP["Mesh_minimal_intensity_variation"] = {}
+AP["Mesh_minimal_intensity_variation"]["label"] = "Mesh minimal intensity variation"
+# START_TIP
+AP["Mesh_minimal_intensity_variation"]["tips"] = \
+f"""The minimal variation in intensity to consider that a given window do contain the specimen(s).
+NB:
+- This threshold is an intensity value ranging from 0 to 255 (generally small).
+- Correspond to the level of noise in the background.
+"""
+# END_TIP
+
+AP["Expected_oscillation_period"] = {}
+AP["Expected_oscillation_period"]["label"] = "Expected oscillation period"
+# START_TIP
+AP["Expected_oscillation_period"]["tips"] = \
+f"""The period (in minutes) of the biological oscillations to detect within the specimen(s). Computation
+is based on luminosity variations.
+"""
+# END_TIP
+
+AP["Minimal_oscillating_cluster_size"] = {}
+AP["Minimal_oscillating_cluster_size"]["label"] = "Minimal oscillating cluster size"
+# START_TIP
+AP["Minimal_oscillating_cluster_size"]["tips"] = \
+f"""When looking for oscillatory patterns, Cellects detects connected components that are thickening or
+slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
+connected group of pixels. This threshold is useful to filter out small noisy oscillations.
+"""
+# END_TIP
+
+AP["Spatio_temporal_scaling"] = {}
+AP["Spatio_temporal_scaling"]["label"] = "Spatio-temporal scaling"
+# START_TIP
+AP["Spatio_temporal_scaling"]["tips"] = \
+f"""Defines the spatiotemporal scale of the dataset:
+- Time between images or frames (minutes)
+- Option to convert areas/distances from pixels to mm/mm²
+"""
+# END_TIP
+
+AP["Parallel_analysis"] = {}
+AP["Parallel_analysis"]["label"] = "Run analysis in parallel"
+# START_TIP
+AP["Parallel_analysis"]["tips"] = \
+f"""Allow the use of more than one core of the computer processor.
+- **Checked** → A use multiple CPU cores to analyze arenas in parallel (faster).
+- **Unchecked** → Single core analysis.
+"""
+# END_TIP
+
+AP["Proc_max_core_nb"] = {}
+AP["Proc_max_core_nb"]["label"] = "Proc max core number"
+# START_TIP
+AP["Proc_max_core_nb"]["tips"] = \
+f"""Maximum number of logical CPU cores to use during analysis. Default is the available number of cores
+minus one.
+"""
+# END_TIP
+
+AP["Minimal_RAM_let_free"] = {}
+AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free"
+# START_TIP
+AP["Minimal_RAM_let_free"]["tips"] = \
+f"""Amount of RAM to leave available for other programs.   Setting to `0` gives Cellects all memory, but
+increases crash risk if other apps are open.
+"""
+# END_TIP
+
+AP["Lose_accuracy_to_save_RAM"] = {}
+AP["Lose_accuracy_to_save_RAM"]["label"] = "Lose accuracy to save RAM"
+# START_TIP
+AP["Lose_accuracy_to_save_RAM"]["tips"] = \
+f"""For low
+-memory systems:
+- Converts video from `np.float64` to `uint8`
+- Saves RAM at the cost of a slight precision loss
+"""
+# END_TIP
+
+AP["Video_fps"] = {}
+AP["Video_fps"]["label"] = "Video fps"
+# START_TIP
+AP["Video_fps"]["tips"] = \
+f"""Frames per second of validation videos.
+"""
+# END_TIP
+
+AP["Keep_unaltered_videos"] = {}
+AP["Keep_unaltered_videos"]["label"] = 'Keep unaltered videos'
+# START_TIP
+AP["Keep_unaltered_videos"]["tips"] = \
+f"""Keeps unaltered `.npy` videos in hard drive.
+- **Checked** → Running the same analysis will be faster.
+- **Unchecked** → These videos will be written and removed each run of the same analysis.
+NB:
+- Larges files: it is recommended to remove them once analysis is entirely finalized.
+"""
+# END_TIP
+
+AP["Save_processed_videos"] = {}
+AP["Save_processed_videos"]["label"] = 'Save processed videos'
+# START_TIP
+AP["Save_processed_videos"]["tips"] = \
+f"""Saves lightweight processed validation videos (recommended over unaltered videos).   These videos
+assess analysis accuracy and can be read in standard video players.
+"""
+# END_TIP
+
+AP["Csc_for_video_analysis"] = {}
+AP["Csc_for_video_analysis"]["label"] = 'Color space combination for video analysis'
+# START_TIP
+AP["Csc_for_video_analysis"]["tips"] = \
+f"""Advanced option to change RGB processing directly in the video tracking window.   Useful to test new
+color spaces without redoing image analysis.
+"""
+# END_TIP
+
+AP["Night_mode"] = {}
+AP["Night_mode"]["label"] = 'Night mode'
+# START_TIP
+AP["Night_mode"]["tips"] = \
+f"""Switches the application background between light and dark themes.
+"""
+# END_TIP
+
+AP["Reset_all_settings"] = {}
+AP["Reset_all_settings"]["label"] = 'Reset all settings'
+# START_TIP
+AP["Reset_all_settings"]["tips"] = \
+f"""Useful when the software freeze with no apparent reason. To reset all settings, it removes the
+config file in the  current folder as well as the config file in the software folder. Then, it
+retrieves and saves the default parameters.
 """
 # END_TIP
