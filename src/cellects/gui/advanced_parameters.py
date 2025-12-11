@@ -26,7 +26,7 @@ from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Spinbox, Combobox, Checkbox, FixedText)
-from cellects.gui.ui_strings import AP
+from cellects.gui.ui_strings import AP, IAW
 
 
 class AdvancedParameters(WindowType):
@@ -328,6 +328,68 @@ class AdvancedParameters(WindowType):
         self.appearing_cell_box_widget.setLayout(self.appearing_cell_box_layout)
         self.left_col_layout.addWidget(self.appearing_cell_box_widget)
 
+        # V/ Fifth box: Network detection parameters:#
+        # IV/A/ Title
+        self.rolling_window_s_label = FixedText(IAW["Rolling_window_segmentation"]["label"] + ': (auto if checked)',
+                                                tip=IAW["Rolling_window_segmentation"]["tips"],
+                                              night_mode=self.parent().po.all['night_mode'])
+        self.left_col_layout.addWidget(self.rolling_window_s_label)
+        self.rolling_window_s_layout = QtWidgets.QGridLayout()
+        self.rolling_window_s_widget = QtWidgets.QWidget()
+        self.rolling_window_s_widget.setStyleSheet(boxstylesheet)
+        self.mesh_side_length_cb = Checkbox(self.parent().po.all['auto_mesh_side_length'],
+                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_side_length_cb.stateChanged.connect(self.mesh_side_length_cb_changed)
+        self.mesh_side_length_label = FixedText(AP["Mesh_side_length"]["label"], tip=AP["Mesh_side_length"]["tips"],
+                                                night_mode=self.parent().po.all['night_mode'])
+        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+            self.mesh_side_length = Spinbox(min=0, max=1000000, val=4, decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_side_length.setVisible(False)
+        else:
+            self.mesh_side_length = Spinbox(min=0, max=1000000, val=self.parent().po.vars['rolling_window_segmentation']['side_len'], decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+
+
+        self.mesh_step_length_cb = Checkbox(self.parent().po.all['auto_mesh_step_length'],
+                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_step_length_cb.stateChanged.connect(self.mesh_step_length_cb_changed)
+        self.mesh_step_length_label = FixedText(AP["Mesh_step_length"]["label"], tip=AP["Mesh_step_length"]["tips"],
+                                                night_mode=self.parent().po.all['night_mode'])
+        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+            self.mesh_step_length = Spinbox(min=0, max=1000, val=2, decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_step_length.setVisible(False)
+        else:
+            self.mesh_step_length = Spinbox(min=0, max=1000, val=self.parent().po.vars['rolling_window_segmentation']['step'], decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+
+
+        self.mesh_min_int_var_cb = Checkbox(self.parent().po.all['auto_mesh_min_int_var'],
+                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_min_int_var_cb.stateChanged.connect(self.mesh_min_int_var_cb_changed)
+        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+            self.mesh_min_int_var = Spinbox(min=0, max=1000, val=2, decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_min_int_var.setVisible(False)
+        else:
+            self.mesh_min_int_var = Spinbox(min=0, max=1000, val=self.parent().po.vars['rolling_window_segmentation']['min_int_var'], decimals=0,
+                                            night_mode=self.parent().po.all['night_mode'])
+        self.mesh_min_int_var_label = FixedText(AP["Mesh_minimal_intensity_variation"]["label"],
+                                                tip=AP["Mesh_minimal_intensity_variation"]["tips"],
+                                                night_mode=self.parent().po.all['night_mode'])
+        self.rolling_window_s_layout.addWidget(self.mesh_side_length_cb, 0, 0)
+        self.rolling_window_s_layout.addWidget(self.mesh_side_length_label, 0, 1)
+        self.rolling_window_s_layout.addWidget(self.mesh_side_length, 0, 2)
+        self.rolling_window_s_layout.addWidget(self.mesh_step_length_cb, 1, 0)
+        self.rolling_window_s_layout.addWidget(self.mesh_step_length_label, 1, 1)
+        self.rolling_window_s_layout.addWidget(self.mesh_step_length, 1, 2)
+        self.rolling_window_s_layout.addWidget(self.mesh_min_int_var_cb, 2, 0)
+        self.rolling_window_s_layout.addWidget(self.mesh_min_int_var_label, 2, 1)
+        self.rolling_window_s_layout.addWidget(self.mesh_min_int_var, 2, 2)
+        self.rolling_window_s_widget.setLayout(self.rolling_window_s_layout)
+        self.left_col_layout.addWidget(self.rolling_window_s_widget)
+
         # IV/ Fourth box: Oscillation period:
         # IV/A/ Title
         self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
@@ -340,14 +402,14 @@ class AdvancedParameters(WindowType):
 
         self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
                                           night_mode=self.parent().po.all['night_mode'])
-        self.oscillation_period_label = FixedText('Expected oscillation period (min)',
-                                                  tip="If one expect biotic oscillations to occur",
+        self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
+                                                  tip=AP["Expected_oscillation_period"]["tips"],
                                                   night_mode=self.parent().po.all['night_mode'])
 
         self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
                                           night_mode=self.parent().po.all['night_mode'])
-        self.minimal_oscillating_cluster_size_label = FixedText('Minimal oscillating cluster size',
-                                                  tip="In pixels\nWhen analyzing oscillations within the detected specimen(s)\nCellects looks for clusters of pixels that oscillate synchronously\nThis parameter sets the minimal size (in pixels) of these clusters.",
+        self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
+                                                  tip=AP["Minimal_oscillating_cluster_size"]["tips"],
                                                   night_mode=self.parent().po.all['night_mode'])
 
         self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
@@ -358,25 +420,6 @@ class AdvancedParameters(WindowType):
         self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
         self.left_col_layout.addWidget(self.oscillation_period_widget)
 
-        # V/ Fifth box: Network detection parameters:#
-        # IV/A/ Title
-        self.network_label = FixedText('Network parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
-        self.left_col_layout.addWidget(self.network_label)
-        self.network_layout = QtWidgets.QGridLayout()
-        self.network_widget = QtWidgets.QWidget()
-        self.network_widget.setStyleSheet(boxstylesheet)
-        self.network_detection_threshold = Spinbox(min=0, max=255, val=self.parent().po.vars['network_detection_threshold'], decimals=0,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.network_detection_threshold_label = FixedText('Network detection threshold',
-                                                  tip="To detect the network, Cellects segment small parts of the image using a sliding window.\nThis threshold is an intensity value [0, 255]\napplied to the sliding window to not consider homogeneous substes of the image\ni.e. This is the minimal variation in intensity to consider that some pixels are parts of the network.",
-                                                  night_mode=self.parent().po.all['night_mode'])
-
-        self.network_layout.addWidget(self.network_detection_threshold, 0, 0)
-        self.network_layout.addWidget(self.network_detection_threshold_label, 0, 1)
-        self.network_widget.setLayout(self.network_layout)
-        self.left_col_layout.addWidget(self.network_widget)
-
         # I/ First box: Scales
         # I/A/ Title
         self.right_scroll_table = QtWidgets.QScrollArea()   # Scroll Area which contains the widgets, set as the centralWidget
@@ -385,7 +428,8 @@ class AdvancedParameters(WindowType):
         self.right_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.right_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.right_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
-        self.scale_box_label = FixedText('Spatio-temporal scaling:', tip="",
+        self.scale_box_label = FixedText(AP["Spatio_temporal_scaling"]["label"] + ':',
+                                         tip=AP["Spatio_temporal_scaling"]["tips"],
                                          night_mode=self.parent().po.all['night_mode'])
         self.right_col_layout.addWidget(self.scale_box_label)
 
@@ -436,18 +480,23 @@ class AdvancedParameters(WindowType):
 
         # IV/C/ Create widgets
         self.do_multiprocessing = Checkbox(self.parent().po.all['do_multiprocessing'])
-        self.do_multiprocessing_label = FixedText('Run analysis in parallel', tip="Allow the use of more than one core of the computer processor", night_mode=self.parent().po.all['night_mode'])
+        self.do_multiprocessing_label = FixedText(AP["Parallel_analysis"]["label"], tip=AP["Parallel_analysis"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
         self.do_multiprocessing.stateChanged.connect(self.do_multiprocessing_is_clicked)
         self.max_core_nb = Spinbox(min=0, max=256, val=self.parent().po.all['cores'],
                                    night_mode=self.parent().po.all['night_mode'])
-        self.max_core_nb_label = FixedText('Proc max core number', night_mode=self.parent().po.all['night_mode'])
+        self.max_core_nb_label = FixedText(AP["Proc_max_core_nb"]["label"],
+                                           tip=AP["Proc_max_core_nb"]["tips"],
+                                           night_mode=self.parent().po.all['night_mode'])
         self.min_memory_left = Spinbox(min=0, max=1024, val=self.parent().po.vars['min_ram_free'], decimals=1,
                                        night_mode=self.parent().po.all['night_mode'])
-        self.min_memory_left_label = FixedText('Minimal RAM let free (Go)', night_mode=self.parent().po.all['night_mode'])
+        self.min_memory_left_label = FixedText(AP["Minimal_RAM_let_free"]["label"],
+                                                tip=AP["Minimal_RAM_let_free"]["tips"],
+                                               night_mode=self.parent().po.all['night_mode'])
 
         self.lose_accuracy_to_save_memory = Checkbox(self.parent().po.vars['lose_accuracy_to_save_memory'])
-        self.lose_accuracy_to_save_memory_label = FixedText('Lose accuracy to save RAM',
-                                                  tip="Use 8 bits instead of 64 to study each pixel",
+        self.lose_accuracy_to_save_memory_label = FixedText(AP["Lose_accuracy_to_save_RAM"]["label"],
+                                                  tip=AP["Lose_accuracy_to_save_RAM"]["tips"],
                                                   night_mode=self.parent().po.all['night_mode'])
 
         # IV/D/ Arrange widgets in the box
@@ -476,11 +525,16 @@ class AdvancedParameters(WindowType):
         # V/C/ Create widgets
         self.video_fps = Spinbox(min=0, max=10000, val=self.parent().po.vars['video_fps'], decimals=2,
                                  night_mode=self.parent().po.all['night_mode'])
-        self.video_fps_label = FixedText('Video fps', night_mode=self.parent().po.all['night_mode'])
+        self.video_fps_label = FixedText(AP["Video_fps"]["label"], tip=AP["Video_fps"]["tips"],
+                                         night_mode=self.parent().po.all['night_mode'])
         self.keep_unaltered_videos = Checkbox(self.parent().po.vars['keep_unaltered_videos'])
-        self.keep_unaltered_videos_label = FixedText('Keep unaltered videos', tip="Unaltered videos (.npy) takes a lot of hard drive space\nUsers should only keep these videos\nif they plan to redo the analysis soon and faster", night_mode=self.parent().po.all['night_mode'])
+        self.keep_unaltered_videos_label = FixedText(AP["Keep_unaltered_videos"]["label"],
+                                                     tip=AP["Keep_unaltered_videos"]["tips"],
+                                                     night_mode=self.parent().po.all['night_mode'])
         self.save_processed_videos = Checkbox(self.parent().po.vars['save_processed_videos'])
-        self.save_processed_videos_label = FixedText('Save processed videos', tip="Processed videos allow to check analysis accuracy\nThey do not take a lot of space", night_mode=self.parent().po.all['night_mode'])
+        self.save_processed_videos_label = FixedText(AP["Save_processed_videos"]["label"],
+                                                     tip=AP["Save_processed_videos"]["tips"],
+                                                     night_mode=self.parent().po.all['night_mode'])
 
         # V/D/ Arrange widgets in the box
         curr_box_row = 0
@@ -528,8 +582,10 @@ class AdvancedParameters(WindowType):
         self.last_row_widget = QtWidgets.QWidget()
         self.night_mode_cb = Checkbox(self.parent().po.all['night_mode'])
         self.night_mode_cb.clicked.connect(self.night_mode_is_clicked)
-        self.night_mode_label = FixedText('Night mode', night_mode=self.parent().po.all['night_mode'])
-        self.reset_all_settings = PButton("Reset all settings", night_mode=self.parent().po.all['night_mode'])
+        self.night_mode_label = FixedText(AP["Night_mode"]["label"], tip=AP["Night_mode"]["tips"],
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.reset_all_settings = PButton(AP["Reset_all_settings"]["label"], tip=AP["Reset_all_settings"]["tips"],
+                                          night_mode=self.parent().po.all['night_mode'])
         self.reset_all_settings.clicked.connect(self.reset_all_settings_is_clicked)
         self.message = FixedText('', night_mode=self.parent().po.all['night_mode'])
         self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
@@ -611,6 +667,15 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold.setVisible(not self.do_automatic_size_thresholding.isChecked())
         self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
+    def mesh_side_length_cb_changed(self):
+        self.mesh_side_length.setVisible(self.mesh_side_length_cb.isChecked())
+
+    def mesh_step_length_cb_changed(self):
+        self.mesh_step_length.setVisible(self.mesh_step_length_cb.isChecked())
+
+    def mesh_min_int_var_cb_changed(self):
+        self.mesh_min_int_var.setVisible(self.mesh_min_int_var_cb.isChecked())
+
     def extract_time_is_clicked(self):
         """
         Toggle the visibility of time_step_label and update its text/tooltip based on
@@ -685,7 +750,8 @@ class AdvancedParameters(WindowType):
         self.csc_table_layout = QtWidgets.QVBoxLayout()
 
         # 2) Titles
-        self.video_csc_label = FixedText('Color space combination for video analysis:', tip="",
+        self.video_csc_label = FixedText(AP["Csc_for_video_analysis"]["label"] + ':',
+                                         tip=AP["Csc_for_video_analysis"]["tips"],
                                          night_mode=self.parent().po.all['night_mode'])
         self.video_csc_label.setFixedHeight(30)
         self.csc_table_layout.addWidget(self.video_csc_label)
@@ -705,7 +771,7 @@ class AdvancedParameters(WindowType):
         self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
-        self.logical_operator_label = FixedText("Logical operator", halign='c', tip="Between selected color space combinations",
+        self.logical_operator_label = FixedText(IAW["Color_combination"]["label"], halign='c', tip=IAW["Color_combination"]["tips"],
                                                 night_mode=self.parent().po.all['night_mode'])
         self.row21 = self.one_csc_editing()
         self.row21[4].clicked.connect(self.display_row22)
@@ -769,8 +835,8 @@ class AdvancedParameters(WindowType):
                             "QCheckBox:margin-right {-10%}")
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
-        self.more_than_two_colors_label = FixedText("Heterogeneous back",
-                                                    tip="The program will split the image into categories", night_mode=self.parent().po.all['night_mode'])
+        self.more_than_two_colors_label = FixedText(IAW["Kmeans"]["label"],
+                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
         self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
@@ -1112,8 +1178,6 @@ class AdvancedParameters(WindowType):
         self.oscillation_period.setValue(self.parent().po.vars['expected_oscillation_period'])
         self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
 
-        self.network_detection_threshold.setValue(self.parent().po.vars['network_detection_threshold'])
-
         self.do_multiprocessing.setChecked(self.parent().po.all['do_multiprocessing'])
         self.max_core_nb.setValue(self.parent().po.all['cores'])
         self.min_memory_left.setValue(self.parent().po.vars['min_ram_free'])
@@ -1174,10 +1238,27 @@ class AdvancedParameters(WindowType):
         self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
         self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
         self.parent().po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
+
+        self.parent().po.all['auto_mesh_step_length'] = self.mesh_step_length_cb.isChecked()
+        if self.parent().po.all['auto_mesh_step_length']:
+            self.parent().po.vars['rolling_window_segmentation']['step'] = None
+        else:
+            self.parent().po.vars['rolling_window_segmentation']['step'] = int(self.mesh_step_length.value())
+
+        self.parent().po.all['auto_mesh_side_length'] = self.mesh_side_length_cb.isChecked()
+        if self.parent().po.all['auto_mesh_side_length']:
+            self.parent().po.vars['rolling_window_segmentation']['side_len'] = None
+        else:
+            self.parent().po.vars['rolling_window_segmentation']['side_len'] = int(self.mesh_side_length.value())
+
+        self.parent().po.all['auto_mesh_min_int_var'] = self.mesh_min_int_var_cb.isChecked()
+        if self.parent().po.all['auto_mesh_min_int_var']:
+            self.parent().po.vars['rolling_window_segmentation']['min_int_var'] = None
+        else:
+            self.parent().po.vars['rolling_window_segmentation']['min_int_var'] = int(self.mesh_min_int_var.value())
+
         self.parent().po.vars['expected_oscillation_period'] = self.oscillation_period.value()
         self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
-
-        self.parent().po.vars['network_detection_threshold'] = int(np.round(self.network_detection_threshold.value()))
 
         self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
         self.parent().po.all['cores'] = np.uint8(self.max_core_nb.value())

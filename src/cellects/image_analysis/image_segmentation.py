@@ -685,7 +685,7 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
     return binary_image, binary_image2, new_bio_label, new_bio_label2
 
 
-def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_length: int=4, step: int=2, int_var_thresh: float=None):
+def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_length: int=None, step: int=None, min_int_var: float=None):
     """
     Perform grid segmentation on the image.
 
@@ -696,17 +696,21 @@ def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_len
     Args:
         lighter_background (bool): If True, areas lighter than the Otsu threshold are considered;
             otherwise, darker areas are considered.
-        side_length (int, optional): The size of each grid square. Default is 8.
-        step (int, optional): The step size for the sliding window. Default is 2.
-        int_var_thresh (int, optional): Threshold for intensity variation within a grid.
+        side_length (int, optional): The size of each grid square. Default is None.
+        step (int, optional): The step size for the sliding window. Default is None.
+        min_int_var (int, optional): Threshold for intensity variation within a grid.
             Default is 20.
         mask (NDArray, optional): A binary mask to restrict the segmentation area. Default is None.
     """
     if lighter_background is None:
         binary_image = otsu_thresholding(image)
         lighter_background = binary_image.sum() > (binary_image.size / 2)
-    if int_var_thresh is None:
-        int_var_thresh = np.ptp(image).astype(np.float64) * 0.1
+    if min_int_var is None:
+        min_int_var = np.ptp(image).astype(np.float64) * 0.1
+    if side_length is None:
+        side_length = int(np.min(image.shape) // 10)
+    if step is None:
+        step = side_length // 2
     grid_image = np.zeros(image.shape, np.uint64)
     homogeneities = np.zeros(image.shape, np.uint64)
     mask = np.ones(image.shape, np.uint64)
@@ -726,7 +730,7 @@ def windowed_thresholding(image:NDArray, lighter_background: bool=None, side_len
                                 if np.any(mask[y_start:y_end, x_start:x_end]):
                                     potential_detection = image[y_start:y_end, x_start:x_end]
                                     if np.any(potential_detection):
-                                        if np.ptp(potential_detection[np.nonzero(potential_detection)]) < int_var_thresh:
+                                        if np.ptp(potential_detection[np.nonzero(potential_detection)]) < min_int_var:
                                             homogeneities[y_start:y_end, x_start:x_end] += 1
                                         threshold = get_otsu_threshold(potential_detection)
                                         if lighter_background:

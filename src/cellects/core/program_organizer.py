@@ -633,7 +633,8 @@ class ProgramOrganizer:
             self.vars['convert_for_origin'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
         self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                              self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
-                                             subtract_background2=None, grid_segmentation=self.vars["grid_segmentation"],
+                                             subtract_background2=None,
+                                             rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                              filter_spec=self.vars["filter_spec"])
         if not self.first_image.drift_correction_already_adjusted:
             self.vars['drift_already_corrected'] = self.first_image.check_if_image_border_attest_drift_correction()
@@ -642,7 +643,7 @@ class ProgramOrganizer:
                 self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
                                                      self.all["bio_mask"], self.all["back_mask"],
                                                      subtract_background=None, subtract_background2=None,
-                                                     grid_segmentation=self.vars["grid_segmentation"],
+                                                     rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                                      filter_spec=self.vars["filter_spec"],
                                                      allowed_window=self.first_image.drift_mask_coord)
 
@@ -695,14 +696,13 @@ class ProgramOrganizer:
         self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                             biomask, backmask, self.first_image.subtract_background,
                                             self.first_image.subtract_background2,
-                                            grid_segmentation=self.vars["grid_segmentation"],
+                                            rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                             filter_spec=self.vars["filter_spec"])
-        if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["grid_segmentation"]:
+        if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["rolling_window_segmentation"]['do']:
             self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                 biomask, backmask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
-                                                grid_segmentation=self.vars["grid_segmentation"],
                                                 allowed_window=self.last_image.drift_mask_coord,
                                                 filter_spec=self.vars["filter_spec"])
         
@@ -883,7 +883,7 @@ class ProgramOrganizer:
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                  None, None, subtract_background=None,
                                                  subtract_background2=None,
-                                                 grid_segmentation=self.vars["grid_segmentation"],
+                                                 rolling_window_segmentation=self.vars['rolling_window_segmentation'],
                                                  filter_spec=self.vars["filter_spec"])
             covered_values = self.first_image.image[np.nonzero(binary_image)]
             self.vars['luminosity_threshold'] = 127
@@ -1022,10 +1022,8 @@ class ProgramOrganizer:
                     # In.adjust_to_drift_correction(self.vars['convert_for_motion']['logical'])
                 In.convert_and_segment(self.vars['convert_for_motion'], self.vars['color_number'], None, None,
                                        self.first_image.subtract_background, self.first_image.subtract_background2,
-                                       self.vars['grid_segmentation'], self.vars['lighter_background'],
-                                       self.vars['mesh_side_length'], self.vars['mesh_step_length'],
-                                       self.vars['int_var_threshold'],
-                                       In.drift_mask_coord, self.vars['filter_spec'])
+                                       self.vars['rolling_window_segmentation'], self.vars['lighter_background'],
+                                       allowed_window=In.drift_mask_coord, filter_spec=self.vars['filter_spec'])
                 motion_list.insert(frame_idx, In.binary_image)
         return motion_list
 

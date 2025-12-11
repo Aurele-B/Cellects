@@ -88,8 +88,8 @@ class OneImageAnalysis:
 
     def convert_and_segment(self, c_space_dict: dict, color_number=2, biomask: NDArray[np.uint8]=None,
                             backmask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
-                            subtract_background2: NDArray=None, grid_segmentation: bool=False,
-                            lighter_background: bool=None, side_length: int=20, step: int=5, int_var_thresh=None,
+                            subtract_background2: NDArray=None, rolling_window_segmentation: dict=None,
+                            lighter_background: bool=None,
                             allowed_window: NDArray=None, filter_spec: dict=None):
         """
         Convert an image to grayscale and segment it based on specified parameters.
@@ -106,11 +106,8 @@ class OneImageAnalysis:
         - `backmask` (NDArray[np.uint8], optional): Backmask for segmentation. Defaults to None.
         - `subtract_background` (NDArray, optional): Background to subtract. Defaults to None.
         - `subtract_background2` (NDArray, optional): Second background to subtract. Defaults to None.
-        - `grid_segmentation` (bool, optional): Flag for grid segmentation. Defaults to False.
+        - rolling_window_segmentation (dict, optional): Flag for grid segmentation. Defaults to None.
         - `lighter_background` (bool, optional): Flag for lighter background. Defaults to None.
-        - `side_length` (int, optional): Side length for segmentation grid. Defaults to 20.
-        - `step` (int, optional): Step size for segmentation grid. Defaults to 5.
-        - `int_var_thresh` (optional): Threshold for intensity variation. Defaults to None.
         - `mask` (NDArray, optional): Additional mask for segmentation. Defaults to None.
         - `filter_spec` (dict, optional): Filter specifications. Defaults to None.
 
@@ -127,15 +124,14 @@ class OneImageAnalysis:
                 self.all_c_spaces = all_c_spaces
 
         self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
-                          backmask=backmask, grid_segmentation=grid_segmentation,
-                          lighter_background=lighter_background, side_length=side_length, step=step,
-                          int_var_thresh=int_var_thresh, allowed_window=allowed_window, filter_spec=filter_spec)
+                          backmask=backmask, rolling_window_segmentation=rolling_window_segmentation,
+                          lighter_background=lighter_background, allowed_window=allowed_window, filter_spec=filter_spec)
 
 
     def segmentation(self, logical: str='None', color_number: int=2, biomask: NDArray[np.uint8]=None,
-                     backmask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None, grid_segmentation: bool=False,
-                     lighter_background: bool=None, side_length: int=20, step: int=5, int_var_thresh: float=None,
-                     allowed_window: Tuple=None, filter_spec: dict=None):
+                     backmask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None,
+                     rolling_window_segmentation: dict=None, lighter_background: bool=None,allowed_window: Tuple=None,
+                     filter_spec: dict=None):
         """
         Implement segmentation on the image using various methods and parameters.
 
@@ -148,12 +144,9 @@ class OneImageAnalysis:
             backmask (NDArray[np.uint8]): Binary mask for background areas. Default is None.
             bio_label (Any): Label for biological features. Default is None.
             bio_label2 (Any): Secondary label for biological features. Default is None.
-            grid_segmentation (bool): Whether to perform grid segmentation. Default is False.
+            rolling_window_segmentation (dict): Whether to perform grid segmentation. Default is None.
             lighter_background (bool): Indicates if the background is lighter than objects.
                                        Default is None.
-            side_length (int): Side length of the grid. Default is 20.
-            step (int): Step size in the grid. Default is 5.
-            int_var_thresh (float): Threshold for intensity variation. Default is None.
             allowed_window (Tuple): Mask to apply during segmentation. Default is None.
             filter_spec (dict): Dictionary of filters to apply on the image before segmentation.
 
@@ -177,14 +170,15 @@ class OneImageAnalysis:
         # 3. Do one of the three segmentation algorithms: kmeans, otsu, windowed
         if color_number > 2:
             binary_image, binary_image2, self.bio_label, self.bio_label2  = kmeans(greyscale, greyscale2, color_number, biomask, backmask, logical, bio_label, bio_label2)
-        elif grid_segmentation:
-            binary_image = windowed_thresholding(greyscale, lighter_background, side_length, step, int_var_thresh)
+        elif rolling_window_segmentation is not None and rolling_window_segmentation['do']:
+            binary_image = windowed_thresholding(greyscale, lighter_background, rolling_window_segmentation['side_len'],
+            rolling_window_segmentation['step'], rolling_window_segmentation['min_int_var'])
         else:
             binary_image = otsu_thresholding(greyscale)
         if logical != 'None' and color_number == 2:
-            if grid_segmentation:
-                binary_image2 = windowed_thresholding(greyscale2, lighter_background, side_length, step,
-                                                     int_var_thresh)
+            if rolling_window_segmentation is not None and rolling_window_segmentation['do']:
+                binary_image2 = windowed_thresholding(greyscale2, lighter_background, rolling_window_segmentation['side_len'],
+                rolling_window_segmentation['step'], rolling_window_segmentation['min_int_var'])
             else:
                 binary_image2 = otsu_thresholding(greyscale2)
 
@@ -251,7 +245,7 @@ class OneImageAnalysis:
         if drift_corrected:
             # self.adjust_to_drift_correction(c_space_dict['logical'])
             self.check_if_image_border_attest_drift_correction()
-        self.convert_and_segment(c_space_dict, grid_segmentation=False, allowed_window=self.drift_mask_coord)
+        self.convert_and_segment(c_space_dict, rolling_window_segmentation=None, allowed_window=self.drift_mask_coord)
         disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
         disk = create_ellipse(disk_size, disk_size).astype(np.uint8)
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
