@@ -320,7 +320,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_options_layout.addWidget(self.required_outputs)
 
         #  Save all choices widget
-        self.save_all_vars = PButton(FW["Save_all_choices"]["label"], tip=FW["Save_all_choices"]["tips"],
+        self.save_all_vars = PButton(VAW["Save_all_choices"]["label"], tip=VAW["Save_all_choices"]["tips"],
                                      night_mode=self.parent().po.all['night_mode'])
         self.save_all_vars.clicked.connect(self.save_current_settings)
         self.last_options_layout.addWidget(self.save_all_vars)

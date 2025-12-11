@@ -762,8 +762,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter2_param2.setVisible(has_param2)
         self.filter2_param2_label.setVisible(has_param2)
 
-        self.grid_segmentation.setVisible(is_checked)
-        self.grid_segmentation_label.setVisible(is_checked)
+        self.rolling_window_segmentation.setVisible(is_checked)
+        self.rolling_window_segmentation_label.setVisible(is_checked)
 
         for i in range(5):
             if i == 0:
@@ -1300,7 +1300,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
                 if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
                     self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id]["filter_spec"]
-                    self.parent().po.vars['grid_segmentation'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
                     self.update_filter_display()
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
 
@@ -1351,8 +1351,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.edit_labels_widget = QtWidgets.QWidget()
         self.edit_labels_layout = QtWidgets.QHBoxLayout()
 
-        self.space_label = FixedText('Color combination:', halign='l',
-                                    tip="Color spaces are transformations of the original BGR (Blue Green Red) image\nInstead of defining an image by 3 colors,\n they transform it into 3 different visual properties\n  - hsv: hue (color), saturation, value (lightness)\n  - hls: hue (color), lightness, saturation\n  - lab: Lightness, Red/Green, Blue/Yellow\n  - luv and yuv: l and y are Lightness, u and v are related to colors\n",
+        self.space_label = FixedText(IAW["Color_combination"]["label"] + ':', halign='l',
+                                    tip=IAW["Color_combination"]["tips"],
                                     night_mode=self.parent().po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
@@ -1374,7 +1374,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
-        self.logical_operator_label = FixedText("Logical operator", tip="Between selected color space combinations",
+        self.logical_operator_label = FixedText(IAW["Color_combination"]["label"], tip=IAW["Color_combination"]["tips"],
                                                 night_mode=self.parent().po.all['night_mode'])
 
         self.row21 = self.one_csc_editing()
@@ -1403,8 +1403,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.csc_table_layout.addWidget(self.first_csc_widget)
 
         # First filters
-        self.filter1_label = FixedText('Filter: ', halign='l',
-                                    tip="The filter to apply to the image before segmentation",
+        self.filter1_label = FixedText(IAW["Filter"]["label"] + ': ', halign='l',
+                                    tip=IAW["Filter"]["tips"],
                                     night_mode=self.parent().po.all['night_mode'])
         self.csc_table_layout.addWidget(self.filter1_label)
         self.filter1_widget = QtWidgets.QWidget()
@@ -1482,8 +1482,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.edit_layout.addItem(self.vertical_space)
 
         # Second filters
-        self.filter2_label = FixedText('Filter: ', halign='l',
-                                    tip="The filter to apply to the image before segmentation",
+        self.filter2_label = FixedText(IAW["Filter"]["label"] + ': ', halign='l',
+                                    tip=IAW["Filter"]["tips"],
                                     night_mode=self.parent().po.all['night_mode'])
         self.csc_table_layout.addWidget(self.filter2_label)
         self.filter2_widget = QtWidgets.QWidget()
@@ -1524,15 +1524,15 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter2_widget.setLayout(self.filter2_layout)
         self.csc_table_layout.addWidget(self.filter2_widget)
 
-        # 6) Open the grid_segmentation row layout
-        self.grid_segmentation_widget = QtWidgets.QWidget()
-        self.grid_segmentation_layout = QtWidgets.QHBoxLayout()
+        # 6) Open the rolling_window_segmentation row layout
+        self.rolling_window_segmentation_widget = QtWidgets.QWidget()
+        self.rolling_window_segmentation_layout = QtWidgets.QHBoxLayout()
         try:
-            self.parent().po.vars["grid_segmentation"]
+            self.parent().po.vars["rolling_window_segmentation"]
         except KeyError:
-            self.parent().po.vars["grid_segmentation"] = False
-        self.grid_segmentation = Checkbox(self.parent().po.vars["grid_segmentation"])
-        self.grid_segmentation.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
+            self.parent().po.vars["rolling_window_segmentation"] = False
+        self.rolling_window_segmentation = Checkbox(self.parent().po.vars["rolling_window_segmentation"]['do'])
+        self.rolling_window_segmentation.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
                             "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
@@ -1540,18 +1540,18 @@ class ImageAnalysisWindow(MainTabsType):
                             "QCheckBox:checked {background-color: transparent;}"
                             "QCheckBox:margin-left {0%}"
                             "QCheckBox:margin-right {-10%}")
-        self.grid_segmentation.stateChanged.connect(self.grid_segmentation_option)
+        self.rolling_window_segmentation.stateChanged.connect(self.rolling_window_segmentation_option)
 
-        self.grid_segmentation_label = FixedText("Grid segmentation",
-                                                    tip="Segment small squares of the images to detect local intensity valleys\nThis method segment the image locally using otsu thresholding on a rolling window", night_mode=self.parent().po.all['night_mode'])
-        self.grid_segmentation_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        self.grid_segmentation_label.setAlignment(QtCore.Qt.AlignLeft)
+        self.rolling_window_segmentation_label = FixedText(IAW["Rolling_window_segmentation"]["label"],
+                                                    tip=IAW["Rolling_window_segmentation"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.rolling_window_segmentation_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.rolling_window_segmentation_label.setAlignment(QtCore.Qt.AlignLeft)
 
-        self.grid_segmentation_layout.addWidget(self.grid_segmentation)
-        self.grid_segmentation_layout.addWidget(self.grid_segmentation_label)
-        self.grid_segmentation_layout.addItem(self.horizontal_space)
-        self.grid_segmentation_widget.setLayout(self.grid_segmentation_layout)
-        self.edit_layout.addWidget(self.grid_segmentation_widget)
+        self.rolling_window_segmentation_layout.addWidget(self.rolling_window_segmentation)
+        self.rolling_window_segmentation_layout.addWidget(self.rolling_window_segmentation_label)
+        self.rolling_window_segmentation_layout.addItem(self.horizontal_space)
+        self.rolling_window_segmentation_widget.setLayout(self.rolling_window_segmentation_layout)
+        self.edit_layout.addWidget(self.rolling_window_segmentation_widget)
 
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
@@ -1567,8 +1567,8 @@ class ImageAnalysisWindow(MainTabsType):
                             "QCheckBox:margin-right {-10%}")
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
-        self.more_than_two_colors_label = FixedText("More than two colors",
-                                                    tip="The program will split the image into categories\nand find the one corresponding to the cell(s)", night_mode=self.parent().po.all['night_mode'])
+        self.more_than_two_colors_label = FixedText(IAW["Kmeans"]["label"],
+                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
         self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
@@ -1578,8 +1578,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_two_colors.setVisible(False)
         self.more_than_two_colors_label.setVisible(False)
         self.distinct_colors_number.setVisible(False)
-        self.grid_segmentation.setVisible(False)
-        self.grid_segmentation_label.setVisible(False)
+        self.rolling_window_segmentation.setVisible(False)
+        self.rolling_window_segmentation_label.setVisible(False)
 
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
@@ -1973,11 +1973,11 @@ class ImageAnalysisWindow(MainTabsType):
         else:
             self.csc_dict_is_empty = False
 
-    def grid_segmentation_option(self):
+    def rolling_window_segmentation_option(self):
         """
         Set True the grid segmentation option for future image analysis.
         """
-        self.parent().po.vars["grid_segmentation"] = self.grid_segmentation.isChecked()
+        self.parent().po.vars["rolling_window_segmentation"]['do'] = self.rolling_window_segmentation.isChecked()
 
     def display_more_than_two_colors_option(self):
         """

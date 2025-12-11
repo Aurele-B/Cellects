@@ -551,10 +551,10 @@ class MotionAnalysis:
             # mask[min_y:max_y, min_x:max_x] = 1
             # mask = (self.converted_video[t, ...] > 0).astype(np.uint8)
         # 3. Bracket the focal image
-        if self.vars['grid_segmentation']:
-            int_var_thresh = 100 - (np.ptp(contrasted_im) * 90 / 255)
+        if self.vars['rolling_window_segmentation']['do']:
+            mesh_min_int_var = 100 - (np.ptp(contrasted_im) * 90 / 255)
         else:
-            int_var_thresh = None
+            mesh_min_int_var = None
         analysisi = OneImageAnalysis(contrasted_im)
         if self.vars['convert_for_motion']['logical'] != 'None':
             contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
@@ -570,10 +570,8 @@ class MotionAnalysis:
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
-                               grid_segmentation=self.vars['grid_segmentation'],
+                               rolling_window_segmentation=self.vars['rolling_window_segmentation'],
                                lighter_background=self.vars['lighter_background'],
-                               side_length=self.vars['mesh_side_length'],
-                               step=self.vars['mesh_step_length'], int_var_thresh=int_var_thresh,
                                allowed_window=allowed_window, filter_spec=self.vars['filter_spec']) # filtering already done when creating converted_video
 
         return analysisi
