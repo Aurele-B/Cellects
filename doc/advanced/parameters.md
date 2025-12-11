@@ -268,8 +268,9 @@ Switches the application background between light and dark themes.
 
 <!-- START_Reset_all_settings -->
 ## Reset all settings:
-Useful when the software freeze with no apparent reason. To reset all settings, it removes the config file in the 
-current folder as well as the config file in the software folder. Then, it retrieves and saves the default parameters.
+Useful when the software freeze with no apparent reason. To reset all settings, it removes the
+config file in the  current folder as well as the config file in the software folder. Then, it
+retrieves and saves the default parameters.
 
 <!-- END_Reset_all_settings -->
 
