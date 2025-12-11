@@ -398,10 +398,10 @@ VAW["Temporal_smoothing"] = {}
 VAW["Temporal_smoothing"]["label"] = "Temporal smoothing"
 # START_TIP
 VAW["Temporal_smoothing"]["tips"] = \
-f"""The number of times the video will be smoothed.
-This is useful to accurately detect variations in pixel slopes. Temporal smoothing reduces variations from noise 
-and reveals trends occurring at larger time scales. Technically, Cellects smoothes pixels curves using a rolling window over time.
-NB: 
+f"""The number of times the video will be smoothed. This is useful to accurately detect variations in
+pixel slopes. Temporal smoothing reduces variations from noise  and reveals trends occurring at
+larger time scales. Technically, Cellects smoothes pixels curves using a rolling window over time.
+NB:
 - This algorithm is only useful when segmenting with pixel intensity slopes.
 - Repeating this algorithm many times makes all pixels constants and prevent any detection.
 """

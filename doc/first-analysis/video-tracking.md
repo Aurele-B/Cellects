@@ -40,14 +40,12 @@ by the specimen  between two frames.
 
 <!-- START_Temporal_smoothing -->
 ## Temporal smoothing:
-Tells how many times the intensity over time of each pixel should be smoothed. It consists in
-applying a moving average on the pixel curves. Cellects uses this algorithm to detect slope
-variations with more accuracy.
+The number of times the video will be smoothed. This is useful to accurately detect variations in
+pixel slopes. Temporal smoothing reduces variations from noise  and reveals trends occurring at
+larger time scales. Technically, Cellects smoothes pixels curves using a rolling window over time.
 NB:
-- This setting is very useful when the lightning conditions vary.
-- Increasing too much temporal smoothing has two consequences.  First, it flattens pixel curves and
-end up preventing any detection. Second, it reduces the segmentation accuracy at the beginning and
-at the end of the videos.
+- This algorithm is only useful when segmenting with pixel intensity slopes.
+- Repeating this algorithm many times makes all pixels constants and prevent any detection.
 
 <!-- END_Temporal_smoothing -->
 
