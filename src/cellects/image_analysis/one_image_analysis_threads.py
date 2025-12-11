@@ -209,7 +209,7 @@ class SaveCombinationThread(threading.Thread):
         also handles biomask and backmask calculations if they are not None.
         Finally, it increments the saved color space number counter.
         """
-        logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct spots detected.")
+        logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct specimen(s) detected.")
         self.parent.saved_images_list.append(self.process_i.validated_shapes)
         self.parent.converted_images_list.append(np.round(self.process_i.image).astype(np.uint8))
         self.parent.saved_color_space_list.append(self.process_i.csc_dict)
