@@ -1,7 +1,7 @@
 # Analyze multiple folders at once
 
 <figure>
-  <img src="/static/UserManualFigure10.png" alt="Select folders to analyze window" width="600">
+  <img src="doc/static/UserManualFigure10.png" alt="Select folders to analyze window" width="600">
   <figcaption><strong>Figure 10:</strong> Select folders to analyze window</figcaption>
 </figure>
 

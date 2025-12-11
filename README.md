@@ -9,7 +9,7 @@ Cellects’ main strengths are its broad scope of action, automated computation 
 easy installation and user-friendly interface.
 
 <figure>
-  <img src="/static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
+  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 
@@ -24,7 +24,7 @@ Or, install via pip:
 ```bash
 pip install cellects
 ```
-If any difficulties, follow our [complete installation tutorial](https://github.com/Aurele-B/Cellects/blob/main/doc/installation.md)
+Any difficulties? follow our [complete installation tutorial](https://github.com/Aurele-B/Cellects/blob/main/doc/installation.md)
 
 ---
 
