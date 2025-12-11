@@ -533,40 +533,16 @@ class MotionAnalysis:
             min_y, max_y = np.max(self.drift_mask_coord[t_start:t_end, 0]), np.min(self.drift_mask_coord[t_start:t_end, 1])
             min_x, max_x = np.max(self.drift_mask_coord[t_start:t_end, 2]), np.min(self.drift_mask_coord[t_start:t_end, 3])
             allowed_window = min_y, max_y, min_x, max_x
-            # 3. Bracket the focal image
-            # image_i = contrasted_im[min_y:(max_y + 1), min_x:(max_x + 1)].astype(np.float64)
-            # mean_i = image_i.mean()
-            # if mean_i > 0:
-            #     image_i = image_i / mean_i
-            # image_i = OneImageAnalysis(image_i)
-            # image_i = OneImageAnalysis(contrasted_im)
-            # if self.vars['convert_for_motion']['logical'] != 'None':
-                # image_i2 = contrasted_im2[min_y:(max_y + 1), min_x:(max_x + 1)]
-                # mean_i2 = image_i2.mean()
-                # if mean_i2 > 0:
-                #     image_i2 = image_i2 / mean_i2
-                # image_i.image2 = image_i2
-                # image_i.image2 = contrasted_im2
-            # mask = np.zeros_like(contrasted_im)
-            # mask[min_y:max_y, min_x:max_x] = 1
-            # mask = (self.converted_video[t, ...] > 0).astype(np.uint8)
-        # 3. Bracket the focal image
-        if self.vars['rolling_window_segmentation']['do']:
-            mesh_min_int_var = 100 - (np.ptp(contrasted_im) * 90 / 255)
-        else:
-            mesh_min_int_var = None
+
         analysisi = OneImageAnalysis(contrasted_im)
         if self.vars['convert_for_motion']['logical'] != 'None':
             contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
             analysisi.image2 = contrasted_im2
 
-        if previous_binary_image is None:
-            previous_binary_image = self.origin
+        if previous_binary_image is None or t == 0:
+            analysisi.previous_binary_image = self.origin
         else:
-            if t == 0:
-                analysisi.previous_binary_image = self.origin
-            else:
-                analysisi.previous_binary_image = previous_binary_image
+            analysisi.previous_binary_image = previous_binary_image
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
