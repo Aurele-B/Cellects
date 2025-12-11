@@ -3,7 +3,7 @@
 On first use (Fig. 1), Cellects needs to identify what type of data to look for.  
 
 <figure>
-  <img src="/static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
+  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 

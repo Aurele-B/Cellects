@@ -151,7 +151,7 @@ orange).
 <!-- END_Generate_analysis_options -->
 
 <figure>
-  <img src="/static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
+  <img src="doc/static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
   <figcaption><strong>Figure 3:</strong> Cellects image analysis window after analysis option generation</figcaption>
 </figure>
 
@@ -212,7 +212,7 @@ Cellects will suggest:
 <!-- END_Video_delimitation -->
 
 <figure>
-  <img src="/static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
+  <img src="doc/static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
   <figcaption><strong>Figure 4:</strong> Cellects image analysis window, after arena delineation</figcaption>
 </figure>
 
