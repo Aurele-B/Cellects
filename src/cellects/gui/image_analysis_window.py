@@ -1181,19 +1181,19 @@ class ImageAnalysisWindow(MainTabsType):
                 'shape_number']
             if detected_shape_nb == self.parent().po.sample_number or self.parent().po.vars['several_blob_per_arena']:
                 self.decision_label.setText(
-                    f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
+                    f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
                 if self.step == 1:
                     self.yes.setVisible(True)
                     self.message.setText("If not, draw more Cell and Back ellipses on the image and retry")
             else:
                 if self.no.isVisible():
                     self.decision_label.setText(
-                        f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied, Click No to fill in more parameters")
+                        f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied, Click No to fill in more parameters")
                     self.yes.setVisible(True)
                     self.no.setVisible(True)
                 else:
                     self.decision_label.setText(
-                        f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied")
+                        f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied")
                     self.yes.setVisible(True)
 
             if self.parent().po.vars['several_blob_per_arena'] and (detected_shape_nb == self.parent().po.sample_number):
@@ -1288,11 +1288,11 @@ class ImageAnalysisWindow(MainTabsType):
                 else:
                     if detected_shape_nb == self.parent().po.sample_number:
                         self.decision_label.setText(
-                            f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
+                            f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
                         self.yes.setVisible(True)
                     else:
                         self.decision_label.setText(
-                            f"{detected_shape_nb} distinct spots detected in {self.parent().po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
+                            f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
                         self.yes.setVisible(False)
                 if im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
                     self.message.setText("Make sure that scaling metric and spot size are correct")
@@ -2265,15 +2265,15 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Auto delineation process for image analysis.
 
-        Automatically delineate or start manual delineation based on the number of arenas containing distinct spots.
+        Automatically delineate or start manual delineation based on the number of arenas containing distinct specimen(s).
 
         Notes
         -----
-        - The automatic delineation algorithm cannot handle situations where there are more than one arena containing distinct spots. In such cases, manual delineation is initiated.
+        - The automatic delineation algorithm cannot handle situations where there are more than one arena containing distinct specimen(s). In such cases, manual delineation is initiated.
         - This function updates the current mask and its stats, removes unnecessary memory, initiates image processing steps including cropping, scaling, subtracting, and delineating.
         - The visualization labels are hidden during this process.
         """
-        # Do not proceed automatic delineation if there are more than one arena containing distinct spots
+        # Do not proceed automatic delineation if there are more than one arena containing distinct specimen(s)
         # The automatic delineation algorithm cannot handle this situation
         if self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number > 1:
             self.manual_delineation()
