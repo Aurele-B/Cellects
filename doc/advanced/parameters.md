@@ -8,7 +8,7 @@
 ---
 
 <!-- START_Crop_images -->
-## Automatically crop images:
+**[Automatically crop images]**:
 Uses initial image detection to crop all images and improve arena/last image detection.
 NB:
 - Unselect this option if analysis fails or crashes during image analysis.
@@ -18,7 +18,7 @@ NB:
 ---
 
 <!-- START_Subtract_background -->
-## Subtract background:
+**[Subtract background]**:
 Takes the first image and subtracts it from subsequent images. This can improve or degrade detection
 depending on dataset characteristics.
 
@@ -27,7 +27,7 @@ depending on dataset characteristics.
 ---
 
 <!-- START_Keep_drawings -->
-## Keep Cell and Back drawings for all folders:
+**[Keep Cell and Back drawings for all folders]**:
 During initial image analysis, if the user drew cell/back regions to assist detection, this option
 saves and uses these annotations across all folders. In summary:
 - **Checked** → retain annotations for all folders
@@ -38,7 +38,7 @@ saves and uses these annotations across all folders. In summary:
 ---
 
 <!-- START_Correct_errors_around_initial -->
-## Correct errors around initial specimen's position:
+**[Correct errors around initial specimen's position]**:
 Applies an algorithm to correct detection errors near the initial specimen position due to color
 variations (e.g., from nutrient patches). Technical workflow:
 - Identifies potential gaps around initial position
@@ -53,7 +53,7 @@ between starting and growth regions).
 ---
 
 <!-- START_Prevent_fast_growth_near_periphery -->
-## Prevent fast growth near periphery:
+**[Prevent fast growth near periphery]**:
 During video analysis, prevents false specimen detection at arena borders by filtering rapid
 periphery growth.
 - **Checked** → Exclude fast
@@ -65,7 +65,7 @@ periphery growth.
 ---
 
 <!-- START_Connect_distant_shapes -->
-## Connect distant shapes:
+**[Connect distant shapes]**:
 Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
 specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
 and the detection is smaller than the true specimen. Technical implementation:
@@ -80,7 +80,7 @@ NB:
 ---
 
 <!-- START_Specimens_have_same_direction -->
-## All specimens have the same direction:
+**[All specimens have the same direction]**:
 Select to optimize arena detection for specimens moving move in the same direction.
 - **Checked** → Uses motion pattern analysis for arena localization.
 - **Unchecked** → Employs standard centroid
@@ -91,7 +91,7 @@ Select to optimize arena detection for specimens moving move in the same directi
 ---
 
 <!-- START_Appearance_size_threshold -->
-## Appearance size threshold (automatic if checked):
+**[Appearance size threshold (automatic if checked)]**:
 Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
 - **Checked** → Automatic threshold calculation.
 - **Unchecked** → Manual user
@@ -102,7 +102,7 @@ Minimum pixel count threshold for identifying specimen emergence (e.g., bacteria
 ---
 
 <!-- START_Appearance_detection_method -->
-## Appearance detection method:
+**[Appearance detection method]**:
 Selection criteria for initial specimen detection:
 - Largest: Based on component size metric.
 - Most central: Based on arena center proximity.
@@ -114,7 +114,7 @@ NB:
 ---
 
 <!-- START_Mesh_side_length -->
-## Mesh side length:
+**[Mesh side length]**:
 Pixel dimension for analysis window size.
 NB:
 - Must not exceed minimum image dimension
@@ -124,7 +124,7 @@ NB:
 ---
 
 <!-- START_Mesh_step_length -->
-## Mesh step:
+**[Mesh step]**:
 The size of the step (in pixels) between consecutive rolling window positions.
 NB:
 - Must not exceed the mesh side length to ensure full coverage of the image.
@@ -134,7 +134,7 @@ NB:
 ---
 
 <!-- START_Mesh_minimal_intensity_variation -->
-## Mesh minimal intensity variation:
+**[Mesh minimal intensity variation]**:
 The minimal variation in intensity to consider that a given window does contain the specimen(s).
 NB:
 - This threshold is an intensity value ranging from 0 to 255 (generally small).
@@ -145,7 +145,7 @@ NB:
 ---
 
 <!-- START_Expected_oscillation_period -->
-## Expected oscillation period:
+**[Expected oscillation period]**:
 The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
 based on luminosity variations.
 
@@ -154,7 +154,7 @@ based on luminosity variations.
 ---
 
 <!-- START_Minimal_oscillating_cluster_size -->
-## Minimal oscillating cluster size:
+**[Minimal oscillating cluster size]**:
 When looking for oscillatory patterns, Cellects detects connected components that are thickening or
 slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
 groups of connected pixels. This threshold is useful to filter out small noisy oscillations.
@@ -164,7 +164,7 @@ groups of connected pixels. This threshold is useful to filter out small noisy o
 ---
 
 <!-- START_Spatio_temporal_scaling -->
-## Spatio-temporal scaling:
+**[Spatio-temporal scaling]**:
 Defines the spatiotemporal scale of the dataset:
 - Time between images or frames (minutes).
 - An option to convert areas/distances from pixels to mm/mm².
@@ -174,7 +174,7 @@ Defines the spatiotemporal scale of the dataset:
 ---
 
 <!-- START_Parallel_analysis -->
-## Run analysis in parallel:
+**[Run analysis in parallel]**:
 Allow the use of more than one core of the computer processor.
 - **Checked** → Uses multiple CPU cores to analyze arenas in parallel (faster).
 - **Unchecked** → Single core analysis.
@@ -184,7 +184,7 @@ Allow the use of more than one core of the computer processor.
 ---
 
 <!-- START_Proc_max_core_nb -->
-## Proc max core number:
+**[Proc max core number]**:
 Maximum number of logical CPU cores to use during analysis. The default value is set to the total
 number of available CPU cores minus one.
 
@@ -193,7 +193,7 @@ number of available CPU cores minus one.
 ---
 
 <!-- START_Minimal_RAM_let_free -->
-## Minimal RAM let free:
+**[Minimal RAM let free]**:
 Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
 memory, but increases crash risk if other apps are open.
 
@@ -202,7 +202,7 @@ memory, but increases crash risk if other apps are open.
 ---
 
 <!-- START_Lose_accuracy_to_save_RAM -->
-## Lose accuracy to save RAM:
+**[Lose accuracy to save RAM]**:
 For low memory systems:
 - Converts video from `np.float64` to `uint8`
 - Saves RAM at the cost of a slight precision loss
@@ -212,7 +212,7 @@ For low memory systems:
 ---
 
 <!-- START_Video_fps -->
-## Video fps:
+**[Video fps]**:
 Frames per second of validation videos.
 
 <!-- END_Video_fps -->
@@ -220,7 +220,7 @@ Frames per second of validation videos.
 ---
 
 <!-- START_Keep_unaltered_videos -->
-## Keep unaltered videos:
+**[Keep unaltered videos]**:
 Keeps unaltered `.npy` videos in hard drive.
 - **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.
@@ -232,7 +232,7 @@ NB:
 ---
 
 <!-- START_Save_processed_videos -->
-## Save processed videos:
+**[Save processed videos]**:
 Saves lightweight processed validation videos (recommended over unaltered videos). These videos
 assess analysis accuracy and can be read in standard video players.
 
@@ -241,7 +241,7 @@ assess analysis accuracy and can be read in standard video players.
 ---
 
 <!-- START_Csc_for_video_analysis -->
-## Color space combination for video analysis:
+**[Color space combination for video analysis]**:
 Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
 color spaces without (re)running image analysis.
 
@@ -250,7 +250,7 @@ color spaces without (re)running image analysis.
 ---
 
 <!-- START_Night_mode -->
-## Night mode:
+**[Night mode]**:
 Switches the application background between light and dark themes.
 
 <!-- END_Night_mode -->
@@ -258,7 +258,7 @@ Switches the application background between light and dark themes.
 ---
 
 <!-- START_Reset_all_settings -->
-## Reset all settings:
+**[Reset all settings]**:
 Useful when the software freezes with no apparent reason. To reset all settings, it removes the
 config file in the  current folder as well as the config file in the software folder. Then, it
 retrieves and saves the default parameters.
