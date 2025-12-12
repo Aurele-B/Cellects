@@ -16,7 +16,7 @@ Proper configuration here directly informs downstream video tracking workflows (
 ---
 
 <!-- START_Image_number -->
-## Image number:
+**[Image number]**:
 Selects the image number to analyze. This number should only be changed when specimen(s) are
 invisible on the first image (e.g., in the case of appearing colonies of bacteria), never otherwise.
 When the specimen(s) are invisible, read more advanced images until some material can be detected.
@@ -29,7 +29,7 @@ image labels.
 ---
 
 <!-- START_several_blob_per_arena -->
-## One specimen per arena:
+**[One specimen per arena]**:
 Select this option if there is only one specimen (e.g., a cell or connected colony) per arena. If
 multiple specimens exist (or will be present) in an arena, unselect this option.
 NB:
@@ -40,7 +40,7 @@ NB:
 ---
 
 <!-- START_Scale_with -->
-## Scale with:
+**[Scale with]**:
 Specify how to compute true pixel size (in mm). Cellects can determine this scale using:
 - Image width (horizontal dimension)
 - Specimen width on first image (usable when specimens share consistent width)
@@ -55,7 +55,7 @@ specimen dimensions are known with higher accuracy than imaging equipment.
 ---
 
 <!-- START_Scale_size -->
-## Scale size:
+**[Scale size]**:
 The *Scale size* is the actual length (in mm) corresponding to scaling reference.
 NB:
 - This value enables conversion from pixel coordinates to physical dimensions.
@@ -65,7 +65,7 @@ NB:
 ---
 
 <!-- START_Select_and_draw -->
-## Select and draw:
+**[Select and draw]**:
 *Select and draw* allows the user to inform Cellects about specimen (*Cell*) and background (*Back*)
 areas in images. To use, click *Cell* or *Back* button (button color changes), then:
 - Click and drag mouse on image to mark corresponding area
@@ -82,7 +82,7 @@ enable *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 ---
 
 <!-- START_Draw_buttons -->
-## Draw buttons:
+**[Draw buttons]**:
 Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding
 mouse on the image.
 
@@ -91,7 +91,7 @@ mouse on the image.
 ---
 
 <!-- START_Advanced_mode -->
-## Advanced mode:
+**[Advanced mode]**:
 The *Advanced mode* enables fine
 -tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
@@ -106,7 +106,7 @@ NB:
 ---
 
 <!-- START_Color_combination -->
-## Color combination:
+**[Color combination]**:
 Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
 image by 3 colors,  they transform it into 3 different visual properties
 - hsv: hue (color), saturation, value (lightness)
@@ -119,7 +119,7 @@ image by 3 colors,  they transform it into 3 different visual properties
 ---
 
 <!-- START_Filter -->
-## Filter:
+**[Filter]**:
 Apply a filter to preprocess images before segmentation.
 NB:
 - Filtering can improve segmentation accuracy by emphasizing relevant image features.
@@ -129,7 +129,7 @@ NB:
 ---
 
 <!-- START_Logical_operator -->
-## Logical operator:
+**[Logical operator]**:
 The *Logical operator* defines how to combine results from distinct segmentations (e.g., merging the
 segmentation resulting from a specific color space transformation and filtering with a different
 one). Supported operators: AND, OR, XOR.
@@ -139,7 +139,7 @@ one). Supported operators: AND, OR, XOR.
 ---
 
 <!-- START_Rolling_window_segmentation -->
-## Rolling window segmentation:
+**[Rolling window segmentation]**:
 Segments image regions using a rolling window approach to detect local intensity valleys. The method
 applies Otsu's thresholding locally on each window.
 
@@ -148,7 +148,7 @@ applies Otsu's thresholding locally on each window.
 ---
 
 <!-- START_Kmeans -->
-## Kmeans:
+**[Kmeans]**:
 The *Kmeans* algorithm clusters pixels into a specified number of categories (2
 -5) to identify specimen regions within the image.
 
@@ -157,7 +157,7 @@ The *Kmeans* algorithm clusters pixels into a specified number of categories (2
 ---
 
 <!-- START_Generate_analysis_options -->
-## Generate analysis options:
+**[Generate analysis options]**:
 Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
 first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
@@ -175,7 +175,7 @@ processing.
 ---
 
 <!-- START_Select_option_to_read -->
-## Select option to read:
+**[Select option to read]**:
 Choose the option producing optimal segmentation results. This menu appears after generating
 analysis options, allowing direct quality assessment. For example, if Option 1 shows correct
 detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis via:
@@ -190,7 +190,7 @@ NB:
 ---
 
 <!-- START_Arena_shape -->
-## Arena shape:
+**[Arena shape]**:
 Specifies whether the specimen(s) can move in a circular or rectangular arena.
 
 <!-- END_Arena_shape -->
@@ -198,7 +198,7 @@ Specifies whether the specimen(s) can move in a circular or rectangular arena.
 ---
 
 <!-- START_Spot_shape -->
-## Set spot shape:
+**[Set spot shape]**:
 Defines the expected shape of specimens within arenas.
 
 <!-- END_Spot_shape -->
@@ -206,7 +206,7 @@ Defines the expected shape of specimens within arenas.
 ---
 
 <!-- START_Spot_size -->
-## Set spot size:
+**[Set spot size]**:
 Initial horizontal size of the specimen(s) (in mm). If similar across all specimens, this can also
 be used as a scale.
 
@@ -215,7 +215,7 @@ be used as a scale.
 ---
 
 <!-- START_Video_delimitation -->
-## Video delimitation:
+**[Video delimitation]**:
 After confirming initial detection, automatic video delimitation results appear in blue.  Click
 *Yes* if accurate or *No* for:
 - A slower, higher precision algorithm.
@@ -231,7 +231,7 @@ After confirming initial detection, automatic video delimitation results appear 
 ---
 
 <!-- START_Last_image_question -->
-## Last image question:
+**[Last image question]**:
 If parameters might fail on later images, test them first on the final frame:
 - *Yes* → validates with last image before tracking.
 - *No* → proceeds directly to video analysis.
@@ -241,7 +241,7 @@ If parameters might fail on later images, test them first on the final frame:
 ---
 
 <!-- START_Start_differs_from_arena -->
-## Check if the medium at starting position differs from the rest of the arena:
+**[Check if the medium at starting position differs from the rest of the arena]**:
 Enable if the substrate differs between initial position and arena growth area (e.g., nutritive gel
 vs. agar). Disable for homogeneous substrates.
 
@@ -250,7 +250,7 @@ vs. agar). Disable for homogeneous substrates.
 ---
 
 <!-- START_Save_image_analysis -->
-## Save image analysis:
+**[Save image analysis]**:
 Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze
 video(s), click *Next*.
 NB:

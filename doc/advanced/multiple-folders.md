@@ -12,7 +12,7 @@ The window of **Figure 10** appears after the first window when the selected fol
 ---
 
 <!-- START_Check_to_select_all_folders -->
-## Check to select all folders:
+**[Check to select all folders]**:
 Select this option to run the analysis on all folders containing images matching the *Image prefix*
 and *Images extension*. Otherwise, use Ctrl/Cmd to select specific folders for analysis.
 NB:
