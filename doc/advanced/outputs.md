@@ -9,10 +9,10 @@
 
 <!-- START_coord_specimen -->
 ## Pixels covered by the specimen(s):
-Save a .npy file containing the coordinates (t, y, x) of presence of the specimen(s), as detected
-with the current parameters.
+Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
+parameters.
 NB:
-- Depending on the number of frames, these files may take a lot a memory.
+- These files may consume significant memory depending on the total frame count.
 
 <!-- END_coord_specimen -->
 
@@ -21,19 +21,16 @@ NB:
 
 <!-- START_Graph -->
 ## Graph of the specimen(s) (or network):
-Compute the geometrical graph describing the specimen as it is detected with the current parameters.
-Cellects compute the graph of each frame on the skeleton of the largest connected component.  If the
-user also ask Cellects to detect a network inside the specimen(s), the graph will be computed on
-this detected network. The graph is saved as two .csv files:
-- One for the vertices containing their coordinates (t, y, x), their id, whether they are tips,
-whether they are part of the specimen area at the beginning of the video, and whether they are part
-of a small cluster of vertices.
-- One for the edges containing their id, the id of their two vertices, their lengths, their average
-width and intensity.
+Compute a geometrical graph describing the specimen based on current detection parameters.  Cellects
+generates this graph using the skeleton of the largest connected component per frame.  If network
+detection is enabled, it will be computed on the detected network instead. The output includes:
+- A .csv file for vertices with coordinates (t, y, x), IDs, tip status, part of the specimen's
+initial position, connection status with other vertices.
+- A .csv file for edges with IDs, vertex pairs, lengths, average width, and intensity.
 NB:
-- Depending on the number of frames, these files may take a lot a memory.
-- Selecting both network and graph detection is only useful for organisms having a distinguishable
-network within their main body (e.g. Physarum polycephalum)
+- These files may consume significant memory depending on the total frame count.
+- Network and graph detection together are relevant only for organisms with a distinct internal
+network (e.g., *Physarum polycephalum*).
 
 <!-- END_Graph -->
 
@@ -42,8 +39,8 @@ network within their main body (e.g. Physarum polycephalum)
 
 <!-- START_coord_oscillating -->
 ## Oscillating areas in the specimen(s):
-Compute and save the coordinates (t, y, x) of areas oscillating synchronously in the specimen(s).
-This algorithm save two .npy file: one for thickening areas and one for slimming areas.
+Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
+files are generated: one for thickening regions and one for slimming regions.
 
 <!-- END_coord_oscillating -->
 
@@ -52,7 +49,7 @@ This algorithm save two .npy file: one for thickening areas and one for slimming
 
 <!-- START_coord_network -->
 ## Network in the specimen(s):
-Detect and save (as .npy file) the coordinate (t, y, x) of a distinguishable network in the
+Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
 specimen(s).
 
 <!-- END_coord_network -->

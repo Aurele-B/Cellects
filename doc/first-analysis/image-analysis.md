@@ -18,11 +18,11 @@ Proper configuration here directly informs downstream video tracking workflows (
 <!-- START_Image_number -->
 ## Image number:
 Selects the image number to analyze. This number should only be changed when specimen(s) are
-invisible on the first image (e.g. in the case of appearing colonies of bacteria), never otherwise.
+invisible on the first image (e.g., in the case of appearing colonies of bacteria), never otherwise.
 When the specimen(s) are invisible, read more advanced images until some material can be detected.
 NB:
-- When the data is stored as images, this image number comes from the alphanumerical sorting of the
-original image labeling.
+- When the data is stored as images, this image number comes from alphanumerical sorting of original
+image labels.
 
 <!-- END_Image_number -->
 
@@ -30,8 +30,8 @@ original image labeling.
 
 <!-- START_several_blob_per_arena -->
 ## One specimen per arena:
-Should be selected if there is only one specimen (e.g. a cell or a connected colony) per arena.   If
-there already are (or will be) several specimen(s) per arena, unselect this option.
+Select this option if there is only one specimen (e.g., a cell or connected colony) per arena. If
+multiple specimens exist (or will be present) in an arena, unselect this option.
 NB:
 - This option is selected by default.
 
@@ -41,18 +41,14 @@ NB:
 
 <!-- START_Scale_with -->
 ## Scale with:
-Set how the true pixel size (in mm) should be computed. to calculate pixel size  Cellects can
-determine this scale using the width (horizontal size) of the image or the width of the specimens on
-the first image (ideally in cases where they share the same width).
+Specify how to compute true pixel size (in mm). Cellects can determine this scale using:
+- Image width (horizontal dimension)
+- Specimen width on first image (usable when specimens share consistent width)
 NB:
-- Cellects' advanced parameters include the possibility to disable this scaling and get all outputs
-in pixels.
-- Using the width of the specimens decreases the first image detection efficiency, we recommend
-choosing the width of the image.
-- However, if the width of the specimens is known with more accuracy than the width of the image,
-choose the width of the specimens.
-- By default, distances and surfaces are in pixels (Cellects stores the size of one pixel in a file
-called `software_settings.csv`).
+- Advanced parameters allow disabling scaling and outputting in pixels.
+- Using specimen width reduces initial detection efficiency. We recommend using image width unless
+specimen dimensions are known with higher accuracy than imaging equipment.
+- Pixel size is stored in a file named `software_settings.csv`.
 
 <!-- END_Scale_with -->
 
@@ -60,7 +56,9 @@ called `software_settings.csv`).
 
 <!-- START_Scale_size -->
 ## Scale size:
-The *Scale size* is the length (in mm) of the item(s) used for scaling.
+The *Scale size* is the actual length (in mm) corresponding to scaling reference.
+NB:
+- This value enables conversion from pixel coordinates to physical dimensions.
 
 <!-- END_Scale_size -->
 
@@ -68,18 +66,16 @@ The *Scale size* is the length (in mm) of the item(s) used for scaling.
 
 <!-- START_Select_and_draw -->
 ## Select and draw:
-*Select and draw* is a tool allowing the user to inform Cellects that some parts of the image are
-specimens *Cell* and others are background *Back*. To use that tool, the user must click once on the
-*Cell* button (to draw a part of the image containing specimens) or  on the *Back* button (to draw a
-part of the image containing background). The color of the clicked button changes and the user can
-click and move the cursor on the image to draw the position  of the specimens or of the background.
-Each drawing will also appear (with a number) below the corresponding button. If the user clicks on
-one of these numbered drawings, the corresponding selected area disappears, enabling the user to
-correct mistakes.
+*Select and draw* allows the user to inform Cellects about specimen (*Cell*) and background (*Back*)
+areas in images. To use, click *Cell* or *Back* button (button color changes), then:
+- Click and drag mouse on image to mark corresponding area
+- Numbered drawings appear below buttons for reference
+- (if needed) Click numbered drawing to remove selection.
 NB:
-- If the user wishes to analyze several folders, the *Select and draw* option will only work for the
-first.
-- If each folder requires using this option, the user has to analyze each folder separately.
+- By default, this tool only works for the first folder when analyzing multiple folders. Advanced
+parameters include an option to use these same masks in multiple folders.
+- To apply saved masks (e.g., background or specimen initiation regions) across selected folders,
+enable *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 
 <!-- END_Select_and_draw -->
 
@@ -88,7 +84,7 @@ first.
 <!-- START_Draw_buttons -->
 ## Draw buttons:
 Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding
-down the mouse button.
+mouse on the image.
 
 <!-- END_Draw_buttons -->
 
@@ -96,25 +92,27 @@ down the mouse button.
 
 <!-- START_Advanced_mode -->
 ## Advanced mode:
-The *Advanced mode* allows the user to fine tune the image analysis parameters. This can be useful
-to use previously working set of parameters on similar images, or to test the available methods
-directly. Even when some analysis option are generated, selecting this option can be useful to
-access:
-- The color space combination corresponding to the displayed image.
-- Various filter to apply on the image before segmentation.
-- Other results by adding good channels together or mixing two good options using a logical operator
-between them.
-- The grid segmentation algorithm.
-- The kmeans segmentation algorithm.
+The *Advanced mode* enables fine
+-tuning of image analysis parameters for:
+- Custom color space combinations (e.g., HSV, HLS)
+- Applying filters before segmentation
+- Combining segmentations using logical operators
+- Accessing rolling window and Kmeans algorithms
+NB:
+- Useful for reusing validated parameter sets or testing alternative methods.
 
 <!-- END_Advanced_mode -->
 
 ---
 
 <!-- START_Color_combination -->
-## Logical operator:
-The logical operator to apply between the result of two distinct segmentations. For instance, using
-two filters or two color space combinations.
+## Color combination:
+Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
+image by 3 colors,  they transform it into 3 different visual properties
+- hsv: hue (color), saturation, value (lightness)
+- hls: hue (color), lightness, saturation
+- lab: Lightness, Red/Green, Blue/Yellow
+- luv and yuv: l and y are Lightness, u and v are related to colors
 
 <!-- END_Color_combination -->
 
@@ -122,16 +120,28 @@ two filters or two color space combinations.
 
 <!-- START_Filter -->
 ## Filter:
-The filter to apply to the image before segmentation
+Apply a filter to preprocess images before segmentation.
+NB:
+- Filtering can improve segmentation accuracy by emphasizing relevant image features.
 
 <!-- END_Filter -->
 
 ---
 
+<!-- START_Logical_operator -->
+## Logical operator:
+The *Logical operator* defines how to combine results from distinct segmentations (e.g., merging the
+segmentation resulting from a specific color space transformation and filtering with a different
+one). Supported operators: AND, OR, XOR.
+
+<!-- END_Logical_operator -->
+
+---
+
 <!-- START_Rolling_window_segmentation -->
 ## Rolling window segmentation:
-Segment small squares of the images to detect local intensity valleys This method segment the image
-locally using otsu thresholding on a rolling window
+Segments image regions using a rolling window approach to detect local intensity valleys. The method
+applies Otsu's thresholding locally on each window.
 
 <!-- END_Rolling_window_segmentation -->
 
@@ -139,8 +149,8 @@ locally using otsu thresholding on a rolling window
 
 <!-- START_Kmeans -->
 ## Kmeans:
-The Kmeans algorithm will split the image into categories (a number between 2 and 5) and find the
-one corresponding to the specimen(s)
+The *Kmeans* algorithm clusters pixels into a specified number of categories (2
+-5) to identify specimen regions within the image.
 
 <!-- END_Kmeans -->
 
@@ -148,13 +158,12 @@ one corresponding to the specimen(s)
 
 <!-- START_Generate_analysis_options -->
 ## Generate analysis options:
-Cellects suggests an algorithms to automatically find the best parameters to detect specimens on the
-first image:
-- **Basic** → suggests options in a few minutes.   Alternatively, the user can select *Advanced
-mode* to view or modify the parameters selected by Cellects.
-NB:
-- Clicking on *Basic* (or *Apply current config*) will provoke the display of a working message (in
-orange).
+Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
+first or last image:
+- **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
+to review or modify more specific settings.
+NB: Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
+processing.
 
 <!-- END_Generate_analysis_options -->
 
@@ -167,18 +176,14 @@ orange).
 
 <!-- START_Select_option_to_read -->
 ## Select option to read:
-Select the option allowing the best segmentation. This dropdown menu appears after generating
-analysis options. Each available option allows the user to directly assess their quality.  For
-instance, if option 1 generate a message informing the user that this option detected 6 distinct
-spots in 6 arenas and these correspond to the user's expectations they should click the *Yes*
-button.  Otherwise, Cellects offers several ways to improve the analysis:
-- Setting the *arena shape*, the *spot shape*, or the *spot size*.
-- Drawing more specimens or background using *Select and draw*.
-- Tuning the advanced mode to set up other methods manually.
--> Each of these options can then be tested using the *Apply current config* button.
-NB: Once the magenta/pink contours correspond to the right position of all cells and the right
-number of detected spots, the user can click the *Yes* button. After clicking, an orange working
-message appears, and Cellects automatically looks for the coordinates of the contour of each arena.
+Choose the option producing optimal segmentation results. This menu appears after generating
+analysis options, allowing direct quality assessment. For example, if Option 1 shows correct
+detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis via:
+- Adjusting arena/spot shapes or sizes
+- Using *Select and draw* to annotate specimens/background
+- Manual configuration in advanced mode → Test changes with *Apply current config*
+NB:
+- Confirm when magenta/pink contours match expected positions and counts.
 
 <!-- END_Select_option_to_read -->
 
@@ -194,7 +199,7 @@ Specifies whether the specimen(s) can move in a circular or rectangular arena.
 
 <!-- START_Spot_shape -->
 ## Set spot shape:
-Initial shape of the specimen(s) inside arena(s).
+Defines the expected shape of specimens within arenas.
 
 <!-- END_Spot_shape -->
 
@@ -211,11 +216,10 @@ be used as a scale.
 
 <!-- START_Video_delimitation -->
 ## Video delimitation:
-After validating the initial detection, the result of the automatic video delimitation appears in
-blue in the  center of the window.   If correct, click *Yes*.   If incorrect, click *No*, and
-Cellects will suggest:
-- A slower, more efficient algorithm
-- Or a manual delineation option
+After confirming initial detection, automatic video delimitation results appear in blue.  Click
+*Yes* if accurate or *No* for:
+- A slower, higher precision algorithm.
+- Manual delineation option.
 
 <!-- END_Video_delimitation -->
 
@@ -228,11 +232,9 @@ Cellects will suggest:
 
 <!-- START_Last_image_question -->
 ## Last image question:
-If the user thinks that parameters used on the first image might not work on later images, they can
-fine
--tune them using the last image.
-- Clicking *Yes* → allows testing on the last image before moving on.
-- Clicking *No* → goes directly to video tracking.
+If parameters might fail on later images, test them first on the final frame:
+- *Yes* → validates with last image before tracking.
+- *No* → proceeds directly to video analysis.
 
 <!-- END_Last_image_question -->
 
@@ -240,11 +242,8 @@ fine
 
 <!-- START_Start_differs_from_arena -->
 ## Check if the medium at starting position differs from the rest of the arena:
-If the substrate changes between starting and growing areas (e.g. nutritive gel vs transparent
-agar), keep this checked. If the substrate is homogeneous everywhere, uncheck this option. This
-option is only relevant for experiments in which the medium on which the specimen grow does not have
-the same optic properties at the position of the specimen(s) at the first frame and at their
-positions later on.
+Enable if the substrate differs between initial position and arena growth area (e.g., nutritive gel
+vs. agar). Disable for homogeneous substrates.
 
 <!-- END_Start_differs_from_arena -->
 
@@ -252,13 +251,12 @@ positions later on.
 
 <!-- START_Save_image_analysis -->
 ## Save image analysis:
-Complete the analysis of the current image. Clicking this button is useful to analyze only one
-image.  To analyze video(s), click *Next*.
+Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze
+video(s), click *Next*.
 NB:
-- When there should be only one specimen per arena, keeps the largest connected component.
-- Compute and save (.csv) all descriptors selected in the Required output window on the current
-image.
-- Save a validation image to assess the efficiency of the segmentation.
+- When analyzing a single specimen per arena, keeps the largest connected component.
+- Saves all selected descriptors in .csv format for the current image and generates a validation
+image to assess segmentation accuracy.
 
 <!-- END_Save_image_analysis -->
 
