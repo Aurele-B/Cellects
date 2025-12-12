@@ -1,7 +1,7 @@
 # Advanced parameters
 
 The Advanced parameters window (Fig. 8) provides fine-grained control over Cellects’ algorithmic behavior, enabling researchers to customize analysis pipelines for specific datasets or experimental conditions.
-These settings extend the flexibility introduced in earlier stages ([Data localisation](../first-analysis/data-localisation.md, [Image analysis](../first-analysis/image-analysis.md), and [Video tracking](../first-analysis/video-tracking.md)) by allowing tuning of segmentation logic (e.g., mesh resolution, intensity thresholds), computational performance (parallel processing, memory allocation). 
+These settings extend the flexibility introduced in earlier stages ([Data localisation](../first-analysis/data-localisation.md), [Image analysis](../first-analysis/image-analysis.md), and [Video tracking](../first-analysis/video-tracking.md)) by allowing tuning of segmentation logic (e.g., mesh resolution, intensity thresholds), computational performance (parallel processing, memory allocation). 
 For instance, users can optimize for low-noise environments with [Mesh minimal intensity variation] or facilitate high-throughput computations using [Run analysis in parallel]. This section is particularly critical for troubleshooting edge cases (e.g., ambiguous specimen boundaries) or adapting Cellects to non-standard substrates (e.g., heterogeneous growth media). By documenting and reusing these configurations, researchers ensure both technical precision and reproducibility.
 
 # Detailed description of the window
