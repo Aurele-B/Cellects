@@ -1527,9 +1527,14 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
+                print(self.vars['time_step_is_arbitrary'])
+                if self.vars['time_step_is_arbitrary']:
+                    time_unit = ""
+                else:
+                    time_unit = " min"
                 for t in np.arange(self.dims[0]):
                     image = self.converted_video[t, ...]
-                    text = str(self.one_row_per_frame['time'][t]) + " min"
+                    text = str(self.one_row_per_frame['time'][t]) + time_unit
                     image = cv2.putText(image,  # numpy array on which text is written
                                     text,  # text
                                     position,  # position at which writing has to start
