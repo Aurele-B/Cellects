@@ -1,7 +1,7 @@
 # Required outputs
 
 <figure>
-  <img src="doc/static/UserManualFigure9.png" alt="Required output window" width="600">
+  <img src="../../static/UserManualFigure9.png" alt="Required output window" width="600">
   <figcaption><strong>Figure 9:</strong> Required output window</figcaption>
 </figure>
 
