@@ -1,4 +1,13 @@
 # Required outputs
+The Required outputs window (Fig. 9) defines what quantitative descriptors Cellects computes and exports during analysis—a critical step in ensuring reproducible, shareable results aligned with open science standards. 
+Users select from a range of spatial and temporal metrics (e.g., area, perimeter, oscillation patterns) as well as pixel coordinates, geometrical graphs (vertices.csv, edges.csv), or network skeletons. 
+These outputs bridge raw imaging data to downstream analysis in statistical tools, modeling software, or collaborative platforms. 
+
+For example:
+- Pixel-level tracking (e.g., [Pixels covered by the specimen(s)]) enables high-resolution morphodynamics studies.
+- Graph/network outputs (e.g., [Graph of the specimen(s)]) are essential for organisms with internal branching structures (Physarum polycephalum), capturing topological changes over time.
+
+# Detailed description of the window
 
 <figure>
   <img src="../../static/UserManualFigure9.png" alt="Required output window" width="600">
