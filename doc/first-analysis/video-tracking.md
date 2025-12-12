@@ -1,7 +1,7 @@
 # Tune parameters of the video tracking window
 
 <figure>
-  <img src="doc/static/UserManualFigure5.png" alt="Cellects video tracking window" width="600">
+  <img src="../../static/UserManualFigure5.png" alt="Cellects video tracking window" width="600">
   <figcaption><strong>Figure 5:</strong> Cellects video tracking window</figcaption>
 </figure>
 
@@ -100,7 +100,7 @@ Clicking *Read* starts the video display corresponding to the current state of t
 <!-- END_Read -->
 
 <figure>
-  <img src="doc/static/UserManualFigure6.png" alt="Cellects video tracking window during detection visualization" width="600">
+  <img src="../../static/UserManualFigure6.png" alt="Cellects video tracking window during detection visualization" width="600">
   <figcaption><strong>Figure 6:</strong> Cellects video tracking window during detection visualization</figcaption>
 </figure>
 
@@ -155,7 +155,7 @@ that arena.
 <!-- END_Save_one_result -->
 
 <figure>
-  <img src="doc/static/UserManualFigure7.png" alt="Cellects video tracking window, running all arenas" width="600">
+  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window, running all arenas" width="600">
   <figcaption><strong>Figure 7:</strong> Cellects video tracking window, running all arenas</figcaption>
 </figure>
 

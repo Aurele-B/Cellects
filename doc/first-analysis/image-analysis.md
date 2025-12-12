@@ -1,7 +1,7 @@
 # Find where the specimens are in the image analysis window
 
 <figure>
-  <img src="doc/static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
+  <img src="../../static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
   <figcaption><strong>Figure 2:</strong> Cellects image analysis window</figcaption>
 </figure>
 
@@ -151,7 +151,7 @@ orange).
 <!-- END_Generate_analysis_options -->
 
 <figure>
-  <img src="doc/static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
+  <img src="../../static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
   <figcaption><strong>Figure 3:</strong> Cellects image analysis window after analysis option generation</figcaption>
 </figure>
 
@@ -212,7 +212,7 @@ Cellects will suggest:
 <!-- END_Video_delimitation -->
 
 <figure>
-  <img src="doc/static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
+  <img src="../../static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
   <figcaption><strong>Figure 4:</strong> Cellects image analysis window, after arena delineation</figcaption>
 </figure>
 

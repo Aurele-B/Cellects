@@ -1,7 +1,7 @@
 # Advanced parameters
 
 <figure>
-  <img src="doc/static/UserManualFigure8.png" alt="Advanced parameters window" width="600">
+  <img src="../../static/UserManualFigure8.png" alt="Advanced parameters window" width="600">
   <figcaption><strong>Figure 8:</strong> Advanced parameters window</figcaption>
 </figure>
 
