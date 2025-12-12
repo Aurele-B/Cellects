@@ -1,7 +1,7 @@
 # Find where the specimens are in the image analysis window
 
 <figure>
-  <img src="/static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
+  <img src="doc/static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
   <figcaption><strong>Figure 2:</strong> Cellects image analysis window</figcaption>
 </figure>
 
