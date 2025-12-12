@@ -1,5 +1,10 @@
 # Analyze multiple folders at once
 
+Analyzing multiple folders at once (Fig. 10) streamlines high-throughput experimentation by applying validated analysis parameters to entire datasets with minimal user intervention. 
+By configuring folder selection and per-folder arena counts, users ensure that Cellects applies the same detection logic uniformly while respecting experimental heterogeneity.
+
+# Detailed description of the window
+
 <figure>
   <img src="../../static/UserManualFigure10.png" alt="Select folders to analyze window" width="600">
   <figcaption><strong>Figure 10:</strong> Select folders to analyze window</figcaption>
