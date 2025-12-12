@@ -1,16 +1,16 @@
 # Data localisation in the first window
 
-On first use (Fig. 1), Cellects needs to identify what type of data to look for.  
+Before diving into detailed analysis workflows, Cellects requires initial setup (Fig. 1) to define the scope and format of the data being processed. This first window serves as the gateway to configuring foundational parameters that underpin all subsequent steps: from basic image/video tracking to advanced video analytics. 
+Users will specify whether their input consists of an image stack or a single video file, establish naming conventions for targeted files (e.g., prefixes like "exp_" and extensions like ".jpg"), and define the root folder(s) containing experimental data. Additionally, this interface allows users to declare how many independent arenas are present in each dataset—a critical step for ensuring accurate analysis. 
+These configurations directly inform later stages (e.g., image analysis, video tracking) and enable automation across multiple folders if required (See Fig. 10).
+
+# Detailed description of the window
 
 <figure>
   <img src="../../static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 
-Cellects requires a folder containing one stack of images or one video to run an analysis (See Fig. 1). 
-When the user selects several folders, Cellects uses the parameters filled for the first one 
-to analyze all the remaining folders (See Fig. 10: the several folder window). 
-The available variables are shown in Fig. 9: the required output window.
 
 ---
 

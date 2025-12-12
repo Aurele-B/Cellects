@@ -1,4 +1,12 @@
-# Find where the specimens are in the image analysis window
+# Finding where the specimens are in the image analysis window
+
+After defining the data source (see [Data localisation](data-localisation.md)), the next step consists in setting up Cellects to detect the specimen on single images.
+This interface allows users to guide automated segmentation by specifying whether specimens are isolated per arena, selecting reference images for analysis, and defining spatial scaling parameters (e.g., converting pixel measurements to real-world units). 
+Interactive tools like Select and draw enable manual correction of segmentation errors, while the Advanced mode caters to power users seeking fine-grained control over color spaces, filters, and algorithms. 
+By iteratively testing segmentation methods and validating results through visual feedback (Figures 2–4), researchers calibrate Cellects to reliably distinguish specimens from background noise across heterogeneous datasets. 
+Proper configuration here directly informs downstream video tracking workflows (see [Video tracking](video-tracking.md)), ensuring reproducible, high-fidelity analysis of dynamic processes such as cell migration or colony growth.
+
+# Detailed description of the window
 
 <figure>
   <img src="../../static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
