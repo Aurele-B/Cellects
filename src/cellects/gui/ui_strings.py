@@ -354,16 +354,11 @@ VAW["Arena_to_analyze"]["tips"] = \
 f"""This arena number selects a specific arena in the current folder. The user can choose an arena,
 click *Detection* to load and analyze it, then *Read* results.
 NB:
-- Cellects automatically names the arena by their position (left
--to
--right, top
--to
--bottom).
-- For single
--arena setups, use 1.
+- Cellects automatically names the arena by their position (left to right, top to bottom).
+- For single arena setups, use 1.
 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
 - Loading speeds improve if videos are pre
--saved as ind_*.npy.
+- Saved as ind_*.npy.
 """
 # END_TIP
 
