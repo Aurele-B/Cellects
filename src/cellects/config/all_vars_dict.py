@@ -126,6 +126,7 @@ class DefaultDicts:
             'save_processed_videos': True,
             'several_blob_per_arena': False,
             'time_step': 1,
+            'time_step_is_arbitrary': True,
             'true_if_use_light_AND_slope_else_OR': False,
             'do_fading': False,
             'fading': 0,

@@ -579,14 +579,15 @@ class ProgramOrganizer:
         If `extract_time_interval` is True and unsuccessful, arbitrary time steps will be used.
         Timings are normalized to minutes for consistency across different files.
         """
+        self.vars['time_step_is_arbitrary'] = True
         if self.all['im_or_vid'] == 1:
             timings = np.arange(self.vars['dims'][0])
         else:
+            timings = np.arange(len(self.data_list))
             if sys.platform.startswith('win'):
                 pathway = os.getcwd() + '\\'
             else:
                 pathway = os.getcwd() + '/'
-            arbitrary_time_step: bool = True
             if not 'extract_time_interval' in self.all:
                 self.all['extract_time_interval'] = True
             if self.all['extract_time_interval']:
@@ -607,13 +608,12 @@ class ProgramOrganizer:
                             else:
                                 break
                         self.vars['time_step'] = np.round(time_step, digit_nb + 1)
-                        arbitrary_time_step = False
+                        self.vars['time_step_is_arbitrary'] = False
                 except:
                     pass
-            if arbitrary_time_step:
+            else:
                 timings = np.arange(0, len(self.data_list) * self.vars['time_step'], self.vars['time_step'])
-                timings = timings - timings[0]
-                timings = timings / 60
+                self.vars['time_step_is_arbitrary'] = False
         return timings
 
     def fast_first_image_segmentation(self):
