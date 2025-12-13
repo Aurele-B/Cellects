@@ -7,7 +7,7 @@ For example:
 - Pixel-level tracking (e.g., [Pixels covered by the specimen(s)]) enables high-resolution morphodynamics studies.
 - Graph/network outputs (e.g., [Graph of the specimen(s)]) are essential for organisms with internal branching structures (Physarum polycephalum), capturing topological changes over time.
 
-# Detailed description of the window
+# Detailed description
 
 <figure>
   <img src="../../static/UserManualFigure9.png" alt="Required output window" width="600">

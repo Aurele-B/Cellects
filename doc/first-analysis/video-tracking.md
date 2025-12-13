@@ -4,7 +4,7 @@ Following successful specimen detection ([Image analysis](image-analysis.md)), f
 Here, users adjust segmentation methods (e.g., Frame, Threshold, and Slope), define spatial constraints like the maximal growth factor, and apply post-processing filters to eliminate noise and refine detection accuracy (Figures 5–7). 
 By iteratively testing tracking parameters and validating results through visual feedback, researchers ensure reproducible quantification of temporal changes such as cell migration, colony expansion, or morphological shifts.
 
-# Detailed description of the window
+# Detailed description
 
 <figure>
   <img src="../../static/UserManualFigure5.png" alt="Cellects video tracking window" width="600">

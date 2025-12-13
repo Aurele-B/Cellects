@@ -4,7 +4,7 @@ Before diving into detailed analysis workflows, Cellects requires initial setup 
 Users will specify whether their input consists of an image stack or a single video file, establish naming conventions for targeted files (e.g., prefixes like "exp_" and extensions like ".jpg"), and define the root folder(s) containing experimental data. Additionally, this interface allows users to declare how many independent arenas are present in each dataset—a critical step for ensuring accurate analysis. 
 These configurations directly inform later stages (e.g., image analysis, video tracking) and enable automation across multiple folders if required (See Fig. 10).
 
-# Detailed description of the window
+# Detailed description
 
 <figure>
   <img src="../../static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
