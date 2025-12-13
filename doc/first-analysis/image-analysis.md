@@ -6,7 +6,7 @@ Interactive tools like Select and draw enable manual correction of segmentation 
 By iteratively testing segmentation methods and validating results through visual feedback (Figures 2–4), researchers calibrate Cellects to reliably distinguish specimens from background noise across heterogeneous datasets. 
 Proper configuration here directly informs downstream video tracking workflows (see [Video tracking](video-tracking.md)), ensuring reproducible, high-fidelity analysis of dynamic processes such as cell migration or colony growth.
 
-# Detailed description of the window
+# Detailed description
 
 <figure>
   <img src="../../static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
