@@ -11,12 +11,12 @@ import cv2
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
+from cellects.image_analysis.morphological_operations import create_ellipse
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
-    from cellects.image_analysis.morphological_operations import create_ellipse
     ellipse = create_ellipse(7, 7).astype(np.uint8)
     binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
     binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
