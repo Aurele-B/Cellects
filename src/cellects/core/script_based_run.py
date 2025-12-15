@@ -4,49 +4,63 @@
 import logging
 import os
 from pathlib import Path
+from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 import cv2
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
+from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
 from cellects.image_analysis.network_functions import NetworkDetection
 
+def generate_colony_like_video():
+    from cellects.image_analysis.morphological_operations import create_ellipse
+    ellipse = create_ellipse(7, 7).astype(np.uint8)
+    binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
+    binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
+    binary_video[0, ...] = cv2.dilate(binary_video[0, ...], ellipse)
+    for t in range(1, binary_video.shape[0]):
+        binary_video[t, ...] = cv2.dilate(binary_video[t - 1, ...], ellipse, iterations=1)
+    rgb_video = np.zeros((binary_video.shape[0], binary_video.shape[1], binary_video.shape[2], 3), dtype=np.uint8)
+    for c_ in range(3):
+        rgb_video[:, :, :, c_][binary_video > 0] = np.random.randint(150 + c_ * 20, 250 - c_ * 20, binary_video.sum())
+        rgb_video[:, :, :, c_][binary_video == 0] = np.random.randint(5 ,20 ,
+                                                               binary_video.size - binary_video.sum())
+    return rgb_video
 
-def load_one_folder(pathway, sample_number):
+def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, radical: str='', extension: str='', im_or_vid: int=0):
     po = ProgramOrganizer()
-    po.load_variable_dict()
-    # dd = DefaultDicts()
-    # po.all = dd.all
-    # po.vars = dd.vars
-    po.all['global_pathway'] = pathway
-    po.all['first_folder_sample_number'] = sample_number
-    # po.all['first_folder_sample_number'] = 6
-    # po.all['radical'] = "IMG"
-    # po.all['extension'] = ".jpg"
-    # po.all['im_or_vid'] = 0
-    po.look_for_data()
-    po.load_data_to_run_cellects_quickly()
+    if rgb_video is None:
+        if len(pathway) == 0:
+            pathway = Path(os.getcwd() + "/data/experiment")
+        po.all['global_pathway'] = pathway
+        po.all['first_folder_sample_number'] = sample_number
+        po.all['radical'] = radical
+        po.all['extension'] = extension
+        po.all['im_or_vid'] = im_or_vid
+        po.look_for_data()
+        po.load_data_to_run_cellects_quickly()
+        po.get_first_image()
+    else:
+        po.get_first_image(rgb_video[0,...])
+        po.analysis_instance = rgb_video
+        po.all['im_or_vid'] = 1
     return po
 
-def run_image_analysis(po):
+def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
     if not po.first_exp_ready_to_run:
-        po.get_first_image()
-        po.fast_first_image_segmentation()
-        # po.first_image.find_first_im_csc(sample_number=po.sample_number,
-        #                                    several_blob_per_arena=None,
-        #                                    spot_shape=None, spot_size=None,
-        #                                    kmeans_clust_nb=2,
-        #                                    biomask=None, backmask=None,
-        #                                    color_space_dictionaries=None,
-        #                                    po.basic=True)
+        if PCA:
+            po.fast_first_image_segmentation()
+        else:
+            po.first_image.find_first_im_csc()
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         po.delineate_each_arena()
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
-        po.get_last_image()
+        po.get_last_image(last_im)
         po.fast_last_image_segmentation()
         po.find_if_lighter_background()
         po.extract_exif()
@@ -54,6 +68,26 @@ def run_image_analysis(po):
         print('Image analysis already done, run video analysis')
     return po
 
+def run_one_video_analysis(po, with_video_in_ram: bool=False):
+    i=0
+    show_seg= False
+    po.vars['frame_by_frame_segmentation'] = True
+    po.vars['do_threshold_segmentation'] = False
+    po.vars['do_slope_segmentation'] = False
+    if po.vars['convert_for_motion'] is None:
+        po.vars['convert_for_motion'] = po.vars['convert_for_origin']
+    videos_already_in_ram = None
+    if with_video_in_ram:
+        converted_video, _ = convert_subtract_and_filter_video(po.analysis_instance, po.vars['convert_for_motion'])
+        videos_already_in_ram = [po.analysis_instance, converted_video]
+    segment: bool = True
+    l = [i, i + 1, po.vars, segment, False, show_seg, videos_already_in_ram]
+    MA = MotionAnalysis(l)
+    MA.get_descriptors_from_binary()
+    # MA.detect_growth_transitions()
+    # MA.networks_analysis(show_seg)
+    # MA.study_cytoscillations(show_seg)
+    return MA
 
 def write_videos(po):
     po.update_output_list()
@@ -74,26 +108,6 @@ def write_videos(po):
                          pathway="")
     po.instantiate_tables()
     return po
-
-
-def run_one_video_analysis(po):
-    i=0
-    show_seg= False
-    # if os.path.isfile(f"coord_specimen{i + 1}_t720_y1475_x1477.npy"):
-    #     binary_coord = np.load(f"coord_specimen{i + 1}_t720_y1475_x1477.npy")
-    #     l = [i, i + 1, po.vars, False, False, show_seg, None]
-    #     MA = MotionAnalysis(l)
-    #     MA.binary = np.zeros((720, 1475, 1477), dtype=np.uint8)
-    #     MA.binary[binary_coord[0, :], binary_coord[1, :], binary_coord[2, :]] = 1
-    # else:
-    l = [i, i + 1, po.vars, True, False, show_seg, None]
-    MA = MotionAnalysis(l)
-    MA.get_descriptors_from_binary()
-    MA.detect_growth_transitions()
-    MA.networks_analysis(show_seg)
-    MA.study_cytoscillations(show_seg)
-    return MA
-
 
 def run_all_arenas(po):
     po.instantiate_tables()
@@ -138,7 +152,7 @@ def detect_network_in_one_image(im_path, save_path):
 
 
 if __name__ == "__main__":
-    po = load_one_folder(Path("/data/experiment"), 1)
+    po = load_data(pathway=os.getcwd() + "/data/experiment", sample_number=1, extension='tif')
     po = run_image_analysis(po)
     po = write_videos(po)
     run_all_arenas(po)

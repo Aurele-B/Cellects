@@ -99,6 +99,8 @@ class ProgramOrganizer:
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
         self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
+        self.sample_number = None
+        self.top = None
         self.motion = None
         self.analysis_instance = None
         self.computed_video_options = np.zeros(5, bool)
@@ -479,7 +481,8 @@ class ProgramOrganizer:
         self.reduce_image_dim = False
         if first_im is not None:
             self.first_im = first_im
-            self.sample_number = sample_number
+            if sample_number is not None:
+                self.sample_number = sample_number
         else:
             logging.info("Load first image")
             just_read_image = self.first_im is not None
@@ -581,6 +584,7 @@ class ProgramOrganizer:
         """
         self.vars['time_step_is_arbitrary'] = True
         if self.all['im_or_vid'] == 1:
+            self.vars['dims'] = self.analysis_instance.shape
             timings = np.arange(self.vars['dims'][0])
         else:
             timings = np.arange(len(self.data_list))
@@ -926,7 +930,7 @@ class ProgramOrganizer:
         {'continue': True, 'message': ''}
         """
         analysis_status = {"continue": True, "message": ""}
-        if (self.sample_number > 1 and not self.vars['several_blob_per_arena']):
+        if not self.vars['several_blob_per_arena'] and (self.sample_number > 1):
             compute_get_bb: bool = True
             if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('Data to run Cellects quickly.pkl')):
 
@@ -962,6 +966,7 @@ class ProgramOrganizer:
 
         else:
             self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1] + 1]), np.array([0]), np.array([self.first_image.image.shape[0] + 1])
+            self.sample_number = 1
 
         self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
         if self.not_analyzed_individuals is not None:
