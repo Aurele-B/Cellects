@@ -29,4 +29,47 @@ Once done, click *Read* to see the result of the video tracking.
 This will save the .csv files containing the time series describing the individual's growth.
 NB:
 Other descriptors are available using *Required output*.
-6. 
+
+## Case 2: Automated Physarum polycephalum tracking using API
+**Steps**:  
+1. Load the data
+```python
+import os
+from cellects.core.script_based_run import load_data, run_image_analysis, write_videos, run_all_arenas
+po = load_data(pathway=os.getcwd() + "/data/experiment", sample_number=1, extension='tif')
+po = run_image_analysis(po)
+po = write_videos(po)
+run_all_arenas(po)
+```
+2. Find the ind_1.mp4 file in the folder: os.getcwd() + "/data/experiment"
+This video summarizes the video segmentation
+
+## Case 3: Colony growth tracking
+**Problem**: Get the surface area over time of several appearing colonies
+**Steps**: 
+```python
+# 1. Generate the data
+from matplotlib import pyplot as plt
+from cellects.utils.load_display_save import movie, show
+from cellects.core.script_based_run import generate_colony_like_video, load_data, run_image_analysis, run_one_video_analysis
+rgb_video = generate_colony_like_video()
+
+# 2. Display the data (optional)
+movie(rgb_video)
+
+# 3. Segment the images
+po = load_data(rgb_video)
+po.vars['several_blob_per_arena'] = True
+po = run_image_analysis(po, last_im=rgb_video[-1, ...])
+
+# 4. Visualization of the first image segmentation
+show(po.first_image.binary_image)
+
+# 5. Video tracking
+MA = run_one_video_analysis(po, with_video_in_ram=True)
+
+# 4. Visualization of the video segmentation
+movie(MA.binary)
+plt.plot(MA.one_row_per_frame['time'], MA.one_row_per_frame['area_total'])
+plt.show()
+```
