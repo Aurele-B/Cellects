@@ -1,6 +1,6 @@
 # Real-World Use Cases
 
-## Case 1: Automated Physarum polycephalum tracking
+## Case 1: Automated Physarum polycephalum tracking using GUI
 **Problem**: Track the surface area over time of one individual.  
 **Steps**:  
 1. Launch the GUI  
