@@ -66,6 +66,7 @@ po = run_image_analysis(po, last_im=rgb_video[-1, ...])
 show(po.first_image.binary_image)
 
 # 5. Video tracking
+po.vars['maximal_growth_factor'] = 0.5
 MA = run_one_video_analysis(po, with_video_in_ram=True)
 
 # 4. Visualization of the video segmentation
