@@ -130,7 +130,7 @@ class OneImageAnalysis:
 
     def segmentation(self, logical: str='None', color_number: int=2, biomask: NDArray[np.uint8]=None,
                      backmask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None,
-                     rolling_window_segmentation: dict=None, lighter_background: bool=None,allowed_window: Tuple=None,
+                     rolling_window_segmentation: dict=None, lighter_background: bool=None, allowed_window: Tuple=None,
                      filter_spec: dict=None):
         """
         Implement segmentation on the image using various methods and parameters.
@@ -185,7 +185,8 @@ class OneImageAnalysis:
         # 4. Use previous_binary_image to make sure that the specimens are labelled with ones and the background zeros
         if self.previous_binary_image is not None:
             previous_binary_image = self.previous_binary_image[min_y:max_y, min_x:max_x]
-            if (binary_image * (1 - previous_binary_image)).sum() > (binary_image * previous_binary_image).sum() + perimeter(binary_image):
+            if not (binary_image * previous_binary_image).any() or (binary_image[0, :].all() and binary_image[-1, :].all() and binary_image[:, 0].all() and binary_image[:, -1].all()):
+                # if (binary_image * (1 - previous_binary_image)).sum() > (binary_image * previous_binary_image).sum() + perimeter(binary_image):
                 # Ones of the binary image have more in common with the background than with the specimen
                 binary_image = 1 - binary_image
             if logical != 'None':
@@ -336,7 +337,7 @@ class OneImageAnalysis:
 
     def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
                           spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
-                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=False):
+                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=True):
         """
         Prepare color space lists, dictionaries and matrices.
 
@@ -349,7 +350,7 @@ class OneImageAnalysis:
             biomask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
             backmask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
             color_space_dictionaries: A list of dictionaries containing color space information. Defaults to None.
-            basic: A boolean indicating whether to process the data basic. Defaults to False.
+            basic: A boolean indicating whether to process the data basic. Defaults to True.
 
         Note:
             This method processes the input data to find the first image that matches certain criteria, using various color spaces and masks.
@@ -639,7 +640,7 @@ class OneImageAnalysis:
     def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, arenas_mask: NDArray=None,
                          ref_image: NDArray=None, subtract_background: NDArray=None, kmeans_clust_nb: int=None,
                          biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None,
-                         color_space_dictionaries: dict=None, basic: bool=False):
+                         color_space_dictionaries: dict=None, basic: bool=True):
         """
         Find the last image color space configurations that meets given criteria.
 

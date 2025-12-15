@@ -486,7 +486,6 @@ def otsu_thresholding(image: NDArray) -> NDArray[np.uint8]:
         return binary_image2.astype(np.uint8)
 
 
-@njit()
 def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArray, l_threshold, lighter_background: bool) -> Tuple[NDArray, NDArray]:
     """
     Segment video frames based on luminance threshold.
@@ -1100,6 +1099,17 @@ def convert_subtract_and_filter_video(video: NDArray, color_space_combination: d
         else:
             array_type = np.float64
         first_dict, second_dict, c_spaces = split_dict(color_space_combination)
+        if 'PCA' in first_dict:
+            greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
+            first_dict = Dict()
+            first_dict['bgr'] = first_pc_vector
+            c_spaces = ['bgr']
+        if 'PCA' in second_dict:
+            greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
+            second_dict = Dict()
+            second_dict['bgr'] = first_pc_vector
+            c_spaces = ['bgr']
+
         converted_video = np.zeros(video.shape[:3], dtype=array_type)
         if color_space_combination['logical'] != 'None':
             converted_video2 = converted_video.copy()
