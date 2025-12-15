@@ -13,7 +13,7 @@ Welcome to the **Cellects User Manual**.
   - [Advanced parameters](advanced/parameters.md)  
   - [Required outputs](advanced/outputs.md)  
   - [Analyze multiple folders at once](advanced/multiple-folders.md)
-- [API Reference](api/index.html) <!-- Auto-generated -->
+- [API Reference](api/index.md)
 - [Real-World Use Cases](use-cases.md)
 - [Contributing Guide](contributing.md)
 - [License & Citation](license.md)
