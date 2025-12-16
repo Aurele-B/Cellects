@@ -506,20 +506,22 @@ class MotionAnalysis:
                 self.segmented = self.segmented.astype(np.uint8)
 
 
-    def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray[np.uint8]=None):
+    def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray=None):
         """
-            Frame-by-frame segmentation of video frames using given parameters.
 
-            Parameters
-            ----------
-            t : int
-                The frame index to process.
+        Frame-by-frame segmentation of a video.
 
-            Returns
-            -------
-            analysisi : OneImageAnalysis
-                An instance of `OneImageAnalysis` with segmentation results.
+        Parameters
+        ----------
+        t : int
+            The time index of the frame to process.
+        previous_binary_image : NDArray, optional
+            The binary image from the previous frame. Default is `None`.
 
+        Returns
+        -------
+        OneImageAnalysis
+            An object containing the analysis of the current frame.
         """
         contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
         # 1. Get the mask valid for a number of images around it (step).
