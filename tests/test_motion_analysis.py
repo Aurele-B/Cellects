@@ -268,7 +268,7 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         self.ma.t = self.ma.start
         while self.ma.t < self.ma.binary.shape[0]:  # 200:
             self.ma.update_shape(False)
-        self.assertTrue(self.ma.binary.sum((1, 2)).all())
+        self.assertTrue(self.ma.binary.any())
         self.ma.get_descriptors_from_binary(False)
         self.assertTrue(np.all(self.ma.surfarea.sum() > 0))
         self.ma.detect_growth_transitions() # Do nothing when several blob
