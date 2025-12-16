@@ -157,6 +157,7 @@ class ProgramOrganizer:
             for key, val in dd.vars['descriptors'].items():
                 if not key in self.vars['descriptors']:
                     self.vars['descriptors'][key] = val
+        self._set_analyzed_individuals()
 
     def save_variable_dict(self):
         """
@@ -311,9 +312,17 @@ class ProgramOrganizer:
             self.vars['img_number'] = len(self.data_list)
             self.sample_number = sample_number
         if not 'analyzed_individuals' in self.vars:
+            self._set_analyzed_individuals()
+
+    def _set_analyzed_individuals(self):
+        """
+        Set the analyzed individuals variable in the dataset.
+        """
+        if self.sample_number is not None:
             self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
-        if len(self.vars['analyzed_individuals']) != sample_number:
-            self.vars['analyzed_individuals'] = np.arange(sample_number) + 1
+        if self.not_analyzed_individuals is not None:
+            self.vars['analyzed_individuals'] = np.delete(self.vars['analyzed_individuals'],
+                                                       self.not_analyzed_individuals - 1)
 
     def load_data_to_run_cellects_quickly(self):
         """
@@ -967,12 +976,7 @@ class ProgramOrganizer:
         else:
             self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1] + 1]), np.array([0]), np.array([self.first_image.image.shape[0] + 1])
             self.sample_number = 1
-
-        self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
-        if self.not_analyzed_individuals is not None:
-            self.vars['analyzed_individuals'] = np.delete(self.vars['analyzed_individuals'],
-                                                       self.not_analyzed_individuals - 1)
-
+        self._set_analyzed_individuals()
         return analysis_status
 
 
@@ -1243,7 +1247,8 @@ class ProgramOrganizer:
         self.vars['background_list2'] = []
         for rep in np.arange(len(self.vars['analyzed_individuals'])):
             self.vars['origin_list'].append(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
-            if self.vars['subtract_background']:
+        if self.vars['subtract_background']:
+            for rep in np.arange(len(self.vars['analyzed_individuals'])):
                 self.vars['background_list'].append(
                     self.first_image.subtract_background[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
                 if self.vars['convert_for_motion']['logical'] != 'None':
@@ -1373,15 +1378,15 @@ class ProgramOrganizer:
 
         # 2) Create a table of the dimensions of each video
         # Add 10% to the necessary memory to avoid problems
-        necessary_memory = img_nb * np.multiply((self.bot - self.top - 1).astype(np.uint64), (self.right - self.left - 1).astype(np.uint64)).sum() * 8 * 1.16415e-10
+        necessary_memory = img_nb * np.multiply((self.bot - self.top).astype(np.uint64), (self.right - self.left).astype(np.uint64)).sum() * 8 * 1.16415e-10
         if in_colors:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top - 1, self.right - self.left - 1,
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left,
                  np.repeat(3, self.first_image.shape_number)))
             necessary_memory *= 3
         else:
             sizes = np.column_stack(
-                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top - 1, self.right - self.left - 1))
+                (np.repeat(img_nb, self.first_image.shape_number), self.bot - self.top, self.right - self.left))
         use_list_of_vid = True
         if np.all(sizes[0, :] == sizes):
             use_list_of_vid = False
