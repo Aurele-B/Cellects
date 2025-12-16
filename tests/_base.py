@@ -103,9 +103,9 @@ several_arenas_bin_vid[7, 13:16, 11:14] += cross_33
 several_arenas_bin_vid[several_arenas_bin_vid > 0] = 1
 
 several_arenas_vid = np.zeros((several_arenas_bin_vid.shape[0],several_arenas_bin_vid.shape[1],several_arenas_bin_vid.shape[2],3), dtype=np.uint8)
-several_arenas_vid[:, :, :, 0][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 0][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 1][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 1][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 2][several_arenas_bin_vid > 0] = np.random.randint(150, 170, several_arenas_bin_vid.sum())
-several_arenas_vid[:, :, :, 2][several_arenas_bin_vid == 0] = np.random.randint(205, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid > 0] = np.random.randint(120, 130, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 0][several_arenas_bin_vid == 0] = np.random.randint(235, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid > 0] = np.random.randint(120, 130, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 1][several_arenas_bin_vid == 0] = np.random.randint(235, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid > 0] = np.random.randint(120, 130, several_arenas_bin_vid.sum())
+several_arenas_vid[:, :, :, 2][several_arenas_bin_vid == 0] = np.random.randint(235, 255, several_arenas_bin_vid.size - several_arenas_bin_vid.sum())
