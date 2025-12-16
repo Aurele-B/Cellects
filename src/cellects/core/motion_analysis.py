@@ -45,7 +45,7 @@ from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
 from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
-from cellects.image_analysis.morphological_operations import (find_major_incline, image_borders, draw_me_a_sun,
+from cellects.image_analysis.morphological_operations import (find_major_incline, create_ellipse, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
@@ -430,7 +430,7 @@ class MotionAnalysis:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
             self.segmented = np.zeros(self.dims, dtype=np.uint8)
             for t in np.arange(self.dims[0]):#20):#
-                analysisi = self.frame_by_frame_segmentation(t)
+                analysisi = self.frame_by_frame_segmentation(t, self.segmented[t - 1, ...])
                 self.segmented[t, ...] = analysisi.binary_image
 
                 if self.vars['lose_accuracy_to_save_memory']:
@@ -506,20 +506,22 @@ class MotionAnalysis:
                 self.segmented = self.segmented.astype(np.uint8)
 
 
-    def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray[np.uint8]=None):
+    def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray=None):
         """
-            Frame-by-frame segmentation of video frames using given parameters.
 
-            Parameters
-            ----------
-            t : int
-                The frame index to process.
+        Frame-by-frame segmentation of a video.
 
-            Returns
-            -------
-            analysisi : OneImageAnalysis
-                An instance of `OneImageAnalysis` with segmentation results.
+        Parameters
+        ----------
+        t : int
+            The time index of the frame to process.
+        previous_binary_image : NDArray, optional
+            The binary image from the previous frame. Default is `None`.
 
+        Returns
+        -------
+        OneImageAnalysis
+            An object containing the analysis of the current frame.
         """
         contrasted_im = bracket_to_uint8_image_contrast(self.converted_video[t, :, :])
         # 1. Get the mask valid for a number of images around it (step).
@@ -533,47 +535,21 @@ class MotionAnalysis:
             min_y, max_y = np.max(self.drift_mask_coord[t_start:t_end, 0]), np.min(self.drift_mask_coord[t_start:t_end, 1])
             min_x, max_x = np.max(self.drift_mask_coord[t_start:t_end, 2]), np.min(self.drift_mask_coord[t_start:t_end, 3])
             allowed_window = min_y, max_y, min_x, max_x
-            # 3. Bracket the focal image
-            # image_i = contrasted_im[min_y:(max_y + 1), min_x:(max_x + 1)].astype(np.float64)
-            # mean_i = image_i.mean()
-            # if mean_i > 0:
-            #     image_i = image_i / mean_i
-            # image_i = OneImageAnalysis(image_i)
-            # image_i = OneImageAnalysis(contrasted_im)
-            # if self.vars['convert_for_motion']['logical'] != 'None':
-                # image_i2 = contrasted_im2[min_y:(max_y + 1), min_x:(max_x + 1)]
-                # mean_i2 = image_i2.mean()
-                # if mean_i2 > 0:
-                #     image_i2 = image_i2 / mean_i2
-                # image_i.image2 = image_i2
-                # image_i.image2 = contrasted_im2
-            # mask = np.zeros_like(contrasted_im)
-            # mask[min_y:max_y, min_x:max_x] = 1
-            # mask = (self.converted_video[t, ...] > 0).astype(np.uint8)
-        # 3. Bracket the focal image
-        if self.vars['grid_segmentation']:
-            int_var_thresh = 100 - (np.ptp(contrasted_im) * 90 / 255)
-        else:
-            int_var_thresh = None
+
         analysisi = OneImageAnalysis(contrasted_im)
         if self.vars['convert_for_motion']['logical'] != 'None':
             contrasted_im2 = bracket_to_uint8_image_contrast(self.converted_video2[t, :, :])
             analysisi.image2 = contrasted_im2
 
-        if previous_binary_image is None:
-            previous_binary_image = self.origin
+        if previous_binary_image is None or t == 0:
+            analysisi.previous_binary_image = self.origin
         else:
-            if t == 0:
-                analysisi.previous_binary_image = self.origin
-            else:
-                analysisi.previous_binary_image = previous_binary_image
+            analysisi.previous_binary_image = previous_binary_image
 
         analysisi.segmentation(self.vars['convert_for_motion']['logical'], self.vars['color_number'],
                                bio_label=self.vars["bio_label"], bio_label2=self.vars["bio_label2"],
-                               grid_segmentation=self.vars['grid_segmentation'],
+                               rolling_window_segmentation=self.vars['rolling_window_segmentation'],
                                lighter_background=self.vars['lighter_background'],
-                               side_length=self.vars['mesh_side_length'],
-                               step=self.vars['mesh_step_length'], int_var_thresh=int_var_thresh,
                                allowed_window=allowed_window, filter_spec=self.vars['filter_spec']) # filtering already done when creating converted_video
 
         return analysisi
@@ -875,7 +851,7 @@ class MotionAnalysis:
             self.pixel_ring_depth = 3
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
-        self.erodila_disk = Ellipse((self.pixel_ring_depth, self.pixel_ring_depth)).create().astype(np.uint8)
+        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth).astype(np.uint8)
         self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
@@ -942,7 +918,7 @@ class MotionAnalysis:
             self.near_periphery = np.zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
-                elliperiphery = Ellipse((self.dims[1] - periphery_width, self.dims[2] - periphery_width)).create()
+                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width)
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
                     self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
@@ -1553,9 +1529,14 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
+                print(self.vars['time_step_is_arbitrary'])
+                if self.vars['time_step_is_arbitrary']:
+                    time_unit = ""
+                else:
+                    time_unit = " min"
                 for t in np.arange(self.dims[0]):
                     image = self.converted_video[t, ...]
-                    text = str(self.one_row_per_frame['time'][t]) + " min"
+                    text = str(self.one_row_per_frame['time'][t]) + time_unit
                     image = cv2.putText(image,  # numpy array on which text is written
                                     text,  # text
                                     position,  # position at which writing has to start
@@ -1607,7 +1588,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
                                columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = np.array(list(self.one_descriptor_per_arena.values()), dtype=np.uint32)
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
         if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
             os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")

@@ -26,7 +26,7 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, Ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
+from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.utils.load_display_save import *
@@ -47,7 +47,7 @@ neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
              (1, -1), (1, 0), (1, 1)]
 neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
-def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int,
+def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int=1,
                             starting_time: int=0, visu: NDArray=None, origin: NDArray[np.uint8]=None,
                             smooth_segmentation_over_time: bool = True, detect_pseudopods: bool = True,
                             save_coord_network: bool = True, show_seg: bool = False):
@@ -272,7 +272,7 @@ class  NetworkDetection:
                 'binary': binary_otsu,
                 'quality': quality_otsu,
                 'filtered': frangi_result,
-                'filter': f'frangi',
+                'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
@@ -285,7 +285,7 @@ class  NetworkDetection:
                     'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filtered': frangi_result,
-                    'filter': f'frangi',
+                    'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
@@ -344,7 +344,7 @@ class  NetworkDetection:
                 'binary': binary_otsu,
                 'quality': quality_otsu,
                 'filtered': sato_result,
-                'filter': f'sato',
+                'filter': f'Sato',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
@@ -359,7 +359,7 @@ class  NetworkDetection:
                     'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filtered': sato_result,
-                    'filter': f'sato',
+                    'filter': f'Sato',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
@@ -427,7 +427,7 @@ class  NetworkDetection:
         performs segmentation using either rolling window or Otsu's thresholding.
         The final network detection result is stored in `self.incomplete_network`.
         """
-        if self.best_result['filter'] == 'frangi':
+        if self.best_result['filter'] == 'Frangi':
             filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'], beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
         else:
             filtered_result = sato(self.greyscale_image, sigmas=self.best_result['sigmas'], black_ridges=self.black_ridges, mode='reflect')
@@ -454,50 +454,42 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50):
+    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
-        Detect and extract pseudopods from the image based on given parameters.
+        Detect pseudopods in a binary image.
 
-        This method performs a series of morphological operations and distance
-        transformations to identify pseudopods in the image. It uses binary
-        dilation, connected components analysis, and thresholding to isolate
-        pseudopod structures.
+        Identify and process regions that resemble pseudopods based on width, size,
+        and connectivity criteria. This function is used to detect and label areas
+        that are indicative of pseudopod-like structures within a binary image.
 
         Parameters
         ----------
         lighter_background : bool
-            Flag indicating whether the background is lighter than the foreground.
+            Boolean flag to indicate if the background should be considered lighter.
         pseudopod_min_width : int, optional
-            Minimum width of pseudopods to be detected. Default is 5.
+            Minimum width for pseudopods to be considered valid. Default is 5.
         pseudopod_min_size : int, optional
-            Minimum size of pseudopods to be detected. Default is 50.
+            Minimum size for pseudopods to be considered valid. Default is 50.
+        only_one_connected_component : bool, optional
+            Flag to ensure only one connected component is kept. Default is True.
 
-        Attributes (modified)
-        ----------------------
-        self.pseudopods : ndarray
-            Updated to reflect the detected pseudopod regions.
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This function modifies internal attributes of the object, specifically setting `self.pseudopods` to an array indicating pseudopod regions.
 
         Examples
         --------
-        >>> possibly_filled_pixels = np.random.randint(0, 2, dims, dtype=np.uint8)
-        >>> possibly_filled_pixels = keep_one_connected_component(possibly_filled_pixels)
-        >>> origin_to_add = np.zeros(dims, dtype=np.uint8)
-        >>> mid = dims[0] // 2
-        >>> ite = 2
-        >>> while not origin_to_add.any():
-        >>>     ite += 1
-        >>>     origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
-        >>> greyscale_image = possibly_filled_pixels.copy()
-        >>> greyscale_image[greyscale_image > 0] = np.random.randint(200, 255, possibly_filled_pixels.sum())
-        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 50, possibly_filled_pixels.size - possibly_filled_pixels.sum())
-        >>> add_rolling_window = False
-        >>> NetDet = NetworkDetection(greyscale_image, possibly_filled_pixels, add_rolling_window, origin_to_add)
-        >>> NetDet.get_best_network_detection_method()
-        >>> lighter_background = True
-        >>> pseudopod_min_width = 1
-        >>> pseudopod_min_size = 3
-        >>> NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
-        >>> print(NetDet.pseudopods)
+        >>> result = detect_pseudopods(True, 5, 50)
+        >>> print(self.pseudopods)
+        array([[0, 1, ..., 0],
+               [0, 0, ..., 0],
+               ...,
+               [0, 1, ..., 0]], dtype=uint8)
+
         """
 
         closed_im = close_holes(self.possibly_filled_pixels)
@@ -520,7 +512,7 @@ class  NetworkDetection:
 
         _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
         bin_im = pseudopod_widths >= pseudopod_min_width
-        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=Ellipse((7, 7)).create().astype(np.uint8), iterations=1)
+        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
         bin_im = high_int_in_periphery * dil_bin_im
         nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
         true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
@@ -528,11 +520,14 @@ class  NetworkDetection:
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
         complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
-        complete_network = keep_one_connected_component(complete_network)
-        without_pseudopods = complete_network.copy()
-        without_pseudopods[true_pseudopods] = 0
-        only_connected_network = keep_one_connected_component(without_pseudopods)
-        self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
+        if only_one_connected_component:
+            complete_network = keep_one_connected_component(complete_network)
+            without_pseudopods = complete_network.copy()
+            without_pseudopods[true_pseudopods] = 0
+            only_connected_network = keep_one_connected_component(without_pseudopods)
+            self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
+        else:
+            self.pseudopods = true_pseudopods.astype(np.uint8)
 
     def merge_network_with_pseudopods(self):
         """
@@ -595,7 +590,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
         origin_contours = None
     vertex_table = None
     for t in np.arange(starting_time, dims[0]): # t=320   Y, X = 729, 554
-        tic = timer()
         computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
         net_t = coord_network[1:, coord_network[0, :] == t]
         computed_network[net_t[0], net_t[1]] = 1
@@ -609,7 +603,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             pad_network = add_padding([computed_network])[0]
             pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
                                                                                            pad_origin_centroid)
-
             edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
             edge_id.run_edge_identification()
             if pad_origin_contours is not None:
@@ -619,7 +612,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
                 growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
             edge_id.make_vertex_table(origin_contours, growing_areas)
             edge_id.make_edge_table(converted_video[t, ...])
-
             edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
             edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
             if vertex_table is None:
@@ -628,7 +620,6 @@ def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, are
             else:
                 vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
                 edge_table = np.vstack((edge_table, edge_id.edge_table))
-        # print(f"{t} took: {timer() - tic} seconds")
 
     vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                        "vertex_connected"])
@@ -1505,7 +1496,7 @@ class EdgeIdentification:
         explored_connexions_per_vertex = 0  # the maximal edge number that can connect a vertex
         new_connexions = True
         while new_connexions and explored_connexions_per_vertex < 5 and np.any(cropped_non_tip_vertices) and np.any(starting_vertices_coord):
-            # print(new_connexions)
+
             explored_connexions_per_vertex += 1
             # 1. Find the ith closest vertex to each focal vertex
             ending_vertices_coord, new_edge_lengths, new_edge_pix_coord = _find_closest_vertices(
@@ -1678,7 +1669,7 @@ class EdgeIdentification:
 
     def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
         """
-        Generate a vertex table for the vertices.
+        Generate a table for the vertices.
 
         This method constructs and returns a 2D NumPy array holding information
         about all vertices. Each row corresponds to one vertex identified either
@@ -1752,6 +1743,7 @@ class EdgeIdentification:
             v1_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[0], :2][0]#
             v2_coord = self.vertex_table[self.vertex_table[:, 2] == v_id[1], :2][0]#
             v1_width, v2_width = self.distances[v1_coord[0], v1_coord[1]], self.distances[v2_coord[0], v2_coord[1]]
+
             if not np.isnan(v1_width):
                 pix_widths = np.append(pix_widths, v1_width)
             if not np.isnan(v2_width):
@@ -2068,7 +2060,6 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
         new_edge_im[new_edge[:, 0], new_edge[:, 1]] = 1
         if not np.any(new_edge_im * pad_net_contour) and not np.any(new_edge_im * skeleton_without_vertices):# and not np.any(new_edge_im * holed_skeleton):
             with_central_contour[new_edge[:, 0], new_edge[:, 1]] = 1
-
     # Add dilated contour
     pad_origin_contours = get_contours(pad_origin)
     with_central_contour *= (1 - pad_origin)
@@ -2099,15 +2090,31 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
 
     dil_pad_origin_contours = cv2.dilate(pad_origin_contours, cross_33, iterations=1)
     new_pad_origin_contours = dil_pad_origin_contours * new_skeleton
+    new_pad_origin_contours += pad_origin
+    new_pad_origin_contours[new_pad_origin_contours > 0] = 1
+    new_pad_origin_contours = get_contours(new_pad_origin_contours)
     nb, sh = cv2.connectedComponents(new_pad_origin_contours)
-    while nb > 2:
-        dil_pad_origin_contours = cv2.dilate(dil_pad_origin_contours, cross_33, iterations=1)
-        new_pad_origin_contours = dil_pad_origin_contours * new_skeleton
+
+    new_skeleton[new_pad_origin_contours > 0] = 1
+    if nb > 2:
+        new_pad_origin_contours = cv2.morphologyEx(new_pad_origin_contours, cv2.MORPH_CLOSE, square_33, iterations=1)
         nb, sh = cv2.connectedComponents(new_pad_origin_contours)
+        current_contour_coord = np.argwhere(new_pad_origin_contours)
+        cnv4, cnv8 = get_neighbor_comparisons(new_pad_origin_contours)
+        potential_tips = get_terminations_and_their_connected_nodes(new_pad_origin_contours, cnv4, cnv8)
+        tips_coord = np.transpose(np.array(np.nonzero(potential_tips)))
+        ending_vertices_coord, edge_lengths, edges_coords = _find_closest_vertices(pad_origin, current_contour_coord, tips_coord)
+        new_potentials = np.unique(edges_coords[:, 2])
+        for new_pot in new_potentials:
+            edge_coord = edges_coords[edges_coords[:, 2] == new_pot, :2]
+            test = new_pad_origin_contours.copy()
+            test[edge_coord[:, 0], edge_coord[:, 1]] = 1
+            new_nb, sh = cv2.connectedComponents(test)
+            if new_nb < nb:
+                new_pad_origin_contours[edge_coord[:, 0], edge_coord[:, 1]] = 1
+
     pad_origin_contours = new_pad_origin_contours
-    pad_distances[pad_origin_contours > 0] = np.nan # pad_distances.max() + 1 #
-    # test1 = ((pad_distances > 0) * (1 - new_skeleton)).sum() == 0
-    # test2 = ((1 - (pad_distances > 0)) *  new_skeleton).sum() == 0
+    pad_distances[pad_origin_contours > 0] = np.nan
 
     return new_skeleton, pad_distances, pad_origin_contours
 

@@ -141,7 +141,7 @@ def translate_dict(old_dict: dict) -> Dict:
     return numba_dict
 
 
-def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict]:
+def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict, list]:
     """
 
     Split a dictionary into two dictionaries based on specific criteria and return their keys.

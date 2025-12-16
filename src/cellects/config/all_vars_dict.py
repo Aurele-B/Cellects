@@ -63,7 +63,10 @@ class DefaultDicts:
             'set_spot_shape': True,
             'set_spot_size': True,
             'starting_blob_hsize_in_mm': 15,
-            'starting_blob_shape': None
+            'starting_blob_shape': None,
+            'auto_mesh_side_length': True,
+            'auto_mesh_step_length': True,
+            'auto_mesh_min_int_var': True,
         }
 
         self.vars = {
@@ -89,10 +92,13 @@ class DefaultDicts:
             'min_size_for_connection': 20,
             'origin_state': 'fluctuating',
             'oscilacyto_analysis': False,
-            'network_detection_threshold': 20,
+
+            'rolling_window_segmentation': {'do': False, 'side_len': None, 'step': None, 'min_int_var': None},
+            'grid_segmentation': False,
             'mesh_side_length': 4,
             'mesh_step_length': 2,
-            'int_var_threshold': None,
+            'mesh_min_int_var': 20,
+
             'fractal_analysis': False,
             'fractal_box_side_threshold': 32,
             'fractal_zoom_step': 0,
@@ -120,6 +126,7 @@ class DefaultDicts:
             'save_processed_videos': True,
             'several_blob_per_arena': False,
             'time_step': 1,
+            'time_step_is_arbitrary': True,
             'true_if_use_light_AND_slope_else_OR': False,
             'do_fading': False,
             'fading': 0,
@@ -131,10 +138,9 @@ class DefaultDicts:
             'save_graph': False,
             'save_coord_thickening_slimming': False,
             'save_coord_network': False,
-            'grid_segmentation': False,
             # Data stored during analysis:
             'descriptors': descriptors,
-            'filter_spec': {'filter1_type': "", 'filter1_param': [1., 1.], 'filter2_type': "", 'filter2_param': [1., 1.]},
+            'filter_spec': {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]},
         }
 
     def save_as_pkl(self, po=None):

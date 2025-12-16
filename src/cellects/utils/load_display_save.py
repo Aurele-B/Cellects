@@ -1238,7 +1238,7 @@ def create_empty_videos(image_list: list, cr: list, lose_accuracy_to_save_memory
         - If `already_greyscale` is False, additional arrays are created to store RGB data.
     """
     visu, converted_video, converted_video2 = None, None, None
-    dims = len(image_list), cr[1] - cr[0] + 1, cr[3] - cr[2] + 1
+    dims = len(image_list), cr[1] - cr[0] - 1, cr[3] - cr[2] - 1
     if lose_accuracy_to_save_memory:
         converted_video = np.zeros(dims, dtype=np.uint8)
     else:

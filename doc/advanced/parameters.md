@@ -1,145 +1,281 @@
 # Advanced parameters
 
+The Advanced parameters window (Fig. 9) provides fine-grained control over Cellects’ algorithmic behavior, enabling researchers to customize analysis pipelines for specific datasets or experimental conditions.
+These settings extend the flexibility introduced in earlier stages ([Data localisation](../first-analysis/data-localisation.md), [Image analysis](../first-analysis/image-analysis.md), and [Video tracking](../first-analysis/video-tracking.md)) by allowing tuning of segmentation logic (e.g., mesh resolution, intensity thresholds), computational performance (parallel processing, memory allocation). 
+For instance, users can optimize for low-noise environments with [Mesh minimal intensity variation] or facilitate high-throughput computations using [Run analysis in parallel]. This section is particularly critical for troubleshooting edge cases (e.g., ambiguous specimen boundaries) or adapting Cellects to non-standard substrates (e.g., heterogeneous growth media). By documenting and reusing these configurations, researchers ensure both technical precision and reproducibility.
+
+# Detailed description
+
 <figure>
-  <img src="/static/UserManualFigure8.png" alt="Advanced parameters window" width="600">
-  <figcaption><strong>Figure 8:</strong> Advanced parameters window</figcaption>
+  <img src="../../static/UserManualFigure9.png" alt="Advanced parameters window" width="600">
+  <figcaption><strong>Figure 9:</strong> Advanced parameters window</figcaption>
 </figure>
 
 ---
 
-## Automatically crop images
-Uses the first image detection to crop all images and improve arena and last image detection.  
+<!-- START_Crop_images -->
+**[Automatically crop images]**:
+Uses initial image detection to crop all images and improve arena/last image detection.
+NB:
+- Unselect this option if analysis fails or crashes during image analysis.
 
-> 💡 If the analysis fails or the program crashes while running the image analysis window, unselecting this option may help.
-
----
-
-## Subtract background
-Takes the first image and subtracts it from every following image before analysis.  
-Useful when cells are not visible in the first image.  
-Can either improve or degrade detection depending on the dataset.
+<!-- END_Crop_images -->
 
 ---
 
-## Keep Cell and Back drawings for all folders
-If the user drew cell and background regions during first image analysis:  
-- **Checked** → keep this information for all folders  
-- **Unchecked** → only use it for the current folder
+<!-- START_Subtract_background -->
+**[Subtract background]**:
+Takes the first image and subtracts it from subsequent images. This can improve or degrade detection
+depending on dataset characteristics.
+
+<!-- END_Subtract_background -->
 
 ---
 
-## Correct errors around initial shape
-Applied only if detection is less efficient around the initial shape than in the rest of the arena.  
-Fills potential gaps around the initial shape during growth.  
+<!-- START_Keep_drawings -->
+**[Keep Cell and Back drawings for all folders]**:
+During initial image analysis, if the user drew cell/back regions to assist detection, this option
+saves and uses these annotations across all folders. In summary:
+- **Checked** → retain annotations for all folders
+- **Unchecked** → apply only to current folder
 
-⚠️ Do not use if the substrate has the same opacity everywhere (i.e. no difference between starting and growth regions).
-
----
-
-## Prevent fast growth near periphery
-Removes detection of specimens moving too fast near arena borders.  
-Unchecked → no correction applied.
+<!-- END_Keep_drawings -->
 
 ---
 
-## Connect distant shapes
-Useful when the specimen color is close to the background and causes disconnections.  
-Reconnects disconnected parts of a specimen to the main shape dynamically.  
+<!-- START_Correct_errors_around_initial -->
+**[Correct errors around initial specimen's position]**:
+Applies an algorithm to correct detection errors near the initial specimen position due to color
+variations (e.g., from nutrient patches). Technical workflow:
+- Identifies potential gaps around initial position
+- Monitors local growth velocity
+- Fills gaps using growth patterns from adjacent pixels
+NB:
+- ⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no difference
+between starting and growth regions).
+
+<!-- END_Correct_errors_around_initial -->
 
 ---
 
-## All specimens have the same direction
-Improves automatic arena detection when all specimens move in the same direction.  
-Uncheck only if specimens move strongly and in many directions.
+<!-- START_Prevent_fast_growth_near_periphery -->
+**[Prevent fast growth near periphery]**:
+During video analysis, prevents false specimen detection at arena borders by filtering rapid
+periphery growth.
+- **Checked** → Exclude fast
+-moving detections near boundaries
+- **Unchecked** → Use standard detection criteria
+
+<!-- END_Prevent_fast_growth_near_periphery -->
 
 ---
 
-## Appearing cell/colony parameters
-Defines the minimal size threshold (in pixels) for considering an appearing shape as a colony.  
-Two methods available: detection by **size** or by **position** in the arena.
+<!-- START_Connect_distant_shapes -->
+**[Connect distant shapes]**:
+Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
+specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
+and the detection is smaller than the true specimen. Technical implementation:
+- Identifies disconnected subregions
+- Analyzes local growth dynamics
+- Recreates connections using spatially consistent growth patterns
+NB:
+- Increases analysis time substantially.
+
+<!-- END_Connect_distant_shapes -->
 
 ---
 
-## Oscillatory parameters
-- **Oscillatory period** → sets expected oscillation period for luminosity variations  
-- **Minimal oscillating cluster size** → threshold to filter out small noisy oscillations  
+<!-- START_Specimens_have_same_direction -->
+**[All specimens have the same direction]**:
+Select to optimize arena detection for specimens moving move in the same direction.
+- **Checked** → Uses motion pattern analysis for arena localization.
+- **Unchecked** → Employs standard centroid
+-based algorithm.
 
-These parameters are linked to *Oscillation Analysis* (see Required outputs).
-
----
-
-## Fractal parameters
-Currently under development.
+<!-- END_Specimens_have_same_direction -->
 
 ---
 
-## Network parameters
-- **Network detection threshold** → minimum intensity difference to detect cytoplasmic tubular network  
-- **Mesh side length** → rolling window size (pixels) for network detection  
-- **Mesh step length** → step length (pixels) for rolling window
+<!-- START_Appearance_size_threshold -->
+**[Appearance size threshold (automatic if checked)]**:
+Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
+- **Checked** → Automatic threshold calculation.
+- **Unchecked** → Manual user
+-defined threshold.
+
+<!-- END_Appearance_size_threshold -->
 
 ---
 
-## Spatio-temporal scaling
-Defines the spatiotemporal scale of the dataset:  
-- Time between images or frames (minutes)  
-- Option to convert areas/distances from pixels to mm/mm²  
+<!-- START_Appearance_detection_method -->
+**[Appearance detection method]**:
+Selection criteria for initial specimen detection:
+- Largest: Based on component size metric.
+- Most central: Based on arena center proximity.
+NB:
+- Applicable only to progressively emerging specimens.
+
+<!-- END_Appearance_detection_method -->
 
 ---
 
-## Run analysis in parallel
-Checked → use multiple CPU cores to analyze arenas in parallel (faster).  
-Unchecked → single core analysis.
+<!-- START_Mesh_side_length -->
+**[Mesh side length]**:
+Pixel dimension for analysis window size.
+NB:
+- Must not exceed minimum image dimension
+
+<!-- END_Mesh_side_length -->
 
 ---
 
-## Proc max core number
-Maximum number of logical CPU cores to use during analysis.  
+<!-- START_Mesh_step_length -->
+**[Mesh step]**:
+The size of the step (in pixels) between consecutive rolling window positions.
+NB:
+- Must not exceed the mesh side length to ensure full coverage of the image.
+
+<!-- END_Mesh_step_length -->
 
 ---
 
-## Minimal RAM let free
-Amount of RAM to leave available for other programs.  
-Setting to `0` gives Cellects all memory, but increases crash risk if other apps are open.
+<!-- START_Mesh_minimal_intensity_variation -->
+**[Mesh minimal intensity variation]**:
+The minimal variation in intensity to consider that a given window does contain the specimen(s).
+NB:
+- This threshold is an intensity value ranging from 0 to 255 (generally small).
+- Correspond to the level of noise in the background.
+
+<!-- END_Mesh_minimal_intensity_variation -->
 
 ---
 
-## Lose accuracy to save RAM
-For low-memory systems:  
-- Converts video from `np.float64` to `uint8`  
+<figure>
+  <img src="../../static/UserManualFigure9-1.png" alt="Remaining parameters" width="600">
+  <figcaption><strong>Figure 9-1:</strong> Remaining parameters</figcaption>
+</figure>
+
+---
+
+<!-- START_Expected_oscillation_period -->
+**[Expected oscillation period]**:
+The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
+based on luminosity variations.
+
+<!-- END_Expected_oscillation_period -->
+
+---
+
+<!-- START_Minimal_oscillating_cluster_size -->
+**[Minimal oscillating cluster size]**:
+When looking for oscillatory patterns, Cellects detects connected components that are thickening or
+slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
+groups of connected pixels. This threshold is useful to filter out small noisy oscillations.
+
+<!-- END_Minimal_oscillating_cluster_size -->
+
+---
+
+<!-- START_Spatio_temporal_scaling -->
+**[Spatio-temporal scaling]**:
+Defines the spatiotemporal scale of the dataset:
+- Time between images or frames (minutes).
+- An option to convert areas/distances from pixels to mm/mm².
+
+<!-- END_Spatio_temporal_scaling -->
+
+---
+
+<!-- START_Parallel_analysis -->
+**[Run analysis in parallel]**:
+Allow the use of more than one core of the computer processor.
+- **Checked** → Uses multiple CPU cores to analyze arenas in parallel (faster).
+- **Unchecked** → Single core analysis.
+
+<!-- END_Parallel_analysis -->
+
+---
+
+<!-- START_Proc_max_core_nb -->
+**[Proc max core number]**:
+Maximum number of logical CPU cores to use during analysis. The default value is set to the total
+number of available CPU cores minus one.
+
+<!-- END_Proc_max_core_nb -->
+
+---
+
+<!-- START_Minimal_RAM_let_free -->
+**[Minimal RAM let free]**:
+Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
+memory, but increases crash risk if other apps are open.
+
+<!-- END_Minimal_RAM_let_free -->
+
+---
+
+<!-- START_Lose_accuracy_to_save_RAM -->
+**[Lose accuracy to save RAM]**:
+For low memory systems:
+- Converts video from `np.float64` to `uint8`
 - Saves RAM at the cost of a slight precision loss
 
+<!-- END_Lose_accuracy_to_save_RAM -->
+
 ---
 
-## Video fps
+<!-- START_Video_fps -->
+**[Video fps]**:
 Frames per second of validation videos.
 
----
-
-## Keep unaltered videos
-Keeps unaltered `.npy` videos (faster re-runs, but large files).  
-Recommended to delete them once analysis is finalized.
+<!-- END_Video_fps -->
 
 ---
 
-## Saved processed video
-Saves lightweight processed validation videos (recommended over unaltered videos).  
-Can be read in standard video players.
+<!-- START_Keep_unaltered_videos -->
+**[Keep unaltered videos]**:
+Keeps unaltered `.npy` videos in hard drive.
+- **Checked** → Rerunning the same analysis will be faster.
+- **Unchecked** → These videos will be written and removed each run of the same analysis.
+NB:
+- Large files: it is recommended to remove them once analysis is entirely finalized.
+
+<!-- END_Keep_unaltered_videos -->
 
 ---
 
-## Color space combination for video analysis
-Advanced option to change RGB processing directly in the video tracking window.  
-Useful to test new color spaces without redoing image analysis.
+<!-- START_Save_processed_videos -->
+**[Save processed videos]**:
+Saves lightweight processed validation videos (recommended over unaltered videos). These videos
+assess analysis accuracy and can be read in standard video players.
+
+<!-- END_Save_processed_videos -->
 
 ---
 
-## Heterogeneous background
-Segments the image into 2+ categories using a k-means algorithm.  
-Much slower than thresholding but works in more complex environments.  
-Should be used as a **last resort**.
+<!-- START_Csc_for_video_analysis -->
+**[Color space combination for video analysis]**:
+Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
+color spaces without (re)running image analysis.
+
+<!-- END_Csc_for_video_analysis -->
 
 ---
 
-## Night mode
+<!-- START_Night_mode -->
+**[Night mode]**:
 Switches the application background between light and dark themes.
+
+<!-- END_Night_mode -->
+
+---
+
+<!-- START_Reset_all_settings -->
+**[Reset all settings]**:
+Useful when the software freezes with no apparent reason. To reset all settings, it removes the
+config file in the  current folder as well as the config file in the software folder. Then, it
+retrieves and saves the default parameters.
+
+<!-- END_Reset_all_settings -->
+
+---

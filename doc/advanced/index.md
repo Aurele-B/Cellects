@@ -2,6 +2,6 @@
 
 This section covers advanced use of Cellects:
 
-- Advanced parameters
-- Required outputs
-- Multi-folder analyses
+- [Advanced parameters](parameters.md)  
+- [Required outputs](outputs.md)  
+- [Multi-folder analyses](multiple-folders.md)

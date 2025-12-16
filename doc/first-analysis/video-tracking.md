@@ -1,115 +1,180 @@
-# Tune parameters of the video tracking window
+# Tuning parameters of the video tracking window
+
+Following successful specimen detection ([Image analysis](image-analysis.md)), fine-tune the video tracking algorithms in this window. 
+Here, users adjust segmentation methods (e.g., Frame, Threshold, and Slope), define spatial constraints like the maximal growth factor, and apply post-processing filters to eliminate noise and refine detection accuracy (Figures 5–7). 
+By iteratively testing tracking parameters and validating results through visual feedback, researchers ensure reproducible quantification of temporal changes such as cell migration, colony expansion, or morphological shifts.
+
+# Detailed description
 
 <figure>
-  <img src="/static/UserManualFigure5.png" alt="Cellects video tracking window" width="600">
-  <figcaption><strong>Figure 5:</strong> Cellects video tracking window</figcaption>
+  <img src="../../static/UserManualFigure6.png" alt="Cellects video tracking window" width="600">
+  <figcaption><strong>Figure 6:</strong> Cellects video tracking window</figcaption>
 </figure>
 
 ---
 
-## Arena to analyze
-The arena to analyze is a number allowing Cellects and the user to identify one arena in particular.  
-If there is only one arena, this number should be one.  
-Cellects automatically names the arena according to their position in the image, from left to right and from top to bottom.
+<!-- START_Arena_to_analyze -->
+**[Arena to analyze]**:
+This arena number selects a specific arena in the current folder. The user can choose an arena,
+click *Detection* to load and analyze it, then *Read* results.
+NB:
+- Cellects automatically names the arena by their position (left to right, top to bottom).
+- For single arena setups, use 1.
+- *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
+- Loading speeds improve if videos are pre
+- Saved as ind_*.npy.
+
+<!-- END_Arena_to_analyze -->
 
 ---
 
-## Maximal growth factor
-This factor should be increased if the analysis underestimates the cell size, and decreased if it overestimates.  
+<!-- START_Maximal_growth_factor -->
+**[Maximal growth factor]**:
+This is the maximum allowable proportion of image area that may be covered by specimen movement
+between frames. Adjust accordingly:
+- Increase if specimen size is underestimated.
+- Decrease if specimen size is overestimated.
+NB:
+- Precisely, this defines an upper bound on relative coverage changes between sequential images.
 
-It is a proportion of pixels in the image and indicates how far the specimen can possibly move or grow from one image to the next.  
-More precisely, it is the upper limit of the proportion of the image that can go from background to specimen between frames.
-
----
-
-## Repeat video smoothing
-Increasing this value will decrease noise when the slope option is chosen.  
-
-Cellects analyzes the intensity dynamics of each pixel in the video.  
-When it uses a threshold algorithm based on derivative (slope evolution), it starts by smoothing every pixel intensity curve.  
-This algorithm (a moving average) can be repeated several times to make the curve smoother.  
-This value corresponds to the number of times to apply smoothing.
+<!-- END_Maximal_growth_factor -->
 
 ---
 
-## Segmentation method and compute all options
-Cellects offers five analysis options for video tracking:  
+<!-- START_Temporal_smoothing -->
+**[Temporal smoothing]**:
+Applies temporal smoothing to reduce noise and highlight long
+-term trends by averaging pixel intensity changes. Use when analyzing slope
+-based segmentation results.
+NB:
+- This uses a moving window algorithm on pixel intensity curves over time.
+- Excessive iterations produce constant values, preventing accurate detection.
 
-- **Frame option** → applies the algorithm used during the image analysis window, frame by frame, without temporal dynamics.  
-- **Threshold option** → compares pixel intensity with the average intensity of the whole image at each time step.  
-- **Slope option** → compares slope of the pixel intensity with an automatically defined slope threshold.  
-- **T and S option** → logical AND of threshold and slope options.  
-- **T or S option** → logical OR of threshold and slope options.  
-
-Additional note:  
-- When *Heterogeneous background* has been checked in the image analysis window, only the *Frame* option remains available.
-
----
-
-## Load one arena
-Clicking this button loads the arena corresponding to the number entered in *Arena to analyze*.  
-The center of the window then displays the video of the corresponding arena. 
+<!-- END_Temporal_smoothing -->
 
 ---
 
-## Detection
-*Detection* runs one or all options of video tracking for the chosen arena.  
-It allows testing the effect of parameter changes in this window.  
+<!-- START_Segmentation_method -->
+**[Segmentation method]**:
+Cellects includes five video tracking options:
+- **Frame option**: Applies the image analysis algorithm frame by frame, without temporal dynamics.
+- **Threshold option**: Compares pixel intensity with the average intensity of the whole image at
+each time step.
+- **Slope option**: Compares pixel intensity slopes with an automatically defined threshold.
+- **T and S option**: logical AND of threshold and slope options.
+- **T or S option**: logical OR of threshold and slope options.
+NB:
+- Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Once
+analysis completes. Once the analysis completed, select one option and click *Read*.
+- Computing only one option is faster and requires less memory.
+- When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
+window, only the *Frame* option remains available.
 
-Once detection seems valid, the user can answer “*Done*” to *Step 1: Tune parameters to improve Detection*, and proceed to *Post-processing*.
+<!-- END_Segmentation_method -->
+
+---
+
+<!-- START_Load_one_arena -->
+**[Load one arena]**:
+Clicking this button loads the arena associated with *Arena to analyze*. The center of the window
+displays the first frame of that arena's video. Click *Read* to review the full video.
+
+<!-- END_Load_one_arena -->
+
+---
+
+<!-- START_Detection -->
+**[Detection]**:
+*Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
+view the detection result. If correct, answer *Done* to proceed with tuning parameters for  post
+processing.
+
+<!-- END_Detection -->
+
+
+<!-- START_Read -->
+**[Read]**:
+Clicking *Read* starts the video display corresponding to the current state of the analysis.
+
+<!-- END_Read -->
 
 <figure>
-  <img src="/static/UserManualFigure6.png" alt="Cellects video tracking window during detection visualization" width="600">
-  <figcaption><strong>Figure 6:</strong> Cellects video tracking window during detection visualization</figcaption>
+  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window during detection visualization" width="600">
+  <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
 </figure>
 
 ---
 
-## Fading detection
-*Fading detection* (Fig. 6) is useful when the specimens not only grow but also move.  
-This means a pixel that was covered may later be uncovered.  
+<!-- START_Fading_detection -->
+**[Fading detection]**:
+*Fading detection* monitors when specimens leave previously occupied areas, useful for  moving
+organisms rather than static growth. Uncheck this option if not needed. Set a value  between minus
+one and one to control sensitivity:
+- Near minus one: Minimal false removal of specimen traces.
+- Near one: High risk of over
+-removal from all areas.
 
-When checked, *Fading detection* monitors cell-covered areas to decide when they are abandoned.  
-It can take a value between -1 and 1:
-
-- Near -1 → Cellects almost never detects abandonment  
-- Near +1 → Cellects may wrongly remove detection everywhere  
-- Too high values can also cause wave-like artifacts  
+<!-- END_Fading_detection -->
 
 ---
 
-## Post processing
-*Post-processing* (Fig. 6) applies the chosen detection algorithm to the video, plus additional algorithms to improve detection:  
+<!-- START_Post_processing -->
+**[Post processing]**:
+*Post
+-processing* applies detection algorithms with additional enhancements:
+- Binary operations: opening, closing, logical ops.
+- Fading detection* tracking: when specimen(s) may leave areas (optional).
+- *Correct errors around initial shape*: when the contour of the initial position of the specimen is
+hard to detect (optional).
+- *Connect distant shapes*: when the specimen's heterogeneity create wrong disconnections in the
+video detection (optional).
+- *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
+detected as specimen (optional).
+NB: Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
+parameters to improve Post processing*, and then *Run All* arenas.
 
-- *Fading detection* (as described above)  
-- *Correct errors around initial shape* (fine-tuning in advanced parameters, see Fig. 8)  
-- *Connect distant shapes* (fine-tuning in advanced parameters, see Fig. 8)  
-- Standard binary image operations: opening, closing, logical ops  
+<!-- END_Post_processing -->
 
-Once Post-processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced parameters to improve Post-processing*, and then analyze all arenas (*Run All*).
+<!-- START_Save_one_result -->
+**[Save one result]**:
+Complete the current video analysis by clicking this button for single
+-arena processing. Saving includes:
+- Calculating all selected descriptors (.csv) per frame.
+- Generating validation videos for detection verification.
+- Storing configuration parameters for reproducibility.
+NB:
+- This action will overwrite results and validation data for the current arena.
+
+<!-- END_Save_one_result -->
 
 <figure>
-  <img src="/static/UserManualFigure7.png" alt="Cellects video tracking window, running all arenas" width="600">
-  <figcaption><strong>Figure 7:</strong> Cellects video tracking window, running all arenas</figcaption>
+  <img src="../../static/UserManualFigure8.png" alt="Cellects video tracking window, running all arenas" width="600">
+  <figcaption><strong>Figure 8:</strong> Cellects video tracking window, running all arenas</figcaption>
 </figure>
 
 ---
 
-## Run All
-If detection with *Post-processing* leads to a satisfying result for one arena,  
-the user can apply the current parameters to all arenas.  
+<!-- START_Run_All -->
+**[Run All]**:
+Apply validated parameters to all arenas by clicking *Run All*. This action:
+- Generates full
+-resolution video outputs (storage
+-intensive)
+- Processes videos sequentially with real
+-time visualization
+- Calculates selected descriptors for each frame
+- Produces validation content at multiple intervals
+- Preserves current configuration settings
 
-Clicking *Run All* will:  
-1. Write the uncompressed video of each arena to the folder (can take a lot of space)  
-2. Analyze videos one by one (Fig. 7)  
-3. Save the *Required output* (.csv files), validation videos, and two snapshots per arena (after 1/10 of total time and at the last image)
+<!-- END_Run_All -->
 
 ---
 
-## Save one result
-This button is used only after running *Run All* at least once.  
+<!-- START_Save_all_choices -->
+**[Save all choices]**:
+Clicking *Save all choices* writes/updates configuration files to preserve analysis parameters for
+future replication.
 
-If most arenas analyzed well, but one failed, the user can:  
-1. Run all arenas once with the best parameters (even if imperfect for one arena)  
-2. Adjust parameters to fix the failing arena  
-3. Click *Save one result* to replace the saved results for that arena (CSV rows + validation video)
+<!-- END_Save_all_choices -->
+
+---

@@ -35,9 +35,9 @@ from numba.typed import Dict as TDict
 import numpy as np
 import pandas as pd
 from PySide6 import QtCore
-from cellects.image_analysis.morphological_operations import cross_33, Ellipse, get_contours
+from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
-from cellects.utils.formulas import bracket_to_uint8_image_contrast
+from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
 from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
                                               create_empty_videos, write_video)
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
@@ -269,6 +269,7 @@ class UpdateImageThread(QtCore.QThread):
         # I/ If this thread runs from user input, get the right coordinates
         # and convert them to fit the displayed image size
         user_input = len(self.parent().imageanalysiswindow.saved_coord) > 0 or len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0
+        dims = self.parent().imageanalysiswindow.drawn_image.shape
         if user_input:
             if len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0:
                 idx = self.parent().imageanalysiswindow.temporary_mask_coord
@@ -280,19 +281,8 @@ class UpdateImageThread(QtCore.QThread):
                 # Convert coordinates:
                 self.parent().imageanalysiswindow.display_image.update_image_scaling_factors()
                 sf = self.parent().imageanalysiswindow.display_image.scaling_factors
-                idx = np.array(((np.round(idx[0][0] * sf[0]), np.round(idx[0][1] * sf[1])), (np.round(idx[1][0] * sf[0]), np.round(idx[1][1] * sf[1]))), dtype=np.int64)
-                min_y = np.min(idx[:, 0])
-                max_y = np.max(idx[:, 0])
-                min_x = np.min(idx[:, 1])
-                max_x = np.max(idx[:, 1])
-                if max_y > self.parent().imageanalysiswindow.drawn_image.shape[0]:
-                    max_y = self.parent().imageanalysiswindow.drawn_image.shape[0] - 1
-                if max_x > self.parent().imageanalysiswindow.drawn_image.shape[1]:
-                    max_x = self.parent().imageanalysiswindow.drawn_image.shape[1] - 1
-                if min_y < 0:
-                    min_y = 0
-                if min_x < 0:
-                    min_x = 0
+                idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=sf, dims=dims)
+                minmax = min_y, max_y, min_x, max_x
 
         if len(self.parent().imageanalysiswindow.temporary_mask_coord) == 0:
             # not_load
@@ -303,54 +293,36 @@ class UpdateImageThread(QtCore.QThread):
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
             self.parent().imageanalysiswindow.drawn_image = deepcopy(self.parent().po.current_image)
-            if self.parent().imageanalysiswindow.drawn_image.size < 1000000:
-                contour_width = 3
-            else:
-                contour_width = 6
-            # 1) The segmentation mask
-            logging.info('Add the segmentation mask to the image')
+            contour_width = get_contour_width_from_im_shape(dims)
+            # 1) Add the segmentation mask to the image
             if self.parent().imageanalysiswindow.is_first_image_flag:
                 im_combinations = self.parent().po.first_image.im_combinations
                 im_mean = self.parent().po.first_image.image.mean()
             else:
                 im_combinations = self.parent().po.last_image.im_combinations
-                im_mean = self.parent().po.last_image.bgr.mean()
+                im_mean = self.parent().po.last_image.image.mean()
             # If there are image combinations, get the current corresponding binary image
             if im_combinations is not None and len(im_combinations) != 0:
                 binary_idx = im_combinations[self.parent().po.current_combination_id]["binary_image"]
                 # If it concerns the last image, only keep the contour coordinates
-                binary_idx = np.nonzero(get_contours(binary_idx))
-                # cv2.eroded_binary = cv2.erode(binary_idx, cross_33)
-                # binary_idx = binary_idx - cv2.eroded_binary
-                # binary_idx = cv2.dilate(binary_idx, kernel=cross_33, iterations=contour_width)
-                # binary_idx = np.nonzero(binary_idx)
+                binary_idx = cv2.dilate(get_contours(binary_idx), kernel=cross_33, iterations=contour_width)
+                binary_idx = np.nonzero(binary_idx)
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
-                    # logging.info('Color the segmentation mask in magenta')
+                    # Color the segmentation mask in magenta
                     self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((20, 0, 150), dtype=np.uint8)
                 else:
-                    # logging.info('Color the segmentation mask in pink')
+                    # Color the segmentation mask in pink
                     self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                 if self.parent().imageanalysiswindow.back1_bio2 == 0:
-                    logging.info("Save the user drawn mask of the current arena")
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(np.uint8)
-                        mask[min_y:max_y, min_x:max_x, ...] = ellipse
-                    else:
-                        mask[min_y:max_y, min_x:max_x] = 1
-                else:
-                    logging.info("Save the user drawn mask of Cell or Back")
-
-                    if self.parent().imageanalysiswindow.back1_bio2 == 2:
-                        if self.parent().po.all['starting_blob_shape'] == 'circle':
-                            ellipse = Ellipse((max_y - min_y, max_x - min_x)).create().astype(np.uint8)
-                            mask[min_y:max_y, min_x:max_x, ...] = ellipse
-                        else:
-                            mask[min_y:max_y, min_x:max_x] = 1
-                    else:
-                        mask[min_y:max_y, min_x:max_x] = 1
+                    mask_shape = self.parent().po.vars['arena_shape']
+                elif self.parent().imageanalysiswindow.back1_bio2 == 1:
+                    mask_shape = "rectangle"
+                elif self.parent().imageanalysiswindow.back1_bio2 == 2:
+                    mask_shape = self.parent().po.all['starting_blob_shape']
+                # Save the user drawn mask
+                mask = create_mask(dims, minmax, mask_shape)
                 mask = np.nonzero(mask)
 
                 if self.parent().imageanalysiswindow.back1_bio2 == 1:
@@ -376,12 +348,11 @@ class UpdateImageThread(QtCore.QThread):
 
             self.parent().imageanalysiswindow.drawn_image[bio_coord[0], bio_coord[1], :] = np.array((17, 160, 212), dtype=np.uint8)
 
-            image = self.parent().imageanalysiswindow.drawn_image
+            image = self.parent().imageanalysiswindow.drawn_image.copy()
             # 3) The automatically detected video contours
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
-                # logging.info("Draw the delineation mask of each arena")
+                # Draw the delineation mask of each arena
                 for contour_i in range(len(self.parent().po.top)):
-                    mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
                     min_cy = self.parent().po.top[contour_i]
                     max_cy = self.parent().po.bot[contour_i]
                     min_cx = self.parent().po.left[contour_i]
@@ -398,57 +369,25 @@ class UpdateImageThread(QtCore.QThread):
                                     2)  # font stroke
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = Ellipse((max_cy - min_cy, max_cx - min_cx)).create().astype(np.uint8)
-                        ellipse = cv2.morphologyEx(ellipse, cv2.MORPH_GRADIENT, cross_33)
-                        mask[min_cy:max_cy, min_cx:max_cx, ...] = ellipse
-                    else:
-                        mask[(min_cy, max_cy - 1), min_cx:max_cx] = 1
-                        mask[min_cy:max_cy, (min_cx, max_cx - 1)] = 1
-                    mask = cv2.dilate(mask, kernel=cross_33, iterations=contour_width)
-
-                    mask = np.nonzero(mask)
-                    image[mask[0], mask[1], :] = np.array((138, 95, 18), dtype=np.uint8)# self.parent().po.vars['contour_color']
-
+                    image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
+                                               self.parent().po.vars['arena_shape'], (138, 95, 18), True, contour_width)
         else: #load
             if user_input:
                 # III/ If this thread runs from user input: update the drawn_image according to the current user input
                 # Just add the mask to drawn_image as quick as possible
                 # Add user defined masks
                 # Take the drawn image and add the temporary mask to it
-                image = deepcopy(self.parent().imageanalysiswindow.drawn_image)
-                if self.parent().imageanalysiswindow.back1_bio2 == 0:
-                    # logging.info("Dynamic drawing of the arena outline")
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = Ellipse((max_y - min_y, max_x - min_x)).create()
-                        ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-                        image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
-                        image[min_y:max_y, min_x:max_x, ...] += ellipse
-                    else:
-                        mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
-                        mask[min_y:max_y, min_x:max_x] = 1
-                        mask = np.nonzero(mask)
-                        image[mask[0], mask[1], :] = np.array((0, 0, 0), dtype=np.uint8)
+                image = self.parent().imageanalysiswindow.drawn_image.copy()
+                if self.parent().imageanalysiswindow.back1_bio2 == 2:
+                    color = (17, 160, 212)
+                    mask_shape = self.parent().po.all['starting_blob_shape']
+                elif self.parent().imageanalysiswindow.back1_bio2 == 1:
+                    color = (224, 160, 81)
+                    mask_shape = "rectangle"
                 else:
-                    # logging.info("Dynamic drawing of Cell or Back")
-                    if self.parent().imageanalysiswindow.back1_bio2 == 2:
-                        if self.parent().po.all['starting_blob_shape'] == 'circle':
-                            ellipse = Ellipse((max_y - min_y, max_x - min_x)).create()
-                            ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-                            image[min_y:max_y, min_x:max_x, ...] *= (1 - ellipse)
-                            ellipse[:, :, :] *= np.array((17, 160, 212), dtype=np.uint8)
-                            image[min_y:max_y, min_x:max_x, ...] += ellipse
-                        else:
-                            mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
-                            mask[min_y:max_y, min_x:max_x] = 1
-                            mask = np.nonzero(mask)
-                            image[mask[0], mask[1], :] = np.array((17, 160, 212), dtype=np.uint8)
-                    else:
-                        mask = np.zeros(self.parent().imageanalysiswindow.drawn_image.shape[:2], dtype=np.uint8)
-                        mask[min_y:max_y, min_x:max_x] = 1
-                        mask = np.nonzero(mask)
-                        image[mask[0], mask[1], :] = np.array((224, 160, 81), dtype=np.uint8)
-
+                    color = (0, 0, 0)
+                    mask_shape = self.parent().po.all['arena_shape']
+                image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.parent().imageanalysiswindow.display_image.update_image(image)
         self.message_when_thread_finished.emit(True)
 
@@ -539,13 +478,13 @@ class FirstImageAnalysisThread(QtCore.QThread):
             self.message_from_thread.emit("Generating analysis options, wait...")
             if self.parent().po.vars["color_number"] > 2:
                 kmeans_clust_nb = self.parent().po.vars["color_number"]
-                if self.parent().po.carefully:
+                if self.parent().po.basic:
                     self.message_from_thread.emit("Generating analysis options, wait less than 30 minutes")
                 else:
                     self.message_from_thread.emit("Generating analysis options, a few minutes")
             else:
                 kmeans_clust_nb = None
-                if self.parent().po.carefully:
+                if self.parent().po.basic:
                     self.message_from_thread.emit("Generating analysis options, wait a few minutes")
                 else:
                     self.message_from_thread.emit("Generating analysis options, around 1 minute")
@@ -557,7 +496,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                biomask=self.parent().po.all["bio_mask"],
                                                                backmask=self.parent().po.all["back_mask"],
                                                                color_space_dictionaries=None,
-                                                               carefully=self.parent().po.carefully)
+                                                               basic=self.parent().po.basic)
             else:
                 if self.parent().po.all['scale_with_image_or_cells'] == 0:
                     self.parent().po.get_average_pixel_size()
@@ -571,10 +510,9 @@ class FirstImageAnalysisThread(QtCore.QThread):
                                                                                    biomask=self.parent().po.all["bio_mask"],
                                                                                    backmask=self.parent().po.all["back_mask"],
                                                                                    color_space_dictionaries=None,
-                                                               carefully=self.parent().po.carefully)
+                                                               basic=self.parent().po.basic)
 
-        logging.info(f" image analysis lasted {default_timer() - tic} secondes")
-        logging.info(f" image analysis lasted {np.round((default_timer() - tic) / 60)} minutes")
+        logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60).astype(int)} minutes {np.round((default_timer() - tic) % 60).astype(int)} secondes")
         self.message_when_thread_finished.emit(True)
 
 
@@ -647,43 +585,50 @@ class LastImageAnalysisThread(QtCore.QThread):
             biomask = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
         if self.parent().imageanalysiswindow.back_masks_number != 0:
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
-        if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
+        if self.parent().po.visualize or (len(self.parent().po.first_im.shape) == 2 and not self.parent().po.network_shaped):
             self.message_from_thread.emit("Image segmentation, wait...")
             self.parent().po.fast_last_image_segmentation(biomask=biomask, backmask=backmask)
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
-            if self.parent().po.vars['several_blob_per_arena']:
-                concomp_nb = [self.parent().po.sample_number, self.parent().po.first_image.size // 50]
-                max_shape_size = .75 * self.parent().po.first_image.size
-                total_surfarea = .99 * self.parent().po.first_image.size
-            else:
-                concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
-                if self.parent().po.all['are_zigzag'] == "columns":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                elif self.parent().po.all['are_zigzag'] == "rows":
-                    inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
-                else:
-                    dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                    dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
-                    inter_dist = np.max(dist1, dist2)
-                if self.parent().po.all['starting_blob_shape'] == "circle":
-                    max_shape_size = np.pi * np.square(inter_dist)
-                else:
-                    max_shape_size = np.square(2 * inter_dist)
-                total_surfarea = max_shape_size * self.parent().po.sample_number
-            out_of_arenas = None
+            arenas_mask = None
             if self.parent().po.all['are_gravity_centers_moving'] != 1:
-                out_of_arenas = np.ones_like(self.parent().po.first_image.validated_shapes)
-                for blob_i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
-                    out_of_arenas[self.parent().po.top[blob_i]: self.parent().po.bot[blob_i],
-                    self.parent().po.left[blob_i]: self.parent().po.right[blob_i]] = 0
-            ref_image = self.parent().po.first_image.validated_shapes
-            self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
-            kmeans_clust_nb = None
-            self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, out_of_arenas,
-                                                         ref_image, self.parent().po.first_image.subtract_background,
-                                                         kmeans_clust_nb, biomask, backmask, color_space_dictionaries=None,
-                                                         carefully=self.parent().po.carefully)
+                cr = [self.parent().po.top, self.parent().po.bot, self.parent().po.left, self.parent().po.right]
+                arenas_mask = np.zeros_like(self.parent().po.first_image.validated_shapes)
+                for _i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
+                    if self.parent().po.vars['arena_shape'] == 'circle':
+                        ellipse = create_ellipse(cr[1][_i] - cr[0][_i], cr[3][_i] - cr[2][_i])
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = ellipse
+                    else:
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
+            if self.parent().po.network_shaped:
+                self.parent().po.last_image.network_detection(arenas_mask, csc_dict=self.parent().po.vars["convert_for_motion"], biomask=biomask, backmask=backmask)
+            else:
+                if self.parent().po.vars['several_blob_per_arena']:
+                    concomp_nb = [self.parent().po.sample_number, self.parent().po.first_image.size // 50]
+                    max_shape_size = .75 * self.parent().po.first_image.size
+                    total_surfarea = .99 * self.parent().po.first_image.size
+                else:
+                    concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
+                    if self.parent().po.all['are_zigzag'] == "columns":
+                        inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                    elif self.parent().po.all['are_zigzag'] == "rows":
+                        inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
+                    else:
+                        dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                        dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
+                        inter_dist = np.max(dist1, dist2)
+                    if self.parent().po.all['starting_blob_shape'] == "circle":
+                        max_shape_size = np.pi * np.square(inter_dist)
+                    else:
+                        max_shape_size = np.square(2 * inter_dist)
+                    total_surfarea = max_shape_size * self.parent().po.sample_number
+                ref_image = self.parent().po.first_image.validated_shapes
+                self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
+                kmeans_clust_nb = None
+                self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, arenas_mask,
+                                                             ref_image, self.parent().po.first_image.subtract_background,
+                                                             kmeans_clust_nb, biomask, backmask, color_space_dictionaries=None,
+                                                             basic=self.parent().po.basic)
         self.message_when_thread_finished.emit(True)
 
 
@@ -1044,14 +989,12 @@ class OneArenaThread(QtCore.QThread):
         self.message_from_thread_starting.emit("Video loading, wait...")
 
         self.set_current_folder()
-        print(self.parent().po.vars['convert_for_motion'])
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
             if not self.parent().po.first_exp_ready_to_run:
                 #Need a look for data when Data to run Cellects quickly.pkl and 1 folder selected amon several
                 continue_analysis = self.pre_processing()
         if continue_analysis:
-            print(self.parent().po.vars['convert_for_motion'])
             memory_diff = self.parent().po.update_available_core_nb()
             if self.parent().po.cores == 0:
                 self.message_from_thread_starting.emit(f"Analyzing one arena requires {memory_diff}GB of additional RAM to run")
@@ -1565,7 +1508,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
         # self.parent().po.motion = None
-        self.message_from_thread.emit("")
+        self.message_from_thread.emit(f"Arena n°{self.parent().po.all['arena']}: analysis finished.")
 
 
 class WriteVideoThread(QtCore.QThread):

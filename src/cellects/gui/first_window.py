@@ -19,6 +19,7 @@ from cellects.core.cellects_threads import (
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, FixedText, EditText, LineWidget)
+from cellects.gui.ui_strings import FW
 
 
 class FirstWindow(MainTabsType):
@@ -91,7 +92,9 @@ class FirstWindow(MainTabsType):
         # Open the layout:
         self.second_row_widget = QtWidgets.QWidget()
         self.second_row_layout = QtWidgets.QHBoxLayout()
-        self.im_or_vid_label = FixedText('Image list or Videos:', tip="What type of data do(es) contain(s) folder(s)?", night_mode=self.parent().po.all['night_mode'])
+        self.im_or_vid_label = FixedText(FW['Image_list_or_videos']['label'], tip=FW['Image_list_or_videos']['tips'],
+                                         night_mode=self.parent().po.all['night_mode'])
+        # self.im_or_vid_label = FixedText('Image list or Videos:', tip="What type of data do(es) contain(s) folder(s)?", night_mode=self.parent().po.all['night_mode'])
         self.im_or_vid = Combobox(["Image list", "Videos"], self.parent().po.all['im_or_vid'], night_mode=self.parent().po.all['night_mode'])
         self.im_or_vid.setFixedWidth(150)
         # Set their positions on layout
@@ -111,28 +114,28 @@ class FirstWindow(MainTabsType):
             if self.parent().po.all['extension'] == '.mp4':
                 self.parent().po.all['radical'] = 'IMG_'
                 self.parent().po.all['extension'] = '.JPG'
-            self.arena_number_label = FixedText('Arena number per folder:', tip="If this number is not always the same (depending on the folder), it can be changed later",
+            self.arena_number_label = FixedText('Arena number per folder:',
+                                                tip=FW["Arena_number_per_folder"]["tips"] , #"If this number is not always the same (depending on the folder), it can be changed later",
                                                 night_mode=self.parent().po.all['night_mode'])
-
         else:
             if self.parent().po.all['extension'] == '.JPG':
                 self.parent().po.all['radical'] = ''
                 self.parent().po.all['extension'] = '.mp4'
             self.arena_number_label = FixedText('Arena number per video:',
-                                                tip="If this number is not always the same (depending on the video), it can be changed later",
+                                                tip=FW["Arena_number_per_folder"]["tips"], #"If this number is not always the same (depending on the video), it can be changed later",
                                                 night_mode=self.parent().po.all['night_mode'])
             what = 'Videos'
         self.arena_number_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.arena_number = Spinbox(min=0, max=255, val=self.parent().po.all['first_folder_sample_number'],
                                      decimals=0, night_mode=self.parent().po.all['night_mode'])
         self.arena_number.valueChanged.connect(self.re_instantiate_widgets)
-        self.radical_label = FixedText(what + ' prefix:', tip="Inform the prefix common to each name, if it exists", night_mode=self.parent().po.all['night_mode'])
+        self.radical_label = FixedText(what + ' prefix:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.radical_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.radical = EditText(self.parent().po.all['radical'],
                                        night_mode=self.parent().po.all['night_mode'])
         self.radical.textChanged.connect(self.re_instantiate_widgets)
 
-        self.extension_label = FixedText(what + ' extension:', tip="Caps sensitive", night_mode=self.parent().po.all['night_mode'])
+        self.extension_label = FixedText(what + ' extension:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.extension_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.extension = EditText(self.parent().po.all['extension'],
                                        night_mode=self.parent().po.all['night_mode'])
@@ -156,15 +159,16 @@ class FirstWindow(MainTabsType):
         self.first_row_widget = QtWidgets.QWidget()
         self.first_row_layout = QtWidgets.QHBoxLayout()
 
-        self.folder_label = FixedText('Folder:',
-                                      tip="Path to the folder containing images or videos\nThe selected folder may also contain several folders of data",
+        self.folder_label = FixedText(FW["Folder"]["label"] + ':',
+                                      tip=FW["Folder"]["tips"],#"Path to the folder containing images or videos\nThe selected folder may also contain several folders of data",
                                       night_mode=self.parent().po.all['night_mode'])
         self.folder_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.global_pathway = EditText(self.parent().po.all['global_pathway'],
                                        night_mode=self.parent().po.all['night_mode'])
         self.global_pathway.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.global_pathway.textChanged.connect(self.pathway_changed)
-        self.browse = PButton('Browse', night_mode=self.parent().po.all['night_mode'])
+        self.browse = PButton(FW["Browse"]["label"], tip=FW["Browse"]["tips"],
+                              night_mode=self.parent().po.all['night_mode'])
         self.browse.clicked.connect(self.browse_is_clicked)
 
         # Set their positions on layout
@@ -196,15 +200,18 @@ class FirstWindow(MainTabsType):
         self.shortcuts_layout = QtWidgets.QHBoxLayout()
         # Add shortcuts: Video_analysis and Run directly
         # Shortcut 1 : Advanced Parameters
-        self.advanced_parameters = PButton('Advanced Parameters', night_mode=self.parent().po.all['night_mode'])
+        self.advanced_parameters = PButton(FW["Advanced_parameters"]["label"], tip=FW["Advanced_parameters"]["tips"],
+                                           night_mode=self.parent().po.all['night_mode'])
         self.advanced_parameters.clicked.connect(self.advanced_parameters_is_clicked)
         # Shortcut 2 : Required Outputs
-        self.required_outputs = PButton('Required Outputs', night_mode=self.parent().po.all['night_mode'])
+        self.required_outputs = PButton(FW["Required_outputs"]["label"], tip=FW["Required_outputs"]["tips"],
+                                        night_mode=self.parent().po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         # Shortcut 3 :
         self.video_tab.clicked.connect(self.video_analysis_window_is_clicked)
         # Shortcut 4 :
-        self.Run_all_directly = PButton("Run all directly", night_mode=self.parent().po.all['night_mode'])
+        self.Run_all_directly = PButton(FW["Run_all_directly"]["label"], tip=FW["Run_all_directly"]["tips"],
+                                        night_mode=self.parent().po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Run_all_directly.setVisible(False)
 
@@ -224,7 +231,8 @@ class FirstWindow(MainTabsType):
         self.message = FixedText('', halign='r', night_mode=self.parent().po.all['night_mode'])
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
         # Next button
-        self.next = PButton('Next', night_mode=self.parent().po.all['night_mode'])
+        self.next = PButton(FW['Next']['label'], tip=FW['Next']['tips'],
+                            night_mode=self.parent().po.all['night_mode'])
         self.image_tab.clicked.connect(self.next_is_clicked)
         self.next.clicked.connect(self.next_is_clicked)
         # Add widgets to the last_row_layout
@@ -433,7 +441,7 @@ class FirstWindow(MainTabsType):
 
     def video_analysis_window_is_clicked(self):
         """
-        Handles the logic for when the "Video analysis" button is clicked in the interface,
+        Handles the logic for when the "Video tracking" button is clicked in the interface,
         leading to the video analysis window.
 
         Notes
