@@ -430,7 +430,7 @@ class MotionAnalysis:
             logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Detect cell motion and growth using the frame by frame segmentation algorithm")
             self.segmented = np.zeros(self.dims, dtype=np.uint8)
             for t in np.arange(self.dims[0]):#20):#
-                analysisi = self.frame_by_frame_segmentation(t)
+                analysisi = self.frame_by_frame_segmentation(t, self.segmented[t - 1, ...])
                 self.segmented[t, ...] = analysisi.binary_image
 
                 if self.vars['lose_accuracy_to_save_memory']:

@@ -245,8 +245,6 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
         cls.ma = MotionAnalysis(cls.l)
         cls.ma.get_origin_shape()
-        print(cls.ma.vars['origin_list'][0].shape)
-        print(cls.ma.dims)
         cls.ma.get_covering_duration(1)
         cls.ma.detection(True)
         cls.ma.initialize_post_processing()
