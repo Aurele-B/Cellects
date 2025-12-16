@@ -22,7 +22,7 @@ Make sure that:
 - Arena delineation is correct, click *Yes*
 - In this setting, the medium at starting position is opaque, check the bottom-left checkbox
 - There*s no need to improve the segmentation using the last image here, click *No*
-3. *Close* the Final checks to get to the Video analysis tab.
+3. *Close* the Final checks to get to the Video tracking tab.
 4. Click *Done* and run *Post processing*
 Once done, click *Read* to see the result of the video tracking.
 5. Click *Done* again and run *Save one result*
