@@ -46,12 +46,15 @@ This video summarizes the video segmentation
 
 ## Case 3: Colony growth tracking
 **Problem**: Get the surface area over time of several appearing colonies
-**Steps**: 
+**Steps**:
+
 ```python
 # 1. Generate the data
+import os
 from matplotlib import pyplot as plt
 from cellects.utils.load_display_save import movie, show
 from cellects.core.script_based_run import generate_colony_like_video, load_data, run_image_analysis, run_one_video_analysis
+
 rgb_video = generate_colony_like_video()
 
 # 2. Display the data (optional)
