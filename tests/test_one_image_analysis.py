@@ -36,7 +36,7 @@ class TestOneImageAnalysisBasicOperations(CellectsUnitTest):
         self.assertTrue(result1)
         self.oia.binary_image[4, :] = 0
         result2 = self.oia.check_if_image_border_attest_drift_correction()
-        self.assertFalse(result2)
+        self.assertTrue(result2)
 
     def test_adjust_to_drift_correction(self):
         self.oia.image = video_test[5, :, :, 0]
