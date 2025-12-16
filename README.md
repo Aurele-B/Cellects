@@ -16,9 +16,7 @@ easy installation and user-friendly interface.
 ---
 
 ## 🚀 Installation (Short version)
-### 1. Using pip (Mac, Windows or Linux)
-Install using our Windows installer: 
-[Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
+Install using our Windows installer: [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
 
 Or, install via pip:
 ```bash
@@ -29,6 +27,7 @@ Any difficulties? follow our [complete installation tutorial](https://github.com
 ---
 
 ## 🎯 Quick Start
+Run in terminal:
 ```bash
 Cellects
 ```
@@ -36,17 +35,20 @@ Cellects
 ---
 
 ## 📚 Documentation
-Full documentation is available in the `docs/` folder and includes:
-- **User Manual**: Step-by-step workflows for data localization, image analysis and video tracking.
-- **Advanced Features**: Customization options, batch processing, parameter tuning.
-- **API Reference**: Auto-generated from source code docstrings (see [API Docs](docs/api/index.html)).
+
+Full documentation is available in the [docs](https://github.com/Aurele-B/cellects/blob/main/doc/) folder and includes:
+- [**User Manual**](https://github.com/Aurele-B/cellects/blob/main/doc/first-analysis/index.md): Step-by-step workflows for data localization, image analysis and video tracking 
+- [**Advanced Features**](https://github.com/Aurele-B/cellects/blob/main/doc/advanced/index.md): Customization options, batch processing, parameter tuning.
+- [**API Reference**](https://github.com/Aurele-B/cellects/blob/main/doc/contributing.md): Auto-generated from source code docstrings (see [Build Documentation]).
 
 ---
 
 ## 🧪 Use Cases
 
-See `docs/use-cases.md` for real-world examples:
-- Automated Physarum polycephalum tracking
+See [use cases](https://github.com/Aurele-B/cellects/blob/main/doc/use-cases.md) for real-world examples:
+- Automated Physarum polycephalum tracking using GUI
+- Automated Physarum polycephalum tracking using API
+- Colony growth tracking
 
 ---
 
@@ -56,7 +58,7 @@ We welcome contributions!
 1. Fork the repository and create a new branch.
 2. Submit issues/PRs via [GitHub](https://github.com/Aurele-B/cellects/issues).
 
-For developer workflows, see `docs/contributing.md`.
+For developer workflows, see [**Contributing**](https://github.com/Aurele-B/cellects/blob/main/doc/contributing.md).
 
 ---
 
@@ -88,5 +90,4 @@ pytest
 ---
 
 ## Resources
-- [User manual](https://github.com/Aurele-B/Cellects/blob/main/_old_doc/UserManual.md)  
 - [Usage example (video)](https://www.youtube.com/watch?v=N-k4p_aSPC0)
