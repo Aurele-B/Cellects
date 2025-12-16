@@ -512,7 +512,7 @@ class ImageAnalysisWindow(MainTabsType):
 
     def video_is_clicked(self):
         """
-        Handles the logic for when the "Video analysis" button is clicked in the interface,
+        Handles the logic for when the "Video tracking" button is clicked in the interface,
         leading to the video analysis window.
 
         Notes

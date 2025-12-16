@@ -44,5 +44,5 @@ Click **Next** to go to the image analysis window (Fig. 2) of the first selected
   → To do so, deselect all folders, select the one that needs drawing, then hold `Ctrl/Cmd` while selecting the others.  
 
 - If the first selected folder has already been analyzed, two shortcuts appear:  
-  - **Video analysis window** → skips the image analysis window, lets the user tune video tracking before running all  
+  - **Video tracking window** → skips the image analysis window, lets the user tune video tracking before running all  
   - **Run all directly** → skips both image analysis and video tracking, applies saved settings to all folders directly  
