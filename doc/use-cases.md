@@ -3,36 +3,37 @@
 ## Case 1: Automated Physarum polycephalum tracking using GUI
 **Problem**: Track the surface area over time of one individual.  
 **Steps**:  
-1. Launch the GUI  
+### 1. Launch the GUI  
 Run:  
 ```bash
 Cellects
 ```
-2. Load images via the Data Localisation tab.
-Browse the Cellects/data/experiment folder. 
+### 2. Load images via the Data Localisation tab
+Browse the Cellects/data/experiment folder.
 Make sure that:
 - Images prefix is 'im'
 - Images extension 'is .tif'
 - Arena number per folder is '1'
-2. Click *Next* to switch to the Image analysis tab.
-- Click the *Apply current config* to segment the first image
+
+### 3. Click **Next** to switch to the Image analysis tab
+- Click the **Apply current config** to segment the first image
 -> A magenta contour appears around the specimen
-- If there*s 1 distinct specimen(s) in 1 arena(s), click *Yes*
+- If there is 1 distinct specimen(s) in 1 arena(s), click **Yes**
 -> A blue contour appears around the arena
-- Arena delineation is correct, click *Yes*
+- Arena delineation is correct, click **Yes**
 - In this setting, the medium at starting position is opaque, check the bottom-left checkbox
-- There*s no need to improve the segmentation using the last image here, click *No*
-3. *Close* the Final checks to get to the Video tracking tab.
-4. Click *Done* and run *Post processing*
-Once done, click *Read* to see the result of the video tracking.
-5. Click *Done* again and run *Save one result*
+- There is no need to improve the segmentation using the last image here, click **No**
+### 4. **Close** the Final checks to get to the Video tracking tab
+### 5. Click **Done** and run **Post processing**
+Once done, click **Read** to see the result of the video tracking.
+### 6. Click **Done** again and run **Save one result**
 This will save the .csv files containing the time series describing the individual's growth.
 NB:
-Other descriptors are available using *Required output*.
+Other descriptors are available using **Required output**.
 
 ## Case 2: Automated Physarum polycephalum tracking using API
 **Steps**:  
-1. Load the data
+### 1. Load the data
 ```python
 import os
 from cellects.core.script_based_run import load_data, run_image_analysis, write_videos, run_all_arenas
@@ -41,13 +42,13 @@ po = run_image_analysis(po)
 po = write_videos(po)
 run_all_arenas(po)
 ```
-2. Find the ind_1.mp4 file in the folder: os.getcwd() + "/data/experiment"
+### 2. Find the ind_1.mp4 file in the folder: os.getcwd() + "/data/experiment"
 This video summarizes the video segmentation
 
 ## Case 3: Colony growth tracking
 **Problem**: Get the surface area over time of several appearing colonies
 **Steps**:
-
+### Run the script:
 ```python
 # 1. Generate the data
 import os
