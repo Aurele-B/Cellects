@@ -936,7 +936,7 @@ class OneImageAnalysis:
         NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
         NetDet.get_best_network_detection_method()
         lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask== 0].mean()
-        NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, keep_one_connected_component=False)
+        NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, only_one_connected_component=False)
         NetDet.merge_network_with_pseudopods()
         cc_efficiency_order = np.argsort(NetDet.quality_metrics)
         self.im_combinations = []
