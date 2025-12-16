@@ -15,7 +15,6 @@ Uses QThread for background operations to maintain UI responsiveness.
 """
 import logging
 import numpy as np
-import cv2
 from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import (
@@ -83,12 +82,9 @@ class VideoAnalysisWindow(MainTabsType):
         self.thread['ChangeOneRepResult'] = ChangeOneRepResultThread(self.parent())
         self.thread['RunAll'] = RunAllThread(self.parent())
         self.previous_arena = 0
-
-        self.layout = QtWidgets.QGridLayout()
-        self.grid_widget = QtWidgets.QWidget()
         curr_row_main_layout = 0
         ncol = 1
-        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
 
         # Open subtitle
@@ -103,7 +99,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.general_step_layout.addWidget(self.general_step_button)
         self.general_step_layout.addItem(self.horizontal_space)
         self.general_step_widget.setLayout(self.general_step_layout)
-        self.layout.addWidget(self.general_step_widget, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addWidget(self.general_step_widget)#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
 
         # Open central widget
@@ -250,7 +246,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.video_display_layout.addItem(self.horizontal_space)
         # Close central widget
         self.video_display_widget.setLayout(self.video_display_layout)
-        self.layout.addWidget(self.video_display_widget, curr_row_main_layout, 0)
+        self.Vlayout.addWidget(self.video_display_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
 
         # Open Second step row
@@ -298,9 +294,9 @@ class VideoAnalysisWindow(MainTabsType):
         self.second_step_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.second_step_layout.addItem(self.horizontal_space)
         self.second_step_widget.setLayout(self.second_step_layout)
-        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
-        self.layout.addWidget(self.second_step_widget, curr_row_main_layout, 0)
+        self.Vlayout.addWidget(self.second_step_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
 
         # Open last options row widget
@@ -328,7 +324,7 @@ class VideoAnalysisWindow(MainTabsType):
         # Close last options widget
         self.last_options_layout.addItem(self.horizontal_space)
         self.last_options_widget.setLayout(self.last_options_layout)
-        self.layout.addWidget(self.last_options_widget, curr_row_main_layout, 0)
+        self.Vlayout.addWidget(self.last_options_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
 
         self.message = QtWidgets.QLabel(self)
@@ -352,12 +348,9 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_row_layout.addWidget(self.run_all)
         # Close last row widget
         self.last_row_widget.setLayout(self.last_row_layout)
-        self.layout.addItem(self.vertical_space, curr_row_main_layout, 0, 1, ncol)
-        self.layout.addWidget(self.last_row_widget, curr_row_main_layout, 0)
+        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addWidget(self.last_row_widget)#, curr_row_main_layout + 1, 0)
 
-        self.grid_widget.setLayout(self.layout)
-        self.Vlayout.addItem(self.vertical_space)
-        self.Vlayout.addWidget(self.grid_widget)
         self.setLayout(self.Vlayout)
 
     def display_conditionally_visible_widgets(self):
