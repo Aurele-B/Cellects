@@ -1,7 +1,8 @@
-## 📌 License & Citation
+## License
 
 GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE.odt)).
 
+## Citation 
 To cite Cellects, use:
 ```bibtex
 @article{boussard2024cellects,
