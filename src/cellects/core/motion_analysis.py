@@ -1588,7 +1588,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
                                columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = np.array(list(self.one_descriptor_per_arena.values()), dtype=np.uint32)
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
         if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
             os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")
