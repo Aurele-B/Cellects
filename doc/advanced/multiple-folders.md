@@ -1,18 +1,18 @@
 # Analyze multiple folders at once
 
-Analyzing multiple folders at once (Fig. 10) streamlines high-throughput experimentation by applying validated analysis parameters to entire datasets with minimal user intervention. 
+Analyzing multiple folders at once (Fig. 11) streamlines high-throughput experimentation by applying validated analysis parameters to entire datasets with minimal user intervention. 
 By configuring folder selection and per-folder arena counts, users ensure that Cellects applies the same detection logic uniformly while respecting experimental heterogeneity.
 
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure10.png" alt="Select folders to analyze window" width="600">
-  <figcaption><strong>Figure 10:</strong> Select folders to analyze window</figcaption>
+  <img src="../../static/UserManualFigure11.png" alt="Select folders to analyze window" width="600">
+  <figcaption><strong>Figure 11:</strong> Select folders to analyze window</figcaption>
 </figure>
 
 ---
 
-The window of **Figure 10** appears after the first window when the selected folder contains subfolders with images matching the *Image prefix* and *Images extension* patterns.  
+The window of **Figure 11** appears after the first window when the selected folder contains subfolders with images matching the *Image prefix* and *Images extension* patterns.  
 
 ---
 

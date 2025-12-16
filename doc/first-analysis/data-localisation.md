@@ -2,7 +2,7 @@
 
 Before diving into detailed analysis workflows, Cellects requires initial setup (Fig. 1) to define the scope and format of the data being processed. This first window serves as the gateway to configuring foundational parameters that underpin all subsequent steps: from basic image/video tracking to advanced video analytics. 
 Users will specify whether their input consists of an image stack or a single video file, establish naming conventions for targeted files (e.g., prefixes like "exp_" and extensions like ".jpg"), and define the root folder(s) containing experimental data. Additionally, this interface allows users to declare how many independent arenas are present in each dataset—a critical step for ensuring accurate analysis. 
-These configurations directly inform later stages (e.g., image analysis, video tracking) and enable automation across multiple folders if required (See Fig. 10).
+These configurations directly inform later stages (e.g., image analysis, video tracking) and enable automation across multiple folders if required (See Fig. 11).
 
 # Detailed description
 
@@ -56,7 +56,7 @@ containing all subfolders.
 The *Arena number per folder* specifies how many arenas are present in the images. Cellects will
 process and analyze each arena separately.
 NB:
-- For batch processing, assign different arena counts for each subfolder (see Fig. 10: the several
+- For batch processing, assign different arena counts for each subfolder (see Fig. 11: the several
 folder window).
 
 <!-- END_Arena_number_per_folder -->
@@ -101,7 +101,7 @@ shortcut to bypass the image analysis step and proceed directly to video trackin
 <!-- START_Next -->
 **[Next]**:
 Click the *Next* button to go to the image analysis window (Fig. 2), or  to the window showing the
-list of folders (Fig. 10) if applicable.
+list of folders (Fig. 11) if applicable.
 
 <!-- END_Next -->
 

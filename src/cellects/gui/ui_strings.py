@@ -50,7 +50,7 @@ FW["Arena_number_per_folder"]["tips"] = \
 f"""The *Arena number per folder* specifies how many arenas are present in the images. Cellects will
 process and analyze each arena separately.
 NB:
-- For batch processing, assign different arena counts for each subfolder (see Fig. 10: the several
+- For batch processing, assign different arena counts for each subfolder (see Fig. 11: the several
 folder window).
 """
 # END_TIP
@@ -95,7 +95,7 @@ FW["Next"]["label"] = "Next"
 # START_TIP
 FW["Next"]["tips"] = \
 f"""Click the *Next* button to go to the image analysis window (Fig. 2), or  to the window showing the
-list of folders (Fig. 10) if applicable.
+list of folders (Fig. 11) if applicable.
 """
 # END_TIP
 

@@ -575,7 +575,7 @@ class AdvancedParameters(WindowType):
         self.central_widget = QtWidgets.QWidget()
         self.central_widget.setLayout(self.central_layout)
         self.layout.addWidget(self.central_widget)
-        self.layout.addItem(self.vertical_space)
+        # self.layout.addItem(self.vertical_space)
 
         # Last row
         self.last_row_layout = QtWidgets.QHBoxLayout()
