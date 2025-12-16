@@ -272,8 +272,12 @@ class OneImageAnalysis:
         self.drift_mask_coord = None
         if (t and b) or (t and r) or (t and l) or (t and r) or (b and l) or (b and r) or (l and r):
             cc_nb, shapes = cv2.connectedComponents(self.binary_image)
-            if cc_nb == 2:
-                drift_mask_coord = np.nonzero(1 - self.binary_image)
+            if cc_nb > 1:
+                if cc_nb == 2:
+                    drift_mask_coord = np.nonzero(1 - self.binary_image)
+                else:
+                    back = np.unique(np.concatenate((shapes[0, :], shapes[-1, :],  shapes[:, 0], shapes[:, -1]), axis=0))
+                    drift_mask_coord = np.nonzero(np.logical_or(1 - self.binary_image, 1 - np.isin(shapes, back[back != 0])))
                 drift_mask_coord = (np.min(drift_mask_coord[0]), np.max(drift_mask_coord[0]) + 1,
                                     np.min(drift_mask_coord[1]), np.max(drift_mask_coord[1]) + 1)
                 self.drift_mask_coord = drift_mask_coord
