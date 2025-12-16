@@ -1102,12 +1102,12 @@ def convert_subtract_and_filter_video(video: NDArray, color_space_combination: d
         if 'PCA' in first_dict:
             greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
             first_dict = Dict()
-            first_dict['bgr'] = first_pc_vector
+            first_dict['bgr'] = bracket_to_uint8_image_contrast(first_pc_vector)
             c_spaces = ['bgr']
         if 'PCA' in second_dict:
             greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
             second_dict = Dict()
-            second_dict['bgr'] = first_pc_vector
+            second_dict['bgr'] = bracket_to_uint8_image_contrast(first_pc_vector)
             c_spaces = ['bgr']
 
         converted_video = np.zeros(video.shape[:3], dtype=array_type)
