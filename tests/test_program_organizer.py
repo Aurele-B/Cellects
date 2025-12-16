@@ -340,6 +340,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
                          remaining, self.po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, self.po.reduce_image_dim,
                          pathway="")
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
+        self.assertTrue(os.path.isfile(self.path_experiment / f"ind_2.npy"))
         self.po.get_origins_and_backgrounds_lists()
         self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)

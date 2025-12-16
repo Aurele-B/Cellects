@@ -729,4 +729,72 @@ def get_newly_explored_area(binary_vid: NDArray[np.uint8]) -> NDArray:
     array([0])
     """
     return ((binary_vid - binary_vid[0, ...]) == 1).reshape(binary_vid.shape[0], - 1).sum(1)
-binary_vid=np.zeros((5, 5), dtype=np.uint8)[None, :, :]
+
+def get_contour_width_from_im_shape(im_shape: Tuple) -> int:
+    """
+    Calculate the contour width based on image shape.
+
+    Parameters
+    ----------
+    im_shape : tuple of int, two items
+        The dimensions of the image.
+
+    Returns
+    -------
+    int
+        The calculated contour width.
+    """
+    return np.max((np.round(np.log10(np.max(im_shape)) - 2).astype(int), 1))
+
+def scale_coordinates(coord: NDArray, scale: Tuple, dims: Tuple) -> Tuple[NDArray[np.int64], np.int64, np.int64, np.int64, np.int64]:
+    """
+    Scale coordinates based on given scale factors and dimensions.
+
+    Parameters
+    ----------
+    coord : numpy.ndarray
+        A 2x2 array of coordinates to be scaled.
+    scale : tuple of float
+        Scaling factors for the x and y coordinates, respectively.
+    dims : tuple of int
+        Maximum dimensions (height, width) for the scaled coordinates.
+
+    Returns
+    -------
+    numpy.ndarray
+        Scaled and rounded coordinates.
+    int
+        Minimum y-coordinate.
+    int
+        Maximum y-coordinate.
+    int
+        Minimum x-coordinate.
+    int
+        Maximum x-coordinate.
+
+    Examples
+    --------
+    >>> coord = np.array(((47, 38), (59, 37)))
+    >>> scale = (0.92, 0.87)
+    >>> dims = (245, 300, 3)
+    >>> scaled_coord, min_y, max_y, min_x, max_x = scale_coordinates(coord, scale, dims)
+    >>> scaled_coord
+    array([[43, 33],
+           [54, 32]])
+    >>> min_y, max_y
+    (np.int64(43), np.int64(54))
+    >>> min_x, max_x
+    (np.int64(32), np.int64(33))
+
+    Notes
+    -----
+    This function assumes that the input coordinates are in a specific format
+    and will fail if not. The scaling factors should be positive.
+    """
+    coord = np.array(((np.round(coord[0][0] * scale[0]), np.round(coord[0][1] * scale[1])),
+                    (np.round(coord[1][0] * scale[0]), np.round(coord[1][1] * scale[1]))), dtype=np.int64)
+    min_y = np.max((0, np.min(coord[:, 0])))
+    max_y = np.min((dims[0], np.max(coord[:, 0])))
+    min_x = np.max((0, np.min(coord[:, 1])))
+    max_x = np.min((dims[1], np.max(coord[:, 1])))
+    return coord, min_y, max_y, min_x, max_x

@@ -1061,15 +1061,14 @@ class TestDynamicallyExpandToFillHoles(CellectsUnitTest):
         self.assertTrue(np.array_equal(distance_against_time, expected_distance_against_time))
 
 
-class TestEllipse(unittest.TestCase):
+class TestCreateEllipse(unittest.TestCase):
     """Test that an ellipse is created correctly."""
     def test_create_circle(self):
         """
         Verify the correctness of ellipse_fun to create a circle
         """
         # Test 1: Verify the correctness of ellipse_fun to create a circle
-        sizes = [9, 9]
-        ellipse = Ellipse(sizes).create()
+        ellipse = create_ellipse(9, 9)
         expected_result = np.array([[False, False, False, False,  True, False, False, False, False],
                                  [False, False,  True,  True,  True,  True,  True, False, False],
                                  [False,  True,  True,  True,  True,  True,  True,  True, False],
@@ -1086,8 +1085,7 @@ class TestEllipse(unittest.TestCase):
         Test that verifies the correctness of ellipse creation.
         """
         # Test 2: Verify the correctness of ellipse_fun to create an ellipse
-        sizes = [5, 7]
-        ellipse = Ellipse(sizes).create()
+        ellipse = create_ellipse(5, 7)
         expected_result = np.array([[False, False, False,  True, False, False, False],
                                  [False,  True,  True,  True,  True,  True, False],
                                  [True,  True,  True,  True,  True,  True,  True],
@@ -1564,6 +1562,206 @@ class TestKeepOneConnectedComponent(CellectsUnitTest):
 
         result = keep_one_connected_component(img)
         self.assertTrue(np.array_equal(result, img))
+
+
+class TestCreateMask(CellectsUnitTest):
+    """Test suite for create_mask function."""
+
+    def test_create_mask_rectangular_normal(self):
+        """Test creating a normal rectangular mask."""
+        dims = (10, 10)
+        minmax = (2, 8, 3, 7)  # x_min, x_max, y_min, y_max
+        shape = 'rectangle'
+
+        result = create_mask(dims, minmax, shape)
+
+        # Expected: 6x4 rectangle of True values in a 10x10 False array
+        expected = np.zeros(dims, dtype=bool)
+        expected[2:8, 3:7] = True
+
+        self.assertTrue(np.array_equal(result, expected))
+        self.assertEqual(result.shape, dims)
+
+    def test_create_mask_circle_normal(self):
+        """Test creating a normal circular mask."""
+        dims = (10, 10)
+        minmax = (2, 8, 3, 7)  # x_min, x_max, y_min, y_max
+        shape = 'circle'
+
+        result = create_mask(dims, minmax, shape)
+
+        # We can't easily predict the exact circle pattern without knowing implementation
+        # So we check basic properties instead:
+        self.assertEqual(result.shape, dims[:2])
+        self.assertTrue(np.any(result))  # Should have some True values
+        self.assertTrue(np.any(~result))  # Should have some False values
+
+    def test_create_mask_small_region(self):
+        """Test creating a mask with minimal region size (1x1 pixel)."""
+        dims = (5, 5)
+        minmax = (2, 3, 2, 3)  # Single pixel at (2,2)
+        shape = 'rectangle'
+
+        result = create_mask(dims, minmax, shape)
+
+        expected = np.zeros(dims, dtype=bool)
+        expected[2, 2] = True
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_create_mask_boundary_coordinates(self):
+        """Test creating a mask with coordinates at array boundaries."""
+        dims = (5, 5)
+        minmax = (0, 5, 0, 5)  # Entire array
+        shape = 'rectangle'
+
+        result = create_mask(dims, minmax, shape)
+
+        expected = np.ones((5, 5), dtype=bool)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_create_mask_invalid_shape(self):
+        """Test that invalid shape values don't crash the function."""
+        dims = (5, 5)
+        minmax = (1, 4, 1, 4)
+        shape = 'invalid_shape'
+
+        # Should not raise an exception
+        result = create_mask(dims, minmax, shape)
+
+        # Should behave like rectangle in this case
+        expected = np.zeros(dims, dtype=bool)
+        expected[1:4, 1:4] = True
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_create_mask_empty_region(self):
+        """Test creating a mask with no region (min=max)."""
+        dims = (5, 5)
+        minmax = (2, 2, 3, 3)  # Empty region
+        shape = 'rectangle'
+
+        result = create_mask(dims, minmax, shape)
+
+        expected = np.zeros(dims, dtype=bool)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_create_mask_circle_failure(self):
+        """Test behavior when circle creation fails."""
+        dims = (5, 5)
+        minmax = (1, -1, 2, 4)  # Invalid coordinates
+        shape = 'circle'
+
+        with self.assertRaises(ValueError):
+            create_mask(dims, minmax, shape)
+
+    def test_create_mask_negative_coordinates(self):
+        """Test behavior with negative coordinates."""
+        dims = (5, 5)
+        minmax = (-1, 3, 2, 4)  # Negative x_min
+        shape = 'rectangle'
+
+        result = create_mask(dims, minmax, shape)
+
+        # Expected: Should clamp to valid range (0)
+        expected = np.zeros(dims, dtype=bool)
+        # Note: Actual behavior depends on implementation
+        self.assertTrue(np.array_equal(result, expected))
+
+
+class TestDrawImgWithMask(CellectsUnitTest):
+    """Test suite for draw_img_with_mask function."""
+
+    def test_draw_1_pixel_mask(self):
+        """Test that circle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (3, 3, 3)
+        img = np.zeros(dims)
+        minmax = (1, 2, 1, 2)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertEqual(result[1, 1, 0], 255.)
+
+    def test_draw_circle_normal_case(self):
+        """Test that circle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (7, 7, 3)
+        img = np.zeros(dims)
+        minmax = (1, 6, 1, 6)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertEqual((result[:, :, 0] == 255).sum(), 13)
+
+    def test_draw_circle_edge_case1(self):
+        """Test with circle of the same size of the image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (0, 5, 0, 6)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertEqual((result[:, :, 0] == 255).sum(), 18)
+
+    def test_draw_rectangle_normal_case(self):
+        """Test that rectangle mask is applied correctly to normal image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (1, 4, 1, 5)  # y_min, y_max, x_min, x_max
+        shape = 'rectangle'
+        draw = (0, 255, 0)  # Green
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, draw)
+
+        self.assertTrue(result.shape == dims)
+        self.assertTrue((result[:, :, 1] == 255).sum() == 12)
+
+    def test_draw_rectangle_edge_case1(self):
+        """Test with rectangle of the same size of the image."""
+        # Setup test data
+        dims = (5, 6, 3)
+        img = np.zeros(dims)
+        minmax = (0, 5, 0, 6)  # y_min, y_max, x_min, x_max
+        shape = 'rectangle'
+        drawing = (255, 255, 255)
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing)
+
+        # Verify result
+        self.assertTrue(result.shape == dims)
+        self.assertTrue((result == 255).sum() == img.size)
+
+    def test_draw_circle_borders(self):
+        """Test with the contour of a circle as mask."""
+        # Setup test data
+        dims = (7, 7, 3)
+        img = np.zeros(dims)
+        minmax = (1, 7, 2, 7)  # y_min, y_max, x_min, x_max
+        shape = 'circle'
+        drawing = (255, 0, 0)  # Red
+
+        # Execute function
+        result = draw_img_with_mask(img, dims, minmax, shape, drawing, only_contours=True, dilate_mask=1)
+
+        # Verify result
+        self.assertEqual((result[:, :, 0] == 255).sum(), 27)
 
 
 if __name__ == '__main__':

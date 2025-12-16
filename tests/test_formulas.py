@@ -411,5 +411,261 @@ class TestFindDuplicatesCoord(CellectsUnitTest):
         self.assertTrue(np.array_equal(result, expected))
 
 
+class TestGetNewlyExploredArea(CellectsUnitTest):
+    """Test suite for get_newly_explored_area function."""
+
+    def test_basic_pattern(self):
+        """Test basic pattern with new pixels in each frame."""
+        binary_vid = np.zeros((4, 5, 5), dtype=np.uint8)
+        binary_vid[0, 2, 2] = 1
+        binary_vid[1, 3, 3] = 1
+        binary_vid[2, 4, 4] = 1
+        binary_vid[3, 1, 1] = 1
+
+        expected = np.array([0, 1, 1, 1])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_single_pixel_change(self):
+        """Test single pixel change per frame."""
+        binary_vid = np.zeros((3, 4, 4), dtype=np.uint8)
+        binary_vid[1, 1, 1] = 1
+        binary_vid[2, 2, 2] = 1
+
+        expected = np.array([0, 1, 1])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_multiple_pixels_per_frame(self):
+        """Test multiple pixel changes in one frame."""
+        binary_vid = np.zeros((2, 3, 3), dtype=np.uint8)
+        binary_vid[1, 0, 0] = 1
+        binary_vid[1, 1, 1] = 1
+        binary_vid[1, 2, 2] = 1
+
+        expected = np.array([0, 3])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_single_frame_no_change(self):
+        """Test single frame with no changes from previous."""
+        binary_vid = np.zeros((1, 5, 5), dtype=np.uint8)
+        expected = np.array([0])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_all_pixels_change(self):
+        """Test when all pixels change in one frame."""
+        binary_vid = np.zeros((2, 2, 2), dtype=np.uint8)
+        binary_vid[1] = np.ones((2, 2), dtype=np.uint8)
+
+        expected = np.array([0, 4])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_alternating_pattern(self):
+        """Test with alternating pattern of changes."""
+        binary_vid = np.zeros((3, 2, 2), dtype=np.uint8)
+        binary_vid[0, 0, 0] = 1
+        binary_vid[1, 0, 1] = 1
+        binary_vid[2, 1, 0] = 1
+
+        expected = np.array([0, 1, 1])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_first_frame_with_ones(self):
+        """Test when first frame has some ones (non-zero baseline)."""
+        binary_vid = np.zeros((2, 3, 3), dtype=np.uint8)
+        binary_vid[0, 1, 1] = 1
+        binary_vid[1, 2, 2] = 1
+
+        expected = np.array([0, 1])
+        result = get_newly_explored_area(binary_vid)
+        self.assertTrue(np.array_equal(result, expected))
+
+
+class TestGetContourWidthFromImShape(CellectsUnitTest):
+    """Test suite for get_contour_width_from_im_shape function."""
+
+    def test_get_contour_width_with_standard_image(self):
+        """Test normal operation with typical image dimensions."""
+        # Standard 1024x768 image
+        input_shape = (1024, 768)
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        result = get_contour_width_from_im_shape(input_shape)
+        self.assertEqual(result, expected)
+
+    def test_get_contour_width_with_minimal_dimensions(self):
+        """Test edge case with minimal dimensions (1x1 image)."""
+        input_shape = (1, 1)
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        result = get_contour_width_from_im_shape(input_shape)
+        self.assertEqual(result, expected)
+
+    def test_get_contour_width_boundary_case(self):
+        """Test boundary case where log10(result) - 2 ≈ 1."""
+        input_shape = (10, 10)
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        result = get_contour_width_from_im_shape(input_shape)
+        self.assertEqual(result, expected)
+
+    def test_get_contour_width_with_large_dimensions(self):
+        """Test with large image dimensions."""
+        input_shape = (8192, 5120)
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        result = get_contour_width_from_im_shape(input_shape)
+        self.assertEqual(result, expected)
+
+    def test_get_contour_width_with_non_numeric_values(self):
+        """Test that function raises TypeError for non-numeric values in tuple."""
+        with self.assertRaises(TypeError):
+            get_contour_width_from_im_shape(('a', 'b'))
+
+
+class TestScaleCoordinates(CellectsUnitTest):
+    """Test suite for scale_coordinates function."""
+
+    def test_scale_coordinates_normal_case(self):
+        """Test normal operation with valid inputs."""
+        coord = np.array(((47, 38), (59, 37)))
+        scale = (0.92, 0.87)
+        dims = (245, 300, 3)
+
+        expected_coord = np.array([[43, 33], [54, 32]], dtype=np.int64)
+        expected_min_y = np.int64(43)
+        expected_max_y = np.int64(54)
+        expected_min_x = np.int64(32)
+        expected_max_x = np.int64(33)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_zero_scaling(self):
+        """Test with zero scaling factors."""
+        coord = np.array(((10, 20), (30, 40)))
+        scale = (0, 0)  # Both scales are zero
+        dims = (100, 100, 3)
+
+        expected_coord = np.array([[0, 0], [0, 0]], dtype=np.int64)
+        expected_min_y = np.int64(0)
+        expected_max_y = np.int64(0)
+        expected_min_x = np.int64(0)
+        expected_max_x = np.int64(0)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_at_dimensions_boundary(self):
+        """Test coordinates that are exactly at dimension boundaries."""
+        coord = np.array(((100, 50), (200, 150)))
+        scale = (0.5, 0.5)  # Halve the coordinates
+        dims = (200, 300, 3)
+
+        expected_coord = np.array([[50, 25], [100, 75]], dtype=np.int64)
+        expected_min_y = np.int64(50)
+        expected_max_y = np.int64(100)
+        expected_min_x = np.int64(25)
+        expected_max_x = np.int64(75)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_exceeding_dimensions(self):
+        """Test when scaled coordinates exceed given dimensions."""
+        coord = np.array(((300, 400), (500, 600)))
+        scale = (0.7, 0.9)  # Scale down
+        dims = (250, 350, 3)
+
+        expected_coord = np.array([[210, 360], [350, 540]], dtype=np.int64)
+        expected_min_y = np.int64(210)  # Should be clamped to dims[0]
+        expected_max_y = np.int64(250)  # Clamped
+        expected_min_x = np.int64(360)
+        expected_max_x = np.int64(350)  # Clamped
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_negative_input(self):
+        """Test if function handles negative input coordinates properly."""
+        coord = np.array(((-10, 20), (30, -40)))
+        scale = (1.5, 2)  # Scale up
+        dims = (100, 200, 3)
+
+        expected_coord = np.array([[-15, 40], [45, -80]], dtype=np.int64)
+        expected_min_y = np.int64(0)  # Should be clamped to 0
+        expected_max_y = np.int64(45)
+        expected_min_x = np.int64(0)  # Clamped to 0
+        expected_max_x = np.int64(40)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_single_point(self):
+        """Test with single point coordinate."""
+        coord = np.array(((50, 60), (50, 60)))  # Same point twice
+        scale = (0.8, 1.2)
+        dims = (200, 300, 3)
+
+        expected_coord = np.array([[40, 72], [40, 72]], dtype=np.int64)
+        expected_min_y = np.int64(40)
+        expected_max_y = np.int64(40)  # Same as min
+        expected_min_x = np.int64(72)
+        expected_max_x = np.int64(72)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+    def test_scale_coordinates_non_integer_dimensions(self):
+        """Test with non-integer dimensions tuple (third value is ignored)."""
+        coord = np.array(((10, 20), (30, 40)))
+        scale = (0.5, 1)
+        dims = (100.5, 200.7, "ignore")  # Non-integer values
+
+        expected_coord = np.array([[5, 20], [15, 40]], dtype=np.int64)
+        expected_min_y = np.int64(5)
+        expected_max_y = np.int64(15)  # Should work despite non-integer dims
+        expected_min_x = np.int64(20)
+        expected_max_x = np.int64(40)
+
+        result_coord, result_min_y, result_max_y, result_min_x, result_max_x = scale_coordinates(coord, scale, dims)
+
+        self.assertTrue(np.array_equal(result_coord, expected_coord))
+        self.assertEqual(result_min_y, expected_min_y)
+        self.assertEqual(result_max_y, expected_max_y)
+        self.assertEqual(result_min_x, expected_min_x)
+        self.assertEqual(result_max_x, expected_max_x)
+
+
 if __name__ == '__main__':
     unittest.main()

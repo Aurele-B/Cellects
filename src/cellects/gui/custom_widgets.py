@@ -117,9 +117,9 @@ class MainTabsType(WindowType):
         self.main_tabs_layout = QtWidgets.QHBoxLayout()
         self.main_tabs_layout.setContentsMargins(0, 0, 0, 0)
         self.main_tabs_layout.setSpacing(0)
-        self.data_tab = MainTabsWidget('Data specifications', night_mode=night_mode)
+        self.data_tab = MainTabsWidget('Data localisation', night_mode=night_mode)
         self.image_tab = MainTabsWidget('Image analysis', night_mode=night_mode)
-        self.video_tab = MainTabsWidget('Video analysis', night_mode=night_mode)
+        self.video_tab = MainTabsWidget('Video tracking', night_mode=night_mode)
         self.main_tabs_layout.addWidget(self.data_tab)
         self.main_tabs_layout.addWidget(self.image_tab)
         self.main_tabs_layout.addWidget(self.video_tab)
@@ -219,7 +219,7 @@ class InsertImage(QtWidgets.QLabel):
 
 
 class PButton(QtWidgets.QPushButton):
-    def __init__(self, text, fade=True, night_mode=False):
+    def __init__(self, text, fade=True, tip=None, night_mode=False):
         """
 
         self.setStyleSheet("background-color: rgb(107, 145, 202);\n"
@@ -230,6 +230,7 @@ class PButton(QtWidgets.QPushButton):
         """
         super().__init__()
         self.setText(text)
+        self.setToolTip(tip)
         self.night_mode_switch(night_mode)
         self.setFont(buttonfont)
         # self.setStyleSheet("background-color: rgb(50,50,65);\n" #50,50,65 150, 150, 150 153, 204, 205    122, 0, 61   30, 144, 220

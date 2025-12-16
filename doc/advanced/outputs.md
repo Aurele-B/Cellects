@@ -1,17 +1,67 @@
 # Required outputs
+The Required outputs window (Fig. 11) defines what quantitative descriptors Cellects computes and exports during analysis—a critical step in ensuring reproducible, shareable results aligned with open science standards. 
+Users select from a range of spatial and temporal metrics (e.g., area, perimeter, oscillation patterns) as well as pixel coordinates, geometrical graphs (vertices.csv, edges.csv), or network skeletons. 
+These outputs bridge raw imaging data to downstream analysis in statistical tools, modeling software, or collaborative platforms. 
+
+For example:
+- Pixel-level tracking (e.g., [Pixels covered by the specimen(s)]) enables high-resolution morphodynamics studies.
+- Graph/network outputs (e.g., [Graph of the specimen(s)]) are essential for organisms with internal branching structures (Physarum polycephalum), capturing topological changes over time.
+
+# Detailed description
 
 <figure>
-  <img src="/static/UserManualFigure9.png" alt="Required output window" width="600">
-  <figcaption><strong>Figure 9:</strong> Required output window</figcaption>
+  <img src="../../static/UserManualFigure10.png" alt="Required output window" width="600">
+  <figcaption><strong>Figure 10:</strong> Required output window</figcaption>
 </figure>
 
 ---
 
-## Save presence coordinates
-Saves very large `.npy` files containing all presence coordinates of specimens:  
-- Time  
-- Y position  
-- X position  
+<!-- START_coord_specimen -->
+**[Pixels covered by the specimen(s)]**:
+Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
+parameters.
+NB:
+- These files may consume significant memory depending on the total frame count.
+
+<!-- END_coord_specimen -->
+
+---
+
+
+<!-- START_Graph -->
+**[Graph of the specimen(s) (or network)]**:
+Compute a geometrical graph describing the specimen based on current detection parameters.  Cellects
+generates this graph using the skeleton of the largest connected component per frame.  If network
+detection is enabled, it will be computed on the detected network instead. The output includes:
+- A .csv file for vertices with coordinates (t, y, x), IDs, tip status, part of the specimen's
+initial position, connection status with other vertices.
+- A .csv file for edges with IDs, vertex pairs, lengths, average width, and intensity.
+NB:
+- These files may consume significant memory depending on the total frame count.
+- Network and graph detection together are relevant only for organisms with a distinct internal
+network (e.g., *Physarum polycephalum*).
+
+<!-- END_Graph -->
+
+---
+
+
+<!-- START_coord_oscillating -->
+**[Oscillating areas in the specimen(s)]**:
+Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
+files are generated: one for thickening regions and one for slimming regions.
+
+<!-- END_coord_oscillating -->
+
+---
+
+
+<!-- START_coord_network -->
+**[Network in the specimen(s)]**:
+Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
+specimen(s).
+
+<!-- END_coord_network -->
 
 ---
 
@@ -32,8 +82,6 @@ Available descriptors include:
 - Skewness (x, y)  
 - Kurtosis (x, y)  
 - Major axes lengths and angles  
-
-Additional algorithms:  
-- **Detect growth transition** → automatically detects isotropic to digitated growth transition *(Vogel et al. 2016)*  
-- **Proceed oscillation analysis** → analyzes intracytoplasmic oscillations of *P. polycephalum*  
-  (based on *Boussard et al., 2021*)  
+- Growth transitions
+- Oscillations
+- Minkowski dimension

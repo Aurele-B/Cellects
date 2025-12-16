@@ -23,7 +23,7 @@ expand_until_overlap : Expand shapes until overlap occurs
 dynamically_expand_to_fill_holes : Dynamically expand to fill holes in shapes
 expand_smalls_toward_biggest : Expand smaller shapes toward largest component
 change_thresh_until_one : Change threshold until one connected component remains
-Ellipse : Generate ellipse shape descriptors
+create_ellipse : Generate ellipse shape descriptors
 get_rolling_window_coordinates_list : Get coordinates for rolling window operations
 
 """
@@ -37,7 +37,7 @@ from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
 from cellects.image_analysis.shape_descriptors import ShapeDescriptors
-from cellects.utils.formulas import moving_average
+from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
 from skimage.filters import threshold_otsu
 from skimage.measure import label
 from scipy.stats import linregress
@@ -1297,7 +1297,7 @@ def image_borders(dimensions: tuple, shape: str="rectangular") -> NDArray[np.uin
      [0 0 0]]
     """
     if shape == "circular":
-        borders = Ellipse(dimensions).create()
+        borders = create_ellipse(dimensions[0], dimensions[0])
         img_contours = image_borders(dimensions)
         borders = borders * img_contours
     else:
@@ -1458,87 +1458,53 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
     return binary_video, holes_time_end, distance_against_time
 
 
-class Ellipse:
+@njit()
+def create_ellipse(vsize_in, hsize_in):
     """
-    Create an ellipse with given vertical and horizontal sizes.
+    Create a 2D array representing an ellipse with given vertical and horizontal sizes.
 
-    This class represents an ellipse defined by its vertical and horizontal
-    dimensions. It provides methods to check if a point lies within the ellipse
-    and to generate a 2D array representing the ellipse shape.
+    This function generates a NumPy boolean array where each element is `True` if the point lies within or on
+    the boundary of an ellipse defined by its vertical and horizontal radii. The ellipse is centered at the center
+    of the array, which corresponds to the midpoint of the given dimensions.
+
+    Parameters
+    ----------
+    vsize_in : int
+        Vertical size (number of rows) in the output 2D array.
+    hsize_in : int
+        Horizontal size (number of columns) in the output 2D array.
+
+    Returns
+    -------
+    NDArray[bool]
+        A boolean NumPy array of shape `(vsize, hsize)` where `True` indicates that a pixel lies within or on
+        the boundary of an ellipse centered at the image's center with radii determined by half of the dimensions.
+
+    Notes
+    -----
+    If either vertical or horizontal size is zero, it defaults to 3 as in the original class behavior.
     """
-    def __init__(self, sizes):
-        """
-        Initialize the object with given vertical and horizontal sizes.
+    # Use default values if input sizes are zero
+    vsize = 3 if vsize_in == 0 else vsize_in
+    hsize = 3 if hsize_in == 0 else hsize_in
 
-        Parameters
-        ----------
-        sizes : list or tuple of int, length 2
-            List containing two integers representing vertical and horizontal sizes.
+    # Compute radii (half of each size)
+    vr = hsize // 2
+    hr = vsize // 2
 
-        Attributes
-        ----------
-        vsize : int
-            Vertical size of the object.
-        hsize : int
-            Horizontal size of the object.
-        vr : int
-            Half of the horizontal size.
-        hr : int
-            Half of the vertical size.
-        """
-        if sizes[0] == 0:
-            self.vsize = 3
-        else:
-            self.vsize = sizes[0]
-        if sizes[1] == 0:
-            self.hsize = 3
-        else:
-            self.hsize = sizes[1]
-        self.hsize = sizes[1]
-        self.vr = self.hsize // 2
-        self.hr = self.vsize // 2
+    result = np.empty((vsize, hsize), dtype=np.bool_)
+    if vr > 0 and hr > 0:
+        for i in range(vsize):
+            for j in range(hsize):
+                x = i
+                y = j
+                lhs = ((x - hr) ** 2 / (hr ** 2)) + ((y - vr) ** 2 / (vr ** 2))
+                result[i, j] = lhs <= 1
+    else:
+        result[0, 0] = True
+    return result
 
-    def ellipse_fun(self, x, y):
-        """
-        Check if a point (x,y) lies within or on the ellipse.
-
-        This function checks if a given point lies inside or on the boundary
-        of an ellipse defined by its horizontal radius (`self.hr`) and vertical
-        radius (`self.vr`). The center of the ellipse is at (0, 0).
-
-        Parameters
-        ----------
-        x : float
-            The x-coordinate of the point to be checked.
-        y : float
-            The y-coordinate of the point to be checked.
-
-        Returns
-        -------
-        bool
-            True if the point (x, y) lies within or on the ellipse; False otherwise.
-
-        """
-        return (((x - self.hr) ** 2) / (self.hr ** 2)) + (((y - self.vr) ** 2) / (self.vr ** 2)) <= 1
-
-    def create(self) -> NDArray:
-        """
-        Create a 2D array representing an ellipse.
-
-        This method generates a NumPy array where each element is determined by
-        the `ellipse_fun` function, which computes values based on the horizontal
-        and vertical sizes of the ellipse.
-
-        Returns
-        -------
-        ndarray
-            A 2D NumPy array representing the ellipse shape.
-        """
-        return np.fromfunction(self.ellipse_fun, (self.vsize, self.hsize))
-
-
-rhombus_55 = Ellipse((5, 5)).create().astype(np.uint8)
-
+rhombus_55 = create_ellipse(5, 5).astype(np.uint8)
 
 def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
     """
@@ -1574,6 +1540,8 @@ def get_contours(binary_image: NDArray[np.uint8]) -> NDArray[np.uint8]:
      [0 0 0 0 0 0 0 0 0 0]
      [0 0 0 0 0 0 0 0 0 0]]
     """
+    if not isinstance(binary_image.dtype, np.uint8):
+        binary_image = binary_image.astype(np.uint8)
     if np.all(binary_image):
         contours = 1 - image_borders(binary_image.shape)
     elif np.any(binary_image):
@@ -1724,7 +1692,7 @@ def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direct
     k_size = 3
     if original_shape_hsize is not None:
         k_size = int((np.ceil(original_shape_hsize / 5) * 2) + 1)
-    big_kernel = Ellipse((k_size, k_size)).create().astype(np.uint8)
+    big_kernel = create_ellipse(k_size, k_size).astype(np.uint8)
 
     ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(
         binary_image, y_boundaries, get_ordered_image=True)
@@ -1879,8 +1847,7 @@ def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, 
         min_side = np.min(zoomed_binary.shape)
         if min_side >= min_im_side:
             if contours:
-                eroded_zoomed_binary = cv2.erode(zoomed_binary, cross_33)
-                zoomed_binary = zoomed_binary - eroded_zoomed_binary
+                zoomed_binary = get_contours(zoomed_binary)
             if zoom_step == 0:
                 max_power = int(np.floor(np.log2(min_side)))  # Largest integer power of 2
                 side_lengths = 2 ** np.arange(max_power, int(np.log2(min_mesh_side // 2)), -1)
@@ -2083,3 +2050,119 @@ def keep_one_connected_component(binary_image: NDArray[np.uint8])-> NDArray[np.u
     else:
         return keep_largest_shape(sh)
 
+def create_mask(dims: Tuple, minmax: Tuple, shape: str):
+    """
+
+    Create a boolean mask based on given dimensions and min/max coordinates.
+
+    Parameters
+    ----------
+    dims : Tuple[int, int]
+        The dimensions of the mask (height and width).
+    minmax : Tuple[int, int, int, int]
+        The minimum and maximum coordinates for the mask (x_min, x_max,
+        y_min, y_max).
+    shape : str
+        The shape of the mask. Should be either 'circle' or any other value for a rectangular mask.
+
+    Returns
+    -------
+    np.ndarray[bool]
+        A boolean NumPy array with the same dimensions as `dims`, initialized to False,
+        where the specified region (or circle) is set to True.
+
+    Raises
+    ------
+    ValueError
+        If the shape is 'circle' and the ellipse creation fails.
+
+    Notes
+    -----
+    If `shape` is not 'circle', a rectangular mask will be created. The ellipse
+    creation method used may have specific performance considerations.
+
+    Examples
+    --------
+    >>> mask = create_mask((5, 6), (0, 5, 1, 5), 'circle')
+    >>> print(mask)
+    [[False False False  True False False]
+     [False False  True  True  True False]
+     [False  True  True  True  True False]
+     [False False  True  True  True False]
+     [False False False  True False False]]
+     """
+    mask = np.zeros(dims[:2], dtype=bool)
+    if shape == 'circle':
+        ellipse = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2])
+        mask[minmax[0]:minmax[1], minmax[2]:minmax[3], ...] = ellipse
+    else:
+        mask[minmax[0]:minmax[1], minmax[2]:minmax[3]] = 1
+    return mask
+
+def draw_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, drawing: Tuple, only_contours: bool=False,
+                       dilate_mask: int=0) -> NDArray:
+    """
+
+    Draw an image with a mask and optional contours.
+
+    Draws a subregion of the input image using a specified shape (circle or rectangle),
+    which can be dilated. The mask can be limited to contours only, and an optional
+    drawing (overlay) can be applied within the masked region.
+
+    Parameters
+    ----------
+    img : NDArray
+        The input image to draw on.
+    dims : Tuple[int, int]
+        Dimensions of the subregion (width, height).
+    minmax : Tuple[int, int, int, int]
+        Coordinates of the subregion (x_start, x_end, y_start, y_end).
+    shape : str
+        Shape of the mask to draw ('circle' or 'rectangle').
+    drawing : Tuple[NDArray, NDArray, NDArray]
+        Optional drawing (overlay) to apply within the masked region.
+    only_contours : bool, optional
+        If True, draw only the contours of the shape. Default is False.
+    dilate_mask : int, optional
+        Number of iterations for dilating the mask. Default is 0.
+
+    Returns
+    -------
+    NDArray
+        The modified image with the applied mask and drawing.
+
+    Notes
+    -----
+    This function assumes that the input image is in BGR format (OpenCV style).
+
+    Examples
+    --------
+    >>> dim = (100, 100, 3)
+    >>> img = np.zeros(dim)
+    >>> result = draw_img_with_mask(img, dim, (50, 75, 50, 75), 'circle', (0, 255, 0))
+    >>> print((result == 255).sum())
+    441
+    """
+    if shape == 'circle':
+        mask = create_ellipse(minmax[1] - minmax[0], minmax[3] - minmax[2]).astype(np.uint8)
+        if only_contours:
+            mask = get_contours(mask)
+    else:
+        if only_contours:
+            mask = 1 - image_borders((minmax[1] - minmax[0], minmax[3] - minmax[2]))
+        else:
+            mask = np.ones((minmax[1] - minmax[0], minmax[3] - minmax[2]), np.uint8)
+    if dilate_mask:
+        mask = cv2.dilate(mask, kernel=cross_33, iterations=dilate_mask)
+    anti_mask = 1 - mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] *= anti_mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] *= anti_mask
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] *= anti_mask
+    if isinstance(drawing, np.ndarray):
+        if drawing.dtype != np.uint8:
+            drawing = bracket_to_uint8_image_contrast(drawing)
+        drawing = [drawing[:, :, 0], drawing[:, :, 1], drawing[:, :, 2]]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 0] += mask * drawing[0]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] += mask * drawing[1]
+    img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] += mask * drawing[2]
+    return img
