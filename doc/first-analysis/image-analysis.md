@@ -90,72 +90,6 @@ mouse on the image.
 
 ---
 
-<!-- START_Advanced_mode -->
-**[Advanced mode]**:
-The *Advanced mode* enables fine
--tuning of image analysis parameters for:
-- Custom color space combinations (e.g., HSV, HLS)
-- Applying filters before segmentation
-- Combining segmentations using logical operators
-- Accessing rolling window and Kmeans algorithms
-NB:
-- Useful for reusing validated parameter sets or testing alternative methods.
-
-<!-- END_Advanced_mode -->
-
----
-
-<!-- START_Color_combination -->
-**[Color combination]**:
-Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
-image by 3 colors,  they transform it into 3 different visual properties
-- hsv: hue (color), saturation, value (lightness)
-- hls: hue (color), lightness, saturation
-- lab: Lightness, Red/Green, Blue/Yellow
-- luv and yuv: l and y are Lightness, u and v are related to colors
-
-<!-- END_Color_combination -->
-
----
-
-<!-- START_Filter -->
-**[Filter]**:
-Apply a filter to preprocess images before segmentation.
-NB:
-- Filtering can improve segmentation accuracy by emphasizing relevant image features.
-
-<!-- END_Filter -->
-
----
-
-<!-- START_Logical_operator -->
-**[Logical operator]**:
-The *Logical operator* defines how to combine results from distinct segmentations (e.g., merging the
-segmentation resulting from a specific color space transformation and filtering with a different
-one). Supported operators: AND, OR, XOR.
-
-<!-- END_Logical_operator -->
-
----
-
-<!-- START_Rolling_window_segmentation -->
-**[Rolling window segmentation]**:
-Segments image regions using a rolling window approach to detect local intensity valleys. The method
-applies Otsu's thresholding locally on each window.
-
-<!-- END_Rolling_window_segmentation -->
-
----
-
-<!-- START_Kmeans -->
-**[Kmeans]**:
-The *Kmeans* algorithm clusters pixels into a specified number of categories (2
--5) to identify specimen regions within the image.
-
-<!-- END_Kmeans -->
-
----
-
 <!-- START_Generate_analysis_options -->
 **[Generate analysis options]**:
 Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
@@ -214,6 +148,77 @@ be used as a scale.
 
 ---
 
+<!-- START_Advanced_mode -->
+**[Advanced mode]**:
+The *Advanced mode* enables fine
+-tuning of image analysis parameters for:
+- Custom color space combinations (e.g., HSV, HLS)
+- Applying filters before segmentation
+- Combining segmentations using logical operators
+- Accessing rolling window and Kmeans algorithms
+NB:
+- Useful for reusing validated parameter sets or testing alternative methods.
+
+<!-- END_Advanced_mode -->
+
+---
+<figure>
+  <img src="../../static/UserManualFigure4.png" alt="Image analysis advanced mode" width="600">
+  <figcaption><strong>Figure 4:</strong> Image analysis advanced mode</figcaption>
+</figure>
+---
+
+<!-- START_Color_combination -->
+**[Color combination]**:
+Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
+image by 3 colors,  they transform it into 3 different visual properties
+- hsv: hue (color), saturation, value (lightness)
+- hls: hue (color), lightness, saturation
+- lab: Lightness, Red/Green, Blue/Yellow
+- luv and yuv: l and y are Lightness, u and v are related to colors
+
+<!-- END_Color_combination -->
+
+---
+
+<!-- START_Filter -->
+**[Filter]**:
+Apply a filter to preprocess images before segmentation.
+NB:
+- Filtering can improve segmentation accuracy by emphasizing relevant image features.
+
+<!-- END_Filter -->
+
+---
+
+<!-- START_Logical_operator -->
+**[Logical operator]**:
+The *Logical operator* defines how to combine results from distinct segmentations (e.g., merging the
+segmentation resulting from a specific color space transformation and filtering with a different
+one). Supported operators: AND, OR, XOR.
+
+<!-- END_Logical_operator -->
+
+---
+
+<!-- START_Rolling_window_segmentation -->
+**[Rolling window segmentation]**:
+Segments image regions using a rolling window approach to detect local intensity valleys. The method
+applies Otsu's thresholding locally on each window.
+
+<!-- END_Rolling_window_segmentation -->
+
+---
+
+<!-- START_Kmeans -->
+**[Kmeans]**:
+The *Kmeans* algorithm clusters pixels into a specified number of categories (2
+-5) to identify specimen regions within the image.
+
+<!-- END_Kmeans -->
+
+---
+
 <!-- START_Video_delimitation -->
 **[Video delimitation]**:
 After confirming initial detection, automatic video delimitation results appear in blue.  Click
@@ -224,8 +229,8 @@ After confirming initial detection, automatic video delimitation results appear 
 <!-- END_Video_delimitation -->
 
 <figure>
-  <img src="../../static/UserManualFigure4.png" alt="Cellects image analysis window, after arena delineation" width="600">
-  <figcaption><strong>Figure 4:</strong> Cellects image analysis window, after arena delineation</figcaption>
+  <img src="../../static/UserManualFigure5.png" alt="Cellects image analysis window, after arena delineation" width="600">
+  <figcaption><strong>Figure 5:</strong> Cellects image analysis window, after arena delineation</figcaption>
 </figure>
 
 ---

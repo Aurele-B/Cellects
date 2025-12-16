@@ -1,5 +1,5 @@
 # Required outputs
-The Required outputs window (Fig. 9) defines what quantitative descriptors Cellects computes and exports during analysis—a critical step in ensuring reproducible, shareable results aligned with open science standards. 
+The Required outputs window (Fig. 11) defines what quantitative descriptors Cellects computes and exports during analysis—a critical step in ensuring reproducible, shareable results aligned with open science standards. 
 Users select from a range of spatial and temporal metrics (e.g., area, perimeter, oscillation patterns) as well as pixel coordinates, geometrical graphs (vertices.csv, edges.csv), or network skeletons. 
 These outputs bridge raw imaging data to downstream analysis in statistical tools, modeling software, or collaborative platforms. 
 
@@ -10,8 +10,8 @@ For example:
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure9.png" alt="Required output window" width="600">
-  <figcaption><strong>Figure 9:</strong> Required output window</figcaption>
+  <img src="../../static/UserManualFigure10.png" alt="Required output window" width="600">
+  <figcaption><strong>Figure 10:</strong> Required output window</figcaption>
 </figure>
 
 ---

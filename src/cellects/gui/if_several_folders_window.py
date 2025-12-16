@@ -14,7 +14,7 @@ import numpy as np
 from PySide6 import QtWidgets, QtCore
 from cellects.core.cellects_threads import LoadFirstFolderIfSeveralThread
 from cellects.gui.custom_widgets import (WindowType, PButton, FixedText)
-from cellects.gui.ui_strings import MF
+from cellects.gui.ui_strings import MF, VAW
 
 
 class IfSeveralFoldersWindow(WindowType):
