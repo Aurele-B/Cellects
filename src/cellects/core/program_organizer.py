@@ -979,8 +979,6 @@ class ProgramOrganizer:
         self._set_analyzed_individuals()
         return analysis_status
 
-
-
     def _segment_blob_motion(self, sample_size: int) -> list:
         """
         Segment blob motion from the data list at specified sample sizes.
