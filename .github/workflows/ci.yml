@@ -44,9 +44,10 @@ jobs:
           name: coverage-${{ matrix.python }}
           path: coverage.xml
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage to Codecov (OIDC)
+        uses: codecov/codecov-action@v5
         with:
+          use_oidc: true
           files: coverage.xml
           flags: py${{ matrix.python }}
           fail_ci_if_error: true
