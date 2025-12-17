@@ -1,6 +1,14 @@
 Cellects: Cell Expansion Computer Tracking Software
 ===================================================
 
+[![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/cellects)
+[![Python versions](https://img.shields.io/pypi/pyversions/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
+[![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE)
+[![Stars](https://img.shields.io/github/stars/Aurele-B/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/stargazers)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Aurele-B/Cellects/.github%2Fworkflows%2Fci.yml)
+![Coverage](https://raw.githubusercontent.com/Aurele-B/cellects/gh-pages/badges/coverage.svg)
+
 Description
 -----------
 
@@ -16,13 +24,13 @@ easy installation and user-friendly interface.
 ---
 
 ## 🚀 Installation (Short version)
-Install using our Windows installer: [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
+Install using our Windows installer: [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
 ```bash
 pip install cellects
 ```
-Any difficulties? follow our [complete installation tutorial](https://github.com/Aurele-B/Cellects/blob/main/doc/installation.md)
+Any difficulties? follow our [complete installation tutorial](https://aurele-b.github.io/Cellects/installation/)
 
 ---
 
@@ -36,16 +44,16 @@ Cellects
 
 ## 📚 Documentation
 
-Full documentation is available in the [docs](https://github.com/Aurele-B/cellects/blob/main/doc/) folder and includes:
-- [**User Manual**](https://github.com/Aurele-B/cellects/blob/main/doc/first-analysis/index.md): Step-by-step workflows for data localization, image analysis and video tracking 
-- [**Advanced Features**](https://github.com/Aurele-B/cellects/blob/main/doc/advanced/index.md): Customization options, batch processing, parameter tuning.
-- [**API Reference**](https://github.com/Aurele-B/cellects/blob/main/doc/contributing.md): Auto-generated from source code docstrings (see [Build Documentation]).
+Full documentation is available in the [docs](https://aurele-b.github.io/Cellects/) folder and includes:
+- [**User Manual**](https://aurele-b.github.io/Cellects/first-analysis/): Step-by-step workflows for data localization, image analysis and video tracking 
+- [**Advanced Features**](https://aurele-b.github.io/Cellects/advanced/): Customization options, batch processing, parameter tuning.
+- [**API Reference**](https://aurele-b.github.io/Cellects/api/): Auto-generated from source code docstrings (see [Build Documentation]).
 
 ---
 
 ## 🧪 Use Cases
 
-See [use cases](https://github.com/Aurele-B/cellects/blob/main/doc/use-cases.md) for real-world examples:
+See [use cases](https://aurele-b.github.io/Cellects/use-cases/) for real-world examples:
 - Automated Physarum polycephalum tracking using GUI
 - Automated Physarum polycephalum tracking using API
 - Colony growth tracking
@@ -58,13 +66,13 @@ We welcome contributions!
 1. Fork the repository and create a new branch.
 2. Submit issues/PRs via [GitHub](https://github.com/Aurele-B/cellects/issues).
 
-For developer workflows, see [**Contributing**](https://github.com/Aurele-B/cellects/blob/main/doc/contributing.md).
+For developer workflows, see [**Contributing**](https://aurele-b.github.io/Cellects/contributing/).
 
 ---
 
 ## 📌 License & Citation
 
-GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE.odt)).
+GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE)).
 
 To cite Cellects, use:
 ```bibtex

@@ -14,52 +14,52 @@ By iteratively testing tracking parameters and validating results through visual
 ---
 
 <!-- START_Arena_to_analyze -->
-**[Arena to analyze]**:
+## Arena to analyze:
 This arena number selects a specific arena in the current folder. The user can choose an arena,
 click *Detection* to load and analyze it, then *Read* results.
 !!! note
 
-- Cellects automatically names the arena by their position (left to right, top to bottom).
-- For single arena setups, use 1.
-- *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-- Loading speeds improve if videos are pre
-- Saved as ind_*.npy.
-
+	 - Cellects automatically names the arena by their position (left to right, top to bottom).
+	 - For single arena setups, use 1.
+	 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
+	 - Loading speeds improve if videos are pre
+	 - Saved as ind_*.npy.
 <!-- END_Arena_to_analyze -->
 
 ---
 
 <!-- START_Maximal_growth_factor -->
-**[Maximal growth factor]**:
+## Maximal growth factor:
 This is the maximum allowable proportion of image area that may be covered by specimen movement
 between frames. Adjust accordingly:
+
 - Increase if specimen size is underestimated.
 - Decrease if specimen size is overestimated.
 !!! note
 
-- Precisely, this defines an upper bound on relative coverage changes between sequential images.
-
+	 - Precisely, this defines an upper bound on relative coverage changes between sequential images.
 <!-- END_Maximal_growth_factor -->
 
 ---
 
 <!-- START_Temporal_smoothing -->
-**[Temporal smoothing]**:
+## Temporal smoothing:
 Applies temporal smoothing to reduce noise and highlight long
+
 -term trends by averaging pixel intensity changes. Use when analyzing slope
 -based segmentation results.
 !!! note
 
-- This uses a moving window algorithm on pixel intensity curves over time.
-- Excessive iterations produce constant values, preventing accurate detection.
-
+	 - This uses a moving window algorithm on pixel intensity curves over time.
+	 - Excessive iterations produce constant values, preventing accurate detection.
 <!-- END_Temporal_smoothing -->
 
 ---
 
 <!-- START_Segmentation_method -->
-**[Segmentation method]**:
+## Segmentation method:
 Cellects includes five video tracking options:
+
 - **Frame option**: Applies the image analysis algorithm frame by frame, without temporal dynamics.
 - **Threshold option**: Compares pixel intensity with the average intensity of the whole image at
 each time step.
@@ -68,18 +68,15 @@ each time step.
 - **T or S option**: logical OR of threshold and slope options.
 !!! note
 
-- Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Once
-analysis completes. Once the analysis completed, select one option and click *Read*.
-- Computing only one option is faster and requires less memory.
-- When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
-window, only the *Frame* option remains available.
-
+	 - Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Onceanalysis completes. Once the analysis completed, select one option and click *Read*.
+	 - Computing only one option is faster and requires less memory.
+	 - When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysiswindow, only the *Frame* option remains available.
 <!-- END_Segmentation_method -->
 
 ---
 
 <!-- START_Load_one_arena -->
-**[Load one arena]**:
+## Load one arena:
 Clicking this button loads the arena associated with *Arena to analyze*. The center of the window
 displays the first frame of that arena's video. Click *Read* to review the full video.
 
@@ -88,7 +85,7 @@ displays the first frame of that arena's video. Click *Read* to review the full 
 ---
 
 <!-- START_Detection -->
-**[Detection]**:
+## Detection:
 *Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
 view the detection result. If correct, answer *Done* to proceed with tuning parameters for  post
 processing.
@@ -97,7 +94,7 @@ processing.
 
 
 <!-- START_Read -->
-**[Read]**:
+## Read:
 Clicking *Read* starts the video display corresponding to the current state of the analysis.
 
 <!-- END_Read -->
@@ -110,10 +107,11 @@ Clicking *Read* starts the video display corresponding to the current state of t
 ---
 
 <!-- START_Fading_detection -->
-**[Fading detection]**:
+## Fading detection:
 *Fading detection* monitors when specimens leave previously occupied areas, useful for  moving
 organisms rather than static growth. Uncheck this option if not needed. Set a value  between minus
 one and one to control sensitivity:
+
 - Near minus one: Minimal false removal of specimen traces.
 - Near one: High risk of over
 -removal from all areas.
@@ -123,8 +121,9 @@ one and one to control sensitivity:
 ---
 
 <!-- START_Post_processing -->
-**[Post processing]**:
+## Post processing:
 *Post
+
 -processing* applies detection algorithms with additional enhancements:
 - Binary operations: opening, closing, logical ops.
 - Fading detection* tracking: when specimen(s) may leave areas (optional).
@@ -141,16 +140,16 @@ parameters to improve Post processing*, and then *Run All* arenas.
 <!-- END_Post_processing -->
 
 <!-- START_Save_one_result -->
-**[Save one result]**:
+## Save one result:
 Complete the current video analysis by clicking this button for single
+
 -arena processing. Saving includes:
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.
 !!! note
 
-- This action will overwrite results and validation data for the current arena.
-
+	 - This action will overwrite results and validation data for the current arena.
 <!-- END_Save_one_result -->
 
 <figure>
@@ -161,8 +160,9 @@ Complete the current video analysis by clicking this button for single
 ---
 
 <!-- START_Run_All -->
-**[Run All]**:
+## Run All:
 Apply validated parameters to all arenas by clicking *Run All*. This action:
+
 - Generates full
 -resolution video outputs (storage
 -intensive)
@@ -177,7 +177,7 @@ Apply validated parameters to all arenas by clicking *Run All*. This action:
 ---
 
 <!-- START_Save_all_choices -->
-**[Save all choices]**:
+## Save all choices:
 Clicking *Save all choices* writes/updates configuration files to preserve analysis parameters for
 future replication.
 

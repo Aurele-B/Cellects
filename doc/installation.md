@@ -7,7 +7,7 @@ Choose the method that matches your OS and how you want to use Cellects.
     ### Install with `Cellects_installer.exe`
 
     1. Download **Cellects_installer.exe**:  
-       [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
+       [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
 
     2. Double-click `Cellects_installer.exe` to start the installation.
 

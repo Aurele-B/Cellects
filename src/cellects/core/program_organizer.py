@@ -972,7 +972,7 @@ class ProgramOrganizer:
                     str(self.not_analyzed_individuals) + " individuals are out of picture scope and cannot be analyzed")
 
         else:
-            self.left, self.right, self.top, self.bot = np.array([0]), np.array([self.first_image.image.shape[1] + 1]), np.array([0]), np.array([self.first_image.image.shape[0] + 1])
+            self._whole_image_bounding_boxes()
             self.sample_number = 1
         self._set_analyzed_individuals()
         return analysis_status
@@ -1105,13 +1105,13 @@ class ProgramOrganizer:
             del self.modif_validated_shapes
             del self.standard
             del self.shapes_to_remove
+            self.bot += 1
+            self.right += 1
         else:
-            self.top = np.array(0, dtype=np.int64)
-            self.bot = np.array(self.first_image.image.shape[0], dtype=np.int64)
-            self.left = np.array(0, dtype=np.int64)
-            self.right = np.array(self.first_image.image.shape[1], dtype=np.int64)
-        self.bot += 1
-        self.right += 1
+            self._whole_image_bounding_boxes()
+
+    def _whole_image_bounding_boxes(self):
+        self.top, self.bot, self.left, self.right = np.array([0]), np.array([self.first_image.image.shape[0]]), np.array([0]), np.array([self.first_image.image.shape[1]])
 
     def _standardize_video_sizes(self):
         """
@@ -1236,7 +1236,7 @@ class ProgramOrganizer:
         """
         logging.info("Create origins and background lists")
         if self.top is None:
-            self.top, self.bot, self.left, self.right = np.array([0]), np.array([self.first_im.shape[0]] + 1), np.array([0]), np.array([self.first_im.shape[1] + 1])
+            self._whole_image_bounding_boxes()
         first_im = self.first_image.validated_shapes
         self.vars['origin_list'] = []
         self.vars['background_list'] = []
@@ -1620,7 +1620,7 @@ class ProgramOrganizer:
         If `arena_shape` is 'circle', the visualization will be masked by an ellipse.
 
         """
-        minmax = (self.top[i], self.bot[i] - 1, self.left[i], self.right[i] - 1)
+        minmax = (self.top[i], self.bot[i], self.left[i], self.right[i])
         self.first_image.bgr = draw_img_with_mask(self.first_image.bgr, self.first_image.bgr.shape[:2], minmax,
                                                   self.vars['arena_shape'], first_visualization)
         if last_visualization is not None:

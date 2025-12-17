@@ -295,6 +295,97 @@ class TestCC(CellectsUnitTest):
         self.assertEqual(new_order.max(), 289)
 
 
+class TestShapeSelection(CellectsUnitTest):
+    """Test suite for shape_selection() with image processing validation."""
+    @classmethod
+    def setUpClass(cls):
+        """Initialize a data set for testing"""
+        super().setUpClass()
+        cls.height, cls.width = 100, 100
+        cls.img = np.zeros((cls.height, cls.width), dtype=np.uint8)
+        # Add two perfect circles in opposite corners
+        cls.img[20:30, 20:30] = create_ellipse(10, 10)
+        cls.img[-30:-20, -30:-20] = create_ellipse(10, 10)
+
+
+    def test_shape_selection_valid_input(self):
+        """Verify correct shape filtering with valid parameters and expected counts"""
+        # Setup: Create binary image with 2 valid circular shapes
+
+        validated_shapes, shape_number, stats, centroids = shape_selection(
+            binary_image=self.img,
+            several_blob_per_arena=True,
+            true_shape_number=2,
+            horizontal_size=10,
+            spot_shape='circle'
+        )
+
+        # Validate output has exactly 2 connected components
+        self.assertEqual(shape_number, 2)
+
+    def test_shape_selection_empty(self):
+        """Ensure no shape is detected form an empty video"""
+        img = np.zeros((50, 50), dtype=np.uint8)
+
+        validated_shapes, shape_number, stats, centroids = shape_selection(
+                binary_image=img,
+                several_blob_per_arena=False,
+                true_shape_number=2,
+                horizontal_size=10,
+                spot_shape='triangle'  # Unsupported shape
+            )
+        self.assertEqual(validated_shapes.sum(), 0)
+
+    def test_shape_selection_bio_mask_filtering(self):
+        """Verify bio_mask correctly preserves protected components"""
+        protected = np.zeros_like(self.img)
+
+        validated_shapes, shape_number, stats, centroids = shape_selection(
+            binary_image=self.img,
+            several_blob_per_arena=True,
+            true_shape_number=2,
+            horizontal_size=10,
+            bio_mask=protected
+        )
+        self.assertEqual(shape_number, 2)
+
+    def test_shape_selection_rectangle_shape_validation(self):
+        """Verify rectangle shape filtering with size constraints"""
+        img = np.zeros((self.height, self.width), dtype=np.uint8)
+        # Add two perfect circles in opposite corners
+        img[20:30, 20:30] = 1
+        img[-30:-20, -30:-20] = 1
+        validated_shapes, shape_number, stats, centroids = shape_selection(
+            binary_image=self.img,
+            several_blob_per_arena=False,
+            true_shape_number=1,
+            horizontal_size=10,
+            spot_shape='rectangle'
+        )
+        self.assertEqual(shape_number, 2)
+
+    def test_shape_selection_multiple_iterations_required(self):
+        """Test scenario requiring multiple filtering iterations to reach target count"""
+        img = np.zeros((100, 100), dtype=np.uint8)
+
+        # Create 5 shapes with varying sizes (3 within range, 2 too small)
+        for i in range(3):
+            cv2.circle(img[20+i*20:40+i*20, 20+i*20:40+i*20], (10,10), 5, 255, -1)
+
+        # Two shapes with invalid sizes
+        cv2.circle(img[-30:-10, :20], (10,10), 3, 255, -1)    # Too small
+        cv2.circle(img[-30:-10, 40:60], (10,10), 7, 255, -1)  # Too large
+
+        validated_shapes, shape_number, stats, centroids = shape_selection(
+            binary_image=img,
+            several_blob_per_arena=False,
+            true_shape_number=3,
+            horizontal_size=10,
+            spot_shape='circle'
+        )
+        self.assertEqual(shape_number, 3)  # Only valid shapes remain
+
+
 class TestRoundedInvertedDistanceTransform(CellectsUnitTest):
     """
     Test rounded inverted distance transform.
@@ -609,6 +700,23 @@ class TestMinimalDistance(CellectsUnitTest):
                                    [0, 0, 0, 0, 2]])
         distance = get_minimal_distance_between_2_shapes(image_of_2_shapes, increase_speed=True)
         self.assertAlmostEqual(distance, 3.605551, places=3)
+
+
+class TestMinMaxEuclideanPair(CellectsUnitTest):
+    """Test get_min_or_max_euclidean_pair suite."""
+    def test_get_max_euclidean_pair(self):
+        """Test get max Euclidean pair."""
+        coords = np.array([[0, 1], [2, 3], [4, 5]])
+        point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="max")
+        self.assertTrue(np.array_equal(point1, np.array([0, 1])))
+        self.assertTrue(np.array_equal(point2, np.array([4, 5])))
+
+    def test_get_min_euclidean_pair(self):
+        """Test get min Euclidean pair."""
+        coords = (np.array([0, 2, 4, 8, 1, 5]), np.array([0, 2, 4, 8, 0, 5]))
+        point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="min")
+        self.assertTrue(np.array_equal(point1, np.array([0, 0])))
+        self.assertTrue(np.array_equal(point2, np.array([1, 0])))
 
 
 class TestFindMajorIncline(CellectsUnitTest):
