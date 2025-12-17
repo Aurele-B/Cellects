@@ -33,6 +33,7 @@ from copy import deepcopy
 import cv2
 from numba.typed import Dict as TDict
 import numpy as np
+from numpy.typing import NDArray
 import pandas as pd
 from PySide6 import QtCore
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
@@ -166,7 +167,7 @@ class GetFirstImThread(QtCore.QThread):
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
-    message_when_thread_finished = QtCore.Signal(bool)
+    message_when_thread_finished = QtCore.Signal(np.ndarray)
     def __init__(self, parent=None):
         """
         Initialize the worker thread for loading the first image of one folder.
@@ -184,7 +185,7 @@ class GetFirstImThread(QtCore.QThread):
         Run the first image reading task in the parent process and emit a signal when it finishes.
         """
         self.parent().po.get_first_image()
-        self.message_when_thread_finished.emit(True)
+        self.message_when_thread_finished.emit(self.parent().po.first_im)
 
 
 class GetLastImThread(QtCore.QThread):

@@ -30,7 +30,8 @@ The *Images prefix* and *Images extension* fields allow Cellects to consider rel
 example, setting 'exp_' as image prefix and '.jpg' as image extension will cause Cellects to only
 consider JPG files whose name starts with 'exp_'. Remaining labels should indicate the order in
 which images were taken.
-NB:
+!!! note
+
 - Image prefix is optional
 - If every .jpg files start with IMG_ but other .jpg files exist, use the prefix to exclude
 irrelevant files.
@@ -55,7 +56,8 @@ containing all subfolders.
 **[Arena number per folder]**:
 The *Arena number per folder* specifies how many arenas are present in the images. Cellects will
 process and analyze each arena separately.
-NB:
+!!! note
+
 - For batch processing, assign different arena counts for each subfolder (see Fig. 11: the several
 folder window).
 

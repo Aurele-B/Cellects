@@ -504,7 +504,7 @@ class ProgramOrganizer:
                     self.vars['img_number'] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     self.analysis_instance = np.zeros(
                         [int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                         int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3])
+                         int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3], dtype=np.uint8)
                     while cap.isOpened() and counter < 1:
                         ret, frame = cap.read()
                         if counter == 0:
@@ -530,14 +530,12 @@ class ProgramOrganizer:
                 self.first_im = readim(self.data_list[self.vars['first_detection_frame']], self.all['raw_images'])
                 self.vars['dims'] = [self.vars['img_number'], self.first_im.shape[0], self.first_im.shape[1]]
 
-        if len(self.first_im.shape) == 3:
-            if np.all(np.equal(self.first_im[:, :, 0], self.first_im[:, :, 1])) and np.all(
-                    np.equal(self.first_im[:, :, 1], self.first_im[:, :, 2])):
-                self.reduce_image_dim = True
-            if self.reduce_image_dim:
-                self.first_im = self.first_im[:, :, 0]
-                if self.all['im_or_vid'] == 1:
-                    self.analysis_instance = self.analysis_instance[:, :, :, 0]
+                if len(self.first_im.shape) == 3:
+                    if np.all(np.equal(self.first_im[:, :, 0], self.first_im[:, :, 1])) and np.all(
+                            np.equal(self.first_im[:, :, 1], self.first_im[:, :, 2])):
+                        self.reduce_image_dim = True
+                    if self.reduce_image_dim:
+                        self.first_im = self.first_im[:, :, 0]
         self.first_image = OneImageAnalysis(self.first_im)
         self.vars['already_greyscale'] = self.first_image.already_greyscale
         if self.vars['already_greyscale']:

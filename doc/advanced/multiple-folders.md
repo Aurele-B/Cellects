@@ -20,7 +20,8 @@ The window of **Figure 11** appears after the first window when the selected fol
 **[Check to select all folders]**:
 Select this option to run the analysis on all folders containing images matching the *Image prefix*
 and *Images extension*. Otherwise, use Ctrl/Cmd to select specific folders for analysis.
-NB:
+!!! note
+
 - This setting affects only the *Run All* functionality.
 - To apply saved masks (e.g., background or specimen initiation regions) across selected folders,
 enable    *Keep Cell and Back drawing for all folders* in *Advanced parameters*.

@@ -122,7 +122,7 @@ class ImageAnalysisWindow(MainTabsType):
                                             tip=IAW["Image_number"]["tips"],
                                             night_mode=self.parent().po.all['night_mode'])
         self.image_number_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'], val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
+        self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'] - 1, val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
         self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
         if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
@@ -539,6 +539,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.vars['first_detection_frame'] = int(self.image_number.value())
             self.message.setText(f"Reading image n°{self.parent().po.vars['first_detection_frame']}")
             self.thread["GetFirstIm"].start()
+            self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_im)
 
@@ -684,7 +685,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.current_image = deepcopy(image)
         self.drawn_image = deepcopy(self.parent().po.current_image)
         self.display_image.update_image(self.parent().po.current_image)
-
         self.arena_mask = None
         self.bio_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
         self.back_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
