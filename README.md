@@ -4,7 +4,7 @@ Cellects: Cell Expansion Computer Tracking Software
 [![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/cellects)
 [![Python versions](https://img.shields.io/pypi/pyversions/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
-[![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE.odt)
+[![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/Aurele-B/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/stargazers)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Aurele-B/Cellects/.github%2Fworkflows%2Fci.yml)
 ![Coverage](https://Aurele-B.github.io/cellects/badges/coverage.svg)
@@ -72,7 +72,7 @@ For developer workflows, see [**Contributing**](https://aurele-b.github.io/Celle
 
 ## 📌 License & Citation
 
-GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE.odt)).
+GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE)).
 
 To cite Cellects, use:
 ```bibtex
