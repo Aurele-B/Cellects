@@ -10,7 +10,7 @@ Cellects is a software designed to analyze organisms that **grow or move on an i
 It processes timelapse experiments provided either as a **set of images** or as a **video**, recorded with a fixed camera observing one or several stationary arenas.
 
 <figure>
-  <img src="../../static/UserManualFigure8.png" alt="Select folders to analyze window" width="600">
+  <img src="../static/UserManualFigure8.png" alt="Select folders to analyze window" width="600">
   <figcaption><strong>Figure:</strong> Tracking the growth of 6 plasmodia of Physarum polycephalum </figcaption>
 </figure>
 
