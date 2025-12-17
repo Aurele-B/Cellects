@@ -54,7 +54,9 @@ mkdocs serve
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ### Create windows executable
-When installing Cellects dependencies, do not use editable mode:
+Start by creating a new python environment. 
+If it already exists, save the __main__.spec file elsewhere and delete the environment to get the last Cellects version using pip.
+And run:
 ```bash
 python -m venv ./cellects_env
 deactivate
@@ -62,6 +64,16 @@ cellects_env\Scripts\activate
 pip install .
 pip install pyinstaller
 cd cellects_env/Lib/site-packages/cellects
+```
+Generate the .exe
+```bash
 pyinstaller __main__.py
 ```
-Then, compress the dist folder into Cellects.zip and us NSIS to generate the installer
+To modify the .exe (icons, terminal...), add a .spec file in 'cellects_env/Lib/site-packages/cellects/' and run:
+```bash
+pyinstaller __main__.spec
+```
+Then, compress the dist folder into Cellects.zip and use NSIS to generate the installer
+
+Note: When installing Cellects dependencies, do not use editable mode:
+Note: Lighter installer with the "Solid" option
