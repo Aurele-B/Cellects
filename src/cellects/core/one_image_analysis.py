@@ -1051,7 +1051,7 @@ class OneImageAnalysis:
                 to crop from the image.
 
         """
-        if not self.cropped:
+        if not self.cropped and crop_coord is not None:
             logging.info("Crop using the automatically_crop method of OneImageAnalysis class")
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
