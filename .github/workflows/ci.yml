@@ -61,17 +61,20 @@ jobs:
           python-version: "3.12"
           cache: "pip"
 
-      - name: Install package + badge tool
+      - name: Install badge tool
         run: |
           python -m pip install -U pip
           pip install -e ".[test]"
-          pip install coverage-badge
+          pip install genbadge[coverage]
 
-      - name: Run tests + generate badge
+      - name: Run tests with coverage
         run: |
-          pytest --cov --cov-report=term
+          pytest --cov-report=xml
+
+      - name: Generate coverage badge from XML
+        run: |
           mkdir -p badges
-          coverage-badge -o badges/coverage.svg
+          genbadge coverage -i coverage.xml -o badges/coverage.svg
 
       - name: Publish badge to gh-pages
         uses: peaceiris/actions-gh-pages@v4
