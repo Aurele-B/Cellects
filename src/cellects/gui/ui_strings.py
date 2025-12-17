@@ -183,8 +183,7 @@ IAW["Advanced_mode"] = {}
 IAW["Advanced_mode"]["label"] = "Advanced mode"
 # START_TIP
 IAW["Advanced_mode"]["tips"] = \
-f"""The *Advanced mode* enables fine
--tuning of image analysis parameters for:
+f"""The *Advanced mode* enables fine tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
 - Applying filters before segmentation
 - Combining segmentations using logical operators
@@ -253,7 +252,8 @@ f"""Cellects proposes algorithms to automatically determine optimal specimen det
 first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
-NB: Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
+NB: 
+- Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
 processing.
 """
 # END_TIP
@@ -462,7 +462,8 @@ hard to detect (optional).
 video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).
-NB: Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
+NB: 
+- Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
 parameters to improve Post processing*, and then *Run All* arenas.
 """
 # END_TIP
