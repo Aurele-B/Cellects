@@ -1166,12 +1166,11 @@ By iteratively testing tracking parameters and validating results through visual
 
 <hr />
 <!-- START_Arena_to_analyze -->
-<p><strong>[Arena to analyze]</strong>:
-This arena number selects a specific arena in the current folder. The user can choose an arena,
+<h2 id="arena-to-analyze">Arena to analyze:</h2>
+<p>This arena number selects a specific arena in the current folder. The user can choose an arena,
 click <em>Detection</em> to load and analyze it, then <em>Read</em> results.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Cellects automatically names the arena by their position (left to right, top to bottom).</li>
 <li>For single arena setups, use 1.</li>
@@ -1179,78 +1178,81 @@ click <em>Detection</em> to load and analyze it, then <em>Read</em> results.</p>
 <li>Loading speeds improve if videos are pre</li>
 <li>Saved as ind_*.npy.</li>
 </ul>
+</div>
 <!-- END_Arena_to_analyze -->
 
 <hr />
 <!-- START_Maximal_growth_factor -->
-<p><strong>[Maximal growth factor]</strong>:
-This is the maximum allowable proportion of image area that may be covered by specimen movement
-between frames. Adjust accordingly:
-- Increase if specimen size is underestimated.
-- Decrease if specimen size is overestimated.</p>
+<h2 id="maximal-growth-factor">Maximal growth factor:</h2>
+<p>This is the maximum allowable proportion of image area that may be covered by specimen movement
+between frames. Adjust accordingly:</p>
+<ul>
+<li>Increase if specimen size is underestimated.</li>
+<li>Decrease if specimen size is overestimated.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Precisely, this defines an upper bound on relative coverage changes between sequential images.</li>
 </ul>
+</div>
 <!-- END_Maximal_growth_factor -->
 
 <hr />
 <!-- START_Temporal_smoothing -->
-<p><strong>[Temporal smoothing]</strong>:
-Applies temporal smoothing to reduce noise and highlight long
--term trends by averaging pixel intensity changes. Use when analyzing slope
+<h2 id="temporal-smoothing">Temporal smoothing:</h2>
+<p>Applies temporal smoothing to reduce noise and highlight long</p>
+<p>-term trends by averaging pixel intensity changes. Use when analyzing slope
 -based segmentation results.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>This uses a moving window algorithm on pixel intensity curves over time.</li>
 <li>Excessive iterations produce constant values, preventing accurate detection.</li>
 </ul>
+</div>
 <!-- END_Temporal_smoothing -->
 
 <hr />
 <!-- START_Segmentation_method -->
-<p><strong>[Segmentation method]</strong>:
-Cellects includes five video tracking options:
-- <strong>Frame option</strong>: Applies the image analysis algorithm frame by frame, without temporal dynamics.
-- <strong>Threshold option</strong>: Compares pixel intensity with the average intensity of the whole image at
-each time step.
-- <strong>Slope option</strong>: Compares pixel intensity slopes with an automatically defined threshold.
-- <strong>T and S option</strong>: logical AND of threshold and slope options.
-- <strong>T or S option</strong>: logical OR of threshold and slope options.</p>
+<h2 id="segmentation-method">Segmentation method:</h2>
+<p>Cellects includes five video tracking options:</p>
+<ul>
+<li><strong>Frame option</strong>: Applies the image analysis algorithm frame by frame, without temporal dynamics.</li>
+<li><strong>Threshold option</strong>: Compares pixel intensity with the average intensity of the whole image at
+each time step.</li>
+<li><strong>Slope option</strong>: Compares pixel intensity slopes with an automatically defined threshold.</li>
+<li><strong>T and S option</strong>: logical AND of threshold and slope options.</li>
+<li><strong>T or S option</strong>: logical OR of threshold and slope options.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
-<li>Selecting the <em>Compute all options</em> before dunning <em>Detection</em> allows method comparison.  Once
-analysis completes. Once the analysis completed, select one option and click <em>Read</em>.</li>
+<li>Selecting the <em>Compute all options</em> before dunning <em>Detection</em> allows method comparison.  Onceanalysis completes. Once the analysis completed, select one option and click <em>Read</em>.</li>
 <li>Computing only one option is faster and requires less memory.</li>
-<li>When <em>Heterogeneous background</em> or <em>Grid segmentation</em> has been selected in the image analysis
-window, only the <em>Frame</em> option remains available.</li>
+<li>When <em>Heterogeneous background</em> or <em>Grid segmentation</em> has been selected in the image analysiswindow, only the <em>Frame</em> option remains available.</li>
 </ul>
+</div>
 <!-- END_Segmentation_method -->
 
 <hr />
 <!-- START_Load_one_arena -->
-<p><strong>[Load one arena]</strong>:
-Clicking this button loads the arena associated with <em>Arena to analyze</em>. The center of the window
+<h2 id="load-one-arena">Load one arena:</h2>
+<p>Clicking this button loads the arena associated with <em>Arena to analyze</em>. The center of the window
 displays the first frame of that arena's video. Click <em>Read</em> to review the full video.</p>
 <!-- END_Load_one_arena -->
 
 <hr />
 <!-- START_Detection -->
-<p><strong>[Detection]</strong>:
-<em>Detection</em> applies a (or all) segmentation methods to one arena. Once finished, click <em>Read</em>  to
+<h2 id="detection">Detection:</h2>
+<p><em>Detection</em> applies a (or all) segmentation methods to one arena. Once finished, click <em>Read</em>  to
 view the detection result. If correct, answer <em>Done</em> to proceed with tuning parameters for  post
 processing.</p>
 <!-- END_Detection -->
 
 <!-- START_Read -->
-<p><strong>[Read]</strong>:
-Clicking <em>Read</em> starts the video display corresponding to the current state of the analysis.</p>
+<h2 id="read">Read:</h2>
+<p>Clicking <em>Read</em> starts the video display corresponding to the current state of the analysis.</p>
 <!-- END_Read -->
 
 <figure>
@@ -1260,27 +1262,29 @@ Clicking <em>Read</em> starts the video display corresponding to the current sta
 
 <hr />
 <!-- START_Fading_detection -->
-<p><strong>[Fading detection]</strong>:
-<em>Fading detection</em> monitors when specimens leave previously occupied areas, useful for  moving
+<h2 id="fading-detection">Fading detection:</h2>
+<p><em>Fading detection</em> monitors when specimens leave previously occupied areas, useful for  moving
 organisms rather than static growth. Uncheck this option if not needed. Set a value  between minus
-one and one to control sensitivity:
-- Near minus one: Minimal false removal of specimen traces.
-- Near one: High risk of over
--removal from all areas.</p>
+one and one to control sensitivity:</p>
+<ul>
+<li>Near minus one: Minimal false removal of specimen traces.</li>
+<li>Near one: High risk of over
+-removal from all areas.</li>
+</ul>
 <!-- END_Fading_detection -->
 
 <hr />
 <!-- START_Post_processing -->
-<p><strong>[Post processing]</strong>:
-<em>Post
--processing</em> applies detection algorithms with additional enhancements:
+<h2 id="post-processing">Post processing:</h2>
+<p>*Post</p>
+<p>-processing<em> applies detection algorithms with additional enhancements:
 - Binary operations: opening, closing, logical ops.
-- Fading detection<em> tracking: when specimen(s) may leave areas (optional).
-- </em>Correct errors around initial shape<em>: when the contour of the initial position of the specimen is
+- Fading detection</em> tracking: when specimen(s) may leave areas (optional).
+- <em>Correct errors around initial shape</em>: when the contour of the initial position of the specimen is
 hard to detect (optional).
-- </em>Connect distant shapes<em>: when the specimen's heterogeneity create wrong disconnections in the
+- <em>Connect distant shapes</em>: when the specimen's heterogeneity create wrong disconnections in the
 video detection (optional).
-- </em>Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
+- <em>Prevent fast growth near periphery</em>: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -1290,18 +1294,18 @@ parameters to improve Post processing</em>, and then <em>Run All</em> arenas.</p
 <!-- END_Post_processing -->
 
 <!-- START_Save_one_result -->
-<p><strong>[Save one result]</strong>:
-Complete the current video analysis by clicking this button for single
--arena processing. Saving includes:
+<h2 id="save-one-result">Save one result:</h2>
+<p>Complete the current video analysis by clicking this button for single</p>
+<p>-arena processing. Saving includes:
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>This action will overwrite results and validation data for the current arena.</li>
 </ul>
+</div>
 <!-- END_Save_one_result -->
 
 <figure>
@@ -1311,22 +1315,24 @@ Complete the current video analysis by clicking this button for single
 
 <hr />
 <!-- START_Run_All -->
-<p><strong>[Run All]</strong>:
-Apply validated parameters to all arenas by clicking <em>Run All</em>. This action:
-- Generates full
+<h2 id="run-all">Run All:</h2>
+<p>Apply validated parameters to all arenas by clicking <em>Run All</em>. This action:</p>
+<ul>
+<li>Generates full
 -resolution video outputs (storage
--intensive)
-- Processes videos sequentially with real
--time visualization
-- Calculates selected descriptors for each frame
-- Produces validation content at multiple intervals
-- Preserves current configuration settings</p>
+-intensive)</li>
+<li>Processes videos sequentially with real
+-time visualization</li>
+<li>Calculates selected descriptors for each frame</li>
+<li>Produces validation content at multiple intervals</li>
+<li>Preserves current configuration settings</li>
+</ul>
 <!-- END_Run_All -->
 
 <hr />
 <!-- START_Save_all_choices -->
-<p><strong>[Save all choices]</strong>:
-Clicking <em>Save all choices</em> writes/updates configuration files to preserve analysis parameters for
+<h2 id="save-all-choices">Save all choices:</h2>
+<p>Clicking <em>Save all choices</em> writes/updates configuration files to preserve analysis parameters for
 future replication.</p>
 <!-- END_Save_all_choices -->
 

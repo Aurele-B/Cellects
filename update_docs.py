@@ -8,7 +8,7 @@ from cellects.gui.ui_strings import *
 
 def wrap_tip(text, max_length=100):
 
-    # Step 1: Insert newline before "NB:"
+    # Step 1: Insert newline before '-'
     modif_text = re.sub("-", "\n-", text)
 
     # Step 2: Insert newline after hyphen followed by whitespace
@@ -62,8 +62,46 @@ def process_tips_in_file(file_path):
         file.write(content)
 
 def wrap_md_tip(text):
-    modif_text = re.sub("NB:", "!!! note\n", text)
-    return modif_text
+    final_note = ""
+    if "NB:" in text:
+        main, note = text.split("NB:")
+        split_text = np.array(note.split("\n-"))
+        wrapped_text = split_text[0]
+        if len(split_text) > 1:
+            for paragraph in split_text[1:]:
+                wrapped_text += "\n\t -" + re.sub("\n", "", paragraph)# + "\n"
+        # split_text = np.array(modif_text.split("\n\t-"))
+        final_note = "!!! note\n" + wrapped_text
+    else:
+        main = text
+    split_text = np.array(main.split("-"))
+    if len(split_text) > 1:
+        wrapped_main = split_text[0] + "\n-" + '-'.join(split_text[1:])
+    else:
+        wrapped_main = split_text[0]
+    # return main + final_note
+    return wrapped_main + final_note
+
+# def wrap_md_tip(text):
+#     def replace_note(match):
+#         original = match.group(0)
+#         parts = original.split('\n', 1)  # Split into "NB:" line and the rest
+#         prefix_line = parts[0]
+#         rest = parts[1] if len(parts) > 1 else ''
+#
+#         new_prefix = '!!! note'
+#         indented_rest = re.sub(r'^\s*-\s*', r'    - ', rest, flags=re.MULTILINE)
+#
+#         return f'{new_prefix}\n{indented_rest}'
+#
+#     # Replace all occurrences of "NB:\n- ..." with the indented note block
+#     pattern = r'(NB:\n(?:.*?\n?)+?)'
+#     modified_text = re.sub(pattern, replace_note, text, flags=re.DOTALL)
+#
+#     # Ensure a line break before each `!!! note` if not already present and preceded by content
+#     modified_text = re.sub(r'([^\n])\s*(\n!!! note)', r'\1\n\2', modified_text)
+#
+#     return modified_text
 
 def update_markdown(file_path, dynamic_content):
     #TODO: deal with list of items ("-") & admonitions ("!!! tip")
@@ -87,7 +125,7 @@ def update_markdown(file_path, dynamic_content):
         # value = wrap_tip(value, 100)
         # dynamic_lines.append(f"## {key.replace('_', ' ')}:\n{value}\n")
         modif_text = wrap_md_tip(value["tips"])
-        dynamic_lines.append(f"**[{value["label"]}]**:\n{modif_text}\n")
+        dynamic_lines.append(f"## {value["label"]}:\n{modif_text}\n")
         # Replace the marker block
         lines[start_idx + 1:end_idx] = dynamic_lines
 

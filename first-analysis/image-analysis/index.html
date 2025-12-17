@@ -1168,94 +1168,96 @@ Proper configuration here directly informs downstream video tracking workflows (
 
 <hr />
 <!-- START_Image_number -->
-<p><strong>[Image number]</strong>:
-Selects the image number to analyze. This number should only be changed when specimen(s) are
+<h2 id="image-number">Image number:</h2>
+<p>Selects the image number to analyze. This number should only be changed when specimen(s) are
 invisible on the first image (e.g., in the case of appearing colonies of bacteria), never otherwise.
 When the specimen(s) are invisible, read more advanced images until some material can be detected.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
-<li>When the data is stored as images, this image number comes from alphanumerical sorting of original
-image labels.</li>
+<li>When the data is stored as images, this image number comes from alphanumerical sorting of originalimage labels.</li>
 </ul>
+</div>
 <!-- END_Image_number -->
 
 <hr />
 <!-- START_several_blob_per_arena -->
-<p><strong>[One specimen per arena]</strong>:
-Select this option if there is only one specimen (e.g., a cell or connected colony) per arena. If
+<h2 id="one-specimen-per-arena">One specimen per arena:</h2>
+<p>Select this option if there is only one specimen (e.g., a cell or connected colony) per arena. If
 multiple specimens exist (or will be present) in an arena, unselect this option.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>This option is selected by default.</li>
 </ul>
+</div>
 <!-- END_several_blob_per_arena -->
 
 <hr />
 <!-- START_Scale_with -->
-<p><strong>[Scale with]</strong>:
-Specify how to compute true pixel size (in mm). Cellects can determine this scale using:
-- Image width (horizontal dimension)
-- Specimen width on first image (usable when specimens share consistent width)</p>
+<h2 id="scale-with">Scale with:</h2>
+<p>Specify how to compute true pixel size (in mm). Cellects can determine this scale using:</p>
+<ul>
+<li>Image width (horizontal dimension)</li>
+<li>Specimen width on first image (usable when specimens share consistent width)</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Advanced parameters allow disabling scaling and outputting in pixels.</li>
-<li>Using specimen width reduces initial detection efficiency. We recommend using image width unless
-specimen dimensions are known with higher accuracy than imaging equipment.</li>
+<li>Using specimen width reduces initial detection efficiency. We recommend using image width unlessspecimen dimensions are known with higher accuracy than imaging equipment.</li>
 <li>Pixel size is stored in a file named <code>software_settings.csv</code>.</li>
 </ul>
+</div>
 <!-- END_Scale_with -->
 
 <hr />
 <!-- START_Scale_size -->
-<p><strong>[Scale size]</strong>:
-The <em>Scale size</em> is the actual length (in mm) corresponding to scaling reference.</p>
+<h2 id="scale-size">Scale size:</h2>
+<p>The <em>Scale size</em> is the actual length (in mm) corresponding to scaling reference.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>This value enables conversion from pixel coordinates to physical dimensions.</li>
 </ul>
+</div>
 <!-- END_Scale_size -->
 
 <hr />
 <!-- START_Select_and_draw -->
-<p><strong>[Select and draw]</strong>:
-<em>Select and draw</em> allows the user to inform Cellects about specimen (<em>Cell</em>) and background (<em>Back</em>)
-areas in images. To use, click <em>Cell</em> or <em>Back</em> button (button color changes), then:
-- Click and drag mouse on image to mark corresponding area
-- Numbered drawings appear below buttons for reference
-- (if needed) Click numbered drawing to remove selection.</p>
+<h2 id="select-and-draw">Select and draw:</h2>
+<p><em>Select and draw</em> allows the user to inform Cellects about specimen (<em>Cell</em>) and background (<em>Back</em>)
+areas in images. To use, click <em>Cell</em> or <em>Back</em> button (button color changes), then:</p>
+<ul>
+<li>Click and drag mouse on image to mark corresponding area</li>
+<li>Numbered drawings appear below buttons for reference</li>
+<li>(if needed) Click numbered drawing to remove selection.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
-<li>By default, this tool only works for the first folder when analyzing multiple folders. Advanced
-parameters include an option to use these same masks in multiple folders.</li>
-<li>To apply saved masks (e.g., background or specimen initiation regions) across selected folders,
-enable <em>Keep Cell and Back drawing for all folders</em> in <em>Advanced parameters</em>.</li>
+<li>By default, this tool only works for the first folder when analyzing multiple folders. Advancedparameters include an option to use these same masks in multiple folders.</li>
+<li>To apply saved masks (e.g., background or specimen initiation regions) across selected folders,enable <em>Keep Cell and Back drawing for all folders</em> in <em>Advanced parameters</em>.</li>
 </ul>
+</div>
 <!-- END_Select_and_draw -->
 
 <hr />
 <!-- START_Draw_buttons -->
-<p><strong>[Draw buttons]</strong>:
-Click the <em>Cell</em> or <em>Back</em> button and draw a corresponding area on the image by clicking and holding
+<h2 id="draw-buttons">Draw buttons:</h2>
+<p>Click the <em>Cell</em> or <em>Back</em> button and draw a corresponding area on the image by clicking and holding
 mouse on the image.</p>
 <!-- END_Draw_buttons -->
 
 <hr />
 <!-- START_Generate_analysis_options -->
-<p><strong>[Generate analysis options]</strong>:
-Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
-first or last image:
-- <strong>Basic</strong> → provides suggestions in minutes. Alternatively, the user can switch to <em>Advanced mode</em>
-to review or modify more specific settings.</p>
+<h2 id="generate-analysis-options">Generate analysis options:</h2>
+<p>Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
+first or last image:</p>
+<ul>
+<li><strong>Basic</strong> → provides suggestions in minutes. Alternatively, the user can switch to <em>Advanced mode</em>
+to review or modify more specific settings.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 </div>
@@ -1270,55 +1272,57 @@ processing.</p>
 
 <hr />
 <!-- START_Select_option_to_read -->
-<p><strong>[Select option to read]</strong>:
-Choose the option producing optimal segmentation results. This menu appears after generating
+<h2 id="select-option-to-read">Select option to read:</h2>
+<p>Choose the option producing optimal segmentation results. This menu appears after generating
 analysis options, allowing direct quality assessment. For example, if Option 1 shows correct
-detection (e.g., 6 spots in 6 arenas), click <em>Yes</em>. Otherwise, improve analysis via:
-- Adjusting arena/spot shapes or sizes
-- Using <em>Select and draw</em> to annotate specimens/background
-- Manual configuration in advanced mode → Test changes with <em>Apply current config</em></p>
+detection (e.g., 6 spots in 6 arenas), click <em>Yes</em>. Otherwise, improve analysis via:</p>
+<ul>
+<li>Adjusting arena/spot shapes or sizes</li>
+<li>Using <em>Select and draw</em> to annotate specimens/background</li>
+<li>Manual configuration in advanced mode → Test changes with <em>Apply current config</em></li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Confirm when magenta/pink contours match expected positions and counts.</li>
 </ul>
+</div>
 <!-- END_Select_option_to_read -->
 
 <hr />
 <!-- START_Arena_shape -->
-<p><strong>[Arena shape]</strong>:
-Specifies whether the specimen(s) can move in a circular or rectangular arena.</p>
+<h2 id="arena-shape">Arena shape:</h2>
+<p>Specifies whether the specimen(s) can move in a circular or rectangular arena.</p>
 <!-- END_Arena_shape -->
 
 <hr />
 <!-- START_Spot_shape -->
-<p><strong>[Set spot shape]</strong>:
-Defines the expected shape of specimens within arenas.</p>
+<h2 id="set-spot-shape">Set spot shape:</h2>
+<p>Defines the expected shape of specimens within arenas.</p>
 <!-- END_Spot_shape -->
 
 <hr />
 <!-- START_Spot_size -->
-<p><strong>[Set spot size]</strong>:
-Initial horizontal size of the specimen(s) (in mm). If similar across all specimens, this can also
+<h2 id="set-spot-size">Set spot size:</h2>
+<p>Initial horizontal size of the specimen(s) (in mm). If similar across all specimens, this can also
 be used as a scale.</p>
 <!-- END_Spot_size -->
 
 <hr />
 <!-- START_Advanced_mode -->
-<p><strong>[Advanced mode]</strong>:
-The <em>Advanced mode</em> enables fine
--tuning of image analysis parameters for:
+<h2 id="advanced-mode">Advanced mode:</h2>
+<p>The <em>Advanced mode</em> enables fine</p>
+<p>-tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
 - Applying filters before segmentation
 - Combining segmentations using logical operators
 - Accessing rolling window and Kmeans algorithms</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Useful for reusing validated parameter sets or testing alternative methods.</li>
 </ul>
+</div>
 <!-- END_Advanced_mode -->
 
 <hr />
@@ -1328,56 +1332,60 @@ The <em>Advanced mode</em> enables fine
 </figure>
 <hr />
 <!-- START_Color_combination -->
-<p><strong>[Color combination]</strong>:
-Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
-image by 3 colors,  they transform it into 3 different visual properties
-- hsv: hue (color), saturation, value (lightness)
-- hls: hue (color), lightness, saturation
-- lab: Lightness, Red/Green, Blue/Yellow
-- luv and yuv: l and y are Lightness, u and v are related to colors</p>
+<h2 id="color-combination">Color combination:</h2>
+<p>Color spaces are transformations of the original BGR (Blue Green Red) image Instead of defining an
+image by 3 colors,  they transform it into 3 different visual properties</p>
+<ul>
+<li>hsv: hue (color), saturation, value (lightness)</li>
+<li>hls: hue (color), lightness, saturation</li>
+<li>lab: Lightness, Red/Green, Blue/Yellow</li>
+<li>luv and yuv: l and y are Lightness, u and v are related to colors</li>
+</ul>
 <!-- END_Color_combination -->
 
 <hr />
 <!-- START_Filter -->
-<p><strong>[Filter]</strong>:
-Apply a filter to preprocess images before segmentation.</p>
+<h2 id="filter">Filter:</h2>
+<p>Apply a filter to preprocess images before segmentation.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Filtering can improve segmentation accuracy by emphasizing relevant image features.</li>
 </ul>
+</div>
 <!-- END_Filter -->
 
 <hr />
 <!-- START_Logical_operator -->
-<p><strong>[Logical operator]</strong>:
-The <em>Logical operator</em> defines how to combine results from distinct segmentations (e.g., merging the
+<h2 id="logical-operator">Logical operator:</h2>
+<p>The <em>Logical operator</em> defines how to combine results from distinct segmentations (e.g., merging the
 segmentation resulting from a specific color space transformation and filtering with a different
 one). Supported operators: AND, OR, XOR.</p>
 <!-- END_Logical_operator -->
 
 <hr />
 <!-- START_Rolling_window_segmentation -->
-<p><strong>[Rolling window segmentation]</strong>:
-Segments image regions using a rolling window approach to detect local intensity valleys. The method
+<h2 id="rolling-window-segmentation">Rolling window segmentation:</h2>
+<p>Segments image regions using a rolling window approach to detect local intensity valleys. The method
 applies Otsu's thresholding locally on each window.</p>
 <!-- END_Rolling_window_segmentation -->
 
 <hr />
 <!-- START_Kmeans -->
-<p><strong>[Kmeans]</strong>:
-The <em>Kmeans</em> algorithm clusters pixels into a specified number of categories (2
--5) to identify specimen regions within the image.</p>
+<h2 id="kmeans">Kmeans:</h2>
+<p>The <em>Kmeans</em> algorithm clusters pixels into a specified number of categories (2</p>
+<p>-5) to identify specimen regions within the image.</p>
 <!-- END_Kmeans -->
 
 <hr />
 <!-- START_Video_delimitation -->
-<p><strong>[Video delimitation]</strong>:
-After confirming initial detection, automatic video delimitation results appear in blue.  Click
-<em>Yes</em> if accurate or <em>No</em> for:
-- A slower, higher precision algorithm.
-- Manual delineation option.</p>
+<h2 id="video-delimitation">Video delimitation:</h2>
+<p>After confirming initial detection, automatic video delimitation results appear in blue.  Click
+<em>Yes</em> if accurate or <em>No</em> for:</p>
+<ul>
+<li>A slower, higher precision algorithm.</li>
+<li>Manual delineation option.</li>
+</ul>
 <!-- END_Video_delimitation -->
 
 <figure>
@@ -1387,32 +1395,33 @@ After confirming initial detection, automatic video delimitation results appear 
 
 <hr />
 <!-- START_Last_image_question -->
-<p><strong>[Last image question]</strong>:
-If parameters might fail on later images, test them first on the final frame:
-- <em>Yes</em> → validates with last image before tracking.
-- <em>No</em> → proceeds directly to video analysis.</p>
+<h2 id="last-image-question">Last image question:</h2>
+<p>If parameters might fail on later images, test them first on the final frame:</p>
+<ul>
+<li><em>Yes</em> → validates with last image before tracking.</li>
+<li><em>No</em> → proceeds directly to video analysis.</li>
+</ul>
 <!-- END_Last_image_question -->
 
 <hr />
 <!-- START_Start_differs_from_arena -->
-<p><strong>[Check if the medium at starting position differs from the rest of the arena]</strong>:
-Enable if the substrate differs between initial position and arena growth area (e.g., nutritive gel
+<h2 id="check-if-the-medium-at-starting-position-differs-from-the-rest-of-the-arena">Check if the medium at starting position differs from the rest of the arena:</h2>
+<p>Enable if the substrate differs between initial position and arena growth area (e.g., nutritive gel
 vs. agar). Disable for homogeneous substrates.</p>
 <!-- END_Start_differs_from_arena -->
 
 <hr />
 <!-- START_Save_image_analysis -->
-<p><strong>[Save image analysis]</strong>:
-Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze
+<h2 id="save-image-analysis">Save image analysis:</h2>
+<p>Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze
 video(s), click <em>Next</em>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>When analyzing a single specimen per arena, keeps the largest connected component.</li>
-<li>Saves all selected descriptors in .csv format for the current image and generates a validation
-image to assess segmentation accuracy.</li>
+<li>Saves all selected descriptors in .csv format for the current image and generates a validationimage to assess segmentation accuracy.</li>
 </ul>
+</div>
 <!-- END_Save_image_analysis -->
 
 <hr />

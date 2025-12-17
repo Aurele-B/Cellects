@@ -1166,35 +1166,33 @@ These configurations directly inform later stages (e.g., image analysis, video t
 
 <hr />
 <!-- START_Image_list_or_videos -->
-<p><strong>[Image list or videos]</strong>:
-The <em>Image list or video</em> option indicates whether the data have been stored as an image stack (i.e.
+<h2 id="image-list-or-videos">Image list or videos:</h2>
+<p>The <em>Image list or video</em> option indicates whether the data have been stored as an image stack (i.e.
 a set of files where each file contains a single image) or as a video. Images must be named
 alphanumerically so the program can read them in the right order.</p>
 <!-- END_Image_list_or_videos -->
 
 <hr />
 <!-- START_Image_prefix_and_extension -->
-<p><strong>[Image prefix and extension]</strong>:
-The <em>Images prefix</em> and <em>Images extension</em> fields allow Cellects to consider relevant data. For
+<h2 id="image-prefix-and-extension">Image prefix and extension:</h2>
+<p>The <em>Images prefix</em> and <em>Images extension</em> fields allow Cellects to consider relevant data. For
 example, setting 'exp_' as image prefix and '.jpg' as image extension will cause Cellects to only
 consider JPG files whose name starts with 'exp_'. Remaining labels should indicate the order in
 which images were taken.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Image prefix is optional</li>
-<li>If every .jpg files start with IMG_ but other .jpg files exist, use the prefix to exclude
-irrelevant files.</li>
-<li>Supported formats: bmp, dib, exr, exr, hdr, jp2, jpe, jpeg, jpg, pbm, pfm, pgm, pic, png,  pnm,
-ppm, ras, sr, tif, tiff, webp, cr2, cr3, nef, arw, sr2, raf, prf, rw2, pef, dng, 3fr, iiq.</li>
+<li>If every .jpg files start with IMG_ but other .jpg files exist, use the prefix to excludeirrelevant files.</li>
+<li>Supported formats: bmp, dib, exr, exr, hdr, jp2, jpe, jpeg, jpg, pbm, pfm, pgm, pic, png,  pnm,ppm, ras, sr, tif, tiff, webp, cr2, cr3, nef, arw, sr2, raf, prf, rw2, pef, dng, 3fr, iiq.</li>
 </ul>
+</div>
 <!-- END_Image_prefix_and_extension -->
 
 <hr />
 <!-- START_Folder -->
-<p><strong>[Folder]</strong>:
-The <em>Folder</em> field must specify the directory path to the folder(s) for Cellects to be able to run
+<h2 id="folder">Folder:</h2>
+<p>The <em>Folder</em> field must specify the directory path to the folder(s) for Cellects to be able to run
 the analysis. The user can copy/paste this path into the field or navigate to the folder using the
 <em>Browse</em> push button. For batch analysis, provide a path leading directly to the parent folder
 containing all subfolders.</p>
@@ -1202,49 +1200,48 @@ containing all subfolders.</p>
 
 <hr />
 <!-- START_Arena_number_per_folder -->
-<p><strong>[Arena number per folder]</strong>:
-The <em>Arena number per folder</em> specifies how many arenas are present in the images. Cellects will
+<h2 id="arena-number-per-folder">Arena number per folder:</h2>
+<p>The <em>Arena number per folder</em> specifies how many arenas are present in the images. Cellects will
 process and analyze each arena separately.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
-<li>For batch processing, assign different arena counts for each subfolder (see Fig. 11: the several
-folder window).</li>
+<li>For batch processing, assign different arena counts for each subfolder (see Fig. 11: the severalfolder window).</li>
 </ul>
+</div>
 <!-- END_Arena_number_per_folder -->
 
 <hr />
 <!-- START_Browse -->
-<p><strong>[Browse]</strong>:
-Clicking the <em>Browse</em> button opens a dialog to select a folder for analysis.</p>
+<h2 id="browse">Browse:</h2>
+<p>Clicking the <em>Browse</em> button opens a dialog to select a folder for analysis.</p>
 <!-- END_Browse -->
 
 <hr />
 <!-- START_Advanced_parameters -->
-<p><strong>[Advanced parameters]</strong>:
-Clicking the <em>Advanced parameters</em> button opens the window containing all secondary parameters of
+<h2 id="advanced-parameters">Advanced parameters:</h2>
+<p>Clicking the <em>Advanced parameters</em> button opens the window containing all secondary parameters of
 the software.  Find details about this window in the advanced documentation.</p>
 <!-- END_Advanced_parameters -->
 
 <hr />
 <!-- START_Required_outputs -->
-<p><strong>[Required outputs]</strong>:
-Clicking the <em>Required outputs</em> button opens the window allowing to choose what descriptors Cellects
+<h2 id="required-outputs">Required outputs:</h2>
+<p>Clicking the <em>Required outputs</em> button opens the window allowing to choose what descriptors Cellects
 will compute on the selected data. Find details about this window in the advanced documentation.</p>
 <!-- END_Required_outputs -->
 
 <hr />
 <!-- START_Run_all_directly -->
-<p><strong>[Run all directly]</strong>:
-This option appears when image analysis has already been performed for the current folder. It is a
+<h2 id="run-all-directly">Run all directly:</h2>
+<p>This option appears when image analysis has already been performed for the current folder. It is a
 shortcut to bypass the image analysis step and proceed directly to video tracking refinement.</p>
 <!-- END_Run_all_directly -->
 
 <hr />
 <!-- START_Next -->
-<p><strong>[Next]</strong>:
-Click the <em>Next</em> button to go to the image analysis window (Fig. 2), or  to the window showing the
+<h2 id="next">Next:</h2>
+<p>Click the <em>Next</em> button to go to the image analysis window (Fig. 2), or  to the window showing the
 list of folders (Fig. 11) if applicable.</p>
 <!-- END_Next -->
 

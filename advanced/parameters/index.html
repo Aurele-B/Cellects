@@ -1166,143 +1166,156 @@ For instance, users can optimize for low-noise environments with [Mesh minimal i
 
 <hr />
 <!-- START_Crop_images -->
-<p><strong>[Automatically crop images]</strong>:
-Uses initial image detection to crop all images and improve arena/last image detection.</p>
+<h2 id="automatically-crop-images">Automatically crop images:</h2>
+<p>Uses initial image detection to crop all images and improve arena/last image detection.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Unselect this option if analysis fails or crashes during image analysis.</li>
 </ul>
+</div>
 <!-- END_Crop_images -->
 
 <hr />
 <!-- START_Subtract_background -->
-<p><strong>[Subtract background]</strong>:
-Takes the first image and subtracts it from subsequent images. This can improve or degrade detection
+<h2 id="subtract-background">Subtract background:</h2>
+<p>Takes the first image and subtracts it from subsequent images. This can improve or degrade detection
 depending on dataset characteristics.</p>
 <!-- END_Subtract_background -->
 
 <hr />
 <!-- START_Keep_drawings -->
-<p><strong>[Keep Cell and Back drawings for all folders]</strong>:
-During initial image analysis, if the user drew cell/back regions to assist detection, this option
-saves and uses these annotations across all folders. In summary:
-- <strong>Checked</strong> → retain annotations for all folders
-- <strong>Unchecked</strong> → apply only to current folder</p>
+<h2 id="keep-cell-and-back-drawings-for-all-folders">Keep Cell and Back drawings for all folders:</h2>
+<p>During initial image analysis, if the user drew cell/back regions to assist detection, this option
+saves and uses these annotations across all folders. In summary:</p>
+<ul>
+<li><strong>Checked</strong> → retain annotations for all folders</li>
+<li><strong>Unchecked</strong> → apply only to current folder</li>
+</ul>
 <!-- END_Keep_drawings -->
 
 <hr />
 <!-- START_Correct_errors_around_initial -->
-<p><strong>[Correct errors around initial specimen's position]</strong>:
-Applies an algorithm to correct detection errors near the initial specimen position due to color
-variations (e.g., from nutrient patches). Technical workflow:
-- Identifies potential gaps around initial position
-- Monitors local growth velocity
-- Fills gaps using growth patterns from adjacent pixels</p>
+<h2 id="correct-errors-around-initial-specimens-position">Correct errors around initial specimen's position:</h2>
+<p>Applies an algorithm to correct detection errors near the initial specimen position due to color
+variations (e.g., from nutrient patches). Technical workflow:</p>
+<ul>
+<li>Identifies potential gaps around initial position</li>
+<li>Monitors local growth velocity</li>
+<li>Fills gaps using growth patterns from adjacent pixels</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
-<li>⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no difference
-between starting and growth regions).</li>
+<li>⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no differencebetween starting and growth regions).</li>
 </ul>
+</div>
 <!-- END_Correct_errors_around_initial -->
 
 <hr />
 <!-- START_Prevent_fast_growth_near_periphery -->
-<p><strong>[Prevent fast growth near periphery]</strong>:
-During video analysis, prevents false specimen detection at arena borders by filtering rapid
-periphery growth.
-- <strong>Checked</strong> → Exclude fast
--moving detections near boundaries
-- <strong>Unchecked</strong> → Use standard detection criteria</p>
+<h2 id="prevent-fast-growth-near-periphery">Prevent fast growth near periphery:</h2>
+<p>During video analysis, prevents false specimen detection at arena borders by filtering rapid
+periphery growth.</p>
+<ul>
+<li><strong>Checked</strong> → Exclude fast
+-moving detections near boundaries</li>
+<li><strong>Unchecked</strong> → Use standard detection criteria</li>
+</ul>
 <!-- END_Prevent_fast_growth_near_periphery -->
 
 <hr />
 <!-- START_Connect_distant_shapes -->
-<p><strong>[Connect distant shapes]</strong>:
-Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
+<h2 id="connect-distant-shapes">Connect distant shapes:</h2>
+<p>Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
 specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
-and the detection is smaller than the true specimen. Technical implementation:
-- Identifies disconnected subregions
-- Analyzes local growth dynamics
-- Recreates connections using spatially consistent growth patterns</p>
+and the detection is smaller than the true specimen. Technical implementation:</p>
+<ul>
+<li>Identifies disconnected subregions</li>
+<li>Analyzes local growth dynamics</li>
+<li>Recreates connections using spatially consistent growth patterns</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Increases analysis time substantially.</li>
 </ul>
+</div>
 <!-- END_Connect_distant_shapes -->
 
 <hr />
 <!-- START_Specimens_have_same_direction -->
-<p><strong>[All specimens have the same direction]</strong>:
-Select to optimize arena detection for specimens moving move in the same direction.
-- <strong>Checked</strong> → Uses motion pattern analysis for arena localization.
-- <strong>Unchecked</strong> → Employs standard centroid
--based algorithm.</p>
+<h2 id="all-specimens-have-the-same-direction">All specimens have the same direction:</h2>
+<p>Select to optimize arena detection for specimens moving move in the same direction.</p>
+<ul>
+<li><strong>Checked</strong> → Uses motion pattern analysis for arena localization.</li>
+<li><strong>Unchecked</strong> → Employs standard centroid
+-based algorithm.</li>
+</ul>
 <!-- END_Specimens_have_same_direction -->
 
 <hr />
 <!-- START_Appearance_size_threshold -->
-<p><strong>[Appearance size threshold (automatic if checked)]</strong>:
-Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
-- <strong>Checked</strong> → Automatic threshold calculation.
-- <strong>Unchecked</strong> → Manual user
--defined threshold.</p>
+<h2 id="appearance-size-threshold-automatic-if-checked">Appearance size threshold (automatic if checked):</h2>
+<p>Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).</p>
+<ul>
+<li><strong>Checked</strong> → Automatic threshold calculation.</li>
+<li><strong>Unchecked</strong> → Manual user
+-defined threshold.</li>
+</ul>
 <!-- END_Appearance_size_threshold -->
 
 <hr />
 <!-- START_Appearance_detection_method -->
-<p><strong>[Appearance detection method]</strong>:
-Selection criteria for initial specimen detection:
-- Largest: Based on component size metric.
-- Most central: Based on arena center proximity.</p>
+<h2 id="appearance-detection-method">Appearance detection method:</h2>
+<p>Selection criteria for initial specimen detection:</p>
+<ul>
+<li>Largest: Based on component size metric.</li>
+<li>Most central: Based on arena center proximity.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Applicable only to progressively emerging specimens.</li>
 </ul>
+</div>
 <!-- END_Appearance_detection_method -->
 
 <hr />
 <!-- START_Mesh_side_length -->
-<p><strong>[Mesh side length]</strong>:
-Pixel dimension for analysis window size.</p>
+<h2 id="mesh-side-length">Mesh side length:</h2>
+<p>Pixel dimension for analysis window size.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Must not exceed minimum image dimension</li>
 </ul>
+</div>
 <!-- END_Mesh_side_length -->
 
 <hr />
 <!-- START_Mesh_step_length -->
-<p><strong>[Mesh step]</strong>:
-The size of the step (in pixels) between consecutive rolling window positions.</p>
+<h2 id="mesh-step">Mesh step:</h2>
+<p>The size of the step (in pixels) between consecutive rolling window positions.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Must not exceed the mesh side length to ensure full coverage of the image.</li>
 </ul>
+</div>
 <!-- END_Mesh_step_length -->
 
 <hr />
 <!-- START_Mesh_minimal_intensity_variation -->
-<p><strong>[Mesh minimal intensity variation]</strong>:
-The minimal variation in intensity to consider that a given window does contain the specimen(s).</p>
+<h2 id="mesh-minimal-intensity-variation">Mesh minimal intensity variation:</h2>
+<p>The minimal variation in intensity to consider that a given window does contain the specimen(s).</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>This threshold is an intensity value ranging from 0 to 255 (generally small).</li>
 <li>Correspond to the level of noise in the background.</li>
 </ul>
+</div>
 <!-- END_Mesh_minimal_intensity_variation -->
 
 <hr />
@@ -1313,101 +1326,109 @@ The minimal variation in intensity to consider that a given window does contain 
 
 <hr />
 <!-- START_Expected_oscillation_period -->
-<p><strong>[Expected oscillation period]</strong>:
-The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
+<h2 id="expected-oscillation-period">Expected oscillation period:</h2>
+<p>The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
 based on luminosity variations.</p>
 <!-- END_Expected_oscillation_period -->
 
 <hr />
 <!-- START_Minimal_oscillating_cluster_size -->
-<p><strong>[Minimal oscillating cluster size]</strong>:
-When looking for oscillatory patterns, Cellects detects connected components that are thickening or
+<h2 id="minimal-oscillating-cluster-size">Minimal oscillating cluster size:</h2>
+<p>When looking for oscillatory patterns, Cellects detects connected components that are thickening or
 slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
 groups of connected pixels. This threshold is useful to filter out small noisy oscillations.</p>
 <!-- END_Minimal_oscillating_cluster_size -->
 
 <hr />
 <!-- START_Spatio_temporal_scaling -->
-<p><strong>[Spatio-temporal scaling]</strong>:
-Defines the spatiotemporal scale of the dataset:
-- Time between images or frames (minutes).
-- An option to convert areas/distances from pixels to mm/mm².</p>
+<h2 id="spatio-temporal-scaling">Spatio-temporal scaling:</h2>
+<p>Defines the spatiotemporal scale of the dataset:</p>
+<ul>
+<li>Time between images or frames (minutes).</li>
+<li>An option to convert areas/distances from pixels to mm/mm².</li>
+</ul>
 <!-- END_Spatio_temporal_scaling -->
 
 <hr />
 <!-- START_Parallel_analysis -->
-<p><strong>[Run analysis in parallel]</strong>:
-Allow the use of more than one core of the computer processor.
-- <strong>Checked</strong> → Uses multiple CPU cores to analyze arenas in parallel (faster).
-- <strong>Unchecked</strong> → Single core analysis.</p>
+<h2 id="run-analysis-in-parallel">Run analysis in parallel:</h2>
+<p>Allow the use of more than one core of the computer processor.</p>
+<ul>
+<li><strong>Checked</strong> → Uses multiple CPU cores to analyze arenas in parallel (faster).</li>
+<li><strong>Unchecked</strong> → Single core analysis.</li>
+</ul>
 <!-- END_Parallel_analysis -->
 
 <hr />
 <!-- START_Proc_max_core_nb -->
-<p><strong>[Proc max core number]</strong>:
-Maximum number of logical CPU cores to use during analysis. The default value is set to the total
+<h2 id="proc-max-core-number">Proc max core number:</h2>
+<p>Maximum number of logical CPU cores to use during analysis. The default value is set to the total
 number of available CPU cores minus one.</p>
 <!-- END_Proc_max_core_nb -->
 
 <hr />
 <!-- START_Minimal_RAM_let_free -->
-<p><strong>[Minimal RAM let free]</strong>:
-Amount of RAM that should be left available for other programs. Setting to <code>0</code> gives Cellects all
+<h2 id="minimal-ram-let-free">Minimal RAM let free:</h2>
+<p>Amount of RAM that should be left available for other programs. Setting to <code>0</code> gives Cellects all
 memory, but increases crash risk if other apps are open.</p>
 <!-- END_Minimal_RAM_let_free -->
 
 <hr />
 <!-- START_Lose_accuracy_to_save_RAM -->
-<p><strong>[Lose accuracy to save RAM]</strong>:
-For low memory systems:
-- Converts video from <code>np.float64</code> to <code>uint8</code>
-- Saves RAM at the cost of a slight precision loss</p>
+<h2 id="lose-accuracy-to-save-ram">Lose accuracy to save RAM:</h2>
+<p>For low memory systems:</p>
+<ul>
+<li>Converts video from <code>np.float64</code> to <code>uint8</code></li>
+<li>Saves RAM at the cost of a slight precision loss</li>
+</ul>
 <!-- END_Lose_accuracy_to_save_RAM -->
 
 <hr />
 <!-- START_Video_fps -->
-<p><strong>[Video fps]</strong>:
-Frames per second of validation videos.</p>
+<h2 id="video-fps">Video fps:</h2>
+<p>Frames per second of validation videos.</p>
 <!-- END_Video_fps -->
 
 <hr />
 <!-- START_Keep_unaltered_videos -->
-<p><strong>[Keep unaltered videos]</strong>:
-Keeps unaltered <code>.npy</code> videos in hard drive.
-- <strong>Checked</strong> → Rerunning the same analysis will be faster.
-- <strong>Unchecked</strong> → These videos will be written and removed each run of the same analysis.</p>
+<h2 id="keep-unaltered-videos">Keep unaltered videos:</h2>
+<p>Keeps unaltered <code>.npy</code> videos in hard drive.</p>
+<ul>
+<li><strong>Checked</strong> → Rerunning the same analysis will be faster.</li>
+<li><strong>Unchecked</strong> → These videos will be written and removed each run of the same analysis.</li>
+</ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-</div>
 <ul>
 <li>Large files: it is recommended to remove them once analysis is entirely finalized.</li>
 </ul>
+</div>
 <!-- END_Keep_unaltered_videos -->
 
 <hr />
 <!-- START_Save_processed_videos -->
-<p><strong>[Save processed videos]</strong>:
-Saves lightweight processed validation videos (recommended over unaltered videos). These videos
+<h2 id="save-processed-videos">Save processed videos:</h2>
+<p>Saves lightweight processed validation videos (recommended over unaltered videos). These videos
 assess analysis accuracy and can be read in standard video players.</p>
 <!-- END_Save_processed_videos -->
 
 <hr />
 <!-- START_Csc_for_video_analysis -->
-<p><strong>[Color space combination for video analysis]</strong>:
-Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
+<h2 id="color-space-combination-for-video-analysis">Color space combination for video analysis:</h2>
+<p>Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
 color spaces without (re)running image analysis.</p>
 <!-- END_Csc_for_video_analysis -->
 
 <hr />
 <!-- START_Night_mode -->
-<p><strong>[Night mode]</strong>:
-Switches the application background between light and dark themes.</p>
+<h2 id="night-mode">Night mode:</h2>
+<p>Switches the application background between light and dark themes.</p>
 <!-- END_Night_mode -->
 
 <hr />
 <!-- START_Reset_all_settings -->
-<p><strong>[Reset all settings]</strong>:
-Useful when the software freezes with no apparent reason. To reset all settings, it removes the
+<h2 id="reset-all-settings">Reset all settings:</h2>
+<p>Useful when the software freezes with no apparent reason. To reset all settings, it removes the
 config file in the  current folder as well as the config file in the software folder. Then, it
 retrieves and saves the default parameters.</p>
 <!-- END_Reset_all_settings -->
