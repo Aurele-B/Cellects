@@ -81,28 +81,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: .
-          destination_dir: .
+          publish_dir: badges
+          destination_dir: badges
           keep_files: true
-          exclude_assets: |
-            .git
-            .github
-            **/__pycache__/**
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: "true"
-
-      # Build & publish the artifacts only once (python 3.12)
-      # OPTIONAL : this will be done automatically by release.yml
-      #- name: Build sdist and wheel
-      #  if: matrix.python == '3.12'
-      #  shell: bash -l {0}
-      #  run: |
-      #    python -m build
-      #    ls -lh dist
-      #
-      #- name: Upload dist artifacts
-      #  if: matrix.python == '3.12'
-      #  uses: actions/upload-artifact@v4
-      #  with:
-      #    name: python-package-distributions
-      #    path: dist/*
