@@ -24,7 +24,7 @@ easy installation and user-friendly interface.
 ---
 
 ## 🚀 Installation (Short version)
-Install using our Windows installer: [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/tag/0.2.1)
+Install using our Windows installer: [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
 ```bash
