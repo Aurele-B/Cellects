@@ -1,6 +1,6 @@
 ## License
 
-GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE.odt)).
+GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE)).
 
 ## Citation 
 To cite Cellects, use:
