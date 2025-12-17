@@ -16,7 +16,8 @@ For instance, users can optimize for low-noise environments with [Mesh minimal i
 <!-- START_Crop_images -->
 **[Automatically crop images]**:
 Uses initial image detection to crop all images and improve arena/last image detection.
-NB:
+!!! note
+
 - Unselect this option if analysis fails or crashes during image analysis.
 
 <!-- END_Crop_images -->
@@ -50,7 +51,8 @@ variations (e.g., from nutrient patches). Technical workflow:
 - Identifies potential gaps around initial position
 - Monitors local growth velocity
 - Fills gaps using growth patterns from adjacent pixels
-NB:
+!!! note
+
 - ⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no difference
 between starting and growth regions).
 
@@ -78,7 +80,8 @@ and the detection is smaller than the true specimen. Technical implementation:
 - Identifies disconnected subregions
 - Analyzes local growth dynamics
 - Recreates connections using spatially consistent growth patterns
-NB:
+!!! note
+
 - Increases analysis time substantially.
 
 <!-- END_Connect_distant_shapes -->
@@ -112,7 +115,8 @@ Minimum pixel count threshold for identifying specimen emergence (e.g., bacteria
 Selection criteria for initial specimen detection:
 - Largest: Based on component size metric.
 - Most central: Based on arena center proximity.
-NB:
+!!! note
+
 - Applicable only to progressively emerging specimens.
 
 <!-- END_Appearance_detection_method -->
@@ -122,7 +126,8 @@ NB:
 <!-- START_Mesh_side_length -->
 **[Mesh side length]**:
 Pixel dimension for analysis window size.
-NB:
+!!! note
+
 - Must not exceed minimum image dimension
 
 <!-- END_Mesh_side_length -->
@@ -132,7 +137,8 @@ NB:
 <!-- START_Mesh_step_length -->
 **[Mesh step]**:
 The size of the step (in pixels) between consecutive rolling window positions.
-NB:
+!!! note
+
 - Must not exceed the mesh side length to ensure full coverage of the image.
 
 <!-- END_Mesh_step_length -->
@@ -142,7 +148,8 @@ NB:
 <!-- START_Mesh_minimal_intensity_variation -->
 **[Mesh minimal intensity variation]**:
 The minimal variation in intensity to consider that a given window does contain the specimen(s).
-NB:
+!!! note
+
 - This threshold is an intensity value ranging from 0 to 255 (generally small).
 - Correspond to the level of noise in the background.
 
@@ -237,7 +244,8 @@ Frames per second of validation videos.
 Keeps unaltered `.npy` videos in hard drive.
 - **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.
-NB:
+!!! note
+
 - Large files: it is recommended to remove them once analysis is entirely finalized.
 
 <!-- END_Keep_unaltered_videos -->

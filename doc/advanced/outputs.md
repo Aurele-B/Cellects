@@ -21,7 +21,8 @@ For example:
 **[Pixels covered by the specimen(s)]**:
 Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
 parameters.
-NB:
+!!! note
+
 - These files may consume significant memory depending on the total frame count.
 
 <!-- END_coord_specimen -->
@@ -37,7 +38,8 @@ detection is enabled, it will be computed on the detected network instead. The o
 - A .csv file for vertices with coordinates (t, y, x), IDs, tip status, part of the specimen's
 initial position, connection status with other vertices.
 - A .csv file for edges with IDs, vertex pairs, lengths, average width, and intensity.
-NB:
+!!! note
+
 - These files may consume significant memory depending on the total frame count.
 - Network and graph detection together are relevant only for organisms with a distinct internal
 network (e.g., *Physarum polycephalum*).
