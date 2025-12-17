@@ -64,11 +64,11 @@ validation:
   omitted_files: ignore # avoid warning about auto-generated API files
 
 nav:
+  - Getting started:
+    - Quick start: getting-started.md
+    - What is Cellects?: what-is-cellects.md
+    - Installation: installation.md
   - User guide:
-    - Getting started:
-      - Quick start: getting-started.md
-      - What is Cellects?: what-is-cellects.md
-      - Installation: installation.md
     - Setting up a first analysis:
         - Overview: first-analysis/index.md
         - Data localisation: first-analysis/data-localisation.md
