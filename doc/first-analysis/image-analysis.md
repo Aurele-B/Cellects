@@ -20,7 +20,8 @@ Proper configuration here directly informs downstream video tracking workflows (
 Selects the image number to analyze. This number should only be changed when specimen(s) are
 invisible on the first image (e.g., in the case of appearing colonies of bacteria), never otherwise.
 When the specimen(s) are invisible, read more advanced images until some material can be detected.
-NB:
+!!! note
+
 - When the data is stored as images, this image number comes from alphanumerical sorting of original
 image labels.
 
@@ -32,7 +33,8 @@ image labels.
 **[One specimen per arena]**:
 Select this option if there is only one specimen (e.g., a cell or connected colony) per arena. If
 multiple specimens exist (or will be present) in an arena, unselect this option.
-NB:
+!!! note
+
 - This option is selected by default.
 
 <!-- END_several_blob_per_arena -->
@@ -44,7 +46,8 @@ NB:
 Specify how to compute true pixel size (in mm). Cellects can determine this scale using:
 - Image width (horizontal dimension)
 - Specimen width on first image (usable when specimens share consistent width)
-NB:
+!!! note
+
 - Advanced parameters allow disabling scaling and outputting in pixels.
 - Using specimen width reduces initial detection efficiency. We recommend using image width unless
 specimen dimensions are known with higher accuracy than imaging equipment.
@@ -57,7 +60,8 @@ specimen dimensions are known with higher accuracy than imaging equipment.
 <!-- START_Scale_size -->
 **[Scale size]**:
 The *Scale size* is the actual length (in mm) corresponding to scaling reference.
-NB:
+!!! note
+
 - This value enables conversion from pixel coordinates to physical dimensions.
 
 <!-- END_Scale_size -->
@@ -71,7 +75,8 @@ areas in images. To use, click *Cell* or *Back* button (button color changes), t
 - Click and drag mouse on image to mark corresponding area
 - Numbered drawings appear below buttons for reference
 - (if needed) Click numbered drawing to remove selection.
-NB:
+!!! note
+
 - By default, this tool only works for the first folder when analyzing multiple folders. Advanced
 parameters include an option to use these same masks in multiple folders.
 - To apply saved masks (e.g., background or specimen initiation regions) across selected folders,
@@ -96,7 +101,8 @@ Cellects proposes algorithms to automatically determine optimal specimen detecti
 first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
-NB: Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
+!!! note
+ Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
 processing.
 
 <!-- END_Generate_analysis_options -->
@@ -116,7 +122,8 @@ detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis 
 - Adjusting arena/spot shapes or sizes
 - Using *Select and draw* to annotate specimens/background
 - Manual configuration in advanced mode → Test changes with *Apply current config*
-NB:
+!!! note
+
 - Confirm when magenta/pink contours match expected positions and counts.
 
 <!-- END_Select_option_to_read -->
@@ -156,7 +163,8 @@ The *Advanced mode* enables fine
 - Applying filters before segmentation
 - Combining segmentations using logical operators
 - Accessing rolling window and Kmeans algorithms
-NB:
+!!! note
+
 - Useful for reusing validated parameter sets or testing alternative methods.
 
 <!-- END_Advanced_mode -->
@@ -184,7 +192,8 @@ image by 3 colors,  they transform it into 3 different visual properties
 <!-- START_Filter -->
 **[Filter]**:
 Apply a filter to preprocess images before segmentation.
-NB:
+!!! note
+
 - Filtering can improve segmentation accuracy by emphasizing relevant image features.
 
 <!-- END_Filter -->
@@ -258,7 +267,8 @@ vs. agar). Disable for homogeneous substrates.
 **[Save image analysis]**:
 Complete the analysis of the current image. Clicking this button analyzes only one image. To analyze
 video(s), click *Next*.
-NB:
+!!! note
+
 - When analyzing a single specimen per arena, keeps the largest connected component.
 - Saves all selected descriptors in .csv format for the current image and generates a validation
 image to assess segmentation accuracy.

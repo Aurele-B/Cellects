@@ -61,7 +61,12 @@ def process_tips_in_file(file_path):
     with open(file_path, 'w') as file:
         file.write(content)
 
+def wrap_md_tip(text):
+    modif_text = re.sub("NB:", "!!! note\n", text)
+    return modif_text
+
 def update_markdown(file_path, dynamic_content):
+    #TODO: deal with list of items ("-") & admonitions ("!!! tip")
 
     # Generate dynamic content
     for key, value in dynamic_content.items():
@@ -81,7 +86,8 @@ def update_markdown(file_path, dynamic_content):
             raise RuntimeError(f"Markers not found in Markdown file: {start_marker} and {end_marker}")
         # value = wrap_tip(value, 100)
         # dynamic_lines.append(f"## {key.replace('_', ' ')}:\n{value}\n")
-        dynamic_lines.append(f"**[{value["label"]}]**:\n{value["tips"]}\n")
+        modif_text = wrap_md_tip(value["tips"])
+        dynamic_lines.append(f"**[{value["label"]}]**:\n{modif_text}\n")
         # Replace the marker block
         lines[start_idx + 1:end_idx] = dynamic_lines
 

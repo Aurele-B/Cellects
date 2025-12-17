@@ -1,78 +1,121 @@
 ## Installation
 
-### 1. With Cellects_installer.exe (windows)
-- Download [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
-- Double-click on the Cellects_installer.exe file to start installation
-Note 1: Windows may warn you that it's unsafe; that's normal, because we are not a registered developer. Click "More info" and "Run Anyway".
-Note 2: For the same reason, some antivirus software can prevent installation.
+Choose the method that matches your OS and how you want to use Cellects.
 
-- To run Cellects, explore the newly created folder to find and execute Cellects.exe
-<br />
+=== "Windows (Installer)"
 
-### 2. Using pip (Mac, Windows or Linux)
-- Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
+    ### Install with `Cellects_installer.exe`
 
-- Best practice(optional): create and activate a python environment
-Use a terminal to create the environment:
-```bash
-cd path/toward/an/existing/folder/
-python -m venv ./cellects_env
-```
-Activation on Windows:
-```bash
-cellects_env\Scripts\activate
-```
-Activation on Unix or MacOS:
-```bash
-source cellects_env/bin/activate
-```
+    1. Download **Cellects_installer.exe**:  
+       [Cellects_installer.exe](https://drive.google.com/file/d/1v2ppaln0LJ5QhXXq1D-zduhfun5D2ZXX/view?usp=drive_link)
 
-- Installation:
-```bash
-pip install cellects
-```
+    2. Double-click `Cellects_installer.exe` to start the installation.
 
-- Run Cellects:
-```bash
-Cellects
-```
+    3. To run Cellects, open the newly created folder and launch **`Cellects.exe`**.
 
-To uninstall, use:
-```bash
-pip uninstall cellects
-```
-Note: creating a python environment avoids compatibilities issues with other python scripts.
-However, the user have to activate this environment every time before running Cellects.
+    !!! info "Windows security warning"
+        Windows may warn you that the installer is unsafe (because we are not a registered developer).  
+        Click **More info** → **Run anyway**.
 
-### 3. To access the source code (Mac, Windows or Linux)
-- Install [python 3.13](https://www.python.org/downloads/release/python-3139/)
-- Install [git](https://git-scm.com/downloads)
-- On Mac: also install [brew](https://brew.sh/)
-- Choose a place to install Cellects and use a terminal to write:
-```bash
-cd path/toward/an/existing/folder/
-```
-Note: The repository will be cloned to that folder; if updating an existing project, use a different folder name and rename it after verifying the new version.
-- Clone [Cellects repository](https://github.com/Aurele-B/Cellects.git) in terminal (or any IDE) with:
-```bash
-git clone https://github.com/Aurele-B/Cellects.git
-cd ./Cellects
-pip install --upgrade pip
-python -m venv ./cellects_env
-```
-On Windows, run:
-```bash
-cellects_env\Scripts\activate
-```
-On Unix or MacOS, run:
-```bash
-source cellects_env/bin/activate
-```
-Install Cellects dependencies in editable mode:
-```bash
-pip install -e .
-```
-Run Cellects:
-```bash
-Cellects
-```
+    !!! warning "Antivirus software"
+        Some antivirus software may block or slow down the installation for the same reason.
+
+
+=== "All OS (pip)"
+
+    ### Install with `pip` (macOS / Windows / Linux)
+
+    !!! note "Prerequisite"
+        Install **Python 3.13**:  
+        [Python 3.13](https://www.python.org/downloads/release/python-3139/)
+
+    #### Optional but recommended: use a virtual environment
+
+    ```bash
+    cd path/toward/an/existing/folder/
+    python -m venv ./cellects_env
+    ```
+
+    Activate it:
+
+    === "Windows"
+        ```cmd
+        cellects_env\Scripts\activate
+        ```
+
+    === "macOS / Linux"
+        ```cmd
+        source cellects_env/bin/activate
+        ```
+
+    !!! tip "Why use a virtual environment?"
+        It prevents compatibility issues with other Python projects.  
+        You’ll just need to **activate it** each time before running Cellects.
+
+    #### Install
+
+    ```bash
+    pip install cellects
+    ```
+
+    #### Run
+
+    ```bash
+    Cellects
+    ```
+
+    #### Uninstall
+
+    ```bash
+    pip uninstall cellects
+    ```
+
+=== "All OS (Source)"
+
+    ### Install from source (macOS / Windows / Linux)
+
+    !!! note "Prerequisites"
+        - Install **Python 3.13**: [Python 3.13](https://www.python.org/downloads/release/python-3139/)  
+        - Install **git**: [git](https://git-scm.com/downloads)  
+        - On macOS, install **Homebrew**: [brew](https://brew.sh/)
+
+    #### Clone the repository
+
+    ```bash
+    cd path/toward/an/existing/folder/
+    ```
+
+    !!! warning "Folder choice"
+        The repository will be cloned into this folder.  
+        If you are updating an existing project, clone into a **new folder name** and rename it only after verifying the new version.
+
+    ```bash
+    git clone https://github.com/Aurele-B/Cellects.git
+    cd ./Cellects
+    pip install --upgrade pip
+    python -m venv ./cellects_env
+    ```
+
+    Activate the environment:
+
+    === "Windows"
+        ```cmd
+        cellects_env\Scripts\activate
+        ```
+
+    === "macOS / Linux"
+        ```cmd
+        source cellects_env/bin/activate
+        ```
+
+    #### Install dependencies (editable mode)
+
+    ```bash
+    pip install -e .
+    ```
+
+    #### Run
+
+    ```bash
+    Cellects
+    ```
