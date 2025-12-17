@@ -17,7 +17,8 @@ By iteratively testing tracking parameters and validating results through visual
 **[Arena to analyze]**:
 This arena number selects a specific arena in the current folder. The user can choose an arena,
 click *Detection* to load and analyze it, then *Read* results.
-NB:
+!!! note
+
 - Cellects automatically names the arena by their position (left to right, top to bottom).
 - For single arena setups, use 1.
 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
@@ -34,7 +35,8 @@ This is the maximum allowable proportion of image area that may be covered by sp
 between frames. Adjust accordingly:
 - Increase if specimen size is underestimated.
 - Decrease if specimen size is overestimated.
-NB:
+!!! note
+
 - Precisely, this defines an upper bound on relative coverage changes between sequential images.
 
 <!-- END_Maximal_growth_factor -->
@@ -46,7 +48,8 @@ NB:
 Applies temporal smoothing to reduce noise and highlight long
 -term trends by averaging pixel intensity changes. Use when analyzing slope
 -based segmentation results.
-NB:
+!!! note
+
 - This uses a moving window algorithm on pixel intensity curves over time.
 - Excessive iterations produce constant values, preventing accurate detection.
 
@@ -63,7 +66,8 @@ each time step.
 - **Slope option**: Compares pixel intensity slopes with an automatically defined threshold.
 - **T and S option**: logical AND of threshold and slope options.
 - **T or S option**: logical OR of threshold and slope options.
-NB:
+!!! note
+
 - Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Once
 analysis completes. Once the analysis completed, select one option and click *Read*.
 - Computing only one option is faster and requires less memory.
@@ -130,7 +134,8 @@ hard to detect (optional).
 video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).
-NB: Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
+!!! note
+ Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
 parameters to improve Post processing*, and then *Run All* arenas.
 
 <!-- END_Post_processing -->
@@ -142,7 +147,8 @@ Complete the current video analysis by clicking this button for single
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.
-NB:
+!!! note
+
 - This action will overwrite results and validation data for the current arena.
 
 <!-- END_Save_one_result -->
