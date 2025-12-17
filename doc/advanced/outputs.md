@@ -18,39 +18,37 @@ For example:
 ---
 
 <!-- START_coord_specimen -->
-**[Pixels covered by the specimen(s)]**:
+## Pixels covered by the specimen(s):
 Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
 parameters.
 !!! note
 
-- These files may consume significant memory depending on the total frame count.
-
+	 - These files may consume significant memory depending on the total frame count.
 <!-- END_coord_specimen -->
 
 ---
 
 
 <!-- START_Graph -->
-**[Graph of the specimen(s) (or network)]**:
+## Graph of the specimen(s) (or network):
 Compute a geometrical graph describing the specimen based on current detection parameters.  Cellects
 generates this graph using the skeleton of the largest connected component per frame.  If network
 detection is enabled, it will be computed on the detected network instead. The output includes:
+
 - A .csv file for vertices with coordinates (t, y, x), IDs, tip status, part of the specimen's
 initial position, connection status with other vertices.
 - A .csv file for edges with IDs, vertex pairs, lengths, average width, and intensity.
 !!! note
 
-- These files may consume significant memory depending on the total frame count.
-- Network and graph detection together are relevant only for organisms with a distinct internal
-network (e.g., *Physarum polycephalum*).
-
+	 - These files may consume significant memory depending on the total frame count.
+	 - Network and graph detection together are relevant only for organisms with a distinct internalnetwork (e.g., *Physarum polycephalum*).
 <!-- END_Graph -->
 
 ---
 
 
 <!-- START_coord_oscillating -->
-**[Oscillating areas in the specimen(s)]**:
+## Oscillating areas in the specimen(s):
 Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
 files are generated: one for thickening regions and one for slimming regions.
 
@@ -60,7 +58,7 @@ files are generated: one for thickening regions and one for slimming regions.
 
 
 <!-- START_coord_network -->
-**[Network in the specimen(s)]**:
+## Network in the specimen(s):
 Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
 specimen(s).
 
