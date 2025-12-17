@@ -7,7 +7,7 @@ Cellects: Cell Expansion Computer Tracking Software
 [![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/Aurele-B/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/stargazers)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Aurele-B/Cellects/.github%2Fworkflows%2Fci.yml)
-![Coverage](https://Aurele-B.github.io/cellects/badges/coverage.svg)
+![Coverage](https://raw.githubusercontent.com/Aurele-B/cellects/gh-pages/badges/coverage.svg)
 
 Description
 -----------
