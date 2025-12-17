@@ -44,6 +44,13 @@ jobs:
           name: coverage-${{ matrix.python }}
           path: coverage.xml
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          flags: py${{ matrix.python }}
+          fail_ci_if_error: true
+
       # Build & publish the artifacts only once (python 3.12)
       # OPTIONAL : this will be done automatically by release.yml
       #- name: Build sdist and wheel
