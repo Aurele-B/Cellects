@@ -4,6 +4,7 @@ Users select from a range of spatial and temporal metrics (e.g., area, perimeter
 These outputs bridge raw imaging data to downstream analysis in statistical tools, modeling software, or collaborative platforms. 
 
 For example:
+
 - Pixel-level tracking (e.g., [Pixels covered by the specimen(s)]) enables high-resolution morphodynamics studies.
 - Graph/network outputs (e.g., [Graph of the specimen(s)]) are essential for organisms with internal branching structures (Physarum polycephalum), capturing topological changes over time.
 
@@ -69,6 +70,7 @@ specimen(s).
 Saves selected descriptors in `.csv` files at the end of the analysis (*Run all*).  
 
 Available descriptors include:  
+
 - Area  
 - Perimeter  
 - Circularity  

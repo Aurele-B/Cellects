@@ -62,6 +62,7 @@ def process_tips_in_file(file_path):
         file.write(content)
 
 def update_markdown(file_path, dynamic_content):
+    #TODO: deal with list of items ("-") & admonitions ("!!! tip")
 
     # Generate dynamic content
     for key, value in dynamic_content.items():
