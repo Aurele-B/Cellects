@@ -368,8 +368,6 @@ spot_sizes = np.repeat(spot_size_coefficients, 2)
 def shape_selection(binary_image:NDArray, several_blob_per_arena: bool, true_shape_number: int=None,
                     horizontal_size: int=None, spot_shape: str=None, bio_mask:NDArray=None, back_mask:NDArray=None):
     """
-    binary_image=self.first_image.binary_image;true_shape_number=self.sample_number;horizontal_size=self.starting_blob_hsize_in_pixels
-    spot_shape=self.all['starting_blob_shape'];several_blob_per_arena=self.vars['several_blob_per_arena'];bio_mask=self.all["bio_mask"]; back_mask=self.all["back_mask"]
     Process the binary image to identify and validate shapes.
 
     This method processes a binary image to detect connected components,
