@@ -322,6 +322,8 @@ class UpdateImageThread(QtCore.QThread):
                     mask_shape = "rectangle"
                 elif self.parent().imageanalysiswindow.back1_bio2 == 2:
                     mask_shape = self.parent().po.all['starting_blob_shape']
+                    if mask_shape is None:
+                        mask_shape = 'circle'
                 # Save the user drawn mask
                 mask = create_mask(dims, minmax, mask_shape)
                 mask = np.nonzero(mask)
@@ -382,6 +384,8 @@ class UpdateImageThread(QtCore.QThread):
                 if self.parent().imageanalysiswindow.back1_bio2 == 2:
                     color = (17, 160, 212)
                     mask_shape = self.parent().po.all['starting_blob_shape']
+                    if mask_shape is None:
+                        mask_shape = 'circle'
                 elif self.parent().imageanalysiswindow.back1_bio2 == 1:
                     color = (224, 160, 81)
                     mask_shape = "rectangle"
@@ -618,10 +622,10 @@ class LastImageAnalysisThread(QtCore.QThread):
                         dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
                         dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
                         inter_dist = np.max(dist1, dist2)
-                    if self.parent().po.all['starting_blob_shape'] == "circle":
-                        max_shape_size = np.pi * np.square(inter_dist)
-                    else:
+                    if self.parent().po.all['starting_blob_shape'] == "rectangle":
                         max_shape_size = np.square(2 * inter_dist)
+                    else:
+                        max_shape_size = np.pi * np.square(inter_dist)
                     total_surfarea = max_shape_size * self.parent().po.sample_number
                 ref_image = self.parent().po.first_image.validated_shapes
                 self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
