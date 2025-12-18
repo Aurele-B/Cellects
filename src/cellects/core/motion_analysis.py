@@ -259,12 +259,7 @@ class MotionAnalysis:
                     self.drift_mask_coord[:, 2] == 0) and np.all(self.drift_mask_coord[:, 3] == self.dims[2] - 1):
                 logging.error(f"Drift correction has been wrongly detected. Images do not contain zero-valued pixels")
                 self.vars['drift_already_corrected'] = False
-        if self.vars['origin_state'] == "constant":
-            self.start = 1
-            if self.vars['lighter_background']:
-                # Initialize the covering_intensity matrix as a reference for pixel fading
-                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
-        else:
+        if self.vars['origin_state'] != "constant":
             self.start = 0
             analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
             while np.logical_and(np.sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
@@ -289,6 +284,11 @@ class MotionAnalysis:
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == np.argmax(stats[1:, 4])] = 1
         self.origin_idx = np.nonzero(self.origin)
+        if self.vars['origin_state'] == "constant":
+            self.start = 1
+            if self.vars['lighter_background']:
+                # Initialize the covering_intensity matrix as a reference for pixel fading
+                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
         self.substantial_growth = np.min((1.2 * self.origin.sum(), self.origin.sum() + 250))
 
     def get_covering_duration(self, step: int):

@@ -582,6 +582,8 @@ class LastImageAnalysisThread(QtCore.QThread):
         message_when_thread_finished.emit(success : bool) : signal
             Signal to indicate the completion of the thread.
         """
+        if self.parent().po.last_im is None:
+            self.parent().po.get_last_image()
         self.parent().po.cropping(False)
         self.parent().po.get_background_to_subtract()
         biomask = None
@@ -606,7 +608,7 @@ class LastImageAnalysisThread(QtCore.QThread):
                     else:
                         arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
             if self.parent().po.network_shaped:
-                self.parent().po.last_image.network_detection(arenas_mask, csc_dict=self.parent().po.vars["convert_for_motion"], biomask=biomask, backmask=backmask)
+                self.parent().po.last_image.network_detection(arenas_mask, csc_dict=self.parent().po.vars["convert_for_motion"], lighter_background=None, biomask=biomask, backmask=backmask)
             else:
                 if self.parent().po.vars['several_blob_per_arena']:
                     concomp_nb = [self.parent().po.sample_number, self.parent().po.first_image.size // 50]
@@ -687,7 +689,6 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         """
         logging.info("Start cropping if required")
         self.parent().po.cropping(is_first_image=True)
-        self.parent().po.cropping(is_first_image=False)
         self.parent().po.get_average_pixel_size()
         if os.path.isfile('Data to run Cellects quickly.pkl'):
             os.remove('Data to run Cellects quickly.pkl')

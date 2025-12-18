@@ -376,7 +376,7 @@ class FirstWindow(MainTabsType):
         """
         if len(self.parent().po.all['folder_list']) == 0 and len(self.parent().po.data_list) == 0:
             if self.parent().po.all['im_or_vid'] == 1:
-                error_message = f"There is no videos ({self.parent().po.all['extension']})in the selected folder and its sub-folders"
+                error_message = f"There is no videos ({self.parent().po.all['extension']}) in the selected folder and its sub-folders"
             else:
                 error_message = f"There is no images ({self.parent().po.all['extension']}) in the selected folder and its sub-folders"
             self.message.setText(error_message)
