@@ -16,10 +16,12 @@ Cellects is a tracking software for organisms whose shape and size change over t
 Cellects’ main strengths are its broad scope of action, automated computation of a variety of geometrical descriptors, 
 easy installation and user-friendly interface.
 
-<figure>
+<figure style="text-align: center;">
   <img src="doc/static/UserManualFigure1.png" alt="Cellects first window"
-       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
-  <figcaption style="text-align:center;"><strong>Figure 1:</strong> Cellects first window</figcaption>
+       style="display: block; margin-left: auto; margin-right: auto; width: 100%">
+  <div style="text-align: center;">
+    <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
+  </div>
 </figure>
 
 ---
