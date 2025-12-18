@@ -97,9 +97,8 @@ first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
 !!! note
- Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
-processing.
 
+	 - Selecting *Basic* (or *Apply current config*) will trigger an orange working message duringprocessing.
 <!-- END_Generate_analysis_options -->
 
 <figure>
@@ -153,9 +152,8 @@ be used as a scale.
 
 <!-- START_Advanced_mode -->
 ## Advanced mode:
-The *Advanced mode* enables fine
+The *Advanced mode* enables fine tuning of image analysis parameters for:
 
--tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
 - Applying filters before segmentation
 - Combining segmentations using logical operators
