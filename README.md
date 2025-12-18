@@ -1,5 +1,9 @@
-Cellects: Cell Expansion Computer Tracking Software
-===================================================
+<h1>
+  <img src="https://raw.githubusercontent.com/Aurele-B/cellects/main/.github/icon.png"
+       width="42"
+       style="vertical-align: middle; margin-right: 12px;">
+  Cellects: Cell Expansion Computer Tracking Software
+</h1>
 
 [![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/cellects)
