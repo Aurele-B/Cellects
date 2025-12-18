@@ -39,7 +39,7 @@ Or explicitly:
 pytest --cov=src/cellects --cov-report=term-missing
 ```
 
-### Build Documentation
+## Build Documentation
 Install doc dependencies:
 
 ```bash
@@ -53,7 +53,7 @@ mkdocs serve
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
-### Create windows executable
+## Create windows executable
 Start by creating a new python environment. 
 If it already exists, save the __main__.spec file elsewhere and delete the environment to get the last Cellects version using pip.
 And run:
@@ -75,5 +75,6 @@ pyinstaller __main__.spec
 ```
 Then, compress the dist folder into Cellects.zip and use NSIS to generate the installer
 
-Note: When installing Cellects dependencies, do not use editable mode:
-Note: Lighter installer with the "Solid" option
+!!! note 
+    - When installing Cellects dependencies, do not use editable mode:
+    - Lighter installer with the "Solid" option
