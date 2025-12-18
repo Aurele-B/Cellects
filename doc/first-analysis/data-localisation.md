@@ -7,7 +7,8 @@ These configurations directly inform later stages (e.g., image analysis, video t
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
+  <img src="../../static/UserManualFigure1.png" alt="Cellects first window" class="center"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 

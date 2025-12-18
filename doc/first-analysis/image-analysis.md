@@ -9,7 +9,8 @@ Proper configuration here directly informs downstream video tracking workflows (
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure2.png" alt="Cellects image analysis window" width="600">
+  <img src="../../static/UserManualFigure2.png" alt="Cellects image analysis window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 2:</strong> Cellects image analysis window</figcaption>
 </figure>
 
@@ -96,13 +97,13 @@ first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
 !!! note
- Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
-processing.
 
+	 - Selecting *Basic* (or *Apply current config*) will trigger an orange working message duringprocessing.
 <!-- END_Generate_analysis_options -->
 
 <figure>
-  <img src="../../static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation" width="600">
+  <img src="../../static/UserManualFigure3.png" alt="Cellects image analysis window after analysis option generation"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 3:</strong> Cellects image analysis window after analysis option generation</figcaption>
 </figure>
 
@@ -151,9 +152,8 @@ be used as a scale.
 
 <!-- START_Advanced_mode -->
 ## Advanced mode:
-The *Advanced mode* enables fine
+The *Advanced mode* enables fine tuning of image analysis parameters for:
 
--tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
 - Applying filters before segmentation
 - Combining segmentations using logical operators
@@ -165,7 +165,8 @@ The *Advanced mode* enables fine
 
 ---
 <figure>
-  <img src="../../static/UserManualFigure4.png" alt="Image analysis advanced mode" width="600">
+  <img src="../../static/UserManualFigure4.png" alt="Image analysis advanced mode"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 4:</strong> Image analysis advanced mode</figcaption>
 </figure>
 ---
@@ -234,7 +235,8 @@ After confirming initial detection, automatic video delimitation results appear 
 <!-- END_Video_delimitation -->
 
 <figure>
-  <img src="../../static/UserManualFigure5.png" alt="Cellects image analysis window, after arena delineation" width="600">
+  <img src="../../static/UserManualFigure5.png" alt="Cellects image analysis window, after arena delineation"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 5:</strong> Cellects image analysis window, after arena delineation</figcaption>
 </figure>
 

@@ -697,7 +697,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
             y_lim = self.parent().po.first_image.y_boundaries
             if ((nb - 1) != self.parent().po.sample_number or np.any(stats[:, 4] == 1)):
                 self.message_from_thread.emit("Image analysis failed to detect the right cell(s) number: restart the analysis.")
-            elif len(np.nonzero(y_lim == - 1)) != len(np.nonzero(y_lim == 1)):
+            elif (y_lim == - 1).sum() != (y_lim == 1).sum():
                 self.message_from_thread.emit("Automatic arena delineation cannot work if one cell touches the image border.")
                 self.parent().po.first_image.y_boundaries = None
             else:

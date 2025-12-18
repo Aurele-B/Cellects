@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cellects"
-version = "0.2.2"
+version = "0.2.4"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -51,6 +51,9 @@ doc = [
   "mkdocs-gen-files",
   "mkdocs-autorefs",
   "pymdown-extensions",
+  "mkdocs-literate-nav",
+  "mkdocs-section-index",
+  "mkdocs-jupyter",
 ]
 
 [project.urls]

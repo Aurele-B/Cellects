@@ -183,8 +183,7 @@ IAW["Advanced_mode"] = {}
 IAW["Advanced_mode"]["label"] = "Advanced mode"
 # START_TIP
 IAW["Advanced_mode"]["tips"] = \
-f"""The *Advanced mode* enables fine
--tuning of image analysis parameters for:
+f"""The *Advanced mode* enables fine tuning of image analysis parameters for:
 - Custom color space combinations (e.g., HSV, HLS)
 - Applying filters before segmentation
 - Combining segmentations using logical operators
@@ -253,7 +252,8 @@ f"""Cellects proposes algorithms to automatically determine optimal specimen det
 first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
-NB: Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
+NB:
+- Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
 processing.
 """
 # END_TIP
@@ -357,8 +357,8 @@ NB:
 - Cellects automatically names the arena by their position (left to right, top to bottom).
 - For single arena setups, use 1.
 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-- Loading speeds improve if videos are pre
-- Saved as ind_*.npy.
+- Videos can be saved (as .npy files) for later analysis using the Advanced parameter *Keep
+unaltered videos*.
 """
 # END_TIP
 
@@ -422,7 +422,7 @@ VAW["Detection"]["label"] = "Detection"
 # START_TIP
 VAW["Detection"]["tips"] = \
 f"""*Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
-view the detection result. If correct, answer *Done* to proceed with tuning parameters for  post
+view the detection result. If correct, answer *Done* to proceed with tuning parameters for post
 processing.
 """
 # END_TIP
@@ -452,8 +452,7 @@ VAW["Post_processing"] = {}
 VAW["Post_processing"]["label"] = "Post processing"
 # START_TIP
 VAW["Post_processing"]["tips"] = \
-f"""*Post
--processing* applies detection algorithms with additional enhancements:
+f"""*Post processing* applies detection algorithms with additional enhancements:
 - Binary operations: opening, closing, logical ops.
 - Fading detection* tracking: when specimen(s) may leave areas (optional).
 - *Correct errors around initial shape*: when the contour of the initial position of the specimen is
@@ -462,7 +461,8 @@ hard to detect (optional).
 video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).
-NB: Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
+NB:
+- Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
 parameters to improve Post processing*, and then *Run All* arenas.
 """
 # END_TIP
@@ -471,8 +471,8 @@ VAW["Save_one_result"] = {}
 VAW["Save_one_result"]["label"] = "Save one result"
 # START_TIP
 VAW["Save_one_result"]["tips"] = \
-f"""Complete the current video analysis by clicking this button for single
--arena processing. Saving includes:
+f"""Complete the current video analysis by clicking this button for single arena processing. Saving
+includes:
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.
@@ -489,8 +489,7 @@ f"""Apply validated parameters to all arenas by clicking *Run All*. This action:
 - Generates full
 -resolution video outputs (storage
 -intensive)
-- Processes videos sequentially with real
--time visualization
+- Processes videos sequentially with real time visualization
 - Calculates selected descriptors for each frame
 - Produces validation content at multiple intervals
 - Preserves current configuration settings
