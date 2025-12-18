@@ -109,7 +109,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
         self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.parent().po.current_combination_id = 0
-        greyscale = len(self.parent().po.first_im.shape) == 2
 
         self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
