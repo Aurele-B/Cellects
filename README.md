@@ -17,7 +17,8 @@ Cellects’ main strengths are its broad scope of action, automated computation 
 easy installation and user-friendly interface.
 
 <figure>
-  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window" width="600">
+  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window" width="600"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:60%">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 
