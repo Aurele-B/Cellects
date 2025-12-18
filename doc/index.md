@@ -1,8 +1,3 @@
----
-hide:
-  - toc
----
-
 # Welcome to Cellects!
 
 Cellects is a software designed to analyze organisms that **grow or move on an immobile surface**.

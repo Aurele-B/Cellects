@@ -4,6 +4,8 @@ docs_dir: doc
 
 theme:
   name: material
+  logo: static/icon-256.png
+  favicon: static/icon-128.png
   language: en
   features:
     - navigation.instant       # fast page transitions
