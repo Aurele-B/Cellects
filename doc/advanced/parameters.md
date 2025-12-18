@@ -159,7 +159,7 @@ The minimal variation in intensity to consider that a given window does contain 
 
 <figure>
   <img src="../../static/UserManualFigure9-1.png" alt="Remaining parameters"
-       style="display:block;float:none;margin-left:auto;margin-right:auto;width:20%">
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:50%">
   <figcaption><strong>Figure 9-1:</strong> Remaining parameters</figcaption>
 </figure>
 
