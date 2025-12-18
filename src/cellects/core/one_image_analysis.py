@@ -896,7 +896,7 @@ class OneImageAnalysis:
             self.converted_images_list = None
             self.combination_features = None
 
-    def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, biomask=None, backmask=None):
+    def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, lighter_background: bool= None, biomask=None, backmask=None):
         """
         Network Detection Function
 
@@ -911,6 +911,8 @@ class OneImageAnalysis:
         csc_dict : dict, optional
             A dictionary containing color space conversion parameters. If None,
             defaults to {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+        lighter_background : bool, optional
+            Whether the background is lighter or not
         biomask : NDArray, optional
             The mask for biological objects in the image.
         backmask : NDArray, optional
@@ -935,7 +937,10 @@ class OneImageAnalysis:
         greyscale = self.image
         NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
         NetDet.get_best_network_detection_method()
-        lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask== 0].mean()
+        if lighter_background is None:
+            lighter_background = True
+            if arenas_mask.any() and not arenas_mask.all():
+                lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask == 0].mean()
         NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, only_one_connected_component=False)
         NetDet.merge_network_with_pseudopods()
         cc_efficiency_order = np.argsort(NetDet.quality_metrics)

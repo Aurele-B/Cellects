@@ -349,7 +349,7 @@ class ProgramOrganizer:
         It updates the state of various attributes based on the loaded data
         and logs appropriate messages.
         """
-        self.first_im = None
+        self.analysis_instance = None
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:
@@ -495,17 +495,15 @@ class ProgramOrganizer:
                 self.sample_number = sample_number
         else:
             logging.info("Load first image")
-            just_read_image = self.first_im is not None
-            # just_read_image = self.analysis_instance is not None
             if self.all['im_or_vid'] == 1:
-                if not just_read_image:
+                if self.analysis_instance is None:
                     self.analysis_instance = video2numpy(self.data_list[0])
                     self.sample_number = len(self.data_list)
                     self.vars['img_number'] = self.analysis_instance.shape[0]
                     self.first_im = self.analysis_instance[0, ...]
+                    self.vars['dims'] = self.analysis_instance.shape[:3]
                 else:
                     self.first_im = self.analysis_instance[self.vars['first_detection_frame'], ...]
-                self.vars['dims'] = self.analysis_instance.shape[:3]
 
             else:
                 self.vars['img_number'] = len(self.data_list)
@@ -546,16 +544,7 @@ class ProgramOrganizer:
             self.last_im = last_im
         else:
             if self.all['im_or_vid'] == 1:
-                cap = cv2.VideoCapture(self.data_list[0])
-                counter = 0
-                while cap.isOpened() and counter < self.vars['img_number']:
-                    ret, frame = cap.read()
-                    if self.reduce_image_dim:
-                        frame = frame[:, :, 0]
-                    self.analysis_instance[-1, ...] = frame
-                    counter += 1
-                self.last_im = frame
-                cap.release()
+                self.last_im = self.analysis_instance[-1, ...]
             else:
                 is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
                 self.last_im = read_and_rotate(self.data_list[-1], self.first_im, self.all['raw_images'], is_landscape)
@@ -574,7 +563,8 @@ class ProgramOrganizer:
         """
         self.vars['time_step_is_arbitrary'] = True
         if self.all['im_or_vid'] == 1:
-            self.vars['dims'] = self.analysis_instance.shape
+            if not 'dims' in self.vars:
+                self.vars['dims'] = self.analysis_instance.shape[:3]
             timings = np.arange(self.vars['dims'][0])
         else:
             timings = np.arange(len(self.data_list))

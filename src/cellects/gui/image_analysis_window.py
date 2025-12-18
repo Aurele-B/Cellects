@@ -447,7 +447,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
         self.reinitialize_image_and_masks(self.parent().po.first_im)
         self.thread["GetLastIm"] = GetLastImThread(self.parent())
-        self.thread["GetLastIm"].start()
+        if self.parent().po.all['im_or_vid'] == 0:
+            self.thread["GetLastIm"].start()
         self.parent().po.first_image = OneImageAnalysis(self.parent().po.first_im)
         self.thread["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
         self.thread["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
@@ -1019,6 +1020,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = False
             self.parent().po.network_shaped = True
+            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1038,6 +1040,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = True
             self.parent().po.network_shaped = False
+            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
