@@ -350,6 +350,9 @@ class ProgramOrganizer:
         and logs appropriate messages.
         """
         self.analysis_instance = None
+        self.first_im = None
+        self.first_image = None
+        self.last_image = None
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:

@@ -510,6 +510,8 @@ class FirstWindow(MainTabsType):
             self.required_outputs.setVisible(False)
             self.Run_all_directly.setVisible(False)
             self.next.setVisible(False)
+            self.instantiate = True
+            self.video_tab.set_not_usable()
             # 2) Load the dict
             self.thread["LoadDataToRunCellectsQuickly"].start()
             self.thread["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
