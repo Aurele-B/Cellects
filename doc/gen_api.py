@@ -13,10 +13,17 @@ PACKAGE_ROOT = SRC_ROOT / PACKAGE_NAME
 
 nav = mkdocs_gen_files.Nav()
 
+# Collect only items directly under cellects/
+main_items = {}  # {"core": "cellects/core.md", "gui": "cellects/gui/index.md", ...}
+
 # Iterate over all .py files inside src/cellects
 for path in sorted(PACKAGE_ROOT.rglob("*.py")):
     # Ignore __main__.py files
     if path.name == "__main__.py":
+        continue
+
+    # Skip root package __init__.py to avoid the useless "cellects" page
+    if path == (PACKAGE_ROOT / "__init__.py"):
         continue
 
     # src/cellects/core.py -> ("cellects", "core")
@@ -54,6 +61,11 @@ for path in sorted(PACKAGE_ROOT.rglob("*.py")):
     # Register entry in the navigation tree (used to build api/index.md)
     nav[module_parts] = nav_doc_path.as_posix()
 
+    # Collect top-level items under cellects/
+    if len(module_parts) == 2 and module_parts[0] == PACKAGE_NAME:
+        # store display name without "cellects."
+        main_items[module_parts[1]] = nav_doc_path.as_posix()
+
     # Generate the module page
     with mkdocs_gen_files.open(file_doc_path, "w") as fd:
         fd.write(f"# `{ident}`\n\n")
@@ -62,8 +74,16 @@ for path in sorted(PACKAGE_ROOT.rglob("*.py")):
     # Optional: map generated doc to original source file
     mkdocs_gen_files.set_edit_path(file_doc_path, path)
 
-# Generate the API index page with a hierarchical navigation list
+# Generate the API index page
 index_path = pathlib.Path("api", "index.md")
 with mkdocs_gen_files.open(index_path, "w") as fd:
     fd.write("# API Reference\n\n")
-    fd.write("\n".join(nav.build_literate_nav()))
+    fd.write("## Main modules\n\n")
+    for name in sorted(main_items):
+        fd.write(f"- [`cellects.{name}`]({main_items[name]})\n")
+
+# Generate the literate navigation file
+summary_path = pathlib.Path("api", "SUMMARY.md")
+with mkdocs_gen_files.open(summary_path, "w") as nav_file:
+    nav_file.write("* [Overview](index.md)\n")
+    nav_file.writelines(nav.build_literate_nav())

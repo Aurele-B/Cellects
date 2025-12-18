@@ -51,6 +51,8 @@ doc = [
   "mkdocs-gen-files",
   "mkdocs-autorefs",
   "pymdown-extensions",
+  "mkdocs-literate-nav",
+  "mkdocs-section-index",
 ]
 
 [project.urls]
