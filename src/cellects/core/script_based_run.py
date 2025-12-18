@@ -113,6 +113,7 @@ def run_all_arenas(po):
     po.instantiate_tables()
     for i, arena in enumerate(po.vars['analyzed_individuals']):
         l = [i, arena, po.vars, True, True, False, None]
+        # l = [i, arena, po.vars, False, True, False, None]
         analysis_i = MotionAnalysis(l)
         po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
                                                                     analysis_i.efficiency_test_2)
@@ -124,22 +125,16 @@ def run_all_arenas(po):
             po.update_one_row_per_frame(i * po.vars['img_number'],
                                                       arena * po.vars['img_number'],
                                                       analysis_i.one_row_per_frame)
-            # Save cytosol_oscillations
-        if not pd.isna(analysis_i.one_descriptor_per_arena["first_move"]):
-            if po.vars['oscilacyto_analysis']:
-                oscil_i = pd.DataFrame(
-                    np.c_[np.repeat(arena,
-                                    analysis_i.clusters_final_data.shape[0]), analysis_i.clusters_final_data],
-                    columns=['arena', 'mean_pixel_period', 'phase', 'cluster_size', 'edge_distance', 'coord_y',
-                             'coord_x'])
-                if po.one_row_per_oscillating_cluster is None:
-                    po.one_row_per_oscillating_cluster = oscil_i
-                else:
-                    po.one_row_per_oscillating_cluster = pd.concat((po.one_row_per_oscillating_cluster, oscil_i))
+    # Keep the tables
+    one_row_per_arena = po.one_row_per_arena
+    one_row_per_frame = po.one_row_per_frame
     po.save_tables()
+    po.one_row_per_arena = one_row_per_arena
+    po.one_row_per_frame = one_row_per_frame
     cv2.imwrite(f"Analysis efficiency, last image.jpg", po.last_image.bgr)
     cv2.imwrite(f"Analysis efficiency, {np.ceil(po.vars['img_number'] / 10).astype(np.uint64)}th image.jpg",
         po.first_image.bgr)
+    return po
 
 def detect_network_in_one_image(im_path, save_path):
     im = readim(im_path)
@@ -148,11 +143,3 @@ def detect_network_in_one_image(im_path, save_path):
     net = NetworkDetection(greyscale_image, add_rolling_window=True)
     net.get_best_network_detection_method()
     display_network_methods(net, save_path)
-
-
-
-if __name__ == "__main__":
-    po = load_data(pathway=os.getcwd() + "/data/experiment", sample_number=1, extension='tif')
-    po = run_image_analysis(po)
-    po = write_videos(po)
-    run_all_arenas(po)
