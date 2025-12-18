@@ -37,6 +37,9 @@ plugins:
   - gen-files:
       scripts:
         - doc/gen_api.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - section-index
   - mkdocstrings:
       default_handler: python
       handlers:
@@ -45,6 +48,9 @@ plugins:
           options:
             docstring_style: "numpy"
             show_source: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            heading_level: 1
 
 extra_css:
   - static/extra.css
@@ -83,6 +89,5 @@ nav:
         - Multiple folders: advanced/multiple-folders.md
   - Use cases: use-cases.md
   - Contributing: contributing.md
-  - API Reference:
-      - Overview: api/index.md
+  - API Reference: api/
   - License & Citation: license.md
