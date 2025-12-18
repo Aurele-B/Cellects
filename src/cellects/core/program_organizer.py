@@ -34,7 +34,7 @@ from cellects.image_analysis.morphological_operations import create_ellipse, ran
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.utils.load_display_save import read_and_rotate
+from cellects.utils.load_display_save import read_and_rotate, video2numpy
 from cellects.image_analysis.morphological_operations import shape_selection, draw_img_with_mask
 
 
@@ -498,30 +498,12 @@ class ProgramOrganizer:
             just_read_image = self.first_im is not None
             # just_read_image = self.analysis_instance is not None
             if self.all['im_or_vid'] == 1:
-                cap = cv2.VideoCapture(self.data_list[0])
-                counter = 0
                 if not just_read_image:
+                    self.analysis_instance = video2numpy(self.data_list[0])
                     self.sample_number = len(self.data_list)
-                    self.vars['img_number'] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    self.analysis_instance = np.zeros(
-                        [int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                         int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3], dtype=np.uint8)
-                    while cap.isOpened() and counter < 1:
-                        ret, frame = cap.read()
-                        if counter == 0:
-                            self.first_im = frame
-                            self.analysis_instance[0, ...] = self.first_im
-                            break
-                    cap.release()
-                elif np.sum(self.analysis_instance[self.vars['first_detection_frame'], ...] == 0):
-                    cap = cv2.VideoCapture(self.data_list[0])
-                    counter = 0
-                    while cap.isOpened() and (counter < self.vars['first_detection_frame']):
-                        ret, frame = cap.read()
-                        self.analysis_instance[counter, ...] = frame
-                        counter += 1
-
-                    cap.release()
+                    self.vars['img_number'] = self.analysis_instance.shape[0]
+                    self.first_im = self.analysis_instance[0, ...]
+                else:
                     self.first_im = self.analysis_instance[self.vars['first_detection_frame'], ...]
                 self.vars['dims'] = self.analysis_instance.shape[:3]
 
