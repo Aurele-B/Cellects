@@ -7,7 +7,8 @@ By iteratively testing tracking parameters and validating results through visual
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure6.png" alt="Cellects video tracking window" width="600">
+  <img src="../../static/UserManualFigure6.png" alt="Cellects video tracking window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 6:</strong> Cellects video tracking window</figcaption>
 </figure>
 
@@ -100,7 +101,8 @@ Clicking *Read* starts the video display corresponding to the current state of t
 <!-- END_Read -->
 
 <figure>
-  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window during detection visualization" width="600">
+  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window during detection visualization"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
 </figure>
 
@@ -153,7 +155,8 @@ Complete the current video analysis by clicking this button for single
 <!-- END_Save_one_result -->
 
 <figure>
-  <img src="../../static/UserManualFigure8.png" alt="Cellects video tracking window, running all arenas" width="600">
+  <img src="../../static/UserManualFigure8.png" alt="Cellects video tracking window, running all arenas"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 8:</strong> Cellects video tracking window, running all arenas</figcaption>
 </figure>
 
