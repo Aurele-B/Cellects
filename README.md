@@ -45,9 +45,12 @@ Cellects
 
 ## 📚 Documentation
 
-Full documentation is available in the [docs](https://aurele-b.github.io/Cellects/) folder and includes:
-- [**User Manual**](https://aurele-b.github.io/Cellects/first-analysis/): Step-by-step workflows for data localization, image analysis and video tracking 
-- [**Advanced Features**](https://aurele-b.github.io/Cellects/advanced/): Customization options, batch processing, parameter tuning.
+Cellects' workflow is described in a [complete documentation](https://aurele-b.github.io/Cellects/). It includes:
+- [**What is Cellects**](https://aurele-b.github.io/Cellects/what-is-cellects/): Purpose of the software, usable data and introduction of its user manual
+- [**Setting up a first analysis**](https://aurele-b.github.io/Cellects/first-analysis/): Step-by-step workflows for data localization, image analysis and video tracking 
+- [**Improving the analysis**](https://aurele-b.github.io/Cellects/advanced/): Customization options, batch processing, parameter tuning.
+- [**Use cases**](https://aurele-b.github.io/Cellects/use-cases/): Real-world cases using the GUI (interface) and the API (scripts).
+- [**Contributing**](https://aurele-b.github.io/Cellects/contributing/): Report bugs and feature requests; contribute; testing and documentation processes.
 - [**API Reference**](https://aurele-b.github.io/Cellects/api/): Auto-generated from source code docstrings (see [Build Documentation]).
 
 ---
