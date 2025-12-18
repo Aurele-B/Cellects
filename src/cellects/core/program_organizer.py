@@ -349,6 +349,7 @@ class ProgramOrganizer:
         It updates the state of various attributes based on the loaded data
         and logs appropriate messages.
         """
+        self.first_im = None
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:
