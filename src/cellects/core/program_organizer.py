@@ -1670,6 +1670,7 @@ class ProgramOrganizer:
         for key in ['analyzed_individuals', 'night_mode', 'expert_mode', 'is_auto', 'arena', 'video_option', 'compute_all_options', 'vars', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             global_settings.pop(key, None)
         software_settings.update(global_settings)
+        software_settings.pop('video_list', None)
         software_settings = pd.DataFrame.from_dict(software_settings, columns=["Setting"], orient='index')
         try:
             software_settings.to_csv("software_settings.csv", sep=";")
