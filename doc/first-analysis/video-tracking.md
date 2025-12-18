@@ -23,8 +23,7 @@ click *Detection* to load and analyze it, then *Read* results.
 	 - Cellects automatically names the arena by their position (left to right, top to bottom).
 	 - For single arena setups, use 1.
 	 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-	 - Loading speeds improve if videos are pre
-	 - Saved as ind_*.npy.
+	 - Videos can be saved (as .npy files) for later analysis using the Advanced parameter *Keepunaltered videos*.
 <!-- END_Arena_to_analyze -->
 
 ---
@@ -88,7 +87,7 @@ displays the first frame of that arena's video. Click *Read* to review the full 
 <!-- START_Detection -->
 ## Detection:
 *Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
-view the detection result. If correct, answer *Done* to proceed with tuning parameters for  post
+view the detection result. If correct, answer *Done* to proceed with tuning parameters for post
 processing.
 
 <!-- END_Detection -->
@@ -124,9 +123,8 @@ one and one to control sensitivity:
 
 <!-- START_Post_processing -->
 ## Post processing:
-*Post
+*Post processing* applies detection algorithms with additional enhancements:
 
--processing* applies detection algorithms with additional enhancements:
 - Binary operations: opening, closing, logical ops.
 - Fading detection* tracking: when specimen(s) may leave areas (optional).
 - *Correct errors around initial shape*: when the contour of the initial position of the specimen is
@@ -136,16 +134,15 @@ video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).
 !!! note
- Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
-parameters to improve Post processing*, and then *Run All* arenas.
 
+	 - Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advancedparameters to improve Post processing*, and then *Run All* arenas.
 <!-- END_Post_processing -->
 
 <!-- START_Save_one_result -->
 ## Save one result:
-Complete the current video analysis by clicking this button for single
+Complete the current video analysis by clicking this button for single arena processing. Saving
+includes:
 
--arena processing. Saving includes:
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.
@@ -169,8 +166,7 @@ Apply validated parameters to all arenas by clicking *Run All*. This action:
 - Generates full
 -resolution video outputs (storage
 -intensive)
-- Processes videos sequentially with real
--time visualization
+- Processes videos sequentially with real time visualization
 - Calculates selected descriptors for each frame
 - Produces validation content at multiple intervals
 - Preserves current configuration settings
