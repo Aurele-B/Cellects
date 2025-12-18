@@ -290,7 +290,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
         self.spot_shape.setFixedWidth(160)
         if self.parent().po.all['starting_blob_shape'] is None:
-            self.spot_shape.setCurrentText('circle')
+            self.spot_shape.setCurrentIndex(0)
         else:
             self.spot_shape.setCurrentText(self.parent().po.all['starting_blob_shape'])
         self.spot_shape.currentTextChanged.connect(self.spot_shape_changed)
