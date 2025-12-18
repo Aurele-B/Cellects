@@ -11,7 +11,8 @@ For example:
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure10.png" alt="Required output window" width="600">
+  <img src="../../static/UserManualFigure10.png" alt="Required output window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 10:</strong> Required output window</figcaption>
 </figure>
 
