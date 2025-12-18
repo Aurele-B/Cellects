@@ -610,25 +610,30 @@ class LastImageAnalysisThread(QtCore.QThread):
             if self.parent().po.network_shaped:
                 self.parent().po.last_image.network_detection(arenas_mask, csc_dict=self.parent().po.vars["convert_for_motion"], lighter_background=None, biomask=biomask, backmask=backmask)
             else:
+                im_size = self.parent().po.first_image.image.shape[0] * self.parent().po.first_image.image.shape[1]
                 if self.parent().po.vars['several_blob_per_arena']:
-                    concomp_nb = [self.parent().po.sample_number, self.parent().po.first_image.size // 50]
-                    max_shape_size = .75 * self.parent().po.first_image.size
-                    total_surfarea = .99 * self.parent().po.first_image.size
+                    concomp_nb = [self.parent().po.sample_number, im_size // 50]
+                    max_shape_size = .9 * im_size
+                    total_surfarea = .99 * im_size
                 else:
-                    concomp_nb = [self.parent().po.sample_number, self.parent().po.sample_number * 200]
-                    if self.parent().po.all['are_zigzag'] == "columns":
-                        inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                    elif self.parent().po.all['are_zigzag'] == "rows":
-                        inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
+                    concomp_nb = [self.parent().po.sample_number, np.max((100, im_size // 100))]
+                    if self.parent().po.sample_number > 1:
+                        if self.parent().po.all['are_zigzag'] == "columns":
+                            inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                        elif self.parent().po.all['are_zigzag'] == "rows":
+                            inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
+                        else:
+                            dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
+                            dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
+                            inter_dist = np.max(dist1, dist2)
+                        if self.parent().po.all['starting_blob_shape'] == "rectangle":
+                            max_shape_size = np.square(2 * inter_dist)
+                        else:
+                            max_shape_size = np.pi * np.square(inter_dist)
+                        total_surfarea = max_shape_size * self.parent().po.sample_number
                     else:
-                        dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                        dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
-                        inter_dist = np.max(dist1, dist2)
-                    if self.parent().po.all['starting_blob_shape'] == "rectangle":
-                        max_shape_size = np.square(2 * inter_dist)
-                    else:
-                        max_shape_size = np.pi * np.square(inter_dist)
-                    total_surfarea = max_shape_size * self.parent().po.sample_number
+                        max_shape_size = .9 *im_size
+                        total_surfarea = .99 * im_size
                 ref_image = self.parent().po.first_image.validated_shapes
                 self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
                 kmeans_clust_nb = None
