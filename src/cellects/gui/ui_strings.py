@@ -252,7 +252,7 @@ f"""Cellects proposes algorithms to automatically determine optimal specimen det
 first or last image:
 - **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
-NB: 
+NB:
 - Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
 processing.
 """
@@ -357,7 +357,8 @@ NB:
 - Cellects automatically names the arena by their position (left to right, top to bottom).
 - For single arena setups, use 1.
 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-- Videos can be saved (as .npy files) for later analysis using the Advanced parameter *Keep unaltered videos*.
+- Videos can be saved (as .npy files) for later analysis using the Advanced parameter *Keep
+unaltered videos*.
 """
 # END_TIP
 
@@ -460,7 +461,7 @@ hard to detect (optional).
 video detection (optional).
 - *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
 detected as specimen (optional).
-NB: 
+NB:
 - Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
 parameters to improve Post processing*, and then *Run All* arenas.
 """
@@ -470,7 +471,8 @@ VAW["Save_one_result"] = {}
 VAW["Save_one_result"]["label"] = "Save one result"
 # START_TIP
 VAW["Save_one_result"]["tips"] = \
-f"""Complete the current video analysis by clicking this button for single arena processing. Saving includes:
+f"""Complete the current video analysis by clicking this button for single arena processing. Saving
+includes:
 - Calculating all selected descriptors (.csv) per frame.
 - Generating validation videos for detection verification.
 - Storing configuration parameters for reproducibility.
