@@ -37,6 +37,12 @@ plugins:
   - gen-files:
       scripts:
         - doc/gen_api.py
+  - mkdocs-jupyter:
+      include: ["*.ipynb"]
+      execute: true
+      allow_errors: false
+      highlight_extra_classes: "nb-code"
+      include_requirejs: true
   - literate-nav:
       nav_file: SUMMARY.md
   - section-index
@@ -54,6 +60,7 @@ plugins:
 
 extra_css:
   - static/extra.css
+  - static/notebooks.css
 
 markdown_extensions:
   - attr_list         # enables {...} after elements (e.g., {: .center width="600"})
@@ -87,7 +94,7 @@ nav:
         - Advanced parameters: advanced/parameters.md
         - Required outputs: advanced/outputs.md
         - Multiple folders: advanced/multiple-folders.md
-  - Use cases: use-cases.md
+  - Use cases: use-cases.ipynb
   - Contributing: contributing.md
   - API Reference: api/
   - License & Citation: license.md

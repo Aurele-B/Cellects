@@ -53,6 +53,7 @@ doc = [
   "pymdown-extensions",
   "mkdocs-literate-nav",
   "mkdocs-section-index",
+  "mkdocs-jupyter",
 ]
 
 [project.urls]
