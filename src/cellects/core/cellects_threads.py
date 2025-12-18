@@ -465,7 +465,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
             shape_nb = 0
         if self.parent().imageanalysiswindow.back_masks_number != 0:
             backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
-        if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2 or shape_nb == self.parent().po.sample_number:
+        if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
             self.message_from_thread.emit("Image segmentation, wait")
             if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
                 self.parent().po.get_average_pixel_size()
