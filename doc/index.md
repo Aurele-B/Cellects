@@ -11,7 +11,7 @@ It processes timelapse experiments provided either as a **set of images** or as 
 
 <figure>
   <img src="static/UserManualFigure8.png" alt="Select folders to analyze window"
-       style="display:block;float:none;margin-left:auto;margin-right:auto;width:30%">
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:60%">
   <figcaption><strong>Figure:</strong> Tracking the growth of 6 plasmodia of Physarum polycephalum </figcaption>
 </figure>
 
