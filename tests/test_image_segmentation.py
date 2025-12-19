@@ -326,17 +326,17 @@ class TestKmeans(CellectsUnitTest):
         binary_image, binary_image2, new_bio_label, new_bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb=2, bio_label=1, bio_label2=1,  logical="And")
         self.assertTrue(binary_image.any())
 
-    def test_kmeans_with_biomask(self):
-        """Test kmeans with biomask."""
-        biomask = several_arenas_bin_img
-        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, biomask=biomask, logical="And")
+    def test_kmeans_with_bio_mask(self):
+        """Test kmeans with bio_mask."""
+        bio_mask = several_arenas_bin_img
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, bio_mask=bio_mask, logical="And")
         self.assertTrue(binary_image.any())
 
-    def test_kmeans_with_backmask(self):
-        """Test kmeans with backmask."""
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, backmask=backmask, logical="And")
+    def test_kmeans_with_back_mask(self):
+        """Test kmeans with back_mask."""
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, back_mask=back_mask, logical="And")
         self.assertTrue(binary_image.any())
 
 class TestWindowedThresholding(CellectsUnitTest):
