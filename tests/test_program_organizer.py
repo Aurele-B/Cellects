@@ -116,9 +116,9 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
         po.get_first_image()
-        backmask = np.zeros(po.first_im.shape[:2], np.uint8)
-        backmask[-30:, :] = 1
-        po.all['back_mask'] = np.nonzero(backmask)
+        back_mask = np.zeros(po.first_im.shape[:2], np.uint8)
+        back_mask[-30:, :] = 1
+        po.all['back_mask'] = np.nonzero(back_mask)
         po.vars['convert_for_origin'] = {'PCA': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
         po.vars['convert_for_motion'] = po.vars['convert_for_origin']
         po.all['automatically_crop'] = True

@@ -554,7 +554,7 @@ def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArr
 
 
 def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
-           biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, logical: str='None',
+           bio_mask: NDArray[np.uint8]=None, back_mask: NDArray[np.uint8]=None, logical: str='None',
            bio_label=None, bio_label2=None, previous_binary_image: NDArray[np.uint8]=None):
     """
 
@@ -572,9 +572,9 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
         A second greyscale image for logical operations. Default is `None`.
     kmeans_clust_nb : int, optional
         Number of clusters for K-means. Default is `2`.
-    biomask : NDArray[np.uint8], optional
+    bio_mask : NDArray[np.uint8], optional
         Mask for selecting biological objects. Default is `None`.
-    backmask : NDArray[np.uint8], optional
+    back_mask : NDArray[np.uint8], optional
         Mask for selecting background regions. Default is `None`.
     logical : str, optional
         Logical operation flag to enable processing of the second image. Default is `'None'`.
@@ -628,13 +628,13 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
         binary_image[kmeans_image == bio_label] = 1
         new_bio_label = bio_label
     else:
-        if biomask is not None:
-            all_labels = kmeans_image[biomask[0], biomask[1]]
+        if bio_mask is not None:
+            all_labels = kmeans_image[bio_mask[0], bio_mask[1]]
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (all_labels == i).sum()
             new_bio_label = np.argsort(sum_per_label)[1]
-        elif backmask is not None:
-            all_labels = kmeans_image[backmask[0], backmask[1]]
+        elif back_mask is not None:
+            all_labels = kmeans_image[back_mask[0], back_mask[1]]
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (all_labels == i).sum()
             new_bio_label = np.argsort(sum_per_label)[-2]
@@ -666,13 +666,13 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
             binary_image2[kmeans_image == bio_label2] = 1
             new_bio_label2 = bio_label2
         else:
-            if biomask is not None:
-                all_labels = kmeans_image[biomask[0], biomask[1]]
+            if bio_mask is not None:
+                all_labels = kmeans_image[bio_mask[0], bio_mask[1]]
                 for i in range(kmeans_clust_nb):
                     sum_per_label[i] = (all_labels == i).sum()
                 new_bio_label2 = np.argsort(sum_per_label)[1]
-            elif backmask is not None:
-                all_labels = kmeans_image[backmask[0], backmask[1]]
+            elif back_mask is not None:
+                all_labels = kmeans_image[back_mask[0], back_mask[1]]
                 for i in range(kmeans_clust_nb):
                     sum_per_label[i] = (all_labels == i).sum()
                 new_bio_label2 = np.argsort(sum_per_label)[-2]

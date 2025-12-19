@@ -130,8 +130,8 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         spot_shape = None
         spot_size = None
         kmeans_clust_nb = None
-        biomask = None
-        backmask = None
+        bio_mask = None
+        back_mask = None
         color_space_dictionaries = None
         self.oia.find_first_im_csc(basic=False)
         self.assertGreater(self.oia.saved_csc_nb, 0)
@@ -150,31 +150,31 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         self.oia.update_current_images(0)
         self.assertIsInstance(self.oia.validated_shapes, np.ndarray)
 
-    def test_find_first_im_csc_with_backmask(self):
+    def test_find_first_im_csc_with_back_mask(self):
         """test find_first_im_csc with background mask"""
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        self.oia.find_first_im_csc(backmask=backmask, basic=False)
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        self.oia.find_first_im_csc(back_mask=back_mask, basic=False)
         self.assertGreater(self.oia.saved_csc_nb, 0)
 
-    def test_find_first_im_csc_with_biomask(self):
+    def test_find_first_im_csc_with_bio_mask(self):
         """test find_first_im_csc with bio mask"""
-        biomask = several_arenas_bin_img
-        self.oia.find_first_im_csc(biomask=biomask, basic=False)
+        bio_mask = several_arenas_bin_img
+        self.oia.find_first_im_csc(bio_mask=bio_mask, basic=False)
         self.assertGreater(self.oia.saved_csc_nb, 0)
 
     def test_find_first_im_csc_with_bio_and_back_mask(self):
         """test find_first_im_csc with bio and back mask"""
         # self.oia.image = video_test[5, :, :, :] # binary_video_test[5, :, :]
         # self.oia.all_c_spaces = {}
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        backmask[:, 0] = 1
-        # backmask[5:6, :] = 1
-        biomask = several_arenas_bin_img
-        # biomask = binary_video_test[5, :, :]
-        # biomask[3:5, :] = 0
-        self.oia.find_first_im_csc(biomask=biomask, backmask=backmask, basic=False)
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        back_mask[:, 0] = 1
+        # back_mask[5:6, :] = 1
+        bio_mask = several_arenas_bin_img
+        # bio_mask = binary_video_test[5, :, :]
+        # bio_mask[3:5, :] = 0
+        self.oia.find_first_im_csc(bio_mask=bio_mask, back_mask=back_mask, basic=False)
         self.assertGreater(self.oia.saved_csc_nb, 0)
 
     def test_find_last_im_csc(self):
@@ -186,8 +186,8 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         ref_image = None
         subtract_background = None
         kmeans_clust_nb = None
-        biomask = None
-        backmask = None
+        bio_mask = None
+        back_mask = None
         color_space_dictionaries = None
         basic = False
         self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, basic=False)
@@ -212,23 +212,23 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, basic=basic)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 1)
 
-    def test_find_last_im_csc_with_backmask(self):
+    def test_find_last_im_csc_with_back_mask(self):
         """test find_last_im_csc with background mask"""
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, backmask=backmask, basic=False)
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, back_mask=back_mask, basic=False)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
-    def test_find_last_im_csc_with_biomask(self):
+    def test_find_last_im_csc_with_bio_mask(self):
         """test find_last_im_csc with bio mask"""
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        biomask = several_arenas_bin_img
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, biomask=biomask, basic=False)
+        bio_mask = several_arenas_bin_img
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, bio_mask=bio_mask, basic=False)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
     def test_find_last_im_csc_with_bio_and_back_mask(self):
@@ -236,11 +236,11 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        biomask = several_arenas_bin_img
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        bio_mask = several_arenas_bin_img
         basic = True
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, biomask=biomask, backmask=backmask, basic=basic)
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, bio_mask=bio_mask, back_mask=back_mask, basic=basic)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
     def test_find_last_im_csc_with_kmeans(self):
@@ -248,10 +248,10 @@ class TestOneImageAnalysisFindCSC(CellectsUnitTest):
         total_surfarea = self.image.size
         concomp_nb =[6, 20*6]
         max_shape_size = 10
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
         kmeans_clust_nb = 3
-        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, kmeans_clust_nb=kmeans_clust_nb, backmask=backmask, basic=False)
+        self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, kmeans_clust_nb=kmeans_clust_nb, back_mask=back_mask, basic=False)
         self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
 
