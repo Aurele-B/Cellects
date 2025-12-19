@@ -86,8 +86,8 @@ class OneImageAnalysis:
         self.drift_mask_coord = None
         self.saved_csc_nb = 0
 
-    def convert_and_segment(self, c_space_dict: dict, color_number=2, biomask: NDArray[np.uint8]=None,
-                            backmask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
+    def convert_and_segment(self, c_space_dict: dict, color_number=2, bio_mask: NDArray[np.uint8]=None,
+                            back_mask: NDArray[np.uint8]=None, subtract_background: NDArray=None,
                             subtract_background2: NDArray=None, rolling_window_segmentation: dict=None,
                             lighter_background: bool=None,
                             allowed_window: NDArray=None, filter_spec: dict=None):
@@ -102,8 +102,8 @@ class OneImageAnalysis:
 
         - `c_space_dict` (dict): Dictionary containing color spaces.
         - `color_number` (int, optional): Number of colors to use in segmentation. Defaults to 2.
-        - `biomask` (NDArray[np.uint8], optional): Biomask for segmentation. Defaults to None.
-        - `backmask` (NDArray[np.uint8], optional): Backmask for segmentation. Defaults to None.
+        - `bio_mask` (NDArray[np.uint8], optional): Biomask for segmentation. Defaults to None.
+        - `back_mask` (NDArray[np.uint8], optional): Backmask for segmentation. Defaults to None.
         - `subtract_background` (NDArray, optional): Background to subtract. Defaults to None.
         - `subtract_background2` (NDArray, optional): Second background to subtract. Defaults to None.
         - rolling_window_segmentation (dict, optional): Flag for grid segmentation. Defaults to None.
@@ -123,13 +123,13 @@ class OneImageAnalysis:
             if len(all_c_spaces) > len(self.all_c_spaces):
                 self.all_c_spaces = all_c_spaces
 
-        self.segmentation(logical=c_space_dict['logical'], color_number=color_number, biomask=biomask,
-                          backmask=backmask, rolling_window_segmentation=rolling_window_segmentation,
+        self.segmentation(logical=c_space_dict['logical'], color_number=color_number, bio_mask=bio_mask,
+                          back_mask=back_mask, rolling_window_segmentation=rolling_window_segmentation,
                           lighter_background=lighter_background, allowed_window=allowed_window, filter_spec=filter_spec)
 
 
-    def segmentation(self, logical: str='None', color_number: int=2, biomask: NDArray[np.uint8]=None,
-                     backmask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None,
+    def segmentation(self, logical: str='None', color_number: int=2, bio_mask: NDArray[np.uint8]=None,
+                     back_mask: NDArray[np.uint8]=None, bio_label=None, bio_label2=None,
                      rolling_window_segmentation: dict=None, lighter_background: bool=None, allowed_window: Tuple=None,
                      filter_spec: dict=None):
         """
@@ -140,8 +140,8 @@ class OneImageAnalysis:
                            Options are 'Or', 'And', 'Xor'. Default is 'None'.
             color_number (int): Number of colors to use in segmentation. Must be greater than 2
                                 for kmeans clustering. Default is 2.
-            biomask (NDArray[np.uint8]): Binary mask for biological areas. Default is None.
-            backmask (NDArray[np.uint8]): Binary mask for background areas. Default is None.
+            bio_mask (NDArray[np.uint8]): Binary mask for biological areas. Default is None.
+            back_mask (NDArray[np.uint8]): Binary mask for background areas. Default is None.
             bio_label (Any): Label for biological features. Default is None.
             bio_label2 (Any): Secondary label for biological features. Default is None.
             rolling_window_segmentation (dict): Whether to perform grid segmentation. Default is None.
@@ -169,7 +169,7 @@ class OneImageAnalysis:
 
         # 3. Do one of the three segmentation algorithms: kmeans, otsu, windowed
         if color_number > 2:
-            binary_image, binary_image2, self.bio_label, self.bio_label2  = kmeans(greyscale, greyscale2, color_number, biomask, backmask, logical, bio_label, bio_label2)
+            binary_image, binary_image2, self.bio_label, self.bio_label2  = kmeans(greyscale, greyscale2, color_number, bio_mask, back_mask, logical, bio_label, bio_label2)
         elif rolling_window_segmentation is not None and rolling_window_segmentation['do']:
             binary_image = windowed_thresholding(greyscale, lighter_background, rolling_window_segmentation['side_len'],
             rolling_window_segmentation['step'], rolling_window_segmentation['min_int_var'])
@@ -340,8 +340,8 @@ class OneImageAnalysis:
                 self.binary_image = self.binary_image.astype(np.uint8)
 
     def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
-                          spot_size=None, kmeans_clust_nb: int=None, biomask: NDArray[np.uint8]=None,
-                          backmask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=True):
+                          spot_size=None, kmeans_clust_nb: int=None, bio_mask: NDArray[np.uint8]=None,
+                          back_mask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=True):
         """
         Prepare color space lists, dictionaries and matrices.
 
@@ -351,8 +351,8 @@ class OneImageAnalysis:
             spot_shape: A string representing the shape of the spot. Defaults to None.
             spot_size: An integer representing the size of the spot. Defaults to None.
             kmeans_clust_nb: An integer representing the number of clusters for K-means. Defaults to None.
-            biomask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
-            backmask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
+            bio_mask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
+            back_mask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
             color_space_dictionaries: A list of dictionaries containing color space information. Defaults to None.
             basic: A boolean indicating whether to process the data basic. Defaults to True.
 
@@ -391,7 +391,7 @@ class OneImageAnalysis:
             logging.info(f"Try detection with each available color space channel, one by one.")
             for csc_dict in color_space_dictionaries:
                 list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,
-                             sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
+                             sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None]
                 ProcessFirstImage(list_args)
 
             if sample_number is not None and basic:
@@ -415,16 +415,16 @@ class OneImageAnalysis:
                 get_one_channel_result = False
                 combine_channels = True
                 list_args = [[self, get_one_channel_result, combine_channels, i, several_blob_per_arena, sample_number,
-                              spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, possibilities] for i in possibilities]
+                              spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, possibilities] for i in possibilities]
                 for process_i in pool.imap_unordered(ProcessFirstImage, list_args):
                     pass
 
-            # Get the most and the least covered images and the 2 best biomask and backmask scores
+            # Get the most and the least covered images and the 2 best bio_mask and back_mask scores
             # To try combinations of those
             if self.saved_csc_nb <= 1:
                 csc_dict = {'bgr': np.array((1, 1, 1))}
                 list_args = [self, False, False, csc_dict, several_blob_per_arena,
-                             sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None]
+                             sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None]
                 process_i = ProcessFirstImage(list_args)
                 process_i.image = self.bgr.mean(axis=-1)
                 process_i.binary_image = otsu_thresholding(process_i.image)
@@ -439,17 +439,17 @@ class OneImageAnalysis:
                 coverage = np.argsort(self.combination_features[:self.saved_csc_nb, area])
                 most1 = coverage[-1]; most2 = coverage[-2]
                 least1 = coverage[0]; least2 = coverage[1]
-                if biomask is not None:
+                if bio_mask is not None:
                     bio_sort = np.argsort(self.combination_features[:self.saved_csc_nb, biosum])
                     bio1 = bio_sort[-1]; bio2 = bio_sort[-2]
-                if backmask is not None:
+                if back_mask is not None:
                     back_sort = np.argsort(self.combination_features[:self.saved_csc_nb, backsum])
                     back1 = back_sort[-1]; back2 = back_sort[-2]
 
                 # Try a logical And between the most covered images
                 # Should only need one instanciation
                 process_i = ProcessFirstImage(
-                    [self, False, False, None, several_blob_per_arena, sample_number, spot_size, spot_shape, kmeans_clust_nb, biomask, backmask, None])
+                    [self, False, False, None, several_blob_per_arena, sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None])
                 process_i.binary_image = np.logical_and(self.saved_images_list[most1], self.saved_images_list[most2]).astype(np.uint8)
                 process_i.image = self.converted_images_list[most1]
                 process_i.process_binary_image()
@@ -469,11 +469,11 @@ class OneImageAnalysis:
                 process_i.total_area = process_i.binary_image.sum()
                 self.save_combination_features(process_i)
 
-                # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), biomask, backmask)
+                # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), bio_mask, back_mask)
 
                 # If most images are very low in biosum or backsum, try to mix them together to improve that score
-                # Do a logical And between the two best biomasks
-                if biomask is not None:
+                # Do a logical And between the two best bio_masks
+                if bio_mask is not None:
                     if not np.all(np.isin((bio1, bio2), (most1, most2))):
                         process_i.image = self.converted_images_list[bio1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[bio2]).astype(
@@ -487,8 +487,8 @@ class OneImageAnalysis:
 
                         self.save_combination_features(process_i)
 
-                # Do a logical And between the two best backmask
-                if backmask is not None:
+                # Do a logical And between the two best back_mask
+                if back_mask is not None:
                     if not np.all(np.isin((back1, back2), (most1, most2))):
                         process_i.image = self.converted_images_list[back1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[back1], self.saved_images_list[back2]).astype(
@@ -500,8 +500,8 @@ class OneImageAnalysis:
                         process_i.unaltered_concomp_nb = np.min(self.combination_features[(back1, back2), unaltered_cc_nb])
                         process_i.total_area = process_i.binary_image.sum()
                         self.save_combination_features(process_i)
-                # Do a logical Or between the best biomask and the best backmask
-                if biomask is not None and backmask is not None:
+                # Do a logical Or between the best bio_mask and the best back_mask
+                if bio_mask is not None and back_mask is not None:
                     if not np.all(np.isin((bio1, back1), (least1, least2))):
                         process_i.image = self.converted_images_list[bio1]
                         process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[back1]).astype(
@@ -511,8 +511,8 @@ class OneImageAnalysis:
                                     "logical": "Or",
                                     list(self.saved_color_space_list[back1].keys())[0] + "2": self.combination_features[back1, :3]}
                         process_i.unaltered_concomp_nb = np.max(self.combination_features[(bio1, back1), unaltered_cc_nb])
-                        # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), biomask,
-                        #                                backmask)
+                        # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), bio_mask,
+                        #                                back_mask)
                         process_i.total_area = self.binary_image.sum()
                         self.save_combination_features(process_i)
 
@@ -525,30 +525,30 @@ class OneImageAnalysis:
                 #   - OR The minimal area variations
                 #   - OR The minimal width variations
                 #   - OR The minimal height variations
-                #   - AND/OR their segmentation fits with biomask and backmask
+                #   - AND/OR their segmentation fits with bio_mask and back_mask
                 width_std_fit = self.combination_features[:, width_std] == np.min(self.combination_features[:, width_std])
                 height_std_fit = self.combination_features[:, height_std] == np.min(self.combination_features[:, height_std])
                 area_std_fit = self.combination_features[:, area_std] < np.min(self.combination_features[:, area_std]) * 10
                 fit = np.logical_or(np.logical_or(width_std_fit, height_std_fit), area_std_fit)
-                biomask_fit = np.ones(self.saved_csc_nb, dtype=bool)
-                backmask_fit = np.ones(self.saved_csc_nb, dtype=bool)
-                if biomask is not None or backmask is not None:
-                    if biomask is not None:
-                        biomask_fit = self.combination_features[:, biosum] > 0.9 * len(biomask[0])
-                    if backmask is not None:
-                        backmask_fit = self.combination_features[:, backsum] > 0.9 * len(backmask[0])
+                bio_mask_fit = np.ones(self.saved_csc_nb, dtype=bool)
+                back_mask_fit = np.ones(self.saved_csc_nb, dtype=bool)
+                if bio_mask is not None or back_mask is not None:
+                    if bio_mask is not None:
+                        bio_mask_fit = self.combination_features[:, biosum] > 0.9 * len(bio_mask[0])
+                    if back_mask is not None:
+                        back_mask_fit = self.combination_features[:, backsum] > 0.9 * len(back_mask[0])
                     # First test a logical OR between the precedent options and the mask fits.
-                    fit = np.logical_or(fit, np.logical_and(biomask_fit, backmask_fit))
+                    fit = np.logical_or(fit, np.logical_and(bio_mask_fit, back_mask_fit))
                     # If this is not stringent enough, use a logical AND and increase progressively the proportion of pixels that
-                    # must match the biomask and the backmask
+                    # must match the bio_mask and the back_mask
                     if np.sum(fit) > 5:
                         to_add = 0
                         while np.sum(fit) > 5 and to_add <= 0.25:
-                            if biomask is not None:
-                                biomask_fit = self.combination_features[:, biosum] > (0.75 + to_add) * len(biomask[0])
-                            if backmask is not None:
-                                backmask_fit = self.combination_features[:, backsum] > (0.75 + to_add) * len(backmask[0])
-                            test_fit = np.logical_and(fit, np.logical_and(biomask_fit, backmask_fit))
+                            if bio_mask is not None:
+                                bio_mask_fit = self.combination_features[:, biosum] > (0.75 + to_add) * len(bio_mask[0])
+                            if back_mask is not None:
+                                back_mask_fit = self.combination_features[:, backsum] > (0.75 + to_add) * len(back_mask[0])
+                            test_fit = np.logical_and(fit, np.logical_and(bio_mask_fit, back_mask_fit))
                             if np.sum(test_fit) != 0:
                                 fit = test_fit
                             to_add += 0.05
@@ -568,14 +568,14 @@ class OneImageAnalysis:
                     self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
                     for k, v in self.saved_color_space_list[saved_csc].items():
                         self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                    if backmask is not None:
+                    if back_mask is not None:
                         shape_number, shapes = cv2.connectedComponents(self.saved_images_list[saved_csc], connectivity=8)
-                        if np.any(shapes[backmask]):
-                            shapes[np.isin(shapes, np.unique(shapes[backmask]))] = 0
+                        if np.any(shapes[back_mask]):
+                            shapes[np.isin(shapes, np.unique(shapes[back_mask]))] = 0
                             self.saved_images_list[saved_csc] = (shapes > 0).astype(np.uint8)
-                    if biomask is not None:
-                        self.saved_images_list[saved_csc][biomask] = 1
-                    if backmask is not None or biomask is not None:
+                    if bio_mask is not None:
+                        self.saved_images_list[saved_csc][bio_mask] = 1
+                    if back_mask is not None or bio_mask is not None:
                         self.combination_features[saved_csc, cc_nb], shapes = cv2.connectedComponents(self.saved_images_list[saved_csc], connectivity=8)
                         self.combination_features[saved_csc, cc_nb] -= 1
                     self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
@@ -594,7 +594,7 @@ class OneImageAnalysis:
         Args:
             process_i (object): The processed image object containing various attributes
                 such as validated_shapes, image, csc_dict, unaltered_concomp_nb,
-                shape_number, total_area, stats, biomask, and backmask.
+                shape_number, total_area, stats, bio_mask, and back_mask.
 
             Attributes:
                 processed image object
@@ -614,12 +614,12 @@ class OneImageAnalysis:
             self.combination_features[self.saved_csc_nb, 6] = np.std(process_i.stats[1:, 2])  # width_std
             self.combination_features[self.saved_csc_nb, 7] = np.std(process_i.stats[1:, 3])  # height_std
             self.combination_features[self.saved_csc_nb, 8] = np.std(process_i.stats[1:, 4])  # area_std
-            if process_i.biomask is not None:
+            if process_i.bio_mask is not None:
                 self.combination_features[self.saved_csc_nb, 9] = np.sum(
-                    process_i.validated_shapes[process_i.biomask[0], process_i.biomask[1]])
-            if process_i.backmask is not None:
+                    process_i.validated_shapes[process_i.bio_mask[0], process_i.bio_mask[1]])
+            if process_i.back_mask is not None:
                 self.combination_features[self.saved_csc_nb, 10] = np.sum(
-                    (1 - process_i.validated_shapes)[process_i.backmask[0], process_i.backmask[1]])
+                    (1 - process_i.validated_shapes)[process_i.back_mask[0], process_i.back_mask[1]])
             self.saved_csc_nb += 1
 
     def update_current_images(self, current_combination_id: int):
@@ -643,7 +643,7 @@ class OneImageAnalysis:
 
     def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, arenas_mask: NDArray=None,
                          ref_image: NDArray=None, subtract_background: NDArray=None, kmeans_clust_nb: int=None,
-                         biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None,
+                         bio_mask: NDArray[np.uint8]=None, back_mask: NDArray[np.uint8]=None,
                          color_space_dictionaries: dict=None, basic: bool=True):
         """
         Find the last image color space configurations that meets given criteria.
@@ -656,8 +656,8 @@ class OneImageAnalysis:
             ref_image (NDArray, optional): A reference image for comparison.
             subtract_background (NDArray, optional): A numpy array representing the background to be subtracted.
             kmeans_clust_nb (int, optional): The number of clusters for k-means clustering.
-            biomask (NDArray[np.uint8], optional): A binary mask for biological structures.
-            backmask (NDArray[np.uint8], optional): A binary mask for background areas.
+            bio_mask (NDArray[np.uint8], optional): A binary mask for biological structures.
+            back_mask (NDArray[np.uint8], optional): A binary mask for background areas.
             color_space_dictionaries (dict, optional): Dictionaries of color space configurations.
             basic (bool, optional): A flag indicating whether to process colorspaces basic.
 
@@ -720,20 +720,20 @@ class OneImageAnalysis:
             self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
             self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
             self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-            if biomask is not None:
+            if bio_mask is not None:
                 self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                    self.binary_image[biomask[0], biomask[1]])
-            if backmask is not None:
+                    self.binary_image[bio_mask[0], bio_mask[1]])
+            if back_mask is not None:
                 self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                    (1 - self.binary_image)[backmask[0], backmask[1]])
+                    (1 - self.binary_image)[back_mask[0], back_mask[1]])
             self.saved_csc_nb += 1
 
             potentials = TDict()
             # One channel processing
             for csc_dict in color_space_dictionaries:
                 self.image = combine_color_spaces(csc_dict, self.all_c_spaces, subtract_background)
-                if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
-                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb, biomask, backmask)
+                if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
+                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb, bio_mask, back_mask)
                 else:
                     self.binary_image = otsu_thresholding(self.image)
                 surf = np.sum(self.binary_image)
@@ -758,12 +758,12 @@ class OneImageAnalysis:
                                     self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
                                     self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                                     self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                                    if biomask is not None:
+                                    if bio_mask is not None:
                                         self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                                            self.binary_image[biomask[0], biomask[1]])
-                                    if backmask is not None:
+                                            self.binary_image[bio_mask[0], bio_mask[1]])
+                                    if back_mask is not None:
                                         self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                                            (1 - self.binary_image)[backmask[0], backmask[1]])
+                                            (1 - self.binary_image)[back_mask[0], back_mask[1]])
                                     if np.isin(c_space, list(potentials.keys())):
                                         potentials[c_space] += csc_dict[c_space]
                                     else:
@@ -775,8 +775,8 @@ class OneImageAnalysis:
                 # Add a combination of all selected channels :
                 self.saved_color_space_list.append(potentials)
                 self.image = combine_color_spaces(potentials, self.all_c_spaces, subtract_background)
-                if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
-                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, biomask=biomask, backmask=backmask)
+                if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
+                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, bio_mask=bio_mask, back_mask=back_mask)
                 else:
                     self.binary_image = otsu_thresholding(self.image)
                 surf = self.binary_image.sum()
@@ -794,12 +794,12 @@ class OneImageAnalysis:
                 self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
                 self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                 self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                if biomask is not None:
+                if bio_mask is not None:
                     self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                        self.binary_image[biomask[0], biomask[1]])
-                if backmask is not None:
+                        self.binary_image[bio_mask[0], bio_mask[1]])
+                if back_mask is not None:
                     self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                        (1 - self.binary_image)[backmask[0], backmask[1]])
+                        (1 - self.binary_image)[back_mask[0], back_mask[1]])
                 self.saved_csc_nb += 1
             # All combination processing
             # Try to remove color space one by one
@@ -815,8 +815,8 @@ class OneImageAnalysis:
                     if i > 0:
                         try_potentials.pop(previous_c_space)
                     self.image = combine_color_spaces(try_potentials, self.all_c_spaces, subtract_background)
-                    if kmeans_clust_nb is not None and (biomask is not None or backmask is not None):
-                        self.binary_image, self.binary_image2, self.bio_label, self.bio_label2  = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, biomask=biomask, backmask=backmask)
+                    if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
+                        self.binary_image, self.binary_image2, self.bio_label, self.bio_label2  = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, bio_mask=bio_mask, back_mask=back_mask)
                     else:
                         self.binary_image = otsu_thresholding(self.image)
                     surf = np.sum(self.binary_image)
@@ -840,12 +840,12 @@ class OneImageAnalysis:
                                         self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
                                         self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                                         self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                                        if biomask is not None:
+                                        if bio_mask is not None:
                                             self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                                                self.binary_image[biomask[0], biomask[1]])
-                                        if backmask is not None:
+                                                self.binary_image[bio_mask[0], bio_mask[1]])
+                                        if back_mask is not None:
                                             self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                                                (1 - self.binary_image)[backmask[0], backmask[1]])
+                                                (1 - self.binary_image)[back_mask[0], back_mask[1]])
                                         self.saved_csc_nb += 1
                                         color_space_to_remove.append(c_space)
                                         if i > 0:
@@ -866,12 +866,12 @@ class OneImageAnalysis:
                 self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
                 self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
                 self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                if biomask is not None:
+                if bio_mask is not None:
                     self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                        self.binary_image[biomask[0], biomask[1]])
-                if backmask is not None:
+                        self.binary_image[bio_mask[0], bio_mask[1]])
+                if back_mask is not None:
                     self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                        (1 - self.binary_image)[backmask[0], backmask[1]])
+                        (1 - self.binary_image)[back_mask[0], back_mask[1]])
                 self.saved_csc_nb += 1
 
             self.combination_features = self.combination_features[:self.saved_csc_nb, :]
@@ -896,7 +896,7 @@ class OneImageAnalysis:
             self.converted_images_list = None
             self.combination_features = None
 
-    def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, lighter_background: bool= None, biomask=None, backmask=None):
+    def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, lighter_background: bool= None, bio_mask=None, back_mask=None):
         """
         Network Detection Function
 
@@ -913,9 +913,9 @@ class OneImageAnalysis:
             defaults to {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
         lighter_background : bool, optional
             Whether the background is lighter or not
-        biomask : NDArray, optional
+        bio_mask : NDArray, optional
             The mask for biological objects in the image.
-        backmask : NDArray, optional
+        back_mask : NDArray, optional
             The background mask.
 
         Notes

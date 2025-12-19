@@ -455,67 +455,12 @@ class FirstImageAnalysisThread(QtCore.QThread):
         pixel sizes, and updates various state attributes on the parent object.
         """
         tic = default_timer()
-        biomask = None
-        backmask = None
-        if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            shape_nb, ordered_image = cv2.connectedComponents((self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8))
-            shape_nb -= 1
-            biomask = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
-        else:
-            shape_nb = 0
-        if self.parent().imageanalysiswindow.back_masks_number != 0:
-            backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or len(self.parent().po.first_im.shape) == 2:
-            self.message_from_thread.emit("Image segmentation, wait")
-            if not self.parent().imageanalysiswindow.asking_first_im_parameters_flag and self.parent().po.all['scale_with_image_or_cells'] == 0 and self.parent().po.all["set_spot_size"]:
-                self.parent().po.get_average_pixel_size()
-            else:
-                self.parent().po.starting_blob_hsize_in_pixels = None
-            self.parent().po.all["bio_mask"] = biomask
-            self.parent().po.all["back_mask"] = backmask
-            self.parent().po.fast_first_image_segmentation()
-            if shape_nb == self.parent().po.sample_number and self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] != self.parent().po.sample_number:
-                self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] = shape_nb
-                self.parent().po.first_image.shape_number = shape_nb
-                self.parent().po.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8)
-                self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['binary_image'] = self.parent().po.first_image.validated_shapes
+            self.message_from_thread.emit("Image segmentation, wait...")
         else:
-            self.message_from_thread.emit("Generating analysis options, wait...")
-            if self.parent().po.vars["color_number"] > 2:
-                kmeans_clust_nb = self.parent().po.vars["color_number"]
-                if self.parent().po.basic:
-                    self.message_from_thread.emit("Generating analysis options, wait less than 30 minutes")
-                else:
-                    self.message_from_thread.emit("Generating analysis options, a few minutes")
-            else:
-                kmeans_clust_nb = None
-                if self.parent().po.basic:
-                    self.message_from_thread.emit("Generating analysis options, wait a few minutes")
-                else:
-                    self.message_from_thread.emit("Generating analysis options, around 1 minute")
-            if self.parent().imageanalysiswindow.asking_first_im_parameters_flag:
-                self.parent().po.first_image.find_first_im_csc(sample_number=self.parent().po.sample_number,
-                                                               several_blob_per_arena=None,
-                                                               spot_shape=None, spot_size=None,
-                                                               kmeans_clust_nb=kmeans_clust_nb,
-                                                               biomask=self.parent().po.all["bio_mask"],
-                                                               backmask=self.parent().po.all["back_mask"],
-                                                               color_space_dictionaries=None,
-                                                               basic=self.parent().po.basic)
-            else:
-                if self.parent().po.all['scale_with_image_or_cells'] == 0:
-                    self.parent().po.get_average_pixel_size()
-                else:
-                    self.parent().po.starting_blob_hsize_in_pixels = None
-                self.parent().po.first_image.find_first_im_csc(sample_number=self.parent().po.sample_number,
-                                                                                   several_blob_per_arena=self.parent().po.vars['several_blob_per_arena'],
-                                                                                   spot_shape=self.parent().po.all['starting_blob_shape'],
-                                                               spot_size=self.parent().po.starting_blob_hsize_in_pixels,
-                                                                                   kmeans_clust_nb=kmeans_clust_nb,
-                                                                                   biomask=self.parent().po.all["bio_mask"],
-                                                                                   backmask=self.parent().po.all["back_mask"],
-                                                                                   color_space_dictionaries=None,
-                                                               basic=self.parent().po.basic)
+            self.message_from_thread.emit("Generating segmentation options, wait...")
+        self.parent().po.full_first_image_segmentation(self.parent().imageanalysiswindow.asking_first_im_parameters_flag,
+                                                       self.parent().imageanalysiswindow.bio_mask, self.parent().imageanalysiswindow.back_mask)
 
         logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60).astype(int)} minutes {np.round((default_timer() - tic) % 60).astype(int)} secondes")
         self.message_when_thread_finished.emit(True)
@@ -582,65 +527,11 @@ class LastImageAnalysisThread(QtCore.QThread):
         message_when_thread_finished.emit(success : bool) : signal
             Signal to indicate the completion of the thread.
         """
-        if self.parent().po.last_im is None:
-            self.parent().po.get_last_image()
-        self.parent().po.cropping(False)
-        self.parent().po.get_background_to_subtract()
-        biomask = None
-        backmask = None
-        if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            biomask = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
-        if self.parent().imageanalysiswindow.back_masks_number != 0:
-            backmask = np.nonzero(self.parent().imageanalysiswindow.back_mask)
         if self.parent().po.visualize or (len(self.parent().po.first_im.shape) == 2 and not self.parent().po.network_shaped):
             self.message_from_thread.emit("Image segmentation, wait...")
-            self.parent().po.fast_last_image_segmentation(biomask=biomask, backmask=backmask)
         else:
             self.message_from_thread.emit("Generating analysis options, wait...")
-            arenas_mask = None
-            if self.parent().po.all['are_gravity_centers_moving'] != 1:
-                cr = [self.parent().po.top, self.parent().po.bot, self.parent().po.left, self.parent().po.right]
-                arenas_mask = np.zeros_like(self.parent().po.first_image.validated_shapes)
-                for _i in np.arange(len(self.parent().po.vars['analyzed_individuals'])):
-                    if self.parent().po.vars['arena_shape'] == 'circle':
-                        ellipse = create_ellipse(cr[1][_i] - cr[0][_i], cr[3][_i] - cr[2][_i])
-                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = ellipse
-                    else:
-                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
-            if self.parent().po.network_shaped:
-                self.parent().po.last_image.network_detection(arenas_mask, csc_dict=self.parent().po.vars["convert_for_motion"], lighter_background=None, biomask=biomask, backmask=backmask)
-            else:
-                im_size = self.parent().po.first_image.image.shape[0] * self.parent().po.first_image.image.shape[1]
-                if self.parent().po.vars['several_blob_per_arena']:
-                    concomp_nb = [self.parent().po.sample_number, im_size // 50]
-                    max_shape_size = .9 * im_size
-                    total_surfarea = .99 * im_size
-                else:
-                    concomp_nb = [self.parent().po.sample_number, np.max((100, im_size // 100))]
-                    if self.parent().po.sample_number > 1:
-                        if self.parent().po.all['are_zigzag'] == "columns":
-                            inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                        elif self.parent().po.all['are_zigzag'] == "rows":
-                            inter_dist = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
-                        else:
-                            dist1 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.y_boundaries)))
-                            dist2 = np.mean(np.diff(np.nonzero(self.parent().po.first_image.x_boundaries)))
-                            inter_dist = np.max(dist1, dist2)
-                        if self.parent().po.all['starting_blob_shape'] == "rectangle":
-                            max_shape_size = np.square(2 * inter_dist)
-                        else:
-                            max_shape_size = np.pi * np.square(inter_dist)
-                        total_surfarea = max_shape_size * self.parent().po.sample_number
-                    else:
-                        max_shape_size = .9 *im_size
-                        total_surfarea = .99 * im_size
-                ref_image = self.parent().po.first_image.validated_shapes
-                self.parent().po.first_image.generate_subtract_background(self.parent().po.vars['convert_for_motion'], self.parent().po.vars['drift_already_corrected'])
-                kmeans_clust_nb = None
-                self.parent().po.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, arenas_mask,
-                                                             ref_image, self.parent().po.first_image.subtract_background,
-                                                             kmeans_clust_nb, biomask, backmask, color_space_dictionaries=None,
-                                                             basic=self.parent().po.basic)
+        self.parent().po.full_last_image_segmentation(self.parent().imageanalysiswindow.bio_mask, self.parent().imageanalysiswindow.back_mask)
         self.message_when_thread_finished.emit(True)
 
 
