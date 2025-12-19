@@ -62,17 +62,17 @@ class ProcessFirstImage:
         self.horizontal_size = l[6]
         self.spot_shape = l[7]
         kmeans_clust_nb = l[8]
-        self.biomask = l[9]
-        self.backmask = l[10]
+        self.bio_mask = l[9]
+        self.back_mask = l[10]
         if get_one_channel_result:
             self.csc_dict = l[3]
             self.image = combine_color_spaces(self.csc_dict, self.all_c_spaces)
             if kmeans_clust_nb is None:
                 self.binary_image = otsu_thresholding(self.image)
             else:
-                self.kmeans(kmeans_clust_nb, self.biomask, self.backmask)
+                self.kmeans(kmeans_clust_nb, self.bio_mask, self.back_mask)
                 # self.parent.image = self.image
-                # self.parent.kmeans(kmeans_clust_nb, self.biomask, self.backmask)
+                # self.parent.kmeans(kmeans_clust_nb, self.bio_mask, self.back_mask)
                 # self.binary_image = self.parent.binary_image
             self.unaltered_concomp_nb, shapes = cv2.connectedComponents(self.binary_image)
             if 1 < self.unaltered_concomp_nb < 10000:
@@ -109,7 +109,7 @@ class ProcessFirstImage:
                     if kmeans_clust_nb is None:
                         self.binary_image = otsu_thresholding(self.image)
                     else:
-                        self.kmeans(kmeans_clust_nb, self.biomask, self.backmask)
+                        self.kmeans(kmeans_clust_nb, self.bio_mask, self.back_mask)
                     self.process_binary_image()
                     self.total_area = self.validated_shapes.sum()
                     if previous_shape_number >= self.shape_number and self.total_area > previous_sum * 0.9:
@@ -119,15 +119,15 @@ class ProcessFirstImage:
                         self.unaltered_concomp_nb = combination_features[i, 3]
                         self.parent.save_combination_features(self)
 
-    def kmeans(self, cluster_number: int, biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, bio_label=None):
+    def kmeans(self, cluster_number: int, bio_mask: NDArray[np.uint8]=None, back_mask: NDArray[np.uint8]=None, bio_label=None):
         """
 
         Perform k-means clustering on the image to segment it into a specified number of clusters.
 
         Args:
             cluster_number (int): The desired number of clusters.
-            biomask (NDArray[np.uint8]): Optional mask for biological regions. Default is None.
-            backmask (NDArray[np.uint8]): Optional mask for background regions. Default is None.
+            bio_mask (NDArray[np.uint8]): Optional mask for biological regions. Default is None.
+            back_mask (NDArray[np.uint8]): Optional mask for background regions. Default is None.
             bio_label (int): The label assigned to the biological region. Default is None.
 
         Returns:
@@ -148,13 +148,13 @@ class ProcessFirstImage:
             self.binary_image[np.nonzero(kmeans_image == bio_label)] = 1
             self.bio_label = bio_label
         else:
-            if biomask is not None:
-                all_labels = kmeans_image[biomask[0], biomask[1]]
+            if bio_mask is not None:
+                all_labels = kmeans_image[bio_mask[0], bio_mask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
                 self.bio_label = np.nonzero(sum_per_label == np.max(sum_per_label))
-            elif backmask is not None:
-                all_labels = kmeans_image[backmask[0], backmask[1]]
+            elif back_mask is not None:
+                all_labels = kmeans_image[back_mask[0], back_mask[1]]
                 for i in range(cluster_number):
                     sum_per_label[i] = (all_labels == i).sum()
                 self.bio_label = np.nonzero(sum_per_label == np.min(sum_per_label))
@@ -176,7 +176,7 @@ class ProcessFirstImage:
         """
         shapes_features = shape_selection(self.binary_image, true_shape_number=self.sample_number, horizontal_size=self.horizontal_size,
                         spot_shape=self.spot_shape, several_blob_per_arena=self.several_blob_per_arena,
-                        bio_mask=self.biomask, back_mask=self.backmask)
+                        bio_mask=self.bio_mask, back_mask=self.back_mask)
         self.validated_shapes, self.shape_number, self.stats, self.centroids = shapes_features
 
 
@@ -206,7 +206,7 @@ class SaveCombinationThread(threading.Thread):
         results of the color space combination process. It logs messages,
         updates lists with valid shapes, converts images to a specific format,
         and updates combination features with various statistics. The method
-        also handles biomask and backmask calculations if they are not None.
+        also handles bio_mask and back_mask calculations if they are not None.
         Finally, it increments the saved color space number counter.
         """
         logging.info(f"Saving results from the color space combination: {self.process_i.csc_dict}. {self.process_i.shape_number} distinct specimen(s) detected.")
@@ -220,11 +220,11 @@ class SaveCombinationThread(threading.Thread):
         self.parent.combination_features[self.parent.saved_csc_nb, 6] = np.std(self.process_i.stats[1:, 2])  # width_std
         self.parent.combination_features[self.parent.saved_csc_nb, 7] = np.std(self.process_i.stats[1:, 3])  # height_std
         self.parent.combination_features[self.parent.saved_csc_nb, 8] = np.std(self.process_i.stats[1:, 4])  # area_std
-        if self.process_i.biomask is not None:
+        if self.process_i.bio_mask is not None:
             self.parent.combination_features[self.parent.saved_csc_nb, 9] = np.sum(
-                self.process_i.validated_shapes[self.process_i.biomask[0], self.process_i.biomask[1]])
-        if self.process_i.backmask is not None:
+                self.process_i.validated_shapes[self.process_i.bio_mask[0], self.process_i.bio_mask[1]])
+        if self.process_i.back_mask is not None:
             self.parent.combination_features[self.parent.saved_csc_nb, 10] = np.sum(
-                (1 - self.process_i.validated_shapes)[self.process_i.backmask[0], self.process_i.backmask[1]])
+                (1 - self.process_i.validated_shapes)[self.process_i.back_mask[0], self.process_i.back_mask[1]])
         self.parent.saved_csc_nb += 1
         logging.info("end")

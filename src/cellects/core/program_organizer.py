@@ -121,6 +121,7 @@ class ProgramOrganizer:
         self.one_row_per_frame = None
         self.not_analyzed_individuals = None
         self.visualize: bool = True
+        self.network_shaped: bool = False
 
     def update_variable_dict(self):
         """
@@ -655,15 +656,15 @@ class ProgramOrganizer:
         self.first_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
         self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
 
-    def fast_last_image_segmentation(self, biomask: NDArray[np.uint8] = None, backmask: NDArray[np.uint8] = None):
+    def fast_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
         """
         Segment the first or subsequent image in a series for biological and background masks.
 
         Parameters
         ----------
-        biomask : NDArray[np.uint8], optional
+        bio_mask : NDArray[np.uint8], optional
             The biological mask to be applied to the image.
-        backmask : NDArray[np.uint8], optional
+        back_mask : NDArray[np.uint8], optional
             The background mask to be applied to the image.
 
         Returns
@@ -681,14 +682,14 @@ class ProgramOrganizer:
             self.vars['convert_for_motion'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
         self.cropping(is_first_image=False)
         self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                            biomask, backmask, self.first_image.subtract_background,
+                                            bio_mask, back_mask, self.first_image.subtract_background,
                                             self.first_image.subtract_background2,
                                             rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                             filter_spec=self.vars["filter_spec"])
         if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["rolling_window_segmentation"]['do']:
             self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                                biomask, backmask, self.first_image.subtract_background,
+                                                bio_mask, back_mask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
                                                 allowed_window=self.last_image.drift_mask_coord,
                                                 filter_spec=self.vars["filter_spec"])
@@ -705,6 +706,129 @@ class ProgramOrganizer:
         else:
             greyscale = self.last_image.image
         self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
+
+    def save_user_masks(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        self.all["bio_mask"] = None
+        self.all["back_mask"] = None
+        if bio_mask.any():
+            self.all["bio_mask"] = np.nonzero(bio_mask)
+        if back_mask.any():
+            self.all["back_mask"] = np.nonzero(back_mask)
+
+    def full_first_image_segmentation(self, first_param_known: bool, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
+            shape_nb -= 1
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            shape_nb = 0
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        if self.visualize or len(self.first_im.shape) == 2:
+            if not first_param_known and self.all['scale_with_image_or_cells'] == 0 and self.all["set_spot_size"]:
+                self.get_average_pixel_size()
+            else:
+                self.starting_blob_hsize_in_pixels = None
+            self.all["bio_mask"] = bio_mask
+            self.all["back_mask"] = back_mask
+            self.fast_first_image_segmentation()
+            if shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
+                self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_nb
+                self.first_image.shape_number = shape_nb
+                self.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8)
+                self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+        else:
+            if self.vars["color_number"] > 2:
+                kmeans_clust_nb = self.vars["color_number"]
+            else:
+                kmeans_clust_nb = None
+            if first_param_known:
+                self.first_image.find_first_im_csc(sample_number=self.sample_number,
+                                                               several_blob_per_arena=None,
+                                                               spot_shape=None, spot_size=None,
+                                                               kmeans_clust_nb=kmeans_clust_nb,
+                                                               bio_mask=self.all["bio_mask"],
+                                                               back_mask=self.all["back_mask"],
+                                                               color_space_dictionaries=None,
+                                                               basic=self.basic)
+            else:
+                if self.all['scale_with_image_or_cells'] == 0:
+                    self.get_average_pixel_size()
+                else:
+                    self.starting_blob_hsize_in_pixels = None
+                self.first_image.find_first_im_csc(sample_number=self.sample_number,
+                                                                                   several_blob_per_arena=self.vars['several_blob_per_arena'],
+                                                                                   spot_shape=self.all['starting_blob_shape'],
+                                                               spot_size=self.starting_blob_hsize_in_pixels,
+                                                                                   kmeans_clust_nb=kmeans_clust_nb,
+                                                                                   bio_mask=self.all["bio_mask"],
+                                                                                   back_mask=self.all["back_mask"],
+                                                                                   color_space_dictionaries=None,
+                                                               basic=self.basic)
+
+    def full_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        if self.last_im is None:
+            self.get_last_image()
+        self.cropping(False)
+        self.get_background_to_subtract()
+        if self.visualize or (len(self.first_im.shape) == 2 and not self.network_shaped):
+            self.fast_last_image_segmentation(bio_mask=bio_mask, back_mask=back_mask)
+        else:
+            arenas_mask = None
+            if self.all['are_gravity_centers_moving'] != 1:
+                cr = [self.top, self.bot, self.left, self.right]
+                arenas_mask = np.zeros_like(self.first_image.validated_shapes)
+                for _i in np.arange(len(self.vars['analyzed_individuals'])):
+                    if self.vars['arena_shape'] == 'circle':
+                        ellipse = create_ellipse(cr[1][_i] - cr[0][_i], cr[3][_i] - cr[2][_i])
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = ellipse
+                    else:
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
+            if self.network_shaped:
+                self.last_image.network_detection(arenas_mask, csc_dict=self.vars["convert_for_motion"], lighter_background=None, bio_mask=bio_mask, back_mask=back_mask)
+            else:
+                im_size = self.first_image.image.shape[0] * self.first_image.image.shape[1]
+                if self.vars['several_blob_per_arena']:
+                    concomp_nb = [self.sample_number, im_size // 50]
+                    max_shape_size = .9 * im_size
+                    total_surfarea = .99 * im_size
+                else:
+                    concomp_nb = [self.sample_number, np.max((100, im_size // 100))]
+                    if self.sample_number > 1:
+                        if self.all['are_zigzag'] == "columns":
+                            inter_dist = np.mean(np.diff(np.nonzero(self.first_image.y_boundaries)))
+                        elif self.all['are_zigzag'] == "rows":
+                            inter_dist = np.mean(np.diff(np.nonzero(self.first_image.x_boundaries)))
+                        else:
+                            dist1 = np.mean(np.diff(np.nonzero(self.first_image.y_boundaries)))
+                            dist2 = np.mean(np.diff(np.nonzero(self.first_image.x_boundaries)))
+                            inter_dist = np.max(dist1, dist2)
+                        if self.all['starting_blob_shape'] == "rectangle":
+                            max_shape_size = np.square(2 * inter_dist)
+                        else:
+                            max_shape_size = np.pi * np.square(inter_dist)
+                        total_surfarea = max_shape_size * self.sample_number
+                    else:
+                        max_shape_size = .9 *im_size
+                        total_surfarea = .99 * im_size
+                ref_image = self.first_image.validated_shapes
+                self.first_image.generate_subtract_background(self.vars['convert_for_motion'], self.vars['drift_already_corrected'])
+                kmeans_clust_nb = None
+                self.last_image.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, arenas_mask,
+                                                             ref_image, self.first_image.subtract_background,
+                                                             kmeans_clust_nb, bio_mask, back_mask, color_space_dictionaries=None,
+                                                             basic=self.basic)
 
     def cropping(self, is_first_image: bool):
         """
@@ -1647,13 +1771,11 @@ class ProgramOrganizer:
                 del self.one_row_per_arena
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_arena.csv open when Cellects runs")
             try:
                 self.one_row_per_frame.to_csv("one_row_per_frame.csv", sep=";", index=False, lineterminator='\n')
                 del self.one_row_per_frame
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:
@@ -1676,6 +1798,5 @@ class ProgramOrganizer:
             software_settings.to_csv("software_settings.csv", sep=";")
         except PermissionError:
             logging.error("Never let software_settings.csv open when Cellects runs")
-            self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
 
 
