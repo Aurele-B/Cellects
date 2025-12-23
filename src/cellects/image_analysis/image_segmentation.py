@@ -586,7 +586,7 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (kmeans_image == i).sum()
             new_bio_label = np.argsort(sum_per_label)[-2]
-        binary_image[np.nonzero(np.isin(kmeans_image, new_bio_label))] = 1
+        binary_image += np.isin(kmeans_image, new_bio_label)
 
     if logical != 'None' and greyscale2 is not None:
         image = greyscale2.reshape((-1, 1))
