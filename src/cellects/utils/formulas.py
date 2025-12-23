@@ -798,3 +798,5 @@ def scale_coordinates(coord: NDArray, scale: Tuple, dims: Tuple) -> Tuple[NDArra
     min_x = np.max((0, np.min(coord[:, 1])))
     max_x = np.min((dims[1], np.max(coord[:, 1])))
     return coord, min_y, max_y, min_x, max_x
+
+

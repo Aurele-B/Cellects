@@ -13,6 +13,7 @@ from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.image_analysis.morphological_operations import create_ellipse
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
+from cellects.core.one_image_analysis import init_params
 from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
 from cellects.image_analysis.network_functions import NetworkDetection
 
@@ -54,7 +55,9 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         if PCA:
             po.fast_first_image_segmentation()
         else:
-            po.first_image.find_first_im_csc()
+            params = init_params()
+            params['is_first_image'] = True
+            po.first_image.find_color_space_combinations(params)
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         po.delineate_each_arena()
