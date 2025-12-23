@@ -1300,11 +1300,13 @@ class ImageAnalysisWindow(MainTabsType):
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
-                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
-                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id]["filter_spec"]
-                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
-                    self.update_filter_display()
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
+            if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+            if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+                    "filter_spec"]
+                self.update_filter_display()
 
     def generate_csc_editing(self):
         """
@@ -1595,10 +1597,13 @@ class ImageAnalysisWindow(MainTabsType):
     def update_filter_display(self):
         self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
         self.filter1_param1.setValue(self.parent().po.vars['filter_spec']['filter1_param'][0])
-        self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
-        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
-        self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
-        self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
+        if len(self.parent().po.vars['filter_spec']['filter1_param']) > 1:
+            self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
+        if 'filter2_type' in self.parent().po.vars['filter_spec']:
+            self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+            self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
+            if len(self.parent().po.vars['filter_spec']['filter2_param']) > 1:
+                self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
 
     def filter1_changed(self):
         """

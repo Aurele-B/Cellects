@@ -6,7 +6,7 @@ import unittest
 
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.motion_analysis import *
-from tests._base import CellectsUnitTest, video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
+from tests._base import CellectsUnitTest, rgb_video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 
 
@@ -18,7 +18,7 @@ class TestFullMotionAnalysis(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = [video_test[:, :, :, :], video_test[:, :, :, 0]]
+        cls.videos_already_in_ram = [rgb_video_test[:, :, :, :], rgb_video_test[:, :, :, 0]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
         cls.vars['origin_list'] = [binary_video_test[0]]
@@ -39,7 +39,7 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = [video_test[0, :, :, :][None, :, :, :], video_test[0, :, :, 0][None, :, :]]
+        cls.videos_already_in_ram = [rgb_video_test[0, :, :, :][None, :, :, :], rgb_video_test[0, :, :, 0][None, :, :]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
         cls.vars['origin_list'] = [binary_video_test[0]]
@@ -66,7 +66,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = video_test[:, :, :, 0]
+        cls.videos_already_in_ram = rgb_video_test[:, :, :, 0]
         cls.i = 0
         cls.dd = DefaultDicts()
         cls.vars = cls.dd.vars

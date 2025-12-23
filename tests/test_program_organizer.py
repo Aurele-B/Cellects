@@ -10,7 +10,7 @@ from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import rhombus_55
 from cellects.utils.load_display_save import write_video_sets, PickleRick
 from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
-from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
+from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 import cv2
 import os
@@ -227,7 +227,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         # cls.po.first_image.validated_shapes = several_arenas_bin_vid[0]
         # cls.po.data_list = [several_arenas_vid]
         #
-        cls.image2 = several_arenas_img[:, :, 0]
+        cls.image2 = rgb_several_arenas_img[:, :, 0]
         cls.shape_number2 = 6
         cls.po2 = ProgramOrganizer()
         cls.po2.update_variable_dict()
