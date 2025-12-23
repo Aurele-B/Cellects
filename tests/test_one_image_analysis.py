@@ -125,6 +125,20 @@ class TestSegmentBlobOneLargeCentralBlob(CellectsUnitTest):
         cls.image = blob_vary_rgb_one_large_central_blob
         cls.oia = OneImageAnalysis(blob_vary_rgb_one_large_central_blob)
         cls.oia.all_c_spaces = get_color_spaces(blob_vary_rgb_one_large_central_blob)
+        cls.params = init_params()
+        cls.params['several_blob_per_arena'] = False
+        cls.params['is_first_image'] = True
+        cls.params['blob_nb'] = 1
+        cls.params['blob_size'] = large_size
+        cls.params['kmeans_clust_nb'] = 2
+        cls.params['bio_mask'] = cv2.erode(one_large_central_blob, rhombus_55, iterations=10)
+        cls.params['ref_image'] = cls.params['bio_mask']
+        cls.params['arenas_mask'] = cv2.dilate(one_large_central_blob, cross_33, iterations=10)
+        cls.params['back_mask'] = np.zeros_like(one_large_central_blob)
+        cls.params['back_mask'][:, :200] = 1
+        cls.params['back_mask'][:200, :] = 1
+        cls.params['back_mask'][:, -200:] = 1
+        cls.params['back_mask'][-200:, :] = 1
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
@@ -133,20 +147,20 @@ class TestSegmentBlobOneLargeCentralBlob(CellectsUnitTest):
 
     def test_find_csc_as_first_image(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        params = init_params()
-        params['is_first_image'] = True
-        params['blob_nb'] = 1
-        self.oia.find_color_space_combinations(params)
+        self.oia.find_color_space_combinations(self.params)
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
-    def test_find_csc_bio_and_back_masks(self):
+    def test_find_csc_as_any_image(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        params = init_params()
-        params['bio_mask'] = cv2.erode(one_large_central_blob, cross_33, iterations=10)
-        params['back_mask'] = np.zeros_like(one_large_central_blob)
-        params['back_mask'][0, :] = 1
-        self.oia.find_color_space_combinations(params)
+        self.params['is_first_image'] = False
+        self.oia.find_color_space_combinations(self.params)
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
+
+    def test_network_detection(self):
+        """test if the number of detected connected components is the same as the number of connected components used to create the image"""
+        self.oia.network_detection(self.params['arenas_mask'])
+        self.assertTrue(len(self.oia.im_combinations) > 0)
+        self.assertTrue(self.oia.im_combinations[0]['binary_image'].sum() > 0)
 
 
 class TestSegmentBlobOneLargeSideBlob(CellectsUnitTest):
@@ -158,10 +172,14 @@ class TestSegmentBlobOneLargeSideBlob(CellectsUnitTest):
         cls.image = blob_vary_rgb_one_large_side_blob
         cls.oia = OneImageAnalysis(blob_vary_rgb_one_large_side_blob)
         cls.oia.all_c_spaces = get_color_spaces(blob_vary_rgb_one_large_side_blob)
+        cls.params = init_params()
+        cls.params['several_blob_per_arena'] = False
+        cls.params['is_first_image'] = True
+        cls.params['blob_nb'] = 1
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(self.params)
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -208,10 +226,21 @@ class TestSegmentBlobManySmallBlobs(CellectsUnitTest):
         cls.image = blob_vary_rgb_many_small_blobs
         cls.oia = OneImageAnalysis(blob_vary_rgb_many_small_blobs)
         cls.oia.all_c_spaces = get_color_spaces(blob_vary_rgb_many_small_blobs)
+        cls.params = init_params()
+        cls.params['is_first_image'] = False
+        cls.params['kmeans_clust_nb'] = 2
+        cls.params['bio_mask'] = cv2.erode(many_small_blobs, rhombus_55, iterations=1)
+        cls.params['ref_image'] = cls.params['bio_mask']
+        cls.params['arenas_mask'] = cv2.dilate(many_small_blobs, cross_33, iterations=10)
+        cls.params['back_mask'] = np.zeros_like(many_small_blobs)
+        cls.params['back_mask'][:, :1] = 1
+        cls.params['back_mask'][:1, :] = 1
+        cls.params['back_mask'][:, -1:] = 1
+        cls.params['back_mask'][-1:, :] = 1
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(self.params)
         self.assertTrue((self.oia.combination_features['blob_nb'] == small_blob_nb).any())
 
 
@@ -227,6 +256,14 @@ class TestSegmentBlobManyMediumBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
+        self.oia.find_color_space_combinations()
+        self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
+
+    def test_with_other_params(self):
+        """test if the number of detected connected components is the same as the number of connected components used to create the image"""
+        params = init_params()
+        params['kmeans_clust_nb'] = 2
+        self.oia.find_color_space_combinations(params)
         self.oia.find_color_space_combinations()
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
@@ -358,138 +395,6 @@ class TestSegmentBackManyVaryingBlobs(CellectsUnitTest):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
         self.oia.find_color_space_combinations()
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
-
-
-    # def test_find_first_im_csc(self):
-    #     """test find_first_im_csc main functionality"""
-    #     sample_number = None
-    #     several_blob_per_arena = True
-    #     spot_shape = None
-    #     spot_size = None
-    #     kmeans_clust_nb = None
-    #     bio_mask = None
-    #     back_mask = None
-    #     color_space_dictionaries = None
-    #     self.oia.find_first_im_csc(basic=False)
-    #     self.assertGreater(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_first_im_csc_zeros_image(self):
-    #     """test find_first_im_csc with zeros image"""
-    #     oia = OneImageAnalysis(np.zeros((3, 3, 3), dtype=np.uint8))
-    #     oia.find_first_im_csc(basic=False)
-    #     self.assertEqual(oia.saved_csc_nb, 0)
-    #
-    # def test_find_first_im_csc_with_sample_number_basic(self):
-    #     """test find_first_im_csc with sample number"""
-    #     sample_number = 6
-    #     self.oia.find_first_im_csc(sample_number=sample_number, basic=False)
-    #     self.assertGreater(self.oia.saved_csc_nb, 0)
-    #     self.oia.update_current_images(0)
-    #     self.assertIsInstance(self.oia.validated_shapes, np.ndarray)
-    #
-    # def test_find_first_im_csc_with_back_mask(self):
-    #     """test find_first_im_csc with background mask"""
-    #     back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-    #     back_mask[:, 0] = 1
-    #     self.oia.find_first_im_csc(back_mask=back_mask, basic=False)
-    #     self.assertGreater(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_first_im_csc_with_bio_mask(self):
-    #     """test find_first_im_csc with bio mask"""
-    #     bio_mask = several_arenas_bin_img
-    #     self.oia.find_first_im_csc(bio_mask=bio_mask, basic=False)
-    #     self.assertGreater(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_first_im_csc_with_bio_and_back_mask(self):
-    #     """test find_first_im_csc with bio and back mask"""
-    #     # self.oia.image = rgb_video_test[5, :, :, :] # binary_rgb_video_test[5, :, :]
-    #     # self.oia.all_c_spaces = {}
-    #     back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-    #     back_mask[:, 0] = 1
-    #     back_mask[:, 0] = 1
-    #     # back_mask[5:6, :] = 1
-    #     bio_mask = several_arenas_bin_img
-    #     # bio_mask = binary_video_test[5, :, :]
-    #     # bio_mask[3:5, :] = 0
-    #     self.oia.find_first_im_csc(bio_mask=bio_mask, back_mask=back_mask, basic=False)
-    #     self.assertGreater(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_last_im_csc(self):
-    #     """test find_last_im_csc main functionality"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     arenas_mask = None
-    #     ref_image = None
-    #     subtract_background = None
-    #     kmeans_clust_nb = None
-    #     bio_mask = None
-    #     back_mask = None
-    #     color_space_dictionaries = None
-    #     basic = False
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, basic=False)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 1)
-    #
-    # def test_find_last_im_csc_zeros_image(self):
-    #     """test find_first_im_csc with zeros image"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     zeros_image = np.zeros((3, 3, 3), dtype=np.uint8)
-    #     oia = OneImageAnalysis(zeros_image)
-    #     oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, arenas_mask=zeros_image + 1, ref_image=zeros_image, basic=False)
-    #     self.assertEqual(oia.saved_csc_nb, 0)
-    #
-    # def test_find_last_im_csc_basic(self):
-    #     """test find_last_im_csc basic"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     basic = True
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, basic=basic)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 1)
-    #
-    # def test_find_last_im_csc_with_back_mask(self):
-    #     """test find_last_im_csc with background mask"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-    #     back_mask[:, 0] = 1
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, back_mask=back_mask, basic=False)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_last_im_csc_with_bio_mask(self):
-    #     """test find_last_im_csc with bio mask"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     bio_mask = several_arenas_bin_img
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, bio_mask=bio_mask, basic=False)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_last_im_csc_with_bio_and_back_mask(self):
-    #     """test find_last_im_csc with bio and back mask"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-    #     back_mask[:, 0] = 1
-    #     bio_mask = several_arenas_bin_img
-    #     basic = True
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, bio_mask=bio_mask, back_mask=back_mask, basic=basic)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
-    #
-    # def test_find_last_im_csc_with_kmeans(self):
-    #     """test find_last_im_csc with kmeans"""
-    #     total_surfarea = self.image.size
-    #     concomp_nb =[6, 20*6]
-    #     max_shape_size = 10
-    #     back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-    #     back_mask[:, 0] = 1
-    #     kmeans_clust_nb = 3
-    #     self.oia.find_last_im_csc(concomp_nb, total_surfarea, max_shape_size, kmeans_clust_nb=kmeans_clust_nb, back_mask=back_mask, basic=False)
-    #     self.assertGreaterEqual(self.oia.saved_csc_nb, 0)
 
 
 if __name__ == '__main__':
