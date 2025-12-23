@@ -545,6 +545,10 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
     - Default clustering uses 2 clusters, modify `kmeans_clust_nb` for different needs.
 
     """
+    if isinstance(bio_mask, np.ndarray):
+        bio_mask = np.nonzero(bio_mask)
+    if isinstance(back_mask, np.ndarray):
+        back_mask = np.nonzero(back_mask)
     new_bio_label = None
     new_bio_label2 = None
     binary_image2 = None
