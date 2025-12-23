@@ -21,18 +21,61 @@ from copy import deepcopy
 import numpy as np
 import cv2  # named opencv-python
 import multiprocessing.pool as mp
-from numba.typed import List as TList
-from numba.typed import Dict as TDict
+from numba.typed import List
+from numba.typed import Dict
 from numpy.typing import NDArray
 from typing import Tuple
+import pandas as pd
+from scipy.stats import rankdata
 from skimage.measure import perimeter
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, spot_size_coefficients
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
-from cellects.image_analysis.one_image_analysis_threads import SaveCombinationThread, ProcessFirstImage
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image_analysis.one_image_analysis_threads import ProcessImage
 from cellects.image_analysis.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import split_dict, translate_dict
 
+def init_params():
+    params = {}
+    # User set variables:
+    params['is_first_image']: bool = False
+    params['several_blob_per_arena']: bool = True
+    params['blob_nb']: int = None
+    params['blob_shape']: str = None
+    params['blob_size']: int = None
+    params['kmeans_clust_nb']: int = None
+    params['arenas_mask']: NDArray = None
+    params['ref_image']: NDArray = None
+    params['bio_mask']: Tuple = None
+    params['back_mask']: Tuple = None
+    params['filter_spec']: dict = {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]}
+    # Computed before OneImageAnalysis usage:
+
+    # Computed in OneImageAnalysis usage:
+    params['con_comp_extent']: list = None
+    params['max_blob_size']: int = None
+    params['total_surface_area']: int = None
+    params['out_of_arenas_mask']: NDArray = None
+    params['subtract_background']: NDArray = None
+    return params
+
+def make_one_dict_per_channel():
+    colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
+    one_dict_per_channel = List()
+    channels = np.array((1, 1, 1), dtype=np.int8)
+    csc_dict = Dict()
+    csc_dict["bgr"] = channels
+    one_dict_per_channel.append(csc_dict)
+    for c_space in colorspace_list:
+        for j in np.arange(3):
+            channels = np.array((0, 0, 0), dtype=np.int8)
+            channels[j] = 1
+            csc_dict = Dict()
+            csc_dict[c_space] = channels
+            one_dict_per_channel.append(csc_dict)
+    return one_dict_per_channel
+
+one_dict_per_channel = make_one_dict_per_channel()
 
 class OneImageAnalysis:
     """
@@ -48,7 +91,7 @@ class OneImageAnalysis:
 
         ps: A viewing method displays the image before and after the most advanced modification made in instance
     """
-    def __init__(self, image, shape_number=0):
+    def __init__(self, image, shape_number: int=1):
         self.image = image
         if len(self.image.shape) == 2:
             self.already_greyscale = True
@@ -72,9 +115,9 @@ class OneImageAnalysis:
         self.subtract_background2 = None
         self.im_combinations = None
         self.bgr = image
-        self.colorspace_list = TList(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
+        self.colorspace_list = List(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
         self.spot_shapes = None
-        self.all_c_spaces = TDict()
+        self.all_c_spaces = Dict()
         self.hsv = None
         self.hls = None
         self.lab = None
@@ -339,253 +382,169 @@ class OneImageAnalysis:
                     self.binary_image = np.logical_xor(self.binary_image, self.binary_image2)
                 self.binary_image = self.binary_image.astype(np.uint8)
 
-    def find_first_im_csc(self, sample_number: int=None, several_blob_per_arena:bool=True,  spot_shape: str=None,
-                          spot_size=None, kmeans_clust_nb: int=None, bio_mask: NDArray[np.uint8]=None,
-                          back_mask: NDArray[np.uint8]=None, color_space_dictionaries: TList=None, basic: bool=True):
-        """
-        Prepare color space lists, dictionaries and matrices.
-
-        Args:
-            sample_number: An integer representing the sample number. Defaults to None.
-            several_blob_per_arena: A boolean indicating whether there are several blobs per arena. Defaults to True.
-            spot_shape: A string representing the shape of the spot. Defaults to None.
-            spot_size: An integer representing the size of the spot. Defaults to None.
-            kmeans_clust_nb: An integer representing the number of clusters for K-means. Defaults to None.
-            bio_mask: A 2D numpy array of type np.uint8 representing the bio mask. Defaults to None.
-            back_mask: A 2D numpy array of type np.uint8 representing the background mask. Defaults to None.
-            color_space_dictionaries: A list of dictionaries containing color space information. Defaults to None.
-            basic: A boolean indicating whether to process the data basic. Defaults to True.
-
-        Note:
-            This method processes the input data to find the first image that matches certain criteria, using various color spaces and masks.
-
-        """
-        logging.info(f"Start automatic detection of the first image")
+    def init_combinations_lists(self):
         self.im_combinations = []
-        self.saved_images_list = TList()
-        self.converted_images_list = TList()
+        self.saved_images_list = List()
+        self.converted_images_list = List()
         self.saved_color_space_list = list()
         self.saved_csc_nb = 0
 
+    def find_color_space_combinations(self, params: dict=None, only_bgr: bool = False):
+        logging.info(f"Start automatic finding of color space combinations...")
+        self.init_combinations_lists()
         if self.image.any():
-            self._get_all_color_spaces()
-            if color_space_dictionaries is None:
-                if basic:
-                    colorspace_list = ["bgr", "lab", "hsv", "luv", "hls", "yuv"]
-                else:
-                    colorspace_list = ["bgr"]
-                color_space_dictionaries = TList()
-                for i, c_space in enumerate(colorspace_list):
-                    for i in np.arange(3):
-                        channels = np.array((0, 0, 0), dtype=np.int8)
-                        channels[i] = 1
-                        csc_dict = TDict()
-                        csc_dict[c_space] = channels
-                        color_space_dictionaries.append(csc_dict)
-
-            self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 11), dtype=np.uint32)
-            unaltered_cc_nb, cc_nb, area, width_std, height_std, area_std, biosum, backsum = 3, 4, 5, 6, 7, 8, 9, 10
-            self.save_combination_thread = SaveCombinationThread(self)
-            get_one_channel_result = True
-            combine_channels = False
-            logging.info(f"Try detection with each available color space channel, one by one.")
-            for csc_dict in color_space_dictionaries:
-                list_args = [self, get_one_channel_result, combine_channels, csc_dict, several_blob_per_arena,
-                             sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None]
-                ProcessFirstImage(list_args)
-
-            if sample_number is not None and basic:
-                # Try to add csc together
-                possibilities = []
-                if self.saved_csc_nb > 6:
-                    different_color_spaces = np.unique(self.saved_color_space_list)
-                    for color_space in different_color_spaces:
-                        csc_idx = np.nonzero(np.isin(self.saved_color_space_list, color_space))[0]
-                        possibilities.append(csc_idx[0] + np.argmin(self.combination_features[csc_idx, area_std]))
-                    if len(possibilities) <= 6:
-                        remaining_possibilities = np.arange(len(self.saved_color_space_list))
-                        remaining_possibilities = remaining_possibilities[np.logical_not(np.isin(remaining_possibilities, possibilities))]
-                        while len(possibilities) <= 6:
-                            new_possibility = np.argmin(self.combination_features[remaining_possibilities, area_std])
-                            possibilities.append(new_possibility)
-                            remaining_possibilities = remaining_possibilities[remaining_possibilities != new_possibility]
-
-
-                pool = mp.ThreadPool(processes=os.cpu_count() - 1)
-                get_one_channel_result = False
-                combine_channels = True
-                list_args = [[self, get_one_channel_result, combine_channels, i, several_blob_per_arena, sample_number,
-                              spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, possibilities] for i in possibilities]
-                for process_i in pool.imap_unordered(ProcessFirstImage, list_args):
-                    pass
-
-            # Get the most and the least covered images and the 2 best bio_mask and back_mask scores
-            # To try combinations of those
-            if self.saved_csc_nb <= 1:
-                csc_dict = {'bgr': np.array((1, 1, 1))}
-                list_args = [self, False, False, csc_dict, several_blob_per_arena,
-                             sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None]
-                process_i = ProcessFirstImage(list_args)
-                process_i.image = self.bgr.mean(axis=-1)
-                process_i.binary_image = otsu_thresholding(process_i.image)
-                process_i.csc_dict = csc_dict
-                process_i.total_area = process_i.binary_image.sum()
-                process_i.process_binary_image()
-                process_i.unaltered_concomp_nb, shapes = cv2.connectedComponents(process_i.validated_shapes)
-                self.save_combination_features(process_i)
-                self.combination_features = self.combination_features[:self.saved_csc_nb, :]
-                fit = np.array([True])
+            # 1. Set all params
+            if params is None:
+                params = init_params()
+            if params['arenas_mask'] is not None:
+                params['out_of_arenas_mask'] = 1 - params['arenas_mask']
+            if params['ref_image'] is not None:
+                params['ref_image'] = cv2.dilate(params['ref_image'], cross_33)
+            if params['several_blob_per_arena']:
+                params['con_comp_extent'] = [1, self.binary_image.size // 50]
             else:
-                coverage = np.argsort(self.combination_features[:self.saved_csc_nb, area])
-                most1 = coverage[-1]; most2 = coverage[-2]
-                least1 = coverage[0]; least2 = coverage[1]
-                if bio_mask is not None:
-                    bio_sort = np.argsort(self.combination_features[:self.saved_csc_nb, biosum])
-                    bio1 = bio_sort[-1]; bio2 = bio_sort[-2]
-                if back_mask is not None:
-                    back_sort = np.argsort(self.combination_features[:self.saved_csc_nb, backsum])
-                    back1 = back_sort[-1]; back2 = back_sort[-2]
+                params['con_comp_extent'] = [params['blob_nb'], np.max((params['blob_nb'], self.binary_image.size // 100))]
+            im_size = self.image.shape[0] * self.image.shape[1]
 
-                # Try a logical And between the most covered images
-                # Should only need one instanciation
-                process_i = ProcessFirstImage(
-                    [self, False, False, None, several_blob_per_arena, sample_number, spot_size, spot_shape, kmeans_clust_nb, bio_mask, back_mask, None])
-                process_i.binary_image = np.logical_and(self.saved_images_list[most1], self.saved_images_list[most2]).astype(np.uint8)
-                process_i.image = self.converted_images_list[most1]
-                process_i.process_binary_image()
-                process_i.csc_dict = {list(self.saved_color_space_list[most1].keys())[0]: self.combination_features[most1, :3],
-                            "logical": "And",
-                            list(self.saved_color_space_list[most2].keys())[0] + "2": self.combination_features[most2, :3]}
-                process_i.unaltered_concomp_nb = np.min(self.combination_features[(most1, most2), unaltered_cc_nb])
-                process_i.total_area = process_i.binary_image.sum()
-                self.save_combination_features(process_i)
-                process_i.image = self.converted_images_list[least1]
-                process_i.binary_image = np.logical_or(self.saved_images_list[least1], self.saved_images_list[least2]).astype(np.uint8)
-                process_i.process_binary_image()
-                process_i.csc_dict = {list(self.saved_color_space_list[least1].keys())[0]: self.combination_features[least1, :3],
-                            "logical": "Or",
-                            list(self.saved_color_space_list[least2].keys())[0] + "2": self.combination_features[least2, :3]}
-                process_i.unaltered_concomp_nb = np.max(self.combination_features[(least1, least2), unaltered_cc_nb])
-                process_i.total_area = process_i.binary_image.sum()
-                self.save_combination_features(process_i)
+            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1:
+                if params['are_zigzag'] == "columns":
+                    inter_dist = np.mean(np.diff(np.nonzero(self.y_boundaries)))
+                elif params['are_zigzag'] == "rows":
+                    inter_dist = np.mean(np.diff(np.nonzero(self.x_boundaries)))
+                else:
+                    dist1 = np.mean(np.diff(np.nonzero(self.y_boundaries)))
+                    dist2 = np.mean(np.diff(np.nonzero(self.x_boundaries)))
+                    inter_dist = np.max(dist1, dist2)
+                if params['blob_shape'] == "rectangle":
+                    params['max_blob_size'] = np.square(2 * inter_dist)
+                else:
+                    params['max_blob_size'] = np.pi * np.square(inter_dist)
+                params['total_surface_area'] = params['max_blob_size'] * self.sample_number
+            else:
+                params['max_blob_size'] = .9 * im_size
+                params['total_surface_area'] = .99 * im_size
 
-                # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), bio_mask, back_mask)
+            # 2. Get color_space_dictionaries
+            if only_bgr:
+                if not 'bgr' in self.all_c_spaces:
+                    self.all_c_spaces['bgr'] = self.bgr
+            else:
+                self._get_all_color_spaces()
 
-                # If most images are very low in biosum or backsum, try to mix them together to improve that score
-                # Do a logical And between the two best bio_masks
-                if bio_mask is not None:
-                    if not np.all(np.isin((bio1, bio2), (most1, most2))):
-                        process_i.image = self.converted_images_list[bio1]
-                        process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[bio2]).astype(
-                        np.uint8)
-                        process_i.process_binary_image()
-                        process_i.csc_dict = {list(self.saved_color_space_list[bio1].keys())[0]: self.combination_features[bio1, :3],
-                                    "logical": "And",
-                                    list(self.saved_color_space_list[bio2].keys())[0] + "2": self.combination_features[bio2,:3]}
-                        process_i.unaltered_concomp_nb = np.min(self.combination_features[(bio1, bio2), unaltered_cc_nb])
-                        process_i.total_area = process_i.binary_image.sum()
+            # 3. Init combination_features table
+            unaltered_blob_nb_idx, blob_number_idx, blob_shape_idx, blob_size_idx, total_area_idx, width_std_idx, height_std_idx, area_std_idx, out_of_arenas_idx, in_arena_idx, common_with_ref_idx, bio_sum_idx, back_sum_idx, score_idx = np.arange(3, 17)
+            self.factors = ['unaltered_blob_nb', 'blob_nb', 'total_area', 'width_std', 'height_std', 'area_std', 'out_of_arenas', 'in_arenas', 'common_with_ref', 'bio_sum', 'back_sum', 'score']
+            self.combination_features = pd.DataFrame(np.zeros((100, len(self.factors)), dtype=np.float64), columns=self.factors)
 
-                        self.save_combination_features(process_i)
+            # 4. Test every channel separately
+            process = 'one'
+            for csc_dict in one_dict_per_channel:
+                ProcessImage([self, params, process, csc_dict])
+            # If the blob number is known, try applying filters to improve detection
+            if params['blob_nb'] is not None and (params['filter_spec'] is None or params['filter_spec']['filter1_type'] == ''):
+                if not (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
+                    tested_filters = ['Gaussian', 'Median', 'Mexican hat', 'Butterworth', 'Laplace', '']
+                    for tested_filter in tested_filters:
+                        self.init_combinations_lists()
+                        params['filter_spec'] = {'filter1_type': tested_filter, 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]}
+                        if 'Param1' in filter_dict[tested_filter]:
+                            params['filter_spec']['filter1_param'] = [filter_dict[tested_filter]['Param1']['Default']]
+                            if 'Param2' in filter_dict[tested_filter]:
+                                params['filter_spec']['filter1_param'].append(filter_dict[tested_filter]['Param2']['Default'])
+                        for csc_dict in one_dict_per_channel:
+                            ProcessImage([self, params, process, csc_dict])
+                        if (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
+                            break
 
-                # Do a logical And between the two best back_mask
-                if back_mask is not None:
-                    if not np.all(np.isin((back1, back2), (most1, most2))):
-                        process_i.image = self.converted_images_list[back1]
-                        process_i.binary_image = np.logical_and(self.saved_images_list[back1], self.saved_images_list[back2]).astype(
-                        np.uint8)
-                        process_i.process_binary_image()
-                        process_i.csc_dict = {list(self.saved_color_space_list[back1].keys())[0]: self.combination_features[back1, :3],
-                                    "logical": "And",
-                                    list(self.saved_color_space_list[back2].keys())[0] + "2": self.combination_features[back2,:3]}
-                        process_i.unaltered_concomp_nb = np.min(self.combination_features[(back1, back2), unaltered_cc_nb])
-                        process_i.total_area = process_i.binary_image.sum()
-                        self.save_combination_features(process_i)
-                # Do a logical Or between the best bio_mask and the best back_mask
-                if bio_mask is not None and back_mask is not None:
-                    if not np.all(np.isin((bio1, back1), (least1, least2))):
-                        process_i.image = self.converted_images_list[bio1]
-                        process_i.binary_image = np.logical_and(self.saved_images_list[bio1], self.saved_images_list[back1]).astype(
-                            np.uint8)
-                        process_i.process_binary_image()
-                        process_i.csc_dict = {list(self.saved_color_space_list[bio1].keys())[0]: self.combination_features[bio1, :3],
-                                    "logical": "Or",
-                                    list(self.saved_color_space_list[back1].keys())[0] + "2": self.combination_features[back1, :3]}
-                        process_i.unaltered_concomp_nb = np.max(self.combination_features[(bio1, back1), unaltered_cc_nb])
-                        # self.save_combination_features(csc_dict, unaltered_concomp_nb, self.binary_image.sum(), bio_mask,
-                        #                                back_mask)
-                        process_i.total_area = self.binary_image.sum()
-                        self.save_combination_features(process_i)
+            self.score_combination_features()
+            # 5. Try adding each valid channel with one another
+            # 5.1. Generate an index vector containing, for each color space, the channel maximizing the score
+            possibilities = []
+            self.all_combined = Dict()
+            different_color_spaces = np.unique(self.saved_color_space_list)
+            for color_space in different_color_spaces:
+                indices = np.nonzero(np.isin(self.saved_color_space_list, color_space))[0]
+                csc_idx = indices[0] + np.argmax(self.combination_features.loc[indices, 'score'])
+                possibilities.append(csc_idx)
+                for k, v in self.saved_color_space_list[csc_idx].items():
+                    self.all_combined[k] = v
 
-                if self.save_combination_thread.is_alive():
-                    self.save_combination_thread.join()
-                self.combination_features = self.combination_features[:self.saved_csc_nb, :]
-                # Only keep the row that filled conditions
-                # Save all combinations if they fulfill the following conditions:
-                #   - Their conncomp number is lower than 3 times the smaller conncomp number.
-                #   - OR The minimal area variations
-                #   - OR The minimal width variations
-                #   - OR The minimal height variations
-                #   - AND/OR their segmentation fits with bio_mask and back_mask
-                width_std_fit = self.combination_features[:, width_std] == np.min(self.combination_features[:, width_std])
-                height_std_fit = self.combination_features[:, height_std] == np.min(self.combination_features[:, height_std])
-                area_std_fit = self.combination_features[:, area_std] < np.min(self.combination_features[:, area_std]) * 10
-                fit = np.logical_or(np.logical_or(width_std_fit, height_std_fit), area_std_fit)
-                bio_mask_fit = np.ones(self.saved_csc_nb, dtype=bool)
-                back_mask_fit = np.ones(self.saved_csc_nb, dtype=bool)
-                if bio_mask is not None or back_mask is not None:
-                    if bio_mask is not None:
-                        bio_mask_fit = self.combination_features[:, biosum] > 0.9 * len(bio_mask[0])
-                    if back_mask is not None:
-                        back_mask_fit = self.combination_features[:, backsum] > 0.9 * len(back_mask[0])
-                    # First test a logical OR between the precedent options and the mask fits.
-                    fit = np.logical_or(fit, np.logical_and(bio_mask_fit, back_mask_fit))
-                    # If this is not stringent enough, use a logical AND and increase progressively the proportion of pixels that
-                    # must match the bio_mask and the back_mask
-                    if np.sum(fit) > 5:
-                        to_add = 0
-                        while np.sum(fit) > 5 and to_add <= 0.25:
-                            if bio_mask is not None:
-                                bio_mask_fit = self.combination_features[:, biosum] > (0.75 + to_add) * len(bio_mask[0])
-                            if back_mask is not None:
-                                back_mask_fit = self.combination_features[:, backsum] > (0.75 + to_add) * len(back_mask[0])
-                            test_fit = np.logical_and(fit, np.logical_and(bio_mask_fit, back_mask_fit))
-                            if np.sum(test_fit) != 0:
-                                fit = test_fit
-                            to_add += 0.05
-            # If saved_csc_nb is too low, try bool operators to mix them together to fill holes for instance
-            # Order the table according to the number of shapes that have been removed by filters
-            # cc_efficiency_order = np.argsort(self.combination_features[:, unaltered_cc_nb] - self.combination_features[:, cc_nb])
-            cc_efficiency_order = np.argsort(self.combination_features[:, area_std])
-            # Save and return a dictionnary containing the selected color space combinations
+            # 5.2. Try combining each selected channel with every other in all possible order
+            params['possibilities'] = possibilities
+            pool = mp.ThreadPool(processes=os.cpu_count() - 1)
+            process = 'add'
+            list_args = [[self, params, process, i] for i in possibilities]
+            for process_i in pool.imap_unordered(ProcessImage, list_args):
+                pass
+
+            # 6. Take a combination of all selected channels and try to remove each color space one by one
+            ProcessImage([self, params, 'subtract', 0])
+
+            # 7. Add PCA:
+            ProcessImage([self, params, 'PCA', None])
+
+            # 8. Make logical operations between pairs of segmentation result
+            coverage = np.argsort(self.combination_features['total_area'].iloc[:self.saved_csc_nb])
+
+            # 8.1 Try a logical And between the most covered images
+            most1, most2 = coverage.values[-1], coverage.values[-2]
+            operation = {0: most1, 1: most2, 'logical': 'And'}
+            ProcessImage([self, params, 'logical', operation])
+
+            # 8.2 Try a logical Or between the least covered images
+            least1, least2 = coverage.values[0], coverage.values[1]
+            operation = {0: least1, 1: least2, 'logical': 'Or'}
+            ProcessImage([self, params, 'logical', operation])
+
+
+            # 8.3 Try a logical And between the best bio_mask images
+            if params['bio_mask'] is not None:
+                bio_sort = np.argsort(self.combination_features['bio_sum'].iloc[:self.saved_csc_nb])
+                bio1, bio2 = bio_sort.values[-1], bio_sort.values[-2]
+                operation = {0: bio1, 1: bio2, 'logical': 'And'}
+                ProcessImage([self, params, 'logical', operation])
+
+            # 8.4 Try a logical And between the best back_mask images
+            if params['back_mask'] is not None:
+                back_sort = np.argsort(self.combination_features['back_sum'].iloc[:self.saved_csc_nb])
+                back1, back2 = back_sort.values[-1], back_sort.values[-2]
+                operation = {0: back1, 1: back2, 'logical': 'And'}
+                ProcessImage([self, params, 'logical', operation])
+
+            # 8.5 Try a logical Or between the best bio_mask and the best back_mask images
+            if params['bio_mask'] is not None and params['back_mask'] is not None:
+                operation = {0: bio1, 1: back1, 'logical': 'Or'}
+                ProcessImage([self, params, 'logical', operation])
+
+            # 9. Order all saved features
+            self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
+            self.score_combination_features()
+            if params['is_first_image'] and params['blob_nb'] is not None:
+                distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
+                cc_efficiency_order = np.argsort(distances)
+            else:
+                cc_efficiency_order = np.argsort(self.combination_features['score'])
+                cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
+
+            # 7. Save and return a dictionary containing the selected color space combinations
             # and their corresponding binary images
-
+            self.im_combinations = []
             for saved_csc in cc_efficiency_order:
-                if fit[saved_csc]:
+                if len(self.saved_color_space_list[saved_csc]) > 0:
                     self.im_combinations.append({})
-                    # self.im_combinations.append({})
-                    # self.im_combinations[len(self.im_combinations) - 1]["csc"] = self.saved_color_space_list[saved_csc]
                     self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
                     self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
                     for k, v in self.saved_color_space_list[saved_csc].items():
                         self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                    if back_mask is not None:
-                        shape_number, shapes = cv2.connectedComponents(self.saved_images_list[saved_csc], connectivity=8)
-                        if np.any(shapes[back_mask]):
-                            shapes[np.isin(shapes, np.unique(shapes[back_mask]))] = 0
-                            self.saved_images_list[saved_csc] = (shapes > 0).astype(np.uint8)
-                    if bio_mask is not None:
-                        self.saved_images_list[saved_csc][bio_mask] = 1
-                    if back_mask is not None or bio_mask is not None:
-                        self.combination_features[saved_csc, cc_nb], shapes = cv2.connectedComponents(self.saved_images_list[saved_csc], connectivity=8)
-                        self.combination_features[saved_csc, cc_nb] -= 1
                     self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                    self.im_combinations[len(self.im_combinations) - 1]["shape_number"] = self.combination_features[saved_csc, cc_nb]
-                    self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = self.converted_images_list[saved_csc]
-
+                    self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
+                        saved_csc]).astype(np.uint8)
+                    self.im_combinations[len(self.im_combinations) - 1]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
+                    self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= params['filter_spec']
             self.saved_color_space_list = []
-            self.saved_images_list = None
-            self.converted_images_list = None
-            self.combination_features = None
+            del self.saved_images_list
+            del self.converted_images_list
+            del self.all_combined
 
     def save_combination_features(self, process_i: object):
         """
@@ -603,24 +562,20 @@ class OneImageAnalysis:
                     csc_dict (dict): Color space conversion dictionary
         """
         if process_i.validated_shapes.any():
+            saved_csc_nb = self.saved_csc_nb
+            self.saved_csc_nb += 1
             self.saved_images_list.append(process_i.validated_shapes)
             self.converted_images_list.append(np.round(process_i.image).astype(np.uint8))
             self.saved_color_space_list.append(process_i.csc_dict)
-            self.combination_features[self.saved_csc_nb, :3] = list(process_i.csc_dict.values())[0]
-            self.combination_features[
-                self.saved_csc_nb, 3] = process_i.unaltered_concomp_nb - 1  # unaltered_cc_nb
-            self.combination_features[self.saved_csc_nb, 4] = process_i.shape_number  # cc_nb
-            self.combination_features[self.saved_csc_nb, 5] = process_i.total_area  # area
-            self.combination_features[self.saved_csc_nb, 6] = np.std(process_i.stats[1:, 2])  # width_std
-            self.combination_features[self.saved_csc_nb, 7] = np.std(process_i.stats[1:, 3])  # height_std
-            self.combination_features[self.saved_csc_nb, 8] = np.std(process_i.stats[1:, 4])  # area_std
-            if process_i.bio_mask is not None:
-                self.combination_features[self.saved_csc_nb, 9] = np.sum(
-                    process_i.validated_shapes[process_i.bio_mask[0], process_i.bio_mask[1]])
-            if process_i.back_mask is not None:
-                self.combination_features[self.saved_csc_nb, 10] = np.sum(
-                    (1 - process_i.validated_shapes)[process_i.back_mask[0], process_i.back_mask[1]])
-            self.saved_csc_nb += 1
+            self.combination_features.iloc[saved_csc_nb, :] = process_i.fact
+
+    def score_combination_features(self):
+        for to_minimize in ['unaltered_blob_nb', 'blob_nb', 'area_std', 'width_std', 'height_std', 'back_sum', 'out_of_arenas']:
+            values = rankdata(self.combination_features[to_minimize], method='dense')
+            self.combination_features['score'] += values.max() - values
+        for to_maximize in ['bio_sum', 'in_arenas', 'common_with_ref']:
+            values = rankdata(self.combination_features[to_maximize], method='dense') - 1
+            self.combination_features['score'] += values
 
     def update_current_images(self, current_combination_id: int):
         """
@@ -640,261 +595,6 @@ class OneImageAnalysis:
         """
         self.image = self.im_combinations[current_combination_id]["converted_image"]
         self.validated_shapes = self.im_combinations[current_combination_id]["binary_image"]
-
-    def find_last_im_csc(self, concomp_nb: int, total_surfarea: int, max_shape_size: int, arenas_mask: NDArray=None,
-                         ref_image: NDArray=None, subtract_background: NDArray=None, kmeans_clust_nb: int=None,
-                         bio_mask: NDArray[np.uint8]=None, back_mask: NDArray[np.uint8]=None,
-                         color_space_dictionaries: dict=None, basic: bool=True):
-        """
-        Find the last image color space configurations that meets given criteria.
-
-        Args:
-            concomp_nb (int): A tuple of two integers representing the minimum and maximum number of connected components.
-            total_surfarea (int): The total surface area required for the image.
-            max_shape_size (int): The maximum shape size allowed in the image.
-            arenas_mask (NDArray, optional): A numpy array representing areas inside the field of interest.
-            ref_image (NDArray, optional): A reference image for comparison.
-            subtract_background (NDArray, optional): A numpy array representing the background to be subtracted.
-            kmeans_clust_nb (int, optional): The number of clusters for k-means clustering.
-            bio_mask (NDArray[np.uint8], optional): A binary mask for biological structures.
-            back_mask (NDArray[np.uint8], optional): A binary mask for background areas.
-            color_space_dictionaries (dict, optional): Dictionaries of color space configurations.
-            basic (bool, optional): A flag indicating whether to process colorspaces basic.
-
-        """
-        logging.info(f"Start automatic detection of the last image")
-        self.im_combinations = []
-        self.saved_images_list = TList()
-        self.converted_images_list = TList()
-        self.saved_color_space_list = list()
-        self.saved_csc_nb = 0
-
-        if self.image.any():
-            if arenas_mask is None:
-                arenas_mask = np.ones_like(self.binary_image)
-            out_of_arenas = 1 - arenas_mask
-            self._get_all_color_spaces()
-            if color_space_dictionaries is None:
-                if basic:
-                    colorspace_list = TList(("bgr", "lab", "hsv", "luv", "hls", "yuv"))
-                else:
-                    colorspace_list = TList(("lab", "hsv"))
-                color_space_dictionaries = TList()
-                channels = np.array((1, 1, 1), dtype=np.int8)
-                csc_dict = TDict()
-                csc_dict["bgr"] = channels
-                color_space_dictionaries.append(csc_dict)
-                for i, c_space in enumerate(colorspace_list):
-                    for i in np.arange(3):
-                        channels = np.array((0, 0, 0), dtype=np.int8)
-                        channels[i] = 1
-                        csc_dict = TDict()
-                        csc_dict[c_space] = channels
-                        color_space_dictionaries.append(csc_dict)
-            if ref_image is not None:
-                ref_image = cv2.dilate(ref_image, cross_33)
-            else:
-                ref_image = np.ones(self.bgr.shape[:2], dtype=np.uint8)
-            out_of_arenas_threshold = 0.01 * out_of_arenas.sum()
-            self.combination_features = np.zeros((len(color_space_dictionaries) + 50, 10), dtype=np.uint32)
-            cc_nb_idx, area_idx, out_of_arenas_idx, in_arena_idx, surf_in_common_idx, biosum_idx, backsum_idx = 3, 4, 5, 6, 7, 8, 9
-            self.save_combination_thread = SaveCombinationThread(self)
-
-            # Start with a PCA:
-            pca_dict = TDict()
-            pca_dict['PCA'] = np.array([1, 1, 1], dtype=np.int8)
-            self.image, explained_variance_ratio, first_pc_vector = extract_first_pc(self.bgr)
-            self.binary_image = otsu_thresholding(self.image)
-            nb, shapes = cv2.connectedComponents(self.binary_image)
-            nb -= 1
-            surf = self.binary_image.sum()
-            outside_pixels = np.sum(self.binary_image * out_of_arenas)
-            inside_pixels = np.sum(self.binary_image * arenas_mask)
-            in_common = np.sum(ref_image * self.binary_image)
-            self.converted_images_list.append(self.image)
-            self.saved_images_list.append(self.binary_image)
-            self.saved_color_space_list.append(pca_dict)
-            self.combination_features[self.saved_csc_nb, :3] = list(pca_dict.values())[0]
-            self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-            self.combination_features[self.saved_csc_nb, area_idx] = surf
-            self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-            self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
-            self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-            if bio_mask is not None:
-                self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                    self.binary_image[bio_mask[0], bio_mask[1]])
-            if back_mask is not None:
-                self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                    (1 - self.binary_image)[back_mask[0], back_mask[1]])
-            self.saved_csc_nb += 1
-
-            potentials = TDict()
-            # One channel processing
-            for csc_dict in color_space_dictionaries:
-                self.image = combine_color_spaces(csc_dict, self.all_c_spaces, subtract_background)
-                if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
-                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb, bio_mask, back_mask)
-                else:
-                    self.binary_image = otsu_thresholding(self.image)
-                surf = np.sum(self.binary_image)
-                if surf < total_surfarea:
-                    nb, shapes = cv2.connectedComponents(self.binary_image)
-                    outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                    inside_pixels = np.sum(self.binary_image * arenas_mask)
-                    if outside_pixels < inside_pixels:
-                        if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
-                            in_common = np.sum(ref_image * self.binary_image)
-                            if in_common > 0:
-                                nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
-                                nb -= 1
-                                if np.all(np.sort(stats[:, 4])[:-1] < max_shape_size):
-                                    c_space = list(csc_dict.keys())[0]
-                                    self.converted_images_list.append(self.image)
-                                    self.saved_images_list.append(self.binary_image)
-                                    self.saved_color_space_list.append(csc_dict)
-                                    self.combination_features[self.saved_csc_nb, :3] = csc_dict[c_space]
-                                    self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-                                    self.combination_features[self.saved_csc_nb, area_idx] = surf
-                                    self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-                                    self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
-                                    self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                                    if bio_mask is not None:
-                                        self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                                            self.binary_image[bio_mask[0], bio_mask[1]])
-                                    if back_mask is not None:
-                                        self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                                            (1 - self.binary_image)[back_mask[0], back_mask[1]])
-                                    if np.isin(c_space, list(potentials.keys())):
-                                        potentials[c_space] += csc_dict[c_space]
-                                    else:
-                                        potentials[c_space] = csc_dict[c_space]
-                                    self.saved_csc_nb += 1
-            if len(potentials) > 0:
-                # All combination processing
-
-                # Add a combination of all selected channels :
-                self.saved_color_space_list.append(potentials)
-                self.image = combine_color_spaces(potentials, self.all_c_spaces, subtract_background)
-                if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
-                    self.binary_image, self.binary_image2, self.bio_label, self.bio_label2 = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, bio_mask=bio_mask, back_mask=back_mask)
-                else:
-                    self.binary_image = otsu_thresholding(self.image)
-                surf = self.binary_image.sum()
-                nb, shapes = cv2.connectedComponents(self.binary_image)
-                nb -= 1
-                outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                inside_pixels = np.sum(self.binary_image * arenas_mask)
-                in_common = np.sum(ref_image * self.binary_image)
-                self.converted_images_list.append(self.image)
-                self.saved_images_list.append(self.binary_image)
-                self.saved_color_space_list.append(potentials)
-                self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
-                self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-                self.combination_features[self.saved_csc_nb, area_idx] = surf
-                self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-                self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
-                self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                if bio_mask is not None:
-                    self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                        self.binary_image[bio_mask[0], bio_mask[1]])
-                if back_mask is not None:
-                    self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                        (1 - self.binary_image)[back_mask[0], back_mask[1]])
-                self.saved_csc_nb += 1
-            # All combination processing
-            # Try to remove color space one by one
-            i = 0
-            original_length = len(potentials)
-            while np.logical_and(len(potentials) > 1, i < original_length // 2):
-                color_space_to_remove = TList()
-                # The while loop until one col space remains or the removal of one implies a strong enough area change
-                previous_c_space = list(potentials.keys())[-1]
-                for c_space in potentials.keys():
-                    try_potentials = potentials.copy()
-                    try_potentials.pop(c_space)
-                    if i > 0:
-                        try_potentials.pop(previous_c_space)
-                    self.image = combine_color_spaces(try_potentials, self.all_c_spaces, subtract_background)
-                    if kmeans_clust_nb is not None and (bio_mask is not None or back_mask is not None):
-                        self.binary_image, self.binary_image2, self.bio_label, self.bio_label2  = kmeans(self.image, kmeans_clust_nb=kmeans_clust_nb, bio_mask=bio_mask, back_mask=back_mask)
-                    else:
-                        self.binary_image = otsu_thresholding(self.image)
-                    surf = np.sum(self.binary_image)
-                    if surf < total_surfarea:
-                        nb, shapes = cv2.connectedComponents(self.binary_image)
-                        outside_pixels = np.sum(self.binary_image * out_of_arenas)
-                        inside_pixels = np.sum(self.binary_image * arenas_mask)
-                        if outside_pixels < inside_pixels:
-                            if (nb > concomp_nb[0] - 1) and (nb < concomp_nb[1]):
-                                in_common = np.sum(ref_image * self.binary_image)
-                                if in_common > 0:
-                                    nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.binary_image)
-                                    nb -= 1
-                                    if np.all(np.sort(stats[:, 4])[:-1] < max_shape_size):
-                                        # If a color space remove fits in the requirements, we store its values
-                                        self.converted_images_list.append(self.image)
-                                        self.saved_images_list.append(self.binary_image)
-                                        self.saved_color_space_list.append(try_potentials)
-                                        self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-                                        self.combination_features[self.saved_csc_nb, area_idx] = surf
-                                        self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-                                        self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
-                                        self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                                        if bio_mask is not None:
-                                            self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                                                self.binary_image[bio_mask[0], bio_mask[1]])
-                                        if back_mask is not None:
-                                            self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                                                (1 - self.binary_image)[back_mask[0], back_mask[1]])
-                                        self.saved_csc_nb += 1
-                                        color_space_to_remove.append(c_space)
-                                        if i > 0:
-                                            color_space_to_remove.append(previous_c_space)
-                    # If it does not (if it did not pass every "if" layers), we definitely remove that color space
-                    previous_c_space = c_space
-                color_space_to_remove = np.unique(color_space_to_remove)
-                for remove_col_space in color_space_to_remove:
-                    potentials.pop(remove_col_space)
-                i += 1
-            if np.logical_and(len(potentials) > 0, i > 1):
-                self.converted_images_list.append(self.image)
-                self.saved_images_list.append(self.binary_image)
-                self.saved_color_space_list.append(potentials)
-                self.combination_features[self.saved_csc_nb, :3] = list(potentials.values())[0]
-                self.combination_features[self.saved_csc_nb, cc_nb_idx] = nb
-                self.combination_features[self.saved_csc_nb, area_idx] = surf
-                self.combination_features[self.saved_csc_nb, out_of_arenas_idx] = outside_pixels
-                self.combination_features[self.saved_csc_nb, in_arena_idx] = inside_pixels
-                self.combination_features[self.saved_csc_nb, surf_in_common_idx] = in_common
-                if bio_mask is not None:
-                    self.combination_features[self.saved_csc_nb, biosum_idx] = np.sum(
-                        self.binary_image[bio_mask[0], bio_mask[1]])
-                if back_mask is not None:
-                    self.combination_features[self.saved_csc_nb, backsum_idx] = np.sum(
-                        (1 - self.binary_image)[back_mask[0], back_mask[1]])
-                self.saved_csc_nb += 1
-
-            self.combination_features = self.combination_features[:self.saved_csc_nb, :]
-            # Among all potentials, select the best one, according to criterion decreasing in importance
-            cc_efficiency_order = np.argsort(self.combination_features[:, surf_in_common_idx] + self.combination_features[:, in_arena_idx] - self.combination_features[:, out_of_arenas_idx])
-
-            # Save and return a dictionnary containing the selected color space combinations
-            # and their corresponding binary images
-            self.im_combinations = []
-            for saved_csc in cc_efficiency_order:
-                if len(self.saved_color_space_list[saved_csc]) > 0:
-                    self.im_combinations.append({})
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
-                    for k, v in self.saved_color_space_list[saved_csc].items():
-                        self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                    self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                    self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
-                        saved_csc]).astype(np.uint8)
-            self.saved_color_space_list = []
-            self.saved_images_list = None
-            self.converted_images_list = None
-            self.combination_features = None
 
     def network_detection(self, arenas_mask: NDArray=None, pseudopod_min_size: int=50, csc_dict: dict=None, lighter_background: bool= None, bio_mask=None, back_mask=None):
         """
@@ -1083,5 +783,4 @@ class OneImageAnalysis:
 
             self.y_boundaries, y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
             self.x_boundaries, x_max_sum = self.projection_to_get_peaks_boundaries(axis=0)
-
 
