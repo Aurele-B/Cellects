@@ -1448,26 +1448,11 @@ class WriteVideoThread(QtCore.QThread):
 
         already_greyscale : bool
             Flag indicating if the video is already in greyscale format.
-            This parameter must be set as a variable named 'already_greyscale' in the instance
-            variables of the parent object.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
         FileNotFoundError
             When the path to write the video is not specified.
-
-        Examples
-        --------
-        >>> self.parent().po.vars['already_greyscale'] = False
-        >>> self.run()
-        >>> # Expects to write a visualization video as 'ind_arena.npy'
-        >>> self.parent().po.vars['already_greyscale'] = True
-        >>> self.run()
-        >>> # Expects to write a converted video as 'ind_arena.npy'
         """
         arena = self.parent().po.all['arena']
         if not self.parent().po.vars['already_greyscale']:
