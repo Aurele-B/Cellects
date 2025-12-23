@@ -459,7 +459,7 @@ class FirstImageAnalysisThread(QtCore.QThread):
             self.message_from_thread.emit("Image segmentation, wait...")
         else:
             self.message_from_thread.emit("Generating segmentation options, wait...")
-        self.parent().po.full_first_image_segmentation(self.parent().imageanalysiswindow.asking_first_im_parameters_flag,
+        self.parent().po.full_first_image_segmentation(not self.parent().imageanalysiswindow.asking_first_im_parameters_flag,
                                                        self.parent().imageanalysiswindow.bio_mask, self.parent().imageanalysiswindow.back_mask)
 
         logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60).astype(int)} minutes {np.round((default_timer() - tic) % 60).astype(int)} secondes")

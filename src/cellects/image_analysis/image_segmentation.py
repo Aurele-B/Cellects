@@ -479,11 +479,10 @@ def otsu_thresholding(image: NDArray) -> NDArray[np.uint8]:
     """
     threshold = get_otsu_threshold(image)
     binary_image = (image > threshold)
-    binary_image2 = np.logical_not(binary_image)
-    if binary_image.sum() < binary_image2.sum():
+    if binary_image.sum() < binary_image.size / 2:
         return binary_image.astype(np.uint8)
     else:
-        return binary_image2.astype(np.uint8)
+        return np.logical_not(binary_image).astype(np.uint8)
 
 
 def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArray, l_threshold, lighter_background: bool) -> Tuple[NDArray, NDArray]:
@@ -644,7 +643,7 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
             new_bio_label = np.argsort(sum_per_label)[-2]
         binary_image[np.nonzero(np.isin(kmeans_image, new_bio_label))] = 1
 
-    if logical != 'None' and greyscale is not None:
+    if logical != 'None' and greyscale2 is not None:
         image = greyscale2.reshape((-1, 1))
         image = np.float32(image)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)

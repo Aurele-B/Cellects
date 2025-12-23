@@ -4,7 +4,7 @@ This script contains all unit tests of the image segmentation script
 """
 
 import unittest
-from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img
+from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
@@ -313,8 +313,8 @@ class TestKmeans(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize data for testing"""
         super().setUpClass()
-        cls.image = several_arenas_img[:, :, 0]
-        cls.image2 = several_arenas_img[:, :, 2]
+        cls.image = rgb_several_arenas_img[:, :, 0]
+        cls.image2 = rgb_several_arenas_img[:, :, 2]
 
     def test_kmeans(self):
         """Test kmeans basic functionality."""
@@ -346,7 +346,7 @@ class TestWindowedThresholding(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize data for testing"""
         super().setUpClass()
-        cls.image = several_arenas_img[:, :, 0]
+        cls.image = rgb_several_arenas_img[:, :, 0]
 
     def test_windowed_thresholding(self):
         """Test windowed_thresholding basic functionality."""
@@ -679,7 +679,7 @@ class TestExtractFirstPC(CellectsUnitTest):
 
     def test_first_pc_vector_use_for_conversion(self):
         """Test when first PC vector is used for conversion."""
-        bgr_image = several_arenas_img
+        bgr_image = rgb_several_arenas_img
 
         greyscale, _, first_pc_vector = extract_first_pc(bgr_image)
         pca = bracket_to_uint8_image_contrast(greyscale)
