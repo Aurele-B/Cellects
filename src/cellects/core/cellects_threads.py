@@ -1252,7 +1252,6 @@ class OneArenaThread(QtCore.QThread):
         self.when_detection_finished.emit("Post processing done, read to see the result")
 
 
-
 class VideoReaderThread(QtCore.QThread):
     """
     Thread for reading a video in the GUI.
