@@ -7,7 +7,8 @@ For instance, users can optimize for low-noise environments with [Mesh minimal i
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure9.png" alt="Advanced parameters window" width="600">
+  <img src="../../static/UserManualFigure9.png" alt="Advanced parameters window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 9:</strong> Advanced parameters window</figcaption>
 </figure>
 
@@ -157,7 +158,8 @@ The minimal variation in intensity to consider that a given window does contain 
 ---
 
 <figure>
-  <img src="../../static/UserManualFigure9-1.png" alt="Remaining parameters" width="600">
+  <img src="../../static/UserManualFigure9-1.png" alt="Remaining parameters"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:50%">
   <figcaption><strong>Figure 9-1:</strong> Remaining parameters</figcaption>
 </figure>
 

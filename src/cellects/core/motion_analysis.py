@@ -259,12 +259,7 @@ class MotionAnalysis:
                     self.drift_mask_coord[:, 2] == 0) and np.all(self.drift_mask_coord[:, 3] == self.dims[2] - 1):
                 logging.error(f"Drift correction has been wrongly detected. Images do not contain zero-valued pixels")
                 self.vars['drift_already_corrected'] = False
-        if self.vars['origin_state'] == "constant":
-            self.start = 1
-            if self.vars['lighter_background']:
-                # Initialize the covering_intensity matrix as a reference for pixel fading
-                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
-        else:
+        if self.vars['origin_state'] != "constant":
             self.start = 0
             analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
             while np.logical_and(np.sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
@@ -275,9 +270,11 @@ class MotionAnalysis:
             if self.vars['several_blob_per_arena']:
                 self.origin = analysisi.binary_image
             else:
-                nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(analysisi.binary_image,
-                                                                                           connectivity=8)
-                if self.vars['appearance_detection_method'] == 'most_central':
+                if self.vars['appearance_detection_method'] == 'largest':
+                    self.origin = keep_one_connected_component(analysisi.binary_image)
+                elif self.vars['appearance_detection_method'] == 'most_central':
+                    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(analysisi.binary_image,
+                                                                                               connectivity=8)
                     center = np.array((self.dims[2] // 2, self.dims[1] // 2))
                     stats = np.zeros(nb_components - 1)
                     for shape_i in np.arange(1, nb_components):
@@ -285,10 +282,12 @@ class MotionAnalysis:
                     # The shape having the minimal euclidean distance from the center will be the original shape
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == (np.argmin(stats) + 1)] = 1
-                elif self.vars['appearance_detection_method'] == 'largest':
-                    self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
-                    self.origin[output == np.argmax(stats[1:, 4])] = 1
         self.origin_idx = np.nonzero(self.origin)
+        if self.vars['origin_state'] == "constant":
+            self.start = 1
+            if self.vars['lighter_background']:
+                # Initialize the covering_intensity matrix as a reference for pixel fading
+                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
         self.substantial_growth = np.min((1.2 * self.origin.sum(), self.origin.sum() + 250))
 
     def get_covering_duration(self, step: int):
@@ -1597,7 +1596,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
         """
         Manages the saving and updating of CSV files based on data extracted from analyzed
         one arena. Specifically handles three CSV files: "one_row_per_arena.csv",
-        "one_row_per_frame.csv", and "one_row_per_oscillating_cluster.csv".
+        "one_row_per_frame.csv".
         Each file is updated or created based on the presence of existing data.
         The method ensures that each CSV file contains the relevant information for
         the given arena, frame, and oscillator cluster data.

@@ -33,8 +33,8 @@ from cellects.image_analysis.shape_descriptors import from_shape_descriptors_cla
 from cellects.image_analysis.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.utils.load_display_save import read_and_rotate
+from cellects.core.one_image_analysis import OneImageAnalysis, init_params
+from cellects.utils.load_display_save import read_and_rotate, video2numpy
 from cellects.image_analysis.morphological_operations import shape_selection, draw_img_with_mask
 
 
@@ -99,7 +99,7 @@ class ProgramOrganizer:
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
         self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
-        self.sample_number = None
+        self.sample_number = 1
         self.top = None
         self.motion = None
         self.analysis_instance = None
@@ -121,6 +121,7 @@ class ProgramOrganizer:
         self.one_row_per_frame = None
         self.not_analyzed_individuals = None
         self.visualize: bool = True
+        self.network_shaped: bool = False
 
     def update_variable_dict(self):
         """
@@ -318,8 +319,7 @@ class ProgramOrganizer:
         """
         Set the analyzed individuals variable in the dataset.
         """
-        if self.sample_number is not None:
-            self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
+        self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
         if self.not_analyzed_individuals is not None:
             self.vars['analyzed_individuals'] = np.delete(self.vars['analyzed_individuals'],
                                                        self.not_analyzed_individuals - 1)
@@ -349,6 +349,10 @@ class ProgramOrganizer:
         It updates the state of various attributes based on the loaded data
         and logs appropriate messages.
         """
+        self.analysis_instance = None
+        self.first_im = None
+        self.first_image = None
+        self.last_image = None
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:
@@ -479,7 +483,7 @@ class ProgramOrganizer:
         videos_coordinates = self.first_image.crop_coord + [self.left, self.right, self.top, self.bot]
         return videos_coordinates
 
-    def get_first_image(self, first_im: NDArray=None, sample_number: int=None):
+    def get_first_image(self, first_im: NDArray=None, sample_number: int=1):
         """
         Load and process the first image or frame from a video.
 
@@ -487,42 +491,21 @@ class ProgramOrganizer:
         depending on whether the data is an image or a video. It performs necessary
         preprocessing and initializes relevant attributes for subsequent analysis.
         """
+        self.sample_number = sample_number
         self.reduce_image_dim = False
         if first_im is not None:
             self.first_im = first_im
-            if sample_number is not None:
-                self.sample_number = sample_number
         else:
             logging.info("Load first image")
-            just_read_image = self.first_im is not None
-            # just_read_image = self.analysis_instance is not None
             if self.all['im_or_vid'] == 1:
-                cap = cv2.VideoCapture(self.data_list[0])
-                counter = 0
-                if not just_read_image:
+                if self.analysis_instance is None:
+                    self.analysis_instance = video2numpy(self.data_list[0])
                     self.sample_number = len(self.data_list)
-                    self.vars['img_number'] = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                    self.analysis_instance = np.zeros(
-                        [int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
-                         int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), 3], dtype=np.uint8)
-                    while cap.isOpened() and counter < 1:
-                        ret, frame = cap.read()
-                        if counter == 0:
-                            self.first_im = frame
-                            self.analysis_instance[0, ...] = self.first_im
-                            break
-                    cap.release()
-                elif np.sum(self.analysis_instance[self.vars['first_detection_frame'], ...] == 0):
-                    cap = cv2.VideoCapture(self.data_list[0])
-                    counter = 0
-                    while cap.isOpened() and (counter < self.vars['first_detection_frame']):
-                        ret, frame = cap.read()
-                        self.analysis_instance[counter, ...] = frame
-                        counter += 1
-
-                    cap.release()
+                    self.vars['img_number'] = self.analysis_instance.shape[0]
+                    self.first_im = self.analysis_instance[0, ...]
+                    self.vars['dims'] = self.analysis_instance.shape[:3]
+                else:
                     self.first_im = self.analysis_instance[self.vars['first_detection_frame'], ...]
-                self.vars['dims'] = self.analysis_instance.shape[:3]
 
             else:
                 self.vars['img_number'] = len(self.data_list)
@@ -536,7 +519,8 @@ class ProgramOrganizer:
                         self.reduce_image_dim = True
                     if self.reduce_image_dim:
                         self.first_im = self.first_im[:, :, 0]
-        self.first_image = OneImageAnalysis(self.first_im)
+
+        self.first_image = OneImageAnalysis(self.first_im, self.sample_number)
         self.vars['already_greyscale'] = self.first_image.already_greyscale
         if self.vars['already_greyscale']:
             self.vars["convert_for_origin"] = {"bgr": np.array((1, 1, 1), dtype=np.uint8), "logical": "None"}
@@ -563,16 +547,7 @@ class ProgramOrganizer:
             self.last_im = last_im
         else:
             if self.all['im_or_vid'] == 1:
-                cap = cv2.VideoCapture(self.data_list[0])
-                counter = 0
-                while cap.isOpened() and counter < self.vars['img_number']:
-                    ret, frame = cap.read()
-                    if self.reduce_image_dim:
-                        frame = frame[:, :, 0]
-                    self.analysis_instance[-1, ...] = frame
-                    counter += 1
-                self.last_im = frame
-                cap.release()
+                self.last_im = self.analysis_instance[-1, ...]
             else:
                 is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
                 self.last_im = read_and_rotate(self.data_list[-1], self.first_im, self.all['raw_images'], is_landscape)
@@ -591,7 +566,8 @@ class ProgramOrganizer:
         """
         self.vars['time_step_is_arbitrary'] = True
         if self.all['im_or_vid'] == 1:
-            self.vars['dims'] = self.analysis_instance.shape
+            if not 'dims' in self.vars:
+                self.vars['dims'] = self.analysis_instance.shape[:3]
             timings = np.arange(self.vars['dims'][0])
         else:
             timings = np.arange(len(self.data_list))
@@ -679,15 +655,15 @@ class ProgramOrganizer:
         self.first_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
         self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
 
-    def fast_last_image_segmentation(self, biomask: NDArray[np.uint8] = None, backmask: NDArray[np.uint8] = None):
+    def fast_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
         """
         Segment the first or subsequent image in a series for biological and background masks.
 
         Parameters
         ----------
-        biomask : NDArray[np.uint8], optional
+        bio_mask : NDArray[np.uint8], optional
             The biological mask to be applied to the image.
-        backmask : NDArray[np.uint8], optional
+        back_mask : NDArray[np.uint8], optional
             The background mask to be applied to the image.
 
         Returns
@@ -705,14 +681,14 @@ class ProgramOrganizer:
             self.vars['convert_for_motion'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
         self.cropping(is_first_image=False)
         self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                            biomask, backmask, self.first_image.subtract_background,
+                                            bio_mask, back_mask, self.first_image.subtract_background,
                                             self.first_image.subtract_background2,
                                             rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                             filter_spec=self.vars["filter_spec"])
         if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["rolling_window_segmentation"]['do']:
             self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                                biomask, backmask, self.first_image.subtract_background,
+                                                bio_mask, back_mask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
                                                 allowed_window=self.last_image.drift_mask_coord,
                                                 filter_spec=self.vars["filter_spec"])
@@ -729,6 +705,104 @@ class ProgramOrganizer:
         else:
             greyscale = self.last_image.image
         self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
+
+    def save_user_masks(self, bio_mask=None, back_mask=None):
+        self.all["bio_mask"] = None
+        self.all["back_mask"] = None
+        if self.all['keep_cell_and_back_for_all_folders']:
+            self.all["bio_mask"] = bio_mask
+            self.all["back_mask"] = back_mask
+
+    def full_first_image_segmentation(self, first_param_known: bool, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
+            shape_nb -= 1
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            shape_nb = 0
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        self.save_user_masks(bio_mask=bio_mask, back_mask=back_mask)
+        if self.visualize or len(self.first_im.shape) == 2:
+            if not first_param_known and self.all['scale_with_image_or_cells'] == 0 and self.all["set_spot_size"]:
+                self.get_average_pixel_size()
+            else:
+                self.starting_blob_hsize_in_pixels = None
+            self.fast_first_image_segmentation()
+            if shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
+                self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_nb
+                self.first_image.shape_number = shape_nb
+                self.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8)
+                self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+        else:
+
+            params = init_params()
+            params['is_first_image'] = True
+            params['blob_nb'] = self.sample_number
+            if self.vars["color_number"] > 2:
+                params['kmeans_clust_nb'] = self.vars["color_number"]
+            params['bio_mask'] = self.all["bio_mask"]
+            params['back_mask'] = self.all["back_mask"]
+            params['filter_spec'] = self.vars["filter_spec"]
+
+            if first_param_known:
+                if self.all['scale_with_image_or_cells'] == 0:
+                    self.get_average_pixel_size()
+                else:
+                    self.starting_blob_hsize_in_pixels = None
+                params['several_blob_per_arena'] = self.vars['several_blob_per_arena']
+                params['blob_shape'] = self.all['starting_blob_shape']
+                params['blob_size'] = self.starting_blob_hsize_in_pixels
+
+            self.first_image.find_color_space_combinations(params)
+
+    def full_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        if self.last_im is None:
+            self.get_last_image()
+        self.cropping(False)
+        self.get_background_to_subtract()
+        if self.visualize or (len(self.first_im.shape) == 2 and not self.network_shaped):
+            self.fast_last_image_segmentation(bio_mask=bio_mask, back_mask=back_mask)
+        else:
+            arenas_mask = None
+            if self.all['are_gravity_centers_moving'] != 1:
+                cr = [self.top, self.bot, self.left, self.right]
+                arenas_mask = np.zeros_like(self.first_image.validated_shapes)
+                for _i in np.arange(len(self.vars['analyzed_individuals'])):
+                    if self.vars['arena_shape'] == 'circle':
+                        ellipse = create_ellipse(cr[1][_i] - cr[0][_i], cr[3][_i] - cr[2][_i])
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = ellipse
+                    else:
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
+            if self.network_shaped:
+                self.last_image.network_detection(arenas_mask, csc_dict=self.vars["convert_for_motion"], lighter_background=None, bio_mask=bio_mask, back_mask=back_mask)
+            else:
+                ref_image = self.first_image.validated_shapes
+                self.first_image.generate_subtract_background(self.vars['convert_for_motion'], self.vars['drift_already_corrected'])
+                # kmeans_clust_nb = None
+                params = init_params()
+                params['is_first_image'] = False
+                params['several_blob_per_arena'] = self.vars['several_blob_per_arena']
+                params['blob_nb'] = self.sample_number
+                params['arenas_mask'] = arenas_mask
+                params['ref_image'] = ref_image
+                params['subtract_background'] = self.first_image.subtract_background
+                params['bio_mask'] = bio_mask
+                params['back_mask'] = back_mask
+                params['filter_spec'] = self.vars["filter_spec"]
+
+                self.last_image.find_color_space_combinations(params)
 
     def cropping(self, is_first_image: bool):
         """
@@ -1671,13 +1745,11 @@ class ProgramOrganizer:
                 del self.one_row_per_arena
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_arena.csv open when Cellects runs")
             try:
                 self.one_row_per_frame.to_csv("one_row_per_frame.csv", sep=";", index=False, lineterminator='\n')
                 del self.one_row_per_frame
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:
@@ -1694,11 +1766,11 @@ class ProgramOrganizer:
         for key in ['analyzed_individuals', 'night_mode', 'expert_mode', 'is_auto', 'arena', 'video_option', 'compute_all_options', 'vars', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             global_settings.pop(key, None)
         software_settings.update(global_settings)
+        software_settings.pop('video_list', None)
         software_settings = pd.DataFrame.from_dict(software_settings, columns=["Setting"], orient='index')
         try:
             software_settings.to_csv("software_settings.csv", sep=";")
         except PermissionError:
             logging.error("Never let software_settings.csv open when Cellects runs")
-            self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
 
 

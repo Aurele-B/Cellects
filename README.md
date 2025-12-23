@@ -1,5 +1,9 @@
-Cellects: Cell Expansion Computer Tracking Software
-===================================================
+<h1>
+  <img src="https://raw.githubusercontent.com/Aurele-B/cellects/main/.github/icon.png"
+       width="42"
+       style="vertical-align: middle; margin-right: 12px;">
+  Cellects: Cell Expansion Computer Tracking Software
+</h1>
 
 [![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/cellects)
@@ -17,7 +21,8 @@ Cellects’ main strengths are its broad scope of action, automated computation 
 easy installation and user-friendly interface.
 
 <figure>
-  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window" class="center" width="600">
+  <img src="doc/static/UserManualFigure1.png" alt="Cellects first window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 1:</strong> Cellects first window</figcaption>
 </figure>
 
@@ -44,9 +49,12 @@ Cellects
 
 ## 📚 Documentation
 
-Full documentation is available in the [docs](https://aurele-b.github.io/Cellects/) folder and includes:
-- [**User Manual**](https://aurele-b.github.io/Cellects/first-analysis/): Step-by-step workflows for data localization, image analysis and video tracking 
-- [**Advanced Features**](https://aurele-b.github.io/Cellects/advanced/): Customization options, batch processing, parameter tuning.
+Cellects' workflow is described in a [complete documentation](https://aurele-b.github.io/Cellects/). It includes:
+- [**What is Cellects**](https://aurele-b.github.io/Cellects/what-is-cellects/): Purpose of the software, usable data and introduction of its user manual
+- [**Setting up a first analysis**](https://aurele-b.github.io/Cellects/first-analysis/): Step-by-step workflows for data localization, image analysis and video tracking 
+- [**Improving the analysis**](https://aurele-b.github.io/Cellects/advanced/): Customization options, batch processing, parameter tuning.
+- [**Use cases**](https://aurele-b.github.io/Cellects/use-cases/): Real-world cases using the GUI (interface) and the API (scripts).
+- [**Contributing**](https://aurele-b.github.io/Cellects/contributing/): Report bugs and feature requests; contribute; testing and documentation processes.
 - [**API Reference**](https://aurele-b.github.io/Cellects/api/): Auto-generated from source code docstrings (see [Build Documentation]).
 
 ---

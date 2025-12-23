@@ -1,0 +1,52 @@
+/* 1) Slightly reduce code font size in notebooks */
+.jupyter-wrapper pre,
+.jupyter-wrapper code {
+  font-size: 0.9em;
+}
+
+/* 2) Add breathing room around cells */
+.jupyter-wrapper .jp-Cell {
+  margin: 0.75rem 0;
+}
+
+/* 3) Make outputs stand out a bit */
+.jupyter-wrapper .jp-OutputArea {
+  border-left: 3px solid var(--md-default-fg-color--lighter);
+  padding-left: 0.75rem;
+}
+
+/* 4) Prevent very wide outputs from breaking layout */
+.jupyter-wrapper img,
+.jupyter-wrapper table {
+  max-width: 100%;
+}
+
+.nb-code pre { font-size: 0.9em; }
+
+/* Hide ALL variants of input prompts (In [ ]:) */
+.jupyter-wrapper .jp-InputPrompt,
+.jupyter-wrapper .jp-InputArea-prompt,
+.jupyter-wrapper .jp-InputArea .prompt,
+.jupyter-wrapper .jp-Cell-inputWrapper .prompt,
+.jupyter-wrapper .input_prompt,
+.jupyter-wrapper div.prompt.input_prompt {
+  display: none !important;
+}
+
+/* Hide ALL variants of output prompts (Out [ ]:) */
+.jupyter-wrapper .jp-OutputPrompt,
+.jupyter-wrapper .jp-OutputArea-prompt,
+.jupyter-wrapper .jp-OutputArea .prompt,
+.jupyter-wrapper .output_prompt,
+.jupyter-wrapper div.prompt.output_prompt {
+  display: none !important;
+}
+
+/* Remove the left gutter reserved for prompts (input + output) */
+.jupyter-wrapper .jp-InputArea,
+.jupyter-wrapper .jp-OutputArea,
+.jupyter-wrapper .jp-Cell-inputWrapper,
+.jupyter-wrapper .jp-Cell-outputWrapper {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}

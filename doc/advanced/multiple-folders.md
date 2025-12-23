@@ -6,7 +6,8 @@ By configuring folder selection and per-folder arena counts, users ensure that C
 # Detailed description
 
 <figure>
-  <img src="../../static/UserManualFigure11.png" alt="Select folders to analyze window" width="600">
+  <img src="../../static/UserManualFigure11.png" alt="Select folders to analyze window"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 11:</strong> Select folders to analyze window</figcaption>
 </figure>
 
@@ -34,7 +35,7 @@ Click **Next** to go to the image analysis window (Fig. 2) of the first selected
 
 ---
 
-## Notes
+## Remarks
 
 - If the *Select and draw* option is required for more than one folder, analyze them separately.  
   → In that case, click *Previous* and select only one subfolder.  

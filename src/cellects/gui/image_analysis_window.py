@@ -109,7 +109,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
         self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.parent().po.current_combination_id = 0
-        greyscale = len(self.parent().po.first_im.shape) == 2
 
         self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
@@ -290,7 +289,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
         self.spot_shape.setFixedWidth(160)
         if self.parent().po.all['starting_blob_shape'] is None:
-            self.spot_shape.setCurrentText('circle')
+            self.spot_shape.setCurrentIndex(0)
         else:
             self.spot_shape.setCurrentText(self.parent().po.all['starting_blob_shape'])
         self.spot_shape.currentTextChanged.connect(self.spot_shape_changed)
@@ -447,7 +446,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
         self.reinitialize_image_and_masks(self.parent().po.first_im)
         self.thread["GetLastIm"] = GetLastImThread(self.parent())
-        self.thread["GetLastIm"].start()
+        if self.parent().po.all['im_or_vid'] == 0:
+            self.thread["GetLastIm"].start()
         self.parent().po.first_image = OneImageAnalysis(self.parent().po.first_im)
         self.thread["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
         self.thread["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
@@ -1019,6 +1019,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = False
             self.parent().po.network_shaped = True
+            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1038,6 +1039,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = True
             self.parent().po.network_shaped = False
+            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1298,11 +1300,13 @@ class ImageAnalysisWindow(MainTabsType):
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
-                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
-                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id]["filter_spec"]
-                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
-                    self.update_filter_display()
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
+            if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+            if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+                    "filter_spec"]
+                self.update_filter_display()
 
     def generate_csc_editing(self):
         """
@@ -1593,10 +1597,13 @@ class ImageAnalysisWindow(MainTabsType):
     def update_filter_display(self):
         self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
         self.filter1_param1.setValue(self.parent().po.vars['filter_spec']['filter1_param'][0])
-        self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
-        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
-        self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
-        self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
+        if len(self.parent().po.vars['filter_spec']['filter1_param']) > 1:
+            self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
+        if 'filter2_type' in self.parent().po.vars['filter_spec']:
+            self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+            self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
+            if len(self.parent().po.vars['filter_spec']['filter2_param']) > 1:
+                self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
 
     def filter1_changed(self):
         """
