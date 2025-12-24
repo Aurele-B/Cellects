@@ -1070,16 +1070,7 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                 self.parent().po.converted_video2 = deepcopy(self.parent().po.motion.converted_video2)
-        self.parent().po.motion.get_origin_shape()
-
-        if self.parent().po.motion.dims[0] >= 40:
-            step = self.parent().po.motion.dims[0] // 20
-        else:
-            step = 1
-        if self.parent().po.motion.start >= (self.parent().po.motion.dims[0] - step - 1):
-            self.parent().po.motion.start = None
-        else:
-            self.parent().po.motion.get_covering_duration(step)
+        self.parent().po.motion.assess_motion_detection()
         self.when_loading_finished.emit(save_loaded_video)
 
         if self.parent().po.motion.visu is None:
