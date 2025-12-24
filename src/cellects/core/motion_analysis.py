@@ -151,28 +151,14 @@ class MotionAnalysis:
 
         self.start = None
         if detect_shape:
-            self.start = None
-            # Here to conditional layers allow to detect if an expansion/exploration occured
-            self.get_origin_shape()
-            # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
-            # substantial image: if any of them is not detected, the program considers there is not exp.
-            if self.dims[0] >= 40:
-                step = self.dims[0] // 20
-            else:
-                step = 1
-            if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
-                self.start = None
-            else:
-                self.get_covering_duration(step)
-                if self.start is not None:
-                    self.detection()
-                    self.initialize_post_processing()
-                    self.t = self.start
-                    while self.t < self.dims[0]:  #200:
-                        self.update_shape(show_seg)
+            self.assess_motion_detection()
+            if self.start is not None:
+                self.detection()
+                self.initialize_post_processing()
+                self.t = self.start
+                while self.t < self.dims[0]:  #200:
+                    self.update_shape(show_seg)
                 #
-            if self.start is None:
-                self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
 
             if analyse_shape:
                 self.get_descriptors_from_binary()
@@ -227,6 +213,26 @@ class MotionAnalysis:
                                                      self.vars['lose_accuracy_to_save_memory'],
                                                      self.vars['filter_spec'])
             self.converted_video, self.converted_video2 = vids
+
+    def assess_motion_detection(self):
+        """
+        Assess if a motion can be detected using the current parameters.
+
+        Validate the specimen(s) detected in the first frame and evaluate roughly how growth occurs during the video.
+        """
+        # Here to conditional layers allow to detect if an expansion/exploration occured
+        self.get_origin_shape()
+        # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
+        # substantial image: if any of them is not detected, the program considers there is no motion.
+        if self.dims[0] >= 40:
+            step = self.dims[0] // 20
+        else:
+            step = 1
+        if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
+            self.start = None
+            self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
+        else:
+            self.get_covering_duration(step)
 
     def get_origin_shape(self):
         """
