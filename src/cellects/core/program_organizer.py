@@ -789,8 +789,6 @@ class ProgramOrganizer:
                 self.last_image.network_detection(arenas_mask, csc_dict=self.vars["convert_for_motion"], lighter_background=None, bio_mask=bio_mask, back_mask=back_mask)
             else:
                 ref_image = self.first_image.validated_shapes
-                self.first_image.generate_subtract_background(self.vars['convert_for_motion'], self.vars['drift_already_corrected'])
-                # kmeans_clust_nb = None
                 params = init_params()
                 params['is_first_image'] = False
                 params['several_blob_per_arena'] = self.vars['several_blob_per_arena']

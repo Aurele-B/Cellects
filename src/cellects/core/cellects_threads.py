@@ -1070,16 +1070,7 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                 self.parent().po.converted_video2 = deepcopy(self.parent().po.motion.converted_video2)
-        self.parent().po.motion.get_origin_shape()
-
-        if self.parent().po.motion.dims[0] >= 40:
-            step = self.parent().po.motion.dims[0] // 20
-        else:
-            step = 1
-        if self.parent().po.motion.start >= (self.parent().po.motion.dims[0] - step - 1):
-            self.parent().po.motion.start = None
-        else:
-            self.parent().po.motion.get_covering_duration(step)
+        self.parent().po.motion.assess_motion_detection()
         self.when_loading_finished.emit(save_loaded_video)
 
         if self.parent().po.motion.visu is None:
@@ -1220,8 +1211,7 @@ class OneArenaThread(QtCore.QThread):
 
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
-                contours = np.nonzero(
-                    cv2.morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], cv2.MORPH_GRADIENT, cross_33))
+                contours = get_contours(analysis_i.binary[analysis_i.t - 1, :, :])
                 current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
@@ -1250,7 +1240,6 @@ class OneArenaThread(QtCore.QThread):
             else:
                 self.parent().po.motion.segmented = analysis_i.binary
         self.when_detection_finished.emit("Post processing done, read to see the result")
-
 
 
 class VideoReaderThread(QtCore.QThread):
@@ -1324,7 +1313,6 @@ class VideoReaderThread(QtCore.QThread):
                 video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
                 video_mask[video_mask > 0] = 1
                 video_mask = video_mask.astype(np.uint8)
-        logging.info(f"sum: {video_mask.sum()}")
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
@@ -1449,26 +1437,11 @@ class WriteVideoThread(QtCore.QThread):
 
         already_greyscale : bool
             Flag indicating if the video is already in greyscale format.
-            This parameter must be set as a variable named 'already_greyscale' in the instance
-            variables of the parent object.
-
-        Returns
-        -------
-        None
 
         Raises
         ------
         FileNotFoundError
             When the path to write the video is not specified.
-
-        Examples
-        --------
-        >>> self.parent().po.vars['already_greyscale'] = False
-        >>> self.run()
-        >>> # Expects to write a visualization video as 'ind_arena.npy'
-        >>> self.parent().po.vars['already_greyscale'] = True
-        >>> self.run()
-        >>> # Expects to write a converted video as 'ind_arena.npy'
         """
         arena = self.parent().po.all['arena']
         if not self.parent().po.vars['already_greyscale']:

@@ -137,9 +137,9 @@ class ProcessImage:
         """
         self.fact['unaltered_blob_nb'], shapes = cv2.connectedComponents(self.binary_image)
         self.fact['unaltered_blob_nb'] -= 1
-        if 1 < self.fact['unaltered_blob_nb'].values[0] < 10000:
+        if 1 <= self.fact['unaltered_blob_nb'].values[0] < 10000:
             self.fact['total_area'] = np.sum(self.binary_image)
-            inf_lim = np.min((100, np.ceil(self.binary_image.size / 1000)))
+            inf_lim = np.min((20, np.ceil(self.binary_image.size / 1000)))
             if inf_lim < self.fact['total_area'].values[0] < self.binary_image.size * 0.9:
                 self.process_first_binary_image()
                 self.save_combination()
