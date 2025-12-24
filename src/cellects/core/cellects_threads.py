@@ -1211,8 +1211,7 @@ class OneArenaThread(QtCore.QThread):
 
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
-                contours = np.nonzero(
-                    cv2.morphologyEx(analysis_i.binary[analysis_i.t - 1, :, :], cv2.MORPH_GRADIENT, cross_33))
+                contours = get_contours(analysis_i.binary[analysis_i.t - 1, :, :])
                 current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
@@ -1314,7 +1313,6 @@ class VideoReaderThread(QtCore.QThread):
                 video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
                 video_mask[video_mask > 0] = 1
                 video_mask = video_mask.astype(np.uint8)
-        logging.info(f"sum: {video_mask.sum()}")
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
