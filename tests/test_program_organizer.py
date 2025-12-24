@@ -342,6 +342,8 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_2.npy"))
         self.po.get_origins_and_backgrounds_lists()
+        self.po.vars['convert_for_motion']['PCA2'] = np.ones(3)
+        self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
         self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)
 

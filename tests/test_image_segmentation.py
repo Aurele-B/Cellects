@@ -339,6 +339,12 @@ class TestKmeans(CellectsUnitTest):
         binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, back_mask=back_mask, logical="And")
         self.assertTrue(binary_image.any())
 
+    def test_kmeans_with_previous_binary_image(self):
+        """Test kmeans with previous_binary_image."""
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, previous_binary_image=several_arenas_bin_img, logical="Or")
+        self.assertTrue(binary_image.any())
+
+
 class TestWindowedThresholding(CellectsUnitTest):
     """Test suite for windowed_thresholding function"""
 

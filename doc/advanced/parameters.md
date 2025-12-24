@@ -94,9 +94,10 @@ and the detection is smaller than the true specimen. Technical implementation:
 Select to optimize arena detection for specimens moving move in the same direction.
 
 - **Checked** → Uses motion pattern analysis for arena localization.
-- **Unchecked** → Employs standard centroid
--based algorithm.
+- **Unchecked** → Employs standard centroid based algorithm.
+!!! note
 
+	 - Both options work equally when growth is roughly isotropic
 <!-- END_Specimens_have_same_direction -->
 
 ---
