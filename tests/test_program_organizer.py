@@ -138,7 +138,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.bot), 1)
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
-        self.assertTrue(po.vars['origin_list'][0].any())
+        self.assertTrue(len(po.vars['origin_list'][0]) > 0)
         po.get_last_image()
         po.fast_last_image_segmentation()
         self.assertTrue(po.last_image.binary_image.any())

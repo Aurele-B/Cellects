@@ -645,11 +645,8 @@ class SaveManualDelineationThread(QtCore.QThread):
             self.parent().po.right[arena - 1] = np.max(x)
             self.parent().po.top[arena - 1] = np.min(y)
             self.parent().po.bot[arena - 1] = np.max(y)
-
-        logging.info("Save data to run Cellects quickly")
-        self.parent().po.data_to_save['coordinates'] = True
+        self.parent().po.list_coordinates()
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['coordinates'] = False
 
         logging.info("Save manual video delineation")
         self.parent().po.vars['analyzed_individuals'] = np.arange(self.parent().po.sample_number) + 1
@@ -713,7 +710,6 @@ class CompleteImageAnalysisThread(QtCore.QThread):
     def run(self):
         self.parent().po.get_background_to_subtract()
         self.parent().po.get_origins_and_backgrounds_lists()
-        self.parent().po.data_to_save['coordinates'] = True
         self.parent().po.data_to_save['exif'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
         self.parent().po.all['bio_mask'] = None
@@ -764,10 +760,8 @@ class PrepareVideoAnalysisThread(QtCore.QThread):
         self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
-        self.parent().po.data_to_save['coordinates'] = True
         self.parent().po.data_to_save['exif'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['coordinates'] = False
         self.parent().po.data_to_save['exif'] = False
 
 
@@ -993,7 +987,7 @@ class OneArenaThread(QtCore.QThread):
         """
         arena = self.parent().po.all['arena']
         i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
-        true_frame_width = self.parent().po.vars['origin_list'][i].shape[1]
+        true_frame_width = self.parent().po.right[i] - self.parent().po.left[i]# self.parent().po.vars['origin_list'][i].shape[1]
         if self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile(f'ind_{arena}.npy'):
             os.remove(f'ind_{arena}.npy')
         background = None

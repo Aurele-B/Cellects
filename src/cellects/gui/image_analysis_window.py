@@ -1038,7 +1038,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = True
             self.parent().po.network_shaped = False
-            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -2099,7 +2098,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.auto_delineation_flag = False
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
-
         self.arena_shape_label.setVisible(True)
         self.arena_shape.setVisible(True)
 
@@ -2343,8 +2341,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.yes.setVisible(True)
         self.cell.setVisible(False)
         self.background.setVisible(False)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
         self.no.setVisible(False)
         self.one_blob_per_arena.setVisible(False)
         self.one_blob_per_arena_label.setVisible(False)
