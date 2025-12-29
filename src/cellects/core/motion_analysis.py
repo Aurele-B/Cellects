@@ -852,7 +852,7 @@ class MotionAnalysis:
             self.pixel_ring_depth = 3
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
-        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth).astype(np.uint8)
+        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth, min_size=3).astype(np.uint8)
         self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
@@ -919,7 +919,7 @@ class MotionAnalysis:
             self.near_periphery = np.zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
-                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width)
+                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width, min_size=3)
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
                     self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery

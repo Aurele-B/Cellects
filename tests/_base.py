@@ -34,7 +34,7 @@ np.random.seed(1234)
 # n=2: All the same with huge specimen variations
 
 def make_noisy_circle(size):
-    noisy_circle = create_ellipse(size, size).astype(np.uint8)
+    noisy_circle = create_ellipse(size, size, min_size=3).astype(np.uint8)
     contour = get_contours(noisy_circle)
     contour_coord = np.nonzero(contour)
     sample = np.random.choice(np.arange(len(contour_coord[0])), len(contour_coord[0]) // 3)
