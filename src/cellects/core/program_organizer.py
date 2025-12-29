@@ -994,19 +994,10 @@ class ProgramOrganizer:
             - 'continue' (bool): Whether to continue processing.
             - 'message' (str): Informational or error message.
 
-        Raises
-        ------
-        None
-
         Notes
         -----
         This function relies on the existence of certain attributes and variables
         defined in the class instance.
-
-        Examples
-        --------
-        >>> self.delineate_each_arena()
-        {'continue': True, 'message': ''}
         """
         analysis_status = {"continue": True, "message": ""}
         if not self.vars['several_blob_per_arena'] and (self.sample_number > 1):
@@ -1029,7 +1020,6 @@ class ProgramOrganizer:
                 motion_list = None
                 if self.all['are_gravity_centers_moving']:
                     motion_list = self._segment_blob_motion(sample_size=5)
-                # if self.all['im_or_vid'] == 1:
                 self.get_bounding_boxes(are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
                     motion_list=motion_list, all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
 

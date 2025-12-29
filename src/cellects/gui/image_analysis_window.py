@@ -541,7 +541,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["GetFirstIm"].start()
             self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
-            self.reinitialize_image_and_masks(self.parent().po.first_im)
 
 
     def several_blob_per_arena_check(self):
