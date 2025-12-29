@@ -290,8 +290,8 @@ class OneImageAnalysis:
             # self.adjust_to_drift_correction(c_space_dict['logical'])
             self.check_if_image_border_attest_drift_correction()
         self.convert_and_segment(c_space_dict, rolling_window_segmentation=None, allowed_window=self.drift_mask_coord)
-        disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
-        disk = create_ellipse(disk_size, disk_size).astype(np.uint8)
+        disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
+        disk = create_ellipse(disk_size, disk_size, min_size=3).astype(np.uint8)
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
         if self.image2 is not None:
             self.subtract_background2 = cv2.morphologyEx(self.image2, cv2.MORPH_OPEN, disk)
