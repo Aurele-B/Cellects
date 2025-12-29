@@ -57,6 +57,7 @@ def init_params():
     params['total_surface_area']: int = None
     params['out_of_arenas_mask']: NDArray = None
     params['subtract_background']: NDArray = None
+    params['are_zigzag']: str = None
     return params
 
 def make_one_dict_per_channel():
@@ -406,7 +407,7 @@ class OneImageAnalysis:
                 params['con_comp_extent'] = [params['blob_nb'], np.max((params['blob_nb'], self.binary_image.size // 100))]
             im_size = self.image.shape[0] * self.image.shape[1]
 
-            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1:
+            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1 and params['are_zigzag'] is not None:
                 if params['are_zigzag'] == "columns":
                     inter_dist = np.mean(np.diff(np.nonzero(self.y_boundaries)))
                 elif params['are_zigzag'] == "rows":

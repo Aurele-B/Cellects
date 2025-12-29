@@ -21,7 +21,7 @@ class TestFullMotionAnalysis(CellectsUnitTest):
         cls.videos_already_in_ram = [rgb_video_test[:, :, :, :], rgb_video_test[:, :, :, 0]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
         cls.vars['background_list'] = []
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
@@ -42,7 +42,7 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.videos_already_in_ram = [rgb_video_test[0, :, :, :][None, :, :, :], rgb_video_test[0, :, :, 0][None, :, :]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
         cls.vars['background_list'] = []
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
@@ -72,7 +72,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars = cls.dd.vars
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [binary_video_test[0]]
+        cls.origin_list = [np.nonzero(binary_video_test[0])]
         cls.vars['origin_list'] = cls.origin_list
         cls.vars['already_greyscale'] = True
         cls.vars['drift_already_corrected'] = True # Will automatically become False
@@ -221,7 +221,7 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
                                          'lab2': np.array([0, 0, 1], dtype=np.int8)}
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [several_arenas_bin_vid[0]]
+        cls.origin_list = [np.nonzero(several_arenas_bin_vid[0])]
         cls.vars['origin_list'] = cls.origin_list
         cls.vars['greyscale2'] = False
         cls.vars['drift_already_corrected'] = True

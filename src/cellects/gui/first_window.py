@@ -97,6 +97,7 @@ class FirstWindow(MainTabsType):
         # self.im_or_vid_label = FixedText('Image list or Videos:', tip="What type of data do(es) contain(s) folder(s)?", night_mode=self.parent().po.all['night_mode'])
         self.im_or_vid = Combobox(["Image list", "Videos"], self.parent().po.all['im_or_vid'], night_mode=self.parent().po.all['night_mode'])
         self.im_or_vid.setFixedWidth(150)
+        self.im_or_vid.currentTextChanged.connect(self.im2vid)
         # Set their positions on layout
         self.second_row_layout.addItem(self.horizontal_space)
         self.second_row_layout.addWidget(self.im_or_vid_label)
@@ -121,7 +122,7 @@ class FirstWindow(MainTabsType):
             if self.parent().po.all['extension'] == '.JPG':
                 self.parent().po.all['radical'] = ''
                 self.parent().po.all['extension'] = '.mp4'
-            self.arena_number_label = FixedText('Arena number per video:',
+            self.arena_number_label = FixedText('Arena number per folder:',
                                                 tip=FW["Arena_number_per_folder"]["tips"], #"If this number is not always the same (depending on the video), it can be changed later",
                                                 night_mode=self.parent().po.all['night_mode'])
             what = 'Videos'
@@ -152,7 +153,6 @@ class FirstWindow(MainTabsType):
         self.third_row_widget.setLayout(self.third_row_layout)
         self.Vlayout.addWidget(self.third_row_widget)
         # If im_or_vid changes, adjust these 2 widgets
-        self.im_or_vid.currentTextChanged.connect(self.im2vid)
 
         # 3) Get the path to the right folder:
         # Open the layout:
@@ -293,7 +293,8 @@ class FirstWindow(MainTabsType):
         """
         Toggle between processing images or videos based on UI selection.
         """
-        if self.im_or_vid.currentText() == "Image list":
+        self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
+        if self.im_or_vid.currentIndex() == 0:
             what = 'Images'
             if self.parent().po.all['extension'] == '.mp4':
                 self.parent().po.all['radical'] = 'IMG_'
@@ -563,6 +564,7 @@ class FirstWindow(MainTabsType):
         Reinstantiate the videoanalysis window from the parent of the current window.
         """
         self.instantiate = True
+        self.parent().po.vars['img_number'] = 0
         # Since we re-instantiate everything, image analysis will no longer be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_usable()
 

@@ -98,7 +98,7 @@ class ProgramOrganizer:
         self.one_arena_done: bool = False
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
-        self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
+        self.data_to_save = {'first_image': False, 'exif': False, 'vars': False}
         self.sample_number = 1
         self.top = None
         self.motion = None
@@ -365,7 +365,7 @@ class ProgramOrganizer:
             if data_to_run_cellects_quickly is None:
                 data_to_run_cellects_quickly = {}
 
-            if ('validated_shapes' in data_to_run_cellects_quickly) and ('coordinates' in data_to_run_cellects_quickly) and ('all' in data_to_run_cellects_quickly):
+            if ('validated_shapes' in data_to_run_cellects_quickly) and ('all' in data_to_run_cellects_quickly) and ('bb_coord' in data_to_run_cellects_quickly['all']['vars']):
                 logging.info("Success to load Data to run Cellects quickly.pkl from the user chosen directory")
                 self.all = data_to_run_cellects_quickly['all']
                 # If you want to add a new variable, first run an updated version of all_vars_dict,
@@ -390,8 +390,7 @@ class ProgramOrganizer:
                         self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
                 self.get_first_image()
                 self.get_last_image()
-                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly[
-                    'coordinates']
+                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly['all']['vars']['bb_coord']
                 if self.all['automatically_crop']:
                     self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     logging.info("Crop first image")
@@ -450,11 +449,6 @@ class ProgramOrganizer:
             if self.data_to_save['first_image']:
                 data_to_run_cellects_quickly['validated_shapes'] = self.first_image.im_combinations[self.current_combination_id]['binary_image']
                 data_to_run_cellects_quickly['shape_number'] = self.first_image.im_combinations[self.current_combination_id]['shape_number']
-                    # data_to_run_cellects_quickly['converted_image'] = self.first_image.im_combinations[self.current_combination_id]['converted_image']
-            if self.data_to_save['coordinates']:
-                data_to_run_cellects_quickly['coordinates'] = self._list_coordinates()
-                logging.info("When they exist, do overwrite unaltered video")
-                self.all['overwrite_unaltered_videos'] = True
             if self.data_to_save['exif']:
                 self.vars['exif'] = self.extract_exif()
             self.all['vars'] = self.vars
@@ -462,7 +456,7 @@ class ProgramOrganizer:
             pickle_rick = PickleRick()
             pickle_rick.write_file(data_to_run_cellects_quickly, 'Data to run Cellects quickly.pkl')
 
-    def _list_coordinates(self):
+    def list_coordinates(self):
         """
         Summarize the coordinates of images and video.
 
@@ -480,10 +474,10 @@ class ProgramOrganizer:
         if self.first_image.crop_coord is None:
             self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0,
                                                        self.first_image.image.shape[1]]
-        videos_coordinates = self.first_image.crop_coord + [self.left, self.right, self.top, self.bot]
-        return videos_coordinates
+        self.vars['bb_coord'] = self.first_image.crop_coord + [self.top, self.bot, self.left, self.right]
+        self.all['overwrite_unaltered_videos'] = True
 
-    def get_first_image(self, first_im: NDArray=None, sample_number: int=1):
+    def get_first_image(self, first_im: NDArray=None, sample_number: int=None):
         """
         Load and process the first image or frame from a video.
 
@@ -491,7 +485,8 @@ class ProgramOrganizer:
         depending on whether the data is an image or a video. It performs necessary
         preprocessing and initializes relevant attributes for subsequent analysis.
         """
-        self.sample_number = sample_number
+        if sample_number is not None:
+            self.sample_number = sample_number
         self.reduce_image_dim = False
         if first_im is not None:
             self.first_im = first_im
@@ -732,10 +727,10 @@ class ProgramOrganizer:
             else:
                 self.starting_blob_hsize_in_pixels = None
             self.fast_first_image_segmentation()
-            if shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
+            if not self.vars['several_blob_per_arena'] and bio_mask is not None and shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
                 self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_nb
                 self.first_image.shape_number = shape_nb
-                self.first_image.validated_shapes = (self.parent().imageanalysiswindow.bio_mask > 0).astype(np.uint8)
+                self.first_image.validated_shapes = (ordered_image > 0).astype(np.uint8)
                 self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
         else:
 
@@ -823,10 +818,10 @@ class ProgramOrganizer:
                         pickle_rick = PickleRick()
                         data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
                         if data_to_run_cellects_quickly is not None:
-                            if 'coordinates' in data_to_run_cellects_quickly:
+                            if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
                                 logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
                                 (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                                    data_to_run_cellects_quickly['coordinates']
+                                    data_to_run_cellects_quickly['all']['vars']['bb_coord']
                                 self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                             else:
                                 self.first_image.get_crop_coordinates()
@@ -1007,9 +1002,9 @@ class ProgramOrganizer:
                 pickle_rick = PickleRick()
                 data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
                 if data_to_run_cellects_quickly is not None:
-                    if 'coordinates' in data_to_run_cellects_quickly:
+                    if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
                         (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                            data_to_run_cellects_quickly['coordinates']
+                            data_to_run_cellects_quickly['all']['vars']['bb_coord']
                         self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                         if (self.first_image.image.shape[0] == (ccy2 - ccy1)) and (
                                 self.first_image.image.shape[1] == (ccx2 - ccx1)):  # maybe useless now
@@ -1037,6 +1032,8 @@ class ProgramOrganizer:
             self._whole_image_bounding_boxes()
             self.sample_number = 1
         self._set_analyzed_individuals()
+        self.vars['arena_coord'] = []
+        self.list_coordinates()
         return analysis_status
 
     def _segment_blob_motion(self, sample_size: int) -> list:
@@ -1304,7 +1301,8 @@ class ProgramOrganizer:
         self.vars['background_list'] = []
         self.vars['background_list2'] = []
         for rep in np.arange(len(self.vars['analyzed_individuals'])):
-            self.vars['origin_list'].append(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
+            origin_coord = np.nonzero(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
+            self.vars['origin_list'].append(origin_coord)
         if self.vars['subtract_background']:
             for rep in np.arange(len(self.vars['analyzed_individuals'])):
                 self.vars['background_list'].append(

@@ -190,8 +190,18 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        self.origin = self.vars['origin_list'][i]  # self.vars['origins_list'][i]
-        true_frame_width = self.origin.shape[1]
+        crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
+        if isinstance(self.vars['origin_list'][i], Tuple):
+            self.origin_idx = self.vars['origin_list'][i]
+            frame_height = bot[i] - top[i]
+            true_frame_width = right[i] - left[i]
+            self.origin = np.zeros((frame_height, true_frame_width), dtype=np.uint8)
+            self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
+        else:
+            self.origin = self.vars['origin_list'][i]
+            frame_height = self.origin.shape[0]
+            true_frame_width = self.origin.shape[1]
+
         vid_name = None
         if self.vars['video_list'] is not None:
             vid_name = self.vars['video_list'][i]
@@ -205,6 +215,16 @@ class MotionAnalysis:
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
+        if self.visu.shape[0] != frame_height or self.visu.shape[1] != true_frame_width:
+            self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, :]
+            self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], :]
+            if self.converted_video is not None:
+                self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right, :]
+                self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i], :]
+                if self.converted_video2 is not None:
+                    self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right, :]
+                    self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i], :]
+
         if self.converted_video is None:
             logging.info(
                 f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
