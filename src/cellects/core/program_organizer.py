@@ -1699,23 +1699,6 @@ class ProgramOrganizer:
             self.last_image.bgr = draw_img_with_mask(self.last_image.bgr, self.last_image.bgr.shape[:2], minmax,
                                                       self.vars['arena_shape'], last_visualization)
 
-        # cr = ((self.top[i], self.bot[i]),
-        #       (self.left[i], self.right[i]))
-        # if self.vars['arena_shape'] == 'circle':
-        #     ellipse = create_ellipse(cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])
-        #     ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-        #     first_visualization *= ellipse
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
-        #     if last_visualization is not None:
-        #         last_visualization *= ellipse
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
-        # else:
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
-        #     if last_visualization is not None:
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
-
 
     def save_tables(self, with_last_image: bool=True):
         """
