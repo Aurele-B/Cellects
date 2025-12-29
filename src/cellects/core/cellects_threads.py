@@ -391,7 +391,7 @@ class UpdateImageThread(QtCore.QThread):
                     mask_shape = "rectangle"
                 else:
                     color = (0, 0, 0)
-                    mask_shape = self.parent().po.all['arena_shape']
+                    mask_shape = self.parent().po.vars['arena_shape']
                 image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.parent().imageanalysiswindow.display_image.update_image(image)
         self.message_when_thread_finished.emit(True)
