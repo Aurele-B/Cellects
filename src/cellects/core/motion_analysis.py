@@ -1550,7 +1550,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
-                print(self.vars['time_step_is_arbitrary'])
                 if self.vars['time_step_is_arbitrary']:
                     time_unit = ""
                 else:
