@@ -635,16 +635,16 @@ class SaveManualDelineationThread(QtCore.QThread):
         """
         Do save the coordinates.
         """
-        self.parent().po.left = np.arange(self.parent().po.sample_number)
-        self.parent().po.right = np.arange(self.parent().po.sample_number)
-        self.parent().po.top = np.arange(self.parent().po.sample_number)
-        self.parent().po.bot = np.arange(self.parent().po.sample_number)
-        for arena in np.arange(1, self.parent().po.sample_number + 1):
-            y, x = np.nonzero(self.parent().imageanalysiswindow.arena_mask == arena)
-            self.parent().po.left[arena - 1] = np.min(x)
-            self.parent().po.right[arena - 1] = np.max(x)
-            self.parent().po.top[arena - 1] = np.min(y)
-            self.parent().po.bot[arena - 1] = np.max(y)
+        self.parent().po.left = np.zeros(self.parent().po.sample_number)
+        self.parent().po.right = np.zeros(self.parent().po.sample_number)
+        self.parent().po.top = np.zeros(self.parent().po.sample_number)
+        self.parent().po.bot = np.zeros(self.parent().po.sample_number)
+        for arena_i in np.arange(self.parent().po.sample_number):
+            y, x = np.nonzero(self.parent().imageanalysiswindow.arena_mask == arena_i + 1)
+            self.parent().po.left[arena_i] = np.min(x)
+            self.parent().po.right[arena_i] = np.max(x)
+            self.parent().po.top[arena_i] = np.min(y)
+            self.parent().po.bot[arena_i] = np.max(y)
         self.parent().po.list_coordinates()
         self.parent().po.save_data_to_run_cellects_quickly()
 
