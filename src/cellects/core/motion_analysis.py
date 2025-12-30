@@ -215,15 +215,16 @@ class MotionAnalysis:
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
-        if self.visu.shape[0] != frame_height or self.visu.shape[1] != true_frame_width:
+        # When the video(s) already exists (not just written as .pny), they need to be sliced:
+        if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
             self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, :]
             self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], :]
             if self.converted_video is not None:
-                self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right, :]
-                self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i], :]
+                self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
+                self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
                 if self.converted_video2 is not None:
-                    self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right, :]
-                    self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i], :]
+                    self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right]
+                    self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i]]
 
         if self.converted_video is None:
             logging.info(
