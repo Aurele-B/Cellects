@@ -861,26 +861,27 @@ class ProgramOrganizer:
                 connectivity=8)
         self.first_image.shape_number -= 1
         if self.all['scale_with_image_or_cells'] == 0:
-            self.vars['average_pixel_size'] = np.square(
-                self.all['image_horizontal_size_in_mm'] /
-                self.first_im.shape[1])
+            self.vars['average_pixel_size'] = np.square(self.all['image_horizontal_size_in_mm'] /
+                                                        self.first_im.shape[1])
         else:
-            self.vars['average_pixel_size'] = np.square(
-                self.all['starting_blob_hsize_in_mm'] /
-                np.mean(self.first_image.stats[1:, 2]))
+            if len(self.first_image.stats[1:, 2]) > 0:
+                self.vars['average_pixel_size'] = np.square(self.all['starting_blob_hsize_in_mm'] /
+                                                            np.mean(self.first_image.stats[1:, 2]))
+            else:
+                self.vars['average_pixel_size'] = 1.
+                self.vars['output_in_mm'] = False
+
         if self.all['set_spot_size']:
-            self.starting_blob_hsize_in_pixels = (
-                self.all['starting_blob_hsize_in_mm'] /
-                np.sqrt(self.vars['average_pixel_size']))
+            self.starting_blob_hsize_in_pixels = (self.all['starting_blob_hsize_in_mm'] /
+                                                  np.sqrt(self.vars['average_pixel_size']))
         else:
             self.starting_blob_hsize_in_pixels = None
 
         if self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = 10
         else:
-            self.vars['first_move_threshold'] = np.round(
-                self.all['first_move_threshold_in_mm²'] /
-                self.vars['average_pixel_size']).astype(np.uint8)
+            self.vars['first_move_threshold'] = np.round(self.all['first_move_threshold_in_mm²'] /
+                                                         self.vars['average_pixel_size']).astype(np.uint8)
         logging.info(f"The average pixel size is: {self.vars['average_pixel_size']} mm²")
 
     def get_background_to_subtract(self):
