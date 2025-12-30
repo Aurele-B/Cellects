@@ -97,7 +97,7 @@ Select to optimize arena detection for specimens moving move in the same directi
 - **Unchecked** → Employs standard centroid based algorithm.
 !!! note
 
-	 - Both options work equally when growth is roughly isotropic
+	 - Both options work equally when growth is roughly isotropic.
 <!-- END_Specimens_have_same_direction -->
 
 ---
