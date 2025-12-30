@@ -217,8 +217,8 @@ class MotionAnalysis:
         self.visu, self.converted_video, self.converted_video2 = vids
         # When the video(s) already exists (not just written as .pny), they need to be sliced:
         if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
-            self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, :]
-            self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], :]
+            self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
+            self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
             if self.converted_video is not None:
                 self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
                 self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
