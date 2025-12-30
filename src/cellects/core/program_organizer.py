@@ -244,7 +244,7 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
-        self.vars['img_number'] = 0
+        self.vars['first_detection_frame'] = 0
         if len(self.data_list) > 0:
             self._sort_data_list()
             self.sample_number = self.all['first_folder_sample_number']
