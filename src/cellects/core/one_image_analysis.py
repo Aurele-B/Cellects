@@ -444,7 +444,7 @@ class OneImageAnalysis:
             # If the blob number is known, try applying filters to improve detection
             if params['blob_nb'] is not None and (params['filter_spec'] is None or params['filter_spec']['filter1_type'] == ''):
                 if not (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
-                    tested_filters = ['Gaussian', 'Median', 'Mexican hat', 'Butterworth', 'Laplace', '']
+                    tested_filters = ['Gaussian', 'Median', 'Mexican hat', 'Laplace', '']
                     for tested_filter in tested_filters:
                         self.init_combinations_lists()
                         params['filter_spec'] = {'filter1_type': tested_filter, 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]}
