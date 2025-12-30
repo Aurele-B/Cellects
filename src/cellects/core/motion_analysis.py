@@ -190,7 +190,14 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
+        if 'bb_coord' in self.vars:
+            crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
+        elif videos_already_in_ram is not None:
+            if isinstance(videos_already_in_ram, list):
+                crop_bot, crop_right = videos_already_in_ram[0].shape[1], videos_already_in_ram[0].shape[2]
+            else:
+                crop_bot, crop_right = videos_already_in_ram.shape[1], videos_already_in_ram.shape[2]
+            crop_top, crop_left, top, bot, left, right = 0, 0, [0], [crop_bot], [0], [crop_right]
         if isinstance(self.vars['origin_list'][i], Tuple):
             self.origin_idx = self.vars['origin_list'][i]
             frame_height = bot[i] - top[i]
@@ -216,15 +223,16 @@ class MotionAnalysis:
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
         # When the video(s) already exists (not just written as .pny), they need to be sliced:
-        if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
-            self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
-            self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
-            if self.converted_video is not None:
-                self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
-                self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
-                if self.converted_video2 is not None:
-                    self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right]
-                    self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i]]
+        if self.visu is not None:
+            if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
+                self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
+                self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
+                if self.converted_video is not None:
+                    self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
+                    self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
+                    if self.converted_video2 is not None:
+                        self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right]
+                        self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i]]
 
         if self.converted_video is None:
             logging.info(
