@@ -815,19 +815,14 @@ class ProgramOrganizer:
             if is_first_image:
                 if not self.first_image.cropped:
                     if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('Data to run Cellects quickly.pkl')):
+                        self.first_image.get_crop_coordinates()
                         pickle_rick = PickleRick()
                         data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
-                        if data_to_run_cellects_quickly is not None:
-                            if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
-                                logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
-                                (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
-                                    data_to_run_cellects_quickly['all']['vars']['bb_coord']
-                                self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                            else:
-                                self.first_image.get_crop_coordinates()
-                        else:
-                            self.first_image.get_crop_coordinates()
-
+                        if data_to_run_cellects_quickly is not None and 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
+                            logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
+                            (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
+                                data_to_run_cellects_quickly['all']['vars']['bb_coord']
+                            self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     else:
                         self.first_image.get_crop_coordinates()
                     if self.all['automatically_crop']:
