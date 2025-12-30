@@ -543,7 +543,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
     -------
     message_from_thread : Signal(str)
         Signal emitted when progress messages are available.
-    message_when_thread_finished : Signal(bool)
+    message_when_thread_finished : Signal(dict)
         Signal emitted upon completion of the thread's task.
 
     Notes
@@ -551,7 +551,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
     This class uses `QThread` to manage the process asynchronously.
     """
     message_from_thread = QtCore.Signal(str)
-    message_when_thread_finished = QtCore.Signal(str)
+    message_when_thread_finished = QtCore.Signal(dict)
 
     def __init__(self, parent=None):
         """
@@ -584,6 +584,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         to perform necessary image processing tasks.
         """
         logging.info("Start cropping if required")
+        analysis_status = {"continue": True, "message": ""}
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.get_average_pixel_size()
         if os.path.isfile('Data to run Cellects quickly.pkl'):
@@ -597,18 +598,22 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
             y_lim = self.parent().po.first_image.y_boundaries
             if ((nb - 1) != self.parent().po.sample_number or np.any(stats[:, 4] == 1)):
-                self.message_from_thread.emit("Image analysis failed to detect the right cell(s) number: restart the analysis.")
+                analysis_status["message"] = "Image analysis failed to detect the right cell(s) number: restart the analysis."
+                analysis_status['continue'] = False
+            elif y_lim is None:
+                analysis_status["message"] = "The shapes detected in the image did not allow automatic arena delineation."
+                analysis_status['continue'] = False
             elif (y_lim == - 1).sum() != (y_lim == 1).sum():
-                self.message_from_thread.emit("Automatic arena delineation cannot work if one cell touches the image border.")
+                analysis_status["message"] = "Automatic arena delineation cannot work if one cell touches the image border."
                 self.parent().po.first_image.y_boundaries = None
-            else:
-                logging.info("Start automatic video delineation")
-                analysis_status = self.parent().po.delineate_each_arena()
-                self.message_when_thread_finished.emit(analysis_status["message"])
-        else:
+                analysis_status['continue'] = False
+        if analysis_status['continue']:
             logging.info("Start automatic video delineation")
             analysis_status = self.parent().po.delineate_each_arena()
-            self.message_when_thread_finished.emit(analysis_status["message"])
+        else:
+            self.parent().po.first_image.validated_shapes = np.zeros(self.parent().po.first_image.image.shape[:2], dtype=np.uint8)
+            logging.info(analysis_status["message"])
+        self.message_when_thread_finished.emit(analysis_status)
 
 
 class SaveManualDelineationThread(QtCore.QThread):

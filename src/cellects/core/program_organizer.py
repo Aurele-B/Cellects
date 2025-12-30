@@ -1297,6 +1297,11 @@ class ProgramOrganizer:
         logging.info("Create origins and background lists")
         if self.top is None:
             self._whole_image_bounding_boxes()
+
+        if not self.first_image.validated_shapes.any():
+            if self.vars['convert_for_motion'] is not None:
+                self.vars['convert_for_origin'] = self.vars['convert_for_motion']
+            self.fast_first_image_segmentation()
         first_im = self.first_image.validated_shapes
         self.vars['origin_list'] = []
         self.vars['background_list'] = []

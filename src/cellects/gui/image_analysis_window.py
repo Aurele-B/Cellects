@@ -2062,29 +2062,37 @@ class ImageAnalysisWindow(MainTabsType):
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
 
-    def delineate_is_done(self, message: str):
+    def delineate_is_done(self, analysis_status: dict):
         """
         Update GUI after delineation is complete.
         """
-        logging.info("Delineation is done, update GUI")
-        self.message.setText(message)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
-        self.reinitialize_bio_and_back_legend()
-        self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
-        self.delineation_done = True
-        if self.thread["UpdateImage"].isRunning():
-            self.thread["UpdateImage"].wait()
-        self.thread["UpdateImage"].start()
-        self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+        if analysis_status['continue']:
+            logging.info("Delineation is done, update GUI")
+            self.message.setText(analysis_status["message"])
+            self.arena_shape_label.setVisible(False)
+            self.arena_shape.setVisible(False)
+            self.reinitialize_bio_and_back_legend()
+            self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+            self.delineation_done = True
+            if self.thread["UpdateImage"].isRunning():
+                self.thread["UpdateImage"].wait()
+            self.thread["UpdateImage"].start()
+            self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
-        try:
-            self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
-            self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
-        except RuntimeError:
-            pass
-        if not self.slower_delineation_flag:
-            self.asking_delineation_flag = True
+            try:
+                self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
+                self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
+            except RuntimeError:
+                pass
+            if not self.slower_delineation_flag:
+                self.asking_delineation_flag = True
+        else:
+            self.delineation_done = False
+            self.asking_delineation_flag = False
+            self.auto_delineation_flag = False
+            self.asking_slower_or_manual_delineation_flag = False
+            self.slower_delineation_flag = False
+            self.manual_delineation()
 
     def automatic_delineation_display_done(self, boole):
         """
