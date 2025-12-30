@@ -391,7 +391,7 @@ class ProgramOrganizer:
                         self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
                 self.get_first_image()
                 self.get_last_image()
-                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly['all']['vars']['bb_coord']
+                (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = data_to_run_cellects_quickly['all']['vars']['bb_coord']
                 if self.all['automatically_crop']:
                     self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     logging.info("Crop first image")
@@ -473,8 +473,7 @@ class ProgramOrganizer:
 
         """
         if self.first_image.crop_coord is None:
-            self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0,
-                                                       self.first_image.image.shape[1]]
+            self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0, self.first_image.image.shape[1]]
         self.vars['bb_coord'] = self.first_image.crop_coord + [self.top, self.bot, self.left, self.right]
         self.all['overwrite_unaltered_videos'] = True
 
@@ -821,7 +820,7 @@ class ProgramOrganizer:
                         if data_to_run_cellects_quickly is not None:
                             if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
                                 logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
-                                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
+                                (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
                                     data_to_run_cellects_quickly['all']['vars']['bb_coord']
                                 self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                             else:
@@ -1004,7 +1003,7 @@ class ProgramOrganizer:
                 data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
                 if data_to_run_cellects_quickly is not None:
                     if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
-                        (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
+                        (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
                             data_to_run_cellects_quickly['all']['vars']['bb_coord']
                         self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                         if (self.first_image.image.shape[0] == (ccy2 - ccy1)) and (
