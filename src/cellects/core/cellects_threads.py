@@ -1210,7 +1210,7 @@ class OneArenaThread(QtCore.QThread):
 
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
-                contours = get_contours(analysis_i.binary[analysis_i.t - 1, :, :])
+                contours = np.nonzero(get_contours(analysis_i.binary[analysis_i.t - 1, :, :]))
                 current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
