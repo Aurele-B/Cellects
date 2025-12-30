@@ -564,7 +564,6 @@ class FirstWindow(MainTabsType):
         Reinstantiate the videoanalysis window from the parent of the current window.
         """
         self.instantiate = True
-        self.parent().po.vars['img_number'] = 0
         # Since we re-instantiate everything, image analysis will no longer be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_usable()
 
