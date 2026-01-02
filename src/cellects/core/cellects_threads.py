@@ -1312,6 +1312,7 @@ class VideoReaderThread(QtCore.QThread):
                 video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
                 video_mask[video_mask > 0] = 1
                 video_mask = video_mask.astype(np.uint8)
+        frame_delay = (8 + np.log10(self.parent().po.motion.dims[0])) / self.parent().po.motion.dims[0]
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
@@ -1319,7 +1320,7 @@ class VideoReaderThread(QtCore.QThread):
             current_image[mask > 0] = self.parent().po.vars['contour_color']
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
-            time.sleep(1 / 50)
+            time.sleep(frame_delay)
         self.message_from_thread.emit({"current_image": current_image, "message": ""})#, "time": timings[t]
 
 
