@@ -29,6 +29,7 @@ from typing import Tuple
 from numpy.typing import NDArray
 from copy import deepcopy
 import pandas as pd
+from tqdm import tqdm
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
 from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
                                      get_newly_explored_area)
@@ -168,7 +169,7 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
     centroids = []
 
     # pat_tracker = PercentAndTimeTracker(dims[0], compute_with_elements_number=True)
-    for t in np.arange(dims[0]):
+    for t in tqdm(np.arange(2)):#dims[0])):
         # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
         # keeps the previous colony name.
         # shapes, stats, centers = cc(binary_vid[t, :, :])
@@ -241,12 +242,12 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
         if save_coord_specimen:
             coord_colonies = pd.DataFrame(coord_colonies, columns=["time", "colony", "y", "x"])
             coord_colonies.to_csv(
-                f"coord_colonies{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+                f"coord_colonies{arena_label}_{colony_number}col_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv",
                 sep=';', index=False, lineterminator='\n')
 
     centroids = pd.DataFrame(centroids, columns=["time", "colony", "y", "x"])
     centroids.to_csv(
-        f"colony_centroids{arena_label}_t{dims[0]}_col{colony_number}_y{dims[1]}_x{dims[2]}.csv",
+        f"colony_centroids{arena_label}_{colony_number}col_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv",
         sep=';', index=False, lineterminator='\n')
 
     # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name

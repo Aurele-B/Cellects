@@ -1196,7 +1196,7 @@ class MotionAnalysis:
         `PercentAndTimeTracker` for progress tracking, and other image processing techniques such as connected components analysis.
 
         """
-        ##
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
         if release_memory:
             self.substantial_image = None
             self.covering_intensity = None
