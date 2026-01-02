@@ -37,6 +37,7 @@ class ProcessImage:
             list : list
         """
         self.stats = None
+        self.greyscale = None
         self.start_processing(l)
 
     def start_processing(self, l: list):
@@ -106,16 +107,16 @@ class ProcessImage:
         self.apply_filter_and_segment()
 
     def apply_filter_and_segment(self):
-        greyscale = self.image
+        self.greyscale = self.image
         if self.params['filter_spec'] is not None and self.params['filter_spec']["filter1_type"] != "":
-            greyscale = apply_filter(greyscale, self.params['filter_spec']["filter1_type"], self.params['filter_spec']["filter1_param"])
+            self.greyscale = apply_filter(self.greyscale, self.params['filter_spec']["filter1_type"], self.params['filter_spec']["filter1_param"])
 
 
         if self.params['kmeans_clust_nb'] is not None and (self.params['bio_mask'] is not None or self.params['back_mask'] is not None):
-            self.binary_image, _, self.bio_label, _ = kmeans(greyscale, None, self.params['kmeans_clust_nb'],
+            self.binary_image, _, self.bio_label, _ = kmeans(self.greyscale, None, self.params['kmeans_clust_nb'],
                                                              self.params['bio_mask'], self.params['back_mask'])
         else:
-            self.binary_image = otsu_thresholding(greyscale)
+            self.binary_image = otsu_thresholding(self.greyscale)
         self.validated_shapes = self.binary_image
 
     def evaluate_segmentation(self):
@@ -198,7 +199,7 @@ class ProcessImage:
         elif self.operation['logical'] == 'Or':
             self.binary_image = np.logical_or(im1, im2).astype(np.uint8)
         self.validated_shapes = self.binary_image
-        self.image = self.parent.converted_images_list[self.operation[0]]
+        self.greyscale = self.parent.converted_images_list[self.operation[0]]
         csc1 = self.parent.saved_color_space_list[self.operation[0]]
         csc2 = self.parent.saved_color_space_list[self.operation[1]]
         self.csc_dict = {}

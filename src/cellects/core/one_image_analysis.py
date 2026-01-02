@@ -566,7 +566,7 @@ class OneImageAnalysis:
             saved_csc_nb = self.saved_csc_nb
             self.saved_csc_nb += 1
             self.saved_images_list.append(process_i.validated_shapes)
-            self.converted_images_list.append(np.round(process_i.image).astype(np.uint8))
+            self.converted_images_list.append(bracket_to_uint8_image_contrast(process_i.greyscale))
             self.saved_color_space_list.append(process_i.csc_dict)
             self.combination_features.iloc[saved_csc_nb, :] = process_i.fact
 
