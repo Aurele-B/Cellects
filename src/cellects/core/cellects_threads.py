@@ -354,14 +354,18 @@ class UpdateImageThread(QtCore.QThread):
             image = self.parent().imageanalysiswindow.drawn_image.copy()
             # 3) The automatically detected video contours
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
+                if self.parent().po.vars['contour_color'] == 255:
+                    arena_contour_col = (240, 232, 202)
+                else:
+                    arena_contour_col = (138, 95, 18)
                 # Draw the delineation mask of each arena
                 for _i, (min_cy, max_cy, min_cx, max_cx) in enumerate(zip(self.parent().po.top, self.parent().po.bot, self.parent().po.left, self.parent().po.right)):
                     position = (min_cx + 25, min_cy + (max_cy - min_cy) // 2)
-                    image = cv2.putText(image, f"{_i + 1}", position, cv2.FONT_HERSHEY_SIMPLEX, 1,  (138, 95, 18, 255),2)
+                    image = cv2.putText(image, f"{_i + 1}", position, cv2.FONT_HERSHEY_SIMPLEX, 1,  arena_contour_col + (255,),2)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
-                                               self.parent().po.vars['arena_shape'], (138, 95, 18), True, contour_width)
+                                               self.parent().po.vars['arena_shape'], arena_contour_col, True, contour_width)
         else: #load
             if user_input:
                 # III/ If this thread runs from user input: update the drawn_image according to the current user input
