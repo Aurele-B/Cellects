@@ -646,9 +646,9 @@ def get_line_points(start, end) -> NDArray[int]:
     Parameters
     ----------
     start : tuple of int
-        The starting point coordinates (x0, y0).
+        The starting point coordinates (y0, x0).
     end : tuple of int
-        The ending point coordinates (x1, y1).
+        The ending point coordinates (y1, x1).
 
     Returns
     -------
