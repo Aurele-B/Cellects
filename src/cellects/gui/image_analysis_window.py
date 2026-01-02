@@ -1957,7 +1957,7 @@ class ImageAnalysisWindow(MainTabsType):
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=np.int8)
+            dtype=np.float64)
         if self.logical_operator_between_combination_result.currentText() != 'None':
             spaces = np.concatenate((spaces, np.array((
                         self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
@@ -1965,7 +1965,7 @@ class ImageAnalysisWindow(MainTabsType):
             channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=np.int8)))
+             dtype=np.float64)))
             self.csc_dict['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.csc_dict['logical'] = 'None'
