@@ -173,7 +173,7 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
         # keeps the previous colony name.
         # shapes, stats, centers = cc(binary_vid[t, :, :])
         nb, shapes, stats, centers = cv2.connectedComponentsWithStats(binary_vid[t, :, :])
-        true_colonies = np.nonzero(stats[:, 4] >= min_colony_size)[1:]
+        true_colonies = np.nonzero(stats[:, 4] >= min_colony_size)[0][1:]
         # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
 
         # current_percentage, eta = pat_tracker.get_progress(t, element_number=nb)
