@@ -355,21 +355,9 @@ class UpdateImageThread(QtCore.QThread):
             # 3) The automatically detected video contours
             if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
                 # Draw the delineation mask of each arena
-                for contour_i in range(len(self.parent().po.top)):
-                    min_cy = self.parent().po.top[contour_i]
-                    max_cy = self.parent().po.bot[contour_i]
-                    min_cx = self.parent().po.left[contour_i]
-                    max_cx = self.parent().po.right[contour_i]
-                    text = f"{contour_i + 1}"
-                    position = (self.parent().po.left[contour_i] + 25, self.parent().po.top[contour_i] + (self.parent().po.bot[contour_i] - self.parent().po.top[contour_i]) // 2)
-                    image = cv2.putText(image,  # numpy array on which text is written
-                                    text,  # text
-                                    position,  # position at which writing has to start
-                                    cv2.FONT_HERSHEY_SIMPLEX,  # font family
-                                    1,  # font size
-                                    (138, 95, 18, 255),
-                                    # (209, 80, 0, 255),  # font color
-                                    2)  # font stroke
+                for _i, (min_cy, max_cy, min_cx, max_cx) in enumerate(zip(self.parent().po.top, self.parent().po.bot, self.parent().po.left, self.parent().po.right)):
+                    position = (min_cx + 25, min_cy + (max_cy - min_cy) // 2)
+                    image = cv2.putText(image, f"{_i + 1}", position, cv2.FONT_HERSHEY_SIMPLEX, 1,  (138, 95, 18, 255),2)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
                     image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
