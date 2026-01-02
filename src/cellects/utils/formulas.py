@@ -744,7 +744,7 @@ def get_contour_width_from_im_shape(im_shape: Tuple) -> int:
     int
         The calculated contour width.
     """
-    return np.max((np.round(np.log10(np.max(im_shape)) - 2).astype(int), 1))
+    return np.max((np.round(np.log10(np.max(im_shape)) - 2).astype(int), 2))
 
 def scale_coordinates(coord: NDArray, scale: Tuple, dims: Tuple) -> Tuple[NDArray[np.int64], np.int64, np.int64, np.int64, np.int64]:
     """
