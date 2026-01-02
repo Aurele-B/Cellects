@@ -46,7 +46,7 @@ filter_dict = {"": {'': {}},
                           'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
                "Hessian": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.},
                           'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
-               "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 0., 'Maximum': 100., 'Default': 3}},
+               "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 3, 'Maximum': 100, 'Default': 5}},
                "Sharpen": {'': {}},
                "Mexican hat": {'': {}},
                "Farid": {'': {}},
@@ -142,7 +142,7 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
     elif filter_type == "Hessian":
         image = hessian(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Laplace":
-        image = laplace(image, ksize=int(param[0]))
+        image = laplace(image, ksize=np.max((3, int(np.ceil(param[0])))))
     elif filter_type == "Sharpen":
         image = cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
     elif filter_type == "Mexican hat":
