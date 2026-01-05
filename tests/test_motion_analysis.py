@@ -6,7 +6,7 @@ import unittest
 
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.core.motion_analysis import *
-from tests._base import CellectsUnitTest, video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
+from tests._base import CellectsUnitTest, rgb_video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 
 
@@ -18,10 +18,10 @@ class TestFullMotionAnalysis(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = [video_test[:, :, :, :], video_test[:, :, :, 0]]
+        cls.videos_already_in_ram = [rgb_video_test[:, :, :, :], rgb_video_test[:, :, :, 0]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
         cls.vars['background_list'] = []
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
@@ -39,10 +39,10 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = [video_test[0, :, :, :][None, :, :, :], video_test[0, :, :, 0][None, :, :]]
+        cls.videos_already_in_ram = [rgb_video_test[0, :, :, :][None, :, :, :], rgb_video_test[0, :, :, 0][None, :, :]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [binary_video_test[0]]
+        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
         cls.vars['background_list'] = []
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
@@ -54,7 +54,7 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.vars['fractal_analysis'] = True
         cls.l = [cls.i, cls.i + 1, cls.vars, True, True, False, cls.videos_already_in_ram]
 
-    def test_simple_motion_analysis(self):
+    def test_one_frame_motion_analysis(self):
         self.ma = MotionAnalysis(self.l)
 
 
@@ -66,13 +66,13 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         super().setUpClass()
         os.chdir(cls.path_output)
         cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
-        cls.videos_already_in_ram = video_test[:, :, :, 0]
+        cls.videos_already_in_ram = rgb_video_test[:, :, :, 0]
         cls.i = 0
         cls.dd = DefaultDicts()
         cls.vars = cls.dd.vars
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [binary_video_test[0]]
+        cls.origin_list = [np.nonzero(binary_video_test[0])]
         cls.vars['origin_list'] = cls.origin_list
         cls.vars['already_greyscale'] = True
         cls.vars['drift_already_corrected'] = True # Will automatically become False
@@ -98,7 +98,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['contour_color']: np.uint8 = 0
         cls.l = [cls.i, cls.i + 1, cls.vars, False, False, False, cls.videos_already_in_ram]
 
-    def test_simple_motion_analysis(self):
+    def test_one_blob_motion_analysis(self):
         self.ma = MotionAnalysis(self.l)
         self.ma.get_origin_shape()
         self.ma.get_covering_duration(1)
@@ -221,7 +221,7 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
                                          'lab2': np.array([0, 0, 1], dtype=np.int8)}
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [several_arenas_bin_vid[0]]
+        cls.origin_list = [np.nonzero(several_arenas_bin_vid[0])]
         cls.vars['origin_list'] = cls.origin_list
         cls.vars['greyscale2'] = False
         cls.vars['drift_already_corrected'] = True
@@ -283,18 +283,6 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         for file_name in file_names:
             if os.path.isfile(file_name):
                 os.remove(file_name)
-
-    # def test_invisible(self):
-    #     self.assertTrue(self.ma.start is not None)
-    #     self.assertGreater(self.ma.substantial_time, 0)
-    #     self.assertGreater(self.ma.segmented[-1, ...], 0)
-    #     self.ma.vars['origin_state'] = "invisible"
-    #     self.ma.initialize_post_processing()
-    #     while self.ma.t < self.ma.binary.shape[0]:  # 200:
-    #         self.ma.update_shape(False)
-    #     self.ma.get_descriptors_from_binary()
-    #     self.ma.save_results()
-
 
 
 if __name__ == '__main__':

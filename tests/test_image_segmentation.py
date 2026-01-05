@@ -4,7 +4,7 @@ This script contains all unit tests of the image segmentation script
 """
 
 import unittest
-from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img
+from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img
 from cellects.image_analysis.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
@@ -313,8 +313,8 @@ class TestKmeans(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize data for testing"""
         super().setUpClass()
-        cls.image = several_arenas_img[:, :, 0]
-        cls.image2 = several_arenas_img[:, :, 2]
+        cls.image = rgb_several_arenas_img[:, :, 0]
+        cls.image2 = rgb_several_arenas_img[:, :, 2]
 
     def test_kmeans(self):
         """Test kmeans basic functionality."""
@@ -326,18 +326,24 @@ class TestKmeans(CellectsUnitTest):
         binary_image, binary_image2, new_bio_label, new_bio_label2 = kmeans(self.image, self.image2, kmeans_clust_nb=2, bio_label=1, bio_label2=1,  logical="And")
         self.assertTrue(binary_image.any())
 
-    def test_kmeans_with_biomask(self):
-        """Test kmeans with biomask."""
-        biomask = several_arenas_bin_img
-        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, biomask=biomask, logical="And")
+    def test_kmeans_with_bio_mask(self):
+        """Test kmeans with bio_mask."""
+        bio_mask = several_arenas_bin_img
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, bio_mask=bio_mask, logical="And")
         self.assertTrue(binary_image.any())
 
-    def test_kmeans_with_backmask(self):
-        """Test kmeans with backmask."""
-        backmask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
-        backmask[:, 0] = 1
-        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, backmask=backmask, logical="And")
+    def test_kmeans_with_back_mask(self):
+        """Test kmeans with back_mask."""
+        back_mask = np.zeros((self.image.shape[0], self.image.shape[1]), dtype=np.uint8)
+        back_mask[:, 0] = 1
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, back_mask=back_mask, logical="And")
         self.assertTrue(binary_image.any())
+
+    def test_kmeans_with_previous_binary_image(self):
+        """Test kmeans with previous_binary_image."""
+        binary_image, _, _, _ = kmeans(self.image, self.image2, kmeans_clust_nb=2, previous_binary_image=several_arenas_bin_img, logical="Or")
+        self.assertTrue(binary_image.any())
+
 
 class TestWindowedThresholding(CellectsUnitTest):
     """Test suite for windowed_thresholding function"""
@@ -346,7 +352,7 @@ class TestWindowedThresholding(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize data for testing"""
         super().setUpClass()
-        cls.image = several_arenas_img[:, :, 0]
+        cls.image = rgb_several_arenas_img[:, :, 0]
 
     def test_windowed_thresholding(self):
         """Test windowed_thresholding basic functionality."""
@@ -679,7 +685,7 @@ class TestExtractFirstPC(CellectsUnitTest):
 
     def test_first_pc_vector_use_for_conversion(self):
         """Test when first PC vector is used for conversion."""
-        bgr_image = several_arenas_img
+        bgr_image = rgb_several_arenas_img
 
         greyscale, _, first_pc_vector = extract_first_pc(bgr_image)
         pca = bracket_to_uint8_image_contrast(greyscale)

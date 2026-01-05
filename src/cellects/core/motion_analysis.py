@@ -151,28 +151,14 @@ class MotionAnalysis:
 
         self.start = None
         if detect_shape:
-            self.start = None
-            # Here to conditional layers allow to detect if an expansion/exploration occured
-            self.get_origin_shape()
-            # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
-            # substantial image: if any of them is not detected, the program considers there is not exp.
-            if self.dims[0] >= 40:
-                step = self.dims[0] // 20
-            else:
-                step = 1
-            if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
-                self.start = None
-            else:
-                self.get_covering_duration(step)
-                if self.start is not None:
-                    self.detection()
-                    self.initialize_post_processing()
-                    self.t = self.start
-                    while self.t < self.dims[0]:  #200:
-                        self.update_shape(show_seg)
+            self.assess_motion_detection()
+            if self.start is not None:
+                self.detection()
+                self.initialize_post_processing()
+                self.t = self.start
+                while self.t < self.dims[0]:  #200:
+                    self.update_shape(show_seg)
                 #
-            if self.start is None:
-                self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
 
             if analyse_shape:
                 self.get_descriptors_from_binary()
@@ -204,8 +190,25 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        self.origin = self.vars['origin_list'][i]  # self.vars['origins_list'][i]
-        true_frame_width = self.origin.shape[1]
+        if 'bb_coord' in self.vars:
+            crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
+        elif videos_already_in_ram is not None:
+            if isinstance(videos_already_in_ram, list):
+                crop_bot, crop_right = videos_already_in_ram[0].shape[1], videos_already_in_ram[0].shape[2]
+            else:
+                crop_bot, crop_right = videos_already_in_ram.shape[1], videos_already_in_ram.shape[2]
+            crop_top, crop_left, top, bot, left, right = 0, 0, [0], [crop_bot], [0], [crop_right]
+        if isinstance(self.vars['origin_list'][i], Tuple):
+            self.origin_idx = self.vars['origin_list'][i]
+            frame_height = bot[i] - top[i]
+            true_frame_width = right[i] - left[i]
+            self.origin = np.zeros((frame_height, true_frame_width), dtype=np.uint8)
+            self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
+        else:
+            self.origin = self.vars['origin_list'][i]
+            frame_height = self.origin.shape[0]
+            true_frame_width = self.origin.shape[1]
+
         vid_name = None
         if self.vars['video_list'] is not None:
             vid_name = self.vars['video_list'][i]
@@ -219,6 +222,18 @@ class MotionAnalysis:
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
+        # When the video(s) already exists (not just written as .pny), they need to be sliced:
+        if self.visu is not None:
+            if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
+                self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
+                self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
+                if self.converted_video is not None:
+                    self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
+                    self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
+                    if self.converted_video2 is not None:
+                        self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right]
+                        self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i]]
+
         if self.converted_video is None:
             logging.info(
                 f"Arena n°{self.one_descriptor_per_arena['arena']}. Convert the RGB visu video into a greyscale image using the color space combination: {self.vars['convert_for_motion']}")
@@ -227,6 +242,26 @@ class MotionAnalysis:
                                                      self.vars['lose_accuracy_to_save_memory'],
                                                      self.vars['filter_spec'])
             self.converted_video, self.converted_video2 = vids
+
+    def assess_motion_detection(self):
+        """
+        Assess if a motion can be detected using the current parameters.
+
+        Validate the specimen(s) detected in the first frame and evaluate roughly how growth occurs during the video.
+        """
+        # Here to conditional layers allow to detect if an expansion/exploration occured
+        self.get_origin_shape()
+        # The first, user-defined is the 'first_move_threshold' and the second is the detection of the
+        # substantial image: if any of them is not detected, the program considers there is no motion.
+        if self.dims[0] >= 40:
+            step = self.dims[0] // 20
+        else:
+            step = 1
+        if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
+            self.start = None
+            self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
+        else:
+            self.get_covering_duration(step)
 
     def get_origin_shape(self):
         """
@@ -259,25 +294,19 @@ class MotionAnalysis:
                     self.drift_mask_coord[:, 2] == 0) and np.all(self.drift_mask_coord[:, 3] == self.dims[2] - 1):
                 logging.error(f"Drift correction has been wrongly detected. Images do not contain zero-valued pixels")
                 self.vars['drift_already_corrected'] = False
-        if self.vars['origin_state'] == "constant":
-            self.start = 1
-            if self.vars['lighter_background']:
-                # Initialize the covering_intensity matrix as a reference for pixel fading
-                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
-        else:
-            self.start = 0
+        self.start = 1
+        if self.vars['origin_state'] == "invisible":
+            self.start += self.vars['first_detection_frame']
             analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
-            while np.logical_and(np.sum(analysisi.binary_image) < self.vars['first_move_threshold'], self.start < self.dims[0]):
-                self.start += 1
-                analysisi = self.frame_by_frame_segmentation(self.start, self.origin)
-
             # Use connected components to find which shape is the nearest from the image center.
             if self.vars['several_blob_per_arena']:
                 self.origin = analysisi.binary_image
             else:
-                nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(analysisi.binary_image,
-                                                                                           connectivity=8)
-                if self.vars['appearance_detection_method'] == 'most_central':
+                if self.vars['appearance_detection_method'] == 'largest':
+                    self.origin = keep_one_connected_component(analysisi.binary_image)
+                elif self.vars['appearance_detection_method'] == 'most_central':
+                    nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(analysisi.binary_image,
+                                                                                               connectivity=8)
                     center = np.array((self.dims[2] // 2, self.dims[1] // 2))
                     stats = np.zeros(nb_components - 1)
                     for shape_i in np.arange(1, nb_components):
@@ -285,10 +314,11 @@ class MotionAnalysis:
                     # The shape having the minimal euclidean distance from the center will be the original shape
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == (np.argmin(stats) + 1)] = 1
-                elif self.vars['appearance_detection_method'] == 'largest':
-                    self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
-                    self.origin[output == np.argmax(stats[1:, 4])] = 1
         self.origin_idx = np.nonzero(self.origin)
+        if self.vars['origin_state'] == "constant":
+            if self.vars['lighter_background']:
+                # Initialize the covering_intensity matrix as a reference for pixel fading
+                self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = 200
         self.substantial_growth = np.min((1.2 * self.origin.sum(), self.origin.sum() + 250))
 
     def get_covering_duration(self, step: int):
@@ -851,7 +881,7 @@ class MotionAnalysis:
             self.pixel_ring_depth = 3
         if self.pixel_ring_depth % 2 == 0:
             self.pixel_ring_depth = self.pixel_ring_depth + 1
-        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth).astype(np.uint8)
+        self.erodila_disk = create_ellipse(self.pixel_ring_depth, self.pixel_ring_depth, min_size=3).astype(np.uint8)
         self.max_distance = self.pixel_ring_depth * self.vars['detection_range_factor']
 
     def initialize_post_processing(self):
@@ -918,7 +948,7 @@ class MotionAnalysis:
             self.near_periphery = np.zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
-                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width)
+                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width, min_size=3)
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
                     self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery
@@ -1166,7 +1196,7 @@ class MotionAnalysis:
         `PercentAndTimeTracker` for progress tracking, and other image processing techniques such as connected components analysis.
 
         """
-        ##
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
         if release_memory:
             self.substantial_image = None
             self.covering_intensity = None
@@ -1529,7 +1559,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
-                print(self.vars['time_step_is_arbitrary'])
                 if self.vars['time_step_is_arbitrary']:
                     time_unit = ""
                 else:
@@ -1597,7 +1626,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
         """
         Manages the saving and updating of CSV files based on data extracted from analyzed
         one arena. Specifically handles three CSV files: "one_row_per_arena.csv",
-        "one_row_per_frame.csv", and "one_row_per_oscillating_cluster.csv".
+        "one_row_per_frame.csv".
         Each file is updated or created based on the presence of existing data.
         The method ensures that each CSV file contains the relevant information for
         the given arena, frame, and oscillator cluster data.

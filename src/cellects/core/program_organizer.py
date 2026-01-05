@@ -33,7 +33,7 @@ from cellects.image_analysis.shape_descriptors import from_shape_descriptors_cla
 from cellects.image_analysis.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.core.one_image_analysis import OneImageAnalysis
+from cellects.core.one_image_analysis import OneImageAnalysis, init_params
 from cellects.utils.load_display_save import read_and_rotate, video2numpy
 from cellects.image_analysis.morphological_operations import shape_selection, draw_img_with_mask
 
@@ -98,8 +98,8 @@ class ProgramOrganizer:
         self.one_arena_done: bool = False
         self.reduce_image_dim: bool = False
         self.first_exp_ready_to_run: bool = False
-        self.data_to_save = {'first_image': False, 'coordinates': False, 'exif': False, 'vars': False}
-        self.sample_number = None
+        self.data_to_save = {'first_image': False, 'exif': False, 'vars': False}
+        self.sample_number = 1
         self.top = None
         self.motion = None
         self.analysis_instance = None
@@ -121,6 +121,7 @@ class ProgramOrganizer:
         self.one_row_per_frame = None
         self.not_analyzed_individuals = None
         self.visualize: bool = True
+        self.network_shaped: bool = False
 
     def update_variable_dict(self):
         """
@@ -243,6 +244,7 @@ class ProgramOrganizer:
         self.data_list = insensitive_glob(self.all['radical'] + '*' + self.all['extension'])  # Provides a list ordered by last modification date
         self.all['folder_list'] = []
         self.all['folder_number'] = 1
+        self.vars['first_detection_frame'] = 0
         if len(self.data_list) > 0:
             self._sort_data_list()
             self.sample_number = self.all['first_folder_sample_number']
@@ -318,8 +320,7 @@ class ProgramOrganizer:
         """
         Set the analyzed individuals variable in the dataset.
         """
-        if self.sample_number is not None:
-            self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
+        self.vars['analyzed_individuals'] = np.arange(self.sample_number) + 1
         if self.not_analyzed_individuals is not None:
             self.vars['analyzed_individuals'] = np.delete(self.vars['analyzed_individuals'],
                                                        self.not_analyzed_individuals - 1)
@@ -349,7 +350,10 @@ class ProgramOrganizer:
         It updates the state of various attributes based on the loaded data
         and logs appropriate messages.
         """
+        self.analysis_instance = None
         self.first_im = None
+        self.first_image = None
+        self.last_image = None
         current_global_pathway = self.all['global_pathway']
         folder_number = self.all['folder_number']
         if folder_number > 1:
@@ -362,7 +366,7 @@ class ProgramOrganizer:
             if data_to_run_cellects_quickly is None:
                 data_to_run_cellects_quickly = {}
 
-            if ('validated_shapes' in data_to_run_cellects_quickly) and ('coordinates' in data_to_run_cellects_quickly) and ('all' in data_to_run_cellects_quickly):
+            if ('validated_shapes' in data_to_run_cellects_quickly) and ('all' in data_to_run_cellects_quickly) and ('bb_coord' in data_to_run_cellects_quickly['all']['vars']):
                 logging.info("Success to load Data to run Cellects quickly.pkl from the user chosen directory")
                 self.all = data_to_run_cellects_quickly['all']
                 # If you want to add a new variable, first run an updated version of all_vars_dict,
@@ -387,8 +391,7 @@ class ProgramOrganizer:
                         self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
                 self.get_first_image()
                 self.get_last_image()
-                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = data_to_run_cellects_quickly[
-                    'coordinates']
+                (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = data_to_run_cellects_quickly['all']['vars']['bb_coord']
                 if self.all['automatically_crop']:
                     self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     logging.info("Crop first image")
@@ -447,11 +450,6 @@ class ProgramOrganizer:
             if self.data_to_save['first_image']:
                 data_to_run_cellects_quickly['validated_shapes'] = self.first_image.im_combinations[self.current_combination_id]['binary_image']
                 data_to_run_cellects_quickly['shape_number'] = self.first_image.im_combinations[self.current_combination_id]['shape_number']
-                    # data_to_run_cellects_quickly['converted_image'] = self.first_image.im_combinations[self.current_combination_id]['converted_image']
-            if self.data_to_save['coordinates']:
-                data_to_run_cellects_quickly['coordinates'] = self._list_coordinates()
-                logging.info("When they exist, do overwrite unaltered video")
-                self.all['overwrite_unaltered_videos'] = True
             if self.data_to_save['exif']:
                 self.vars['exif'] = self.extract_exif()
             self.all['vars'] = self.vars
@@ -459,7 +457,7 @@ class ProgramOrganizer:
             pickle_rick = PickleRick()
             pickle_rick.write_file(data_to_run_cellects_quickly, 'Data to run Cellects quickly.pkl')
 
-    def _list_coordinates(self):
+    def list_coordinates(self):
         """
         Summarize the coordinates of images and video.
 
@@ -475,10 +473,9 @@ class ProgramOrganizer:
 
         """
         if self.first_image.crop_coord is None:
-            self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0,
-                                                       self.first_image.image.shape[1]]
-        videos_coordinates = self.first_image.crop_coord + [self.left, self.right, self.top, self.bot]
-        return videos_coordinates
+            self.first_image.crop_coord = [0, self.first_image.image.shape[0], 0, self.first_image.image.shape[1]]
+        self.vars['bb_coord'] = self.first_image.crop_coord + [self.top, self.bot, self.left, self.right]
+        self.all['overwrite_unaltered_videos'] = True
 
     def get_first_image(self, first_im: NDArray=None, sample_number: int=None):
         """
@@ -488,24 +485,22 @@ class ProgramOrganizer:
         depending on whether the data is an image or a video. It performs necessary
         preprocessing and initializes relevant attributes for subsequent analysis.
         """
+        if sample_number is not None:
+            self.sample_number = sample_number
         self.reduce_image_dim = False
         if first_im is not None:
             self.first_im = first_im
-            if sample_number is not None:
-                self.sample_number = sample_number
         else:
             logging.info("Load first image")
-            just_read_image = self.first_im is not None
-            # just_read_image = self.analysis_instance is not None
             if self.all['im_or_vid'] == 1:
-                if not just_read_image:
+                if self.analysis_instance is None:
                     self.analysis_instance = video2numpy(self.data_list[0])
                     self.sample_number = len(self.data_list)
                     self.vars['img_number'] = self.analysis_instance.shape[0]
                     self.first_im = self.analysis_instance[0, ...]
+                    self.vars['dims'] = self.analysis_instance.shape[:3]
                 else:
                     self.first_im = self.analysis_instance[self.vars['first_detection_frame'], ...]
-                self.vars['dims'] = self.analysis_instance.shape[:3]
 
             else:
                 self.vars['img_number'] = len(self.data_list)
@@ -519,7 +514,8 @@ class ProgramOrganizer:
                         self.reduce_image_dim = True
                     if self.reduce_image_dim:
                         self.first_im = self.first_im[:, :, 0]
-        self.first_image = OneImageAnalysis(self.first_im)
+
+        self.first_image = OneImageAnalysis(self.first_im, self.sample_number)
         self.vars['already_greyscale'] = self.first_image.already_greyscale
         if self.vars['already_greyscale']:
             self.vars["convert_for_origin"] = {"bgr": np.array((1, 1, 1), dtype=np.uint8), "logical": "None"}
@@ -546,16 +542,7 @@ class ProgramOrganizer:
             self.last_im = last_im
         else:
             if self.all['im_or_vid'] == 1:
-                cap = cv2.VideoCapture(self.data_list[0])
-                counter = 0
-                while cap.isOpened() and counter < self.vars['img_number']:
-                    ret, frame = cap.read()
-                    if self.reduce_image_dim:
-                        frame = frame[:, :, 0]
-                    self.analysis_instance[-1, ...] = frame
-                    counter += 1
-                self.last_im = frame
-                cap.release()
+                self.last_im = self.analysis_instance[-1, ...]
             else:
                 is_landscape = self.first_image.image.shape[0] < self.first_image.image.shape[1]
                 self.last_im = read_and_rotate(self.data_list[-1], self.first_im, self.all['raw_images'], is_landscape)
@@ -574,7 +561,8 @@ class ProgramOrganizer:
         """
         self.vars['time_step_is_arbitrary'] = True
         if self.all['im_or_vid'] == 1:
-            self.vars['dims'] = self.analysis_instance.shape
+            if not 'dims' in self.vars:
+                self.vars['dims'] = self.analysis_instance.shape[:3]
             timings = np.arange(self.vars['dims'][0])
         else:
             timings = np.arange(len(self.data_list))
@@ -662,15 +650,15 @@ class ProgramOrganizer:
         self.first_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
         self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_number
 
-    def fast_last_image_segmentation(self, biomask: NDArray[np.uint8] = None, backmask: NDArray[np.uint8] = None):
+    def fast_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
         """
         Segment the first or subsequent image in a series for biological and background masks.
 
         Parameters
         ----------
-        biomask : NDArray[np.uint8], optional
+        bio_mask : NDArray[np.uint8], optional
             The biological mask to be applied to the image.
-        backmask : NDArray[np.uint8], optional
+        back_mask : NDArray[np.uint8], optional
             The background mask to be applied to the image.
 
         Returns
@@ -688,14 +676,14 @@ class ProgramOrganizer:
             self.vars['convert_for_motion'] = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
         self.cropping(is_first_image=False)
         self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                            biomask, backmask, self.first_image.subtract_background,
+                                            bio_mask, back_mask, self.first_image.subtract_background,
                                             self.first_image.subtract_background2,
                                             rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                             filter_spec=self.vars["filter_spec"])
         if self.vars['drift_already_corrected'] and not self.last_image.drift_correction_already_adjusted and not self.vars["rolling_window_segmentation"]['do']:
             self.last_image.check_if_image_border_attest_drift_correction()
             self.last_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
-                                                biomask, backmask, self.first_image.subtract_background,
+                                                bio_mask, back_mask, self.first_image.subtract_background,
                                                 self.first_image.subtract_background2,
                                                 allowed_window=self.last_image.drift_mask_coord,
                                                 filter_spec=self.vars["filter_spec"])
@@ -712,6 +700,102 @@ class ProgramOrganizer:
         else:
             greyscale = self.last_image.image
         self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
+
+    def save_user_masks(self, bio_mask=None, back_mask=None):
+        self.all["bio_mask"] = None
+        self.all["back_mask"] = None
+        if self.all['keep_cell_and_back_for_all_folders']:
+            self.all["bio_mask"] = bio_mask
+            self.all["back_mask"] = back_mask
+
+    def full_first_image_segmentation(self, first_param_known: bool, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
+            shape_nb -= 1
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            shape_nb = 0
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        self.save_user_masks(bio_mask=bio_mask, back_mask=back_mask)
+        if self.visualize or len(self.first_im.shape) == 2:
+            if not first_param_known and self.all['scale_with_image_or_cells'] == 0 and self.all["set_spot_size"]:
+                self.get_average_pixel_size()
+            else:
+                self.starting_blob_hsize_in_pixels = None
+            self.fast_first_image_segmentation()
+            if not self.vars['several_blob_per_arena'] and bio_mask is not None and shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
+                self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_nb
+                self.first_image.shape_number = shape_nb
+                self.first_image.validated_shapes = (ordered_image > 0).astype(np.uint8)
+                self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+        else:
+
+            params = init_params()
+            params['is_first_image'] = True
+            params['blob_nb'] = self.sample_number
+            if self.vars["color_number"] > 2:
+                params['kmeans_clust_nb'] = self.vars["color_number"]
+            params['bio_mask'] = self.all["bio_mask"]
+            params['back_mask'] = self.all["back_mask"]
+            params['filter_spec'] = self.vars["filter_spec"]
+
+            if first_param_known:
+                if self.all['scale_with_image_or_cells'] == 0:
+                    self.get_average_pixel_size()
+                else:
+                    self.starting_blob_hsize_in_pixels = None
+                params['several_blob_per_arena'] = self.vars['several_blob_per_arena']
+                params['blob_shape'] = self.all['starting_blob_shape']
+                params['blob_size'] = self.starting_blob_hsize_in_pixels
+
+            self.first_image.find_color_space_combinations(params)
+
+    def full_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        if bio_mask.any():
+            bio_mask = np.nonzero(bio_mask)
+        else:
+            bio_mask = None
+        if back_mask.any():
+            back_mask = np.nonzero(back_mask)
+        else:
+            back_mask = None
+        if self.last_im is None:
+            self.get_last_image()
+        self.cropping(False)
+        self.get_background_to_subtract()
+        if self.visualize or (len(self.first_im.shape) == 2 and not self.network_shaped):
+            self.fast_last_image_segmentation(bio_mask=bio_mask, back_mask=back_mask)
+        else:
+            arenas_mask = None
+            if self.all['are_gravity_centers_moving'] != 1:
+                cr = [self.top, self.bot, self.left, self.right]
+                arenas_mask = np.zeros_like(self.first_image.validated_shapes)
+                for _i in np.arange(len(self.vars['analyzed_individuals'])):
+                    if self.vars['arena_shape'] == 'circle':
+                        ellipse = create_ellipse(cr[1][_i] - cr[0][_i], cr[3][_i] - cr[2][_i])
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = ellipse
+                    else:
+                        arenas_mask[cr[0][_i]: cr[1][_i], cr[2][_i]:cr[3][_i]] = 1
+            if self.network_shaped:
+                self.last_image.network_detection(arenas_mask, csc_dict=self.vars["convert_for_motion"], lighter_background=None, bio_mask=bio_mask, back_mask=back_mask)
+            else:
+                ref_image = self.first_image.validated_shapes
+                params = init_params()
+                params['is_first_image'] = False
+                params['several_blob_per_arena'] = self.vars['several_blob_per_arena']
+                params['blob_nb'] = self.sample_number
+                params['arenas_mask'] = arenas_mask
+                params['ref_image'] = ref_image
+                params['subtract_background'] = self.first_image.subtract_background
+                params['bio_mask'] = bio_mask
+                params['back_mask'] = back_mask
+                params['filter_spec'] = self.vars["filter_spec"]
+
+                self.last_image.find_color_space_combinations(params)
 
     def cropping(self, is_first_image: bool):
         """
@@ -731,19 +815,14 @@ class ProgramOrganizer:
             if is_first_image:
                 if not self.first_image.cropped:
                     if (not self.all['overwrite_unaltered_videos'] and os.path.isfile('Data to run Cellects quickly.pkl')):
+                        self.first_image.get_crop_coordinates()
                         pickle_rick = PickleRick()
                         data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
-                        if data_to_run_cellects_quickly is not None:
-                            if 'coordinates' in data_to_run_cellects_quickly:
-                                logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
-                                (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                                    data_to_run_cellects_quickly['coordinates']
-                                self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                            else:
-                                self.first_image.get_crop_coordinates()
-                        else:
-                            self.first_image.get_crop_coordinates()
-
+                        if data_to_run_cellects_quickly is not None and 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
+                            logging.info("Get crop coordinates from Data to run Cellects quickly.pkl")
+                            (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
+                                data_to_run_cellects_quickly['all']['vars']['bb_coord']
+                            self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                     else:
                         self.first_image.get_crop_coordinates()
                     if self.all['automatically_crop']:
@@ -777,26 +856,27 @@ class ProgramOrganizer:
                 connectivity=8)
         self.first_image.shape_number -= 1
         if self.all['scale_with_image_or_cells'] == 0:
-            self.vars['average_pixel_size'] = np.square(
-                self.all['image_horizontal_size_in_mm'] /
-                self.first_im.shape[1])
+            self.vars['average_pixel_size'] = np.square(self.all['image_horizontal_size_in_mm'] /
+                                                        self.first_im.shape[1])
         else:
-            self.vars['average_pixel_size'] = np.square(
-                self.all['starting_blob_hsize_in_mm'] /
-                np.mean(self.first_image.stats[1:, 2]))
+            if len(self.first_image.stats[1:, 2]) > 0:
+                self.vars['average_pixel_size'] = np.square(self.all['starting_blob_hsize_in_mm'] /
+                                                            np.mean(self.first_image.stats[1:, 2]))
+            else:
+                self.vars['average_pixel_size'] = 1.
+                self.vars['output_in_mm'] = False
+
         if self.all['set_spot_size']:
-            self.starting_blob_hsize_in_pixels = (
-                self.all['starting_blob_hsize_in_mm'] /
-                np.sqrt(self.vars['average_pixel_size']))
+            self.starting_blob_hsize_in_pixels = (self.all['starting_blob_hsize_in_mm'] /
+                                                  np.sqrt(self.vars['average_pixel_size']))
         else:
             self.starting_blob_hsize_in_pixels = None
 
         if self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = 10
         else:
-            self.vars['first_move_threshold'] = np.round(
-                self.all['first_move_threshold_in_mm²'] /
-                self.vars['average_pixel_size']).astype(np.uint8)
+            self.vars['first_move_threshold'] = np.round(self.all['first_move_threshold_in_mm²'] /
+                                                         self.vars['average_pixel_size']).astype(np.uint8)
         logging.info(f"The average pixel size is: {self.vars['average_pixel_size']} mm²")
 
     def get_background_to_subtract(self):
@@ -905,19 +985,10 @@ class ProgramOrganizer:
             - 'continue' (bool): Whether to continue processing.
             - 'message' (str): Informational or error message.
 
-        Raises
-        ------
-        None
-
         Notes
         -----
         This function relies on the existence of certain attributes and variables
         defined in the class instance.
-
-        Examples
-        --------
-        >>> self.delineate_each_arena()
-        {'continue': True, 'message': ''}
         """
         analysis_status = {"continue": True, "message": ""}
         if not self.vars['several_blob_per_arena'] and (self.sample_number > 1):
@@ -927,9 +998,9 @@ class ProgramOrganizer:
                 pickle_rick = PickleRick()
                 data_to_run_cellects_quickly = pickle_rick.read_file('Data to run Cellects quickly.pkl')
                 if data_to_run_cellects_quickly is not None:
-                    if 'coordinates' in data_to_run_cellects_quickly:
-                        (ccy1, ccy2, ccx1, ccx2, self.left, self.right, self.top, self.bot) = \
-                            data_to_run_cellects_quickly['coordinates']
+                    if 'bb_coord' in data_to_run_cellects_quickly['all']['vars']:
+                        (ccy1, ccy2, ccx1, ccx2, self.top, self.bot, self.left, self.right) = \
+                            data_to_run_cellects_quickly['all']['vars']['bb_coord']
                         self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
                         if (self.first_image.image.shape[0] == (ccy2 - ccy1)) and (
                                 self.first_image.image.shape[1] == (ccx2 - ccx1)):  # maybe useless now
@@ -940,7 +1011,6 @@ class ProgramOrganizer:
                 motion_list = None
                 if self.all['are_gravity_centers_moving']:
                     motion_list = self._segment_blob_motion(sample_size=5)
-                # if self.all['im_or_vid'] == 1:
                 self.get_bounding_boxes(are_gravity_centers_moving=self.all['are_gravity_centers_moving'] == 1,
                     motion_list=motion_list, all_specimens_have_same_direction=self.all['all_specimens_have_same_direction'])
 
@@ -958,6 +1028,8 @@ class ProgramOrganizer:
             self._whole_image_bounding_boxes()
             self.sample_number = 1
         self._set_analyzed_individuals()
+        self.vars['arena_coord'] = []
+        self.list_coordinates()
         return analysis_status
 
     def _segment_blob_motion(self, sample_size: int) -> list:
@@ -1220,12 +1292,18 @@ class ProgramOrganizer:
         logging.info("Create origins and background lists")
         if self.top is None:
             self._whole_image_bounding_boxes()
+
+        if not self.first_image.validated_shapes.any():
+            if self.vars['convert_for_motion'] is not None:
+                self.vars['convert_for_origin'] = self.vars['convert_for_motion']
+            self.fast_first_image_segmentation()
         first_im = self.first_image.validated_shapes
         self.vars['origin_list'] = []
         self.vars['background_list'] = []
         self.vars['background_list2'] = []
         for rep in np.arange(len(self.vars['analyzed_individuals'])):
-            self.vars['origin_list'].append(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
+            origin_coord = np.nonzero(first_im[self.top[rep]:self.bot[rep], self.left[rep]:self.right[rep]])
+            self.vars['origin_list'].append(origin_coord)
         if self.vars['subtract_background']:
             for rep in np.arange(len(self.vars['analyzed_individuals'])):
                 self.vars['background_list'].append(
@@ -1610,23 +1688,6 @@ class ProgramOrganizer:
             self.last_image.bgr = draw_img_with_mask(self.last_image.bgr, self.last_image.bgr.shape[:2], minmax,
                                                       self.vars['arena_shape'], last_visualization)
 
-        # cr = ((self.top[i], self.bot[i]),
-        #       (self.left[i], self.right[i]))
-        # if self.vars['arena_shape'] == 'circle':
-        #     ellipse = create_ellipse(cr[0][1] - cr[0][0], cr[1][1] - cr[1][0])
-        #     ellipse = np.stack((ellipse, ellipse, ellipse), axis=2).astype(np.uint8)
-        #     first_visualization *= ellipse
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += first_visualization
-        #     if last_visualization is not None:
-        #         last_visualization *= ellipse
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] *= (1 - ellipse)
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] += last_visualization
-        # else:
-        #     self.first_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = first_visualization
-        #     if last_visualization is not None:
-        #         self.last_image.bgr[cr[0][0]:cr[0][1], cr[1][0]:cr[1][1], ...] = last_visualization
-
 
     def save_tables(self, with_last_image: bool=True):
         """
@@ -1654,13 +1715,11 @@ class ProgramOrganizer:
                 del self.one_row_per_arena
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_arena.csv open when Cellects runs")
             try:
                 self.one_row_per_frame.to_csv("one_row_per_frame.csv", sep=";", index=False, lineterminator='\n')
                 del self.one_row_per_frame
             except PermissionError:
                 logging.error("Never let one_row_per_frame.csv open when Cellects runs")
-                self.message_from_thread.emit(f"Never let one_row_per_frame.csv open when Cellects runs")
         if self.all['extension'] == '.JPG':
             extension = '.PNG'
         else:
@@ -1677,11 +1736,11 @@ class ProgramOrganizer:
         for key in ['analyzed_individuals', 'night_mode', 'expert_mode', 'is_auto', 'arena', 'video_option', 'compute_all_options', 'vars', 'dims', 'origin_list', 'background_list', 'background_list2', 'descriptors', 'folder_list', 'sample_number_per_folder']:
             global_settings.pop(key, None)
         software_settings.update(global_settings)
+        software_settings.pop('video_list', None)
         software_settings = pd.DataFrame.from_dict(software_settings, columns=["Setting"], orient='index')
         try:
             software_settings.to_csv("software_settings.csv", sep=";")
         except PermissionError:
             logging.error("Never let software_settings.csv open when Cellects runs")
-            self.message_from_thread.emit(f"Never let software_settings.csv open when Cellects runs")
 
 

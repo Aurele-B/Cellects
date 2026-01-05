@@ -109,7 +109,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
         self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.parent().po.current_combination_id = 0
-        greyscale = len(self.parent().po.first_im.shape) == 2
 
         self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
@@ -447,7 +446,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
         self.reinitialize_image_and_masks(self.parent().po.first_im)
         self.thread["GetLastIm"] = GetLastImThread(self.parent())
-        self.thread["GetLastIm"].start()
+        if self.parent().po.all['im_or_vid'] == 0:
+            self.thread["GetLastIm"].start()
         self.parent().po.first_image = OneImageAnalysis(self.parent().po.first_im)
         self.thread["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
         self.thread["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
@@ -541,7 +541,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["GetFirstIm"].start()
             self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
-            self.reinitialize_image_and_masks(self.parent().po.first_im)
 
 
     def several_blob_per_arena_check(self):
@@ -1019,6 +1018,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = False
             self.parent().po.network_shaped = True
+            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1298,11 +1298,13 @@ class ImageAnalysisWindow(MainTabsType):
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
                 self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
-                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
-                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id]["filter_spec"]
-                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
-                    self.update_filter_display()
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
+            if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+            if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
+                self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+                    "filter_spec"]
+                self.update_filter_display()
 
     def generate_csc_editing(self):
         """
@@ -1593,10 +1595,13 @@ class ImageAnalysisWindow(MainTabsType):
     def update_filter_display(self):
         self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
         self.filter1_param1.setValue(self.parent().po.vars['filter_spec']['filter1_param'][0])
-        self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
-        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
-        self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
-        self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
+        if len(self.parent().po.vars['filter_spec']['filter1_param']) > 1:
+            self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
+        if 'filter2_type' in self.parent().po.vars['filter_spec']:
+            self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+            self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
+            if len(self.parent().po.vars['filter_spec']['filter2_param']) > 1:
+                self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
 
     def filter1_changed(self):
         """
@@ -1952,7 +1957,7 @@ class ImageAnalysisWindow(MainTabsType):
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=np.int8)
+            dtype=np.float64)
         if self.logical_operator_between_combination_result.currentText() != 'None':
             spaces = np.concatenate((spaces, np.array((
                         self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
@@ -1960,7 +1965,7 @@ class ImageAnalysisWindow(MainTabsType):
             channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=np.int8)))
+             dtype=np.float64)))
             self.csc_dict['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.csc_dict['logical'] = 'None'
@@ -2057,29 +2062,37 @@ class ImageAnalysisWindow(MainTabsType):
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
 
-    def delineate_is_done(self, message: str):
+    def delineate_is_done(self, analysis_status: dict):
         """
         Update GUI after delineation is complete.
         """
-        logging.info("Delineation is done, update GUI")
-        self.message.setText(message)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
-        self.reinitialize_bio_and_back_legend()
-        self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
-        self.delineation_done = True
-        if self.thread["UpdateImage"].isRunning():
-            self.thread["UpdateImage"].wait()
-        self.thread["UpdateImage"].start()
-        self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+        if analysis_status['continue']:
+            logging.info("Delineation is done, update GUI")
+            self.message.setText(analysis_status["message"])
+            self.arena_shape_label.setVisible(False)
+            self.arena_shape.setVisible(False)
+            self.reinitialize_bio_and_back_legend()
+            self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+            self.delineation_done = True
+            if self.thread["UpdateImage"].isRunning():
+                self.thread["UpdateImage"].wait()
+            self.thread["UpdateImage"].start()
+            self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
-        try:
-            self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
-            self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
-        except RuntimeError:
-            pass
-        if not self.slower_delineation_flag:
-            self.asking_delineation_flag = True
+            try:
+                self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
+                self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
+            except RuntimeError:
+                pass
+            if not self.slower_delineation_flag:
+                self.asking_delineation_flag = True
+        else:
+            self.delineation_done = False
+            self.asking_delineation_flag = False
+            self.auto_delineation_flag = False
+            self.asking_slower_or_manual_delineation_flag = False
+            self.slower_delineation_flag = False
+            self.manual_delineation()
 
     def automatic_delineation_display_done(self, boole):
         """
@@ -2093,7 +2106,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.auto_delineation_flag = False
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
-
         self.arena_shape_label.setVisible(True)
         self.arena_shape.setVisible(True)
 
@@ -2337,8 +2349,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.yes.setVisible(True)
         self.cell.setVisible(False)
         self.background.setVisible(False)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
         self.no.setVisible(False)
         self.one_blob_per_arena.setVisible(False)
         self.one_blob_per_arena_label.setVisible(False)

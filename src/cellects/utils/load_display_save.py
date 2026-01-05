@@ -672,7 +672,7 @@ def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_c
     prev_img = img.copy()
     if crop_coord is not None:
         img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], :]
-    img = img[cr[0]:(cr[1] + 1), cr[2]:(cr[3] + 1), :]
+    img = img[cr[0]:cr[1], cr[2]:cr[3], :]
     if reduce_image_dim:
         img = img[:, :, 0]
     return img, prev_img

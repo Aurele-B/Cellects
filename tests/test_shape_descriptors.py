@@ -205,6 +205,5 @@ class TestShapeDescriptors(CellectsUnitTest):
         sd = ShapeDescriptors(self.ones_image, all_descriptors)
         self.assertTrue(isinstance(sd.descriptors, dict))
 
-
 if __name__ == '__main__':
     unittest.main()

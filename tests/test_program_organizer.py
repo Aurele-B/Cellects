@@ -10,7 +10,7 @@ from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import rhombus_55
 from cellects.utils.load_display_save import write_video_sets, PickleRick
 from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
-from tests._base import CellectsUnitTest, several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
+from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 import cv2
 import os
@@ -116,9 +116,9 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
         po.get_first_image()
-        backmask = np.zeros(po.first_im.shape[:2], np.uint8)
-        backmask[-30:, :] = 1
-        po.all['back_mask'] = np.nonzero(backmask)
+        back_mask = np.zeros(po.first_im.shape[:2], np.uint8)
+        back_mask[-30:, :] = 1
+        po.all['back_mask'] = np.nonzero(back_mask)
         po.vars['convert_for_origin'] = {'PCA': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
         po.vars['convert_for_motion'] = po.vars['convert_for_origin']
         po.all['automatically_crop'] = True
@@ -138,7 +138,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.bot), 1)
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
-        self.assertTrue(po.vars['origin_list'][0].any())
+        self.assertTrue(len(po.vars['origin_list'][0]) > 0)
         po.get_last_image()
         po.fast_last_image_segmentation()
         self.assertTrue(po.last_image.binary_image.any())
@@ -227,7 +227,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         # cls.po.first_image.validated_shapes = several_arenas_bin_vid[0]
         # cls.po.data_list = [several_arenas_vid]
         #
-        cls.image2 = several_arenas_img[:, :, 0]
+        cls.image2 = rgb_several_arenas_img[:, :, 0]
         cls.shape_number2 = 6
         cls.po2 = ProgramOrganizer()
         cls.po2.update_variable_dict()
@@ -342,6 +342,9 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_2.npy"))
         self.po.get_origins_and_backgrounds_lists()
+        self.po.vars['bb_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0], self.po.top, self.po.bot, self.po.left, self.po.right
+        self.po.vars['convert_for_motion']['PCA2'] = np.ones(3)
+        self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
         self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)
 

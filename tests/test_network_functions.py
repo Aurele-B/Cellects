@@ -1577,9 +1577,5 @@ class TestEdgeIdentification(CellectsUnitTest):
         expected[0, 2] = 0
         self.assertTrue(np.array_equal(res, expected))
 
-
-
-
-
 if __name__ == "__main__":
     unittest.main()

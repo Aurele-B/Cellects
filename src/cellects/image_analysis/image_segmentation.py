@@ -46,7 +46,7 @@ filter_dict = {"": {'': {}},
                           'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
                "Hessian": {'Param1': {'Name': 'Sigma min:', 'Minimum': 0., 'Maximum': 1000., 'Default': 1.},
                           'Param2': {'Name': 'Sigma max:', 'Minimum': 0., 'Maximum': 1000., 'Default': 10.}},
-               "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 0., 'Maximum': 100., 'Default': 3}},
+               "Laplace": {'Param1': {'Name': 'Ksize:', 'Minimum': 3, 'Maximum': 100, 'Default': 5}},
                "Sharpen": {'': {}},
                "Mexican hat": {'': {}},
                "Farid": {'': {}},
@@ -142,7 +142,7 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
     elif filter_type == "Hessian":
         image = hessian(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Laplace":
-        image = laplace(image, ksize=int(param[0]))
+        image = laplace(image, ksize=np.max((3, int(np.ceil(param[0])))))
     elif filter_type == "Sharpen":
         image = cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
     elif filter_type == "Mexican hat":
@@ -340,65 +340,6 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
 
 
 @njit()
-def get_window_allowed_for_segmentation(im_shape: Tuple, mask:NDArray[np.uint8]=None, padding: int=0) -> Tuple[int, int, int, int]:
-    """
-    Get the allowed window for segmentation within an image.
-
-    This function calculates a bounding box (min_y, max_y, min_x, max_x) around
-    a segmentation mask or the entire image if no mask is provided.
-
-    Parameters
-    ----------
-    im_shape : Tuple[int, int]
-        The shape of the image (height, width).
-    mask : NDArray[np.uint8], optional
-        The binary mask for segmentation. Default is `None`.
-    padding : int, optional
-        Additional padding around the bounding box. Default is 0.
-
-    Returns
-    -------
-    Tuple[int, int, int, int]
-        A tuple containing the bounding box coordinates (min_y, max_y,
-        min_x, max_x).
-
-    Notes
-    -----
-    This function uses NumPy operations to determine the bounding box.
-    If `mask` is `None`, the full image dimensions are used.
-
-    Examples
-    --------
-    >>> im_shape = (500, 400)
-    >>> mask = np.zeros((500, 400), dtype=np.uint8)
-    >>> mask[200:300, 200:300] = 1
-    >>> result = get_window_allowed_for_segmentation(im_shape, mask, padding=10)
-    >>> print(result)
-    (190, 310, 190, 310)
-
-    >>> result = get_window_allowed_for_segmentation(im_shape)
-    >>> print(result)
-    (0, 500, 0, 400)
-    """
-    if mask is None or mask.sum() == 0:
-        min_y = 0
-        min_x = 0
-        max_y = im_shape[0]
-        max_x = im_shape[1]
-    else:
-        y, x = np.nonzero(mask)
-        min_y = np.min(y)
-        min_y = np.max((min_y - padding, 0))
-        min_x = np.min(x)
-        min_x = np.max((min_x - padding, 0))
-        max_y = np.max(y)
-        max_y = np.min((max_y + padding + 1, mask.shape[0]))
-        max_x = np.max(x)
-        max_x = np.min((max_x + padding + 1, mask.shape[0]))
-    return min_y, max_y, min_x, max_x
-
-
-@njit()
 def get_otsu_threshold(image: NDArray):
     """
     Calculate the optimal threshold value for an image using Otsu's method.
@@ -479,11 +420,10 @@ def otsu_thresholding(image: NDArray) -> NDArray[np.uint8]:
     """
     threshold = get_otsu_threshold(image)
     binary_image = (image > threshold)
-    binary_image2 = np.logical_not(binary_image)
-    if binary_image.sum() < binary_image2.sum():
+    if binary_image.sum() < binary_image.size / 2:
         return binary_image.astype(np.uint8)
     else:
-        return binary_image2.astype(np.uint8)
+        return np.logical_not(binary_image).astype(np.uint8)
 
 
 def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArray, l_threshold, lighter_background: bool) -> Tuple[NDArray, NDArray]:
@@ -554,7 +494,7 @@ def segment_with_lum_value(converted_video: NDArray, basic_bckgrnd_values: NDArr
 
 
 def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
-           biomask: NDArray[np.uint8]=None, backmask: NDArray[np.uint8]=None, logical: str='None',
+           bio_mask: NDArray[np.uint8]=None, back_mask: NDArray[np.uint8]=None, logical: str='None',
            bio_label=None, bio_label2=None, previous_binary_image: NDArray[np.uint8]=None):
     """
 
@@ -572,9 +512,9 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
         A second greyscale image for logical operations. Default is `None`.
     kmeans_clust_nb : int, optional
         Number of clusters for K-means. Default is `2`.
-    biomask : NDArray[np.uint8], optional
+    bio_mask : NDArray[np.uint8], optional
         Mask for selecting biological objects. Default is `None`.
-    backmask : NDArray[np.uint8], optional
+    back_mask : NDArray[np.uint8], optional
         Mask for selecting background regions. Default is `None`.
     logical : str, optional
         Logical operation flag to enable processing of the second image. Default is `'None'`.
@@ -605,6 +545,10 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
     - Default clustering uses 2 clusters, modify `kmeans_clust_nb` for different needs.
 
     """
+    if isinstance(bio_mask, np.ndarray):
+        bio_mask = np.nonzero(bio_mask)
+    if isinstance(back_mask, np.ndarray):
+        back_mask = np.nonzero(back_mask)
     new_bio_label = None
     new_bio_label2 = None
     binary_image2 = None
@@ -628,13 +572,13 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
         binary_image[kmeans_image == bio_label] = 1
         new_bio_label = bio_label
     else:
-        if biomask is not None:
-            all_labels = kmeans_image[biomask[0], biomask[1]]
+        if bio_mask is not None:
+            all_labels = kmeans_image[bio_mask[0], bio_mask[1]]
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (all_labels == i).sum()
             new_bio_label = np.argsort(sum_per_label)[1]
-        elif backmask is not None:
-            all_labels = kmeans_image[backmask[0], backmask[1]]
+        elif back_mask is not None:
+            all_labels = kmeans_image[back_mask[0], back_mask[1]]
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (all_labels == i).sum()
             new_bio_label = np.argsort(sum_per_label)[-2]
@@ -642,9 +586,9 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
             for i in range(kmeans_clust_nb):
                 sum_per_label[i] = (kmeans_image == i).sum()
             new_bio_label = np.argsort(sum_per_label)[-2]
-        binary_image[np.nonzero(np.isin(kmeans_image, new_bio_label))] = 1
+        binary_image += np.isin(kmeans_image, new_bio_label)
 
-    if logical != 'None' and greyscale is not None:
+    if logical != 'None' and greyscale2 is not None:
         image = greyscale2.reshape((-1, 1))
         image = np.float32(image)
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
@@ -666,13 +610,13 @@ def kmeans(greyscale: NDArray, greyscale2: NDArray=None, kmeans_clust_nb: int=2,
             binary_image2[kmeans_image == bio_label2] = 1
             new_bio_label2 = bio_label2
         else:
-            if biomask is not None:
-                all_labels = kmeans_image[biomask[0], biomask[1]]
+            if bio_mask is not None:
+                all_labels = kmeans_image[bio_mask[0], bio_mask[1]]
                 for i in range(kmeans_clust_nb):
                     sum_per_label[i] = (all_labels == i).sum()
                 new_bio_label2 = np.argsort(sum_per_label)[1]
-            elif backmask is not None:
-                all_labels = kmeans_image[backmask[0], backmask[1]]
+            elif back_mask is not None:
+                all_labels = kmeans_image[back_mask[0], back_mask[1]]
                 for i in range(kmeans_clust_nb):
                     sum_per_label[i] = (all_labels == i).sum()
                 new_bio_label2 = np.argsort(sum_per_label)[-2]
