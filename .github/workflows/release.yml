@@ -69,6 +69,34 @@ jobs:
       ref: ${{ needs.resolve.outputs.ref }}
       py_build: "3.12"
       py_test: '["3.12","3.13"]'
+      coverage: true
+
+  coverage-badge:
+    runs-on: ubuntu-latest
+    needs: [ resolve, build-test ]
+    if: ${{ needs.resolve.outputs.docs == 'true' || needs.resolve.outputs.pypi == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+      - run: |
+          python -m pip install -U pip
+          pip install genbadge[coverage]
+          mkdir -p badges
+          genbadge coverage -i coverage/coverage.xml -o badges/coverage.svg
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: badges
+          destination_dir: badges
+          keep_files: true
 
   pypi:
     runs-on: ubuntu-latest
@@ -89,7 +117,7 @@ jobs:
 
   docs:
     runs-on: ubuntu-latest
-    needs: [resolve, build-test, pypi]
+    needs: [resolve, build-test, coverage-badge, pypi]
     if: ${{ needs.resolve.outputs.docs == 'true' }}
     permissions:
       contents: write
@@ -115,3 +143,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site
           publish_branch: gh-pages
+          keep_files: true
