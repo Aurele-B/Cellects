@@ -169,7 +169,7 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
     centroids = []
 
     # pat_tracker = PercentAndTimeTracker(dims[0], compute_with_elements_number=True)
-    for t in tqdm(np.arange(2)):#dims[0])):
+    for t in tqdm(np.arange(dims[0])):
         # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
         # keeps the previous colony name.
         # shapes, stats, centers = cc(binary_vid[t, :, :])
