@@ -492,28 +492,28 @@ class TestGetContourWidthFromImShape(CellectsUnitTest):
         """Test normal operation with typical image dimensions."""
         # Standard 1024x768 image
         input_shape = (1024, 768)
-        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 2))
         result = get_contour_width_from_im_shape(input_shape)
         self.assertEqual(result, expected)
 
     def test_get_contour_width_with_minimal_dimensions(self):
         """Test edge case with minimal dimensions (1x1 image)."""
         input_shape = (1, 1)
-        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 2))
         result = get_contour_width_from_im_shape(input_shape)
         self.assertEqual(result, expected)
 
     def test_get_contour_width_boundary_case(self):
         """Test boundary case where log10(result) - 2 ≈ 1."""
         input_shape = (10, 10)
-        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 2))
         result = get_contour_width_from_im_shape(input_shape)
         self.assertEqual(result, expected)
 
     def test_get_contour_width_with_large_dimensions(self):
         """Test with large image dimensions."""
         input_shape = (8192, 5120)
-        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 1))
+        expected = np.max((np.round(np.log10(max(input_shape)) - 2).astype(int), 2))
         result = get_contour_width_from_im_shape(input_shape)
         self.assertEqual(result, expected)
 
