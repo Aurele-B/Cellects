@@ -1,29 +1,149 @@
-name: Publish to PyPI
+name: release
 
 on:
   push:
-    tags: ['*']
+    tags: ["*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to release (tag, branch or commit SHA)"
+        required: true
+        default: "main"
+      pypi:
+        description: "Publish the package to PyPI"
+        type: boolean
+        required: true
+        default: false
+      docs:
+        description: "Build and publish documentation"
+        type: boolean
+        required: true
+        default: true
+
+concurrency:
+  group: ${{ github.repository }}-pipeline
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  resolve:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+    outputs:
+      ref: ${{ steps.o.outputs.ref }}
+      is_tag: ${{ steps.o.outputs.is_tag }}
+      pypi: ${{ steps.o.outputs.pypi }}
+      docs: ${{ steps.o.outputs.docs }}
+    steps:
+      - id: o
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            echo "pypi=true" >> $GITHUB_OUTPUT
+            echo "docs=true" >> $GITHUB_OUTPUT
+          else
+            echo "ref=${{ inputs.ref }}" >> $GITHUB_OUTPUT
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "pypi=${{ inputs.pypi }}" >> $GITHUB_OUTPUT
+            echo "docs=${{ inputs.docs }}" >> $GITHUB_OUTPUT
+          fi
 
+  gate:
+    runs-on: ubuntu-latest
+    needs: resolve
+    if: ${{ needs.resolve.outputs.is_tag == 'true' || needs.resolve.outputs.pypi == 'true' || needs.resolve.outputs.docs == 'true' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve.outputs.ref }}
+          lfs: true
+      - run: |
+          git fetch origin main --depth=1
+          REF_SHA="$(git rev-parse HEAD)"
+          MAIN_SHA="$(git rev-parse origin/main)"
+          git merge-base --is-ancestor "$REF_SHA" "$MAIN_SHA"
 
-      - name: Build sdist & wheel
-        run: |
-          python -m pip install -U pip build twine
-          pip install -U packaging
-          python -m build
-          twine check dist/*
+  build-test:
+    needs: [resolve, gate]
+    uses: ./.github/workflows/_build_and_test.yml
+    with:
+      ref: ${{ needs.resolve.outputs.ref }}
+      py_build: "3.12"
+      py_test: '["3.12","3.13"]'
+      coverage: true
 
-      - name: Publish to PyPI (OIDC)
-        uses: pypa/gh-action-pypi-publish@v1.12.2
+  coverage-badge:
+    runs-on: ubuntu-latest
+    needs: [ resolve, build-test ]
+    if: ${{ needs.resolve.outputs.docs == 'true' || needs.resolve.outputs.pypi == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+      - run: |
+          python -m pip install -U pip
+          pip install genbadge[coverage]
+          mkdir -p badges
+          genbadge coverage -i coverage/coverage.xml -o badges/coverage.svg
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: badges
+          destination_dir: badges
+          keep_files: true
+
+  pypi:
+    runs-on: ubuntu-latest
+    needs: [resolve, build-test]
+    if: ${{ needs.resolve.outputs.pypi == 'true' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist
           verify-metadata: false
-          verbose: true
+
+  docs:
+    runs-on: ubuntu-latest
+    needs: [resolve, build-test, coverage-badge, pypi]
+    if: ${{ needs.resolve.outputs.docs == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve.outputs.ref }}
+          lfs: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: |
+          python -m pip install -U pip
+          pip install -e .
+          pip install mkdocs mkdocs-material \
+            "mkdocstrings[python]" mkdocs-gen-files mkdocs-autorefs \
+            pymdown-extensions mkdocs-literate-nav mkdocs-section-index \
+            mkdocs-jupyter
+      - run: mkdocs build --strict
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          keep_files: true

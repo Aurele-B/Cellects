@@ -1,81 +1,17 @@
-name: CI
+name: ci
 
 on:
-  push:
-    branches: ["main"]     # auto on main
   pull_request:
-  workflow_dispatch:        # manual run from any branch
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.repository }}-pipeline
+  cancel-in-progress: false
 
 jobs:
-  test:
-    name: tests (py${{ matrix.python }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.12", "3.13"]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
-          cache: "pip"
-
-      - name: Upgrade pip and install build
-        run: |
-          python -m pip install -U pip build
-
-      - name: Install package with test dependencies
-        shell: bash -l {0}
-        run: |
-          pip install -e ".[test]"
-
-      - name: Run tests with coverage
-        shell: bash -l {0}
-        run: |
-          pytest --cov-report=xml
-
-      - name: Upload coverage.xml
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.python }}
-          path: coverage.xml
-
-  publish-coverage-badge:
-    name: publish coverage badge
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download coverage.xml (py3.12)
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-3.12
-          path: coverage
-
-      - name: Install badge tool
-        run: |
-          python -m pip install -U pip
-          pip install genbadge[coverage]
-
-      - name: Generate coverage badge from XML
-        run: |
-          mkdir -p badges
-          genbadge coverage -i coverage/coverage.xml -o badges/coverage.svg
-
-      - name: Publish badge to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: badges
-          destination_dir: badges
-          keep_files: true
+  qa:
+    uses: ./.github/workflows/_build_and_test.yml
+    with:
+      ref: ${{ github.sha }}
+      py_build: "3.12"
+      py_test: '["3.12","3.13"]'

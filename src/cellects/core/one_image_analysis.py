@@ -57,6 +57,7 @@ def init_params():
     params['total_surface_area']: int = None
     params['out_of_arenas_mask']: NDArray = None
     params['subtract_background']: NDArray = None
+    params['are_zigzag']: str = None
     return params
 
 def make_one_dict_per_channel():
@@ -290,8 +291,8 @@ class OneImageAnalysis:
             # self.adjust_to_drift_correction(c_space_dict['logical'])
             self.check_if_image_border_attest_drift_correction()
         self.convert_and_segment(c_space_dict, rolling_window_segmentation=None, allowed_window=self.drift_mask_coord)
-        disk_size = np.max((3, int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))))
-        disk = create_ellipse(disk_size, disk_size).astype(np.uint8)
+        disk_size = int(np.floor(np.sqrt(np.min(self.bgr.shape[:2])) / 2))
+        disk = create_ellipse(disk_size, disk_size, min_size=3).astype(np.uint8)
         self.subtract_background = cv2.morphologyEx(self.image, cv2.MORPH_OPEN, disk)
         if self.image2 is not None:
             self.subtract_background2 = cv2.morphologyEx(self.image2, cv2.MORPH_OPEN, disk)
@@ -406,7 +407,7 @@ class OneImageAnalysis:
                 params['con_comp_extent'] = [params['blob_nb'], np.max((params['blob_nb'], self.binary_image.size // 100))]
             im_size = self.image.shape[0] * self.image.shape[1]
 
-            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1:
+            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1 and params['are_zigzag'] is not None:
                 if params['are_zigzag'] == "columns":
                     inter_dist = np.mean(np.diff(np.nonzero(self.y_boundaries)))
                 elif params['are_zigzag'] == "rows":
@@ -443,7 +444,7 @@ class OneImageAnalysis:
             # If the blob number is known, try applying filters to improve detection
             if params['blob_nb'] is not None and (params['filter_spec'] is None or params['filter_spec']['filter1_type'] == ''):
                 if not (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
-                    tested_filters = ['Gaussian', 'Median', 'Mexican hat', 'Butterworth', 'Laplace', '']
+                    tested_filters = ['Gaussian', 'Median', 'Mexican hat', 'Laplace', '']
                     for tested_filter in tested_filters:
                         self.init_combinations_lists()
                         params['filter_spec'] = {'filter1_type': tested_filter, 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]}
@@ -565,7 +566,7 @@ class OneImageAnalysis:
             saved_csc_nb = self.saved_csc_nb
             self.saved_csc_nb += 1
             self.saved_images_list.append(process_i.validated_shapes)
-            self.converted_images_list.append(np.round(process_i.image).astype(np.uint8))
+            self.converted_images_list.append(bracket_to_uint8_image_contrast(process_i.greyscale))
             self.saved_color_space_list.append(process_i.csc_dict)
             self.combination_features.iloc[saved_csc_nb, :] = process_i.fact
 

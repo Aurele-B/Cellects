@@ -10,7 +10,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 [![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/Aurele-B/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/stargazers)
-![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Aurele-B/Cellects/.github%2Fworkflows%2Fci.yml)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Aurele-B/Cellects/.github%2Fworkflows%2Frelease.yml)
 ![Coverage](https://raw.githubusercontent.com/Aurele-B/cellects/gh-pages/badges/coverage.svg)
 
 Description
@@ -28,7 +28,7 @@ easy installation and user-friendly interface.
 
 ---
 
-## 🚀 Installation (Short version)
+## Installation (Short version)
 Install using our Windows installer: [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
@@ -39,7 +39,7 @@ Any difficulties? follow our [complete installation tutorial](https://aurele-b.g
 
 ---
 
-## 🎯 Quick Start
+## Quick Start
 Run in terminal:
 ```bash
 Cellects
@@ -47,7 +47,7 @@ Cellects
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 Cellects' workflow is described in a [complete documentation](https://aurele-b.github.io/Cellects/). It includes:
 - [**What is Cellects**](https://aurele-b.github.io/Cellects/what-is-cellects/): Purpose of the software, usable data and introduction of its user manual
@@ -59,7 +59,7 @@ Cellects' workflow is described in a [complete documentation](https://aurele-b.g
 
 ---
 
-## 🧪 Use Cases
+## Use Cases
 
 See [use cases](https://aurele-b.github.io/Cellects/use-cases/) for real-world examples:
 - Automated Physarum polycephalum tracking using GUI
@@ -68,7 +68,7 @@ See [use cases](https://aurele-b.github.io/Cellects/use-cases/) for real-world e
 
 ---
 
-## 🛠 Contributing
+## Contributing
 
 We welcome contributions!  
 1. Fork the repository and create a new branch.
@@ -78,7 +78,7 @@ For developer workflows, see [**Contributing**](https://aurele-b.github.io/Celle
 
 ---
 
-## 📌 License & Citation
+## License & Citation
 
 GNU GPL3 License (see [LICENSE](https://github.com/Aurele-B/cellects/blob/main/LICENSE)).
 
@@ -96,7 +96,7 @@ To cite Cellects, use:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 Run unit tests with:
 ```bash

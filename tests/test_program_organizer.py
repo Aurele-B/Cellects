@@ -138,7 +138,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.bot), 1)
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
-        self.assertTrue(po.vars['origin_list'][0].any())
+        self.assertTrue(len(po.vars['origin_list'][0]) > 0)
         po.get_last_image()
         po.fast_last_image_segmentation()
         self.assertTrue(po.last_image.binary_image.any())
@@ -342,6 +342,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
         self.assertTrue(os.path.isfile(self.path_experiment / f"ind_2.npy"))
         self.po.get_origins_and_backgrounds_lists()
+        self.po.vars['bb_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0], self.po.top, self.po.bot, self.po.left, self.po.right
         self.po.vars['convert_for_motion']['PCA2'] = np.ones(3)
         self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
         self.l = [0, 1, self.po.vars, False, False, False, None]

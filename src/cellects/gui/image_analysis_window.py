@@ -541,7 +541,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.thread["GetFirstIm"].start()
             self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
-            self.reinitialize_image_and_masks(self.parent().po.first_im)
 
 
     def several_blob_per_arena_check(self):
@@ -1039,7 +1038,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.visualize = False
             self.parent().po.basic = True
             self.parent().po.network_shaped = False
-            self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1959,7 +1957,7 @@ class ImageAnalysisWindow(MainTabsType):
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=np.int8)
+            dtype=np.float64)
         if self.logical_operator_between_combination_result.currentText() != 'None':
             spaces = np.concatenate((spaces, np.array((
                         self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
@@ -1967,7 +1965,7 @@ class ImageAnalysisWindow(MainTabsType):
             channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=np.int8)))
+             dtype=np.float64)))
             self.csc_dict['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.csc_dict['logical'] = 'None'
@@ -2064,29 +2062,37 @@ class ImageAnalysisWindow(MainTabsType):
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
 
-    def delineate_is_done(self, message: str):
+    def delineate_is_done(self, analysis_status: dict):
         """
         Update GUI after delineation is complete.
         """
-        logging.info("Delineation is done, update GUI")
-        self.message.setText(message)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
-        self.reinitialize_bio_and_back_legend()
-        self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
-        self.delineation_done = True
-        if self.thread["UpdateImage"].isRunning():
-            self.thread["UpdateImage"].wait()
-        self.thread["UpdateImage"].start()
-        self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+        if analysis_status['continue']:
+            logging.info("Delineation is done, update GUI")
+            self.message.setText(analysis_status["message"])
+            self.arena_shape_label.setVisible(False)
+            self.arena_shape.setVisible(False)
+            self.reinitialize_bio_and_back_legend()
+            self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+            self.delineation_done = True
+            if self.thread["UpdateImage"].isRunning():
+                self.thread["UpdateImage"].wait()
+            self.thread["UpdateImage"].start()
+            self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
-        try:
-            self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
-            self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
-        except RuntimeError:
-            pass
-        if not self.slower_delineation_flag:
-            self.asking_delineation_flag = True
+            try:
+                self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
+                self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
+            except RuntimeError:
+                pass
+            if not self.slower_delineation_flag:
+                self.asking_delineation_flag = True
+        else:
+            self.delineation_done = False
+            self.asking_delineation_flag = False
+            self.auto_delineation_flag = False
+            self.asking_slower_or_manual_delineation_flag = False
+            self.slower_delineation_flag = False
+            self.manual_delineation()
 
     def automatic_delineation_display_done(self, boole):
         """
@@ -2100,7 +2106,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.auto_delineation_flag = False
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
-
         self.arena_shape_label.setVisible(True)
         self.arena_shape.setVisible(True)
 
@@ -2344,8 +2349,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.yes.setVisible(True)
         self.cell.setVisible(False)
         self.background.setVisible(False)
-        self.arena_shape_label.setVisible(False)
-        self.arena_shape.setVisible(False)
         self.no.setVisible(False)
         self.one_blob_per_arena.setVisible(False)
         self.one_blob_per_arena_label.setVisible(False)

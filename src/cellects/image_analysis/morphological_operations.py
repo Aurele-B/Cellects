@@ -646,9 +646,9 @@ def get_line_points(start, end) -> NDArray[int]:
     Parameters
     ----------
     start : tuple of int
-        The starting point coordinates (x0, y0).
+        The starting point coordinates (y0, x0).
     end : tuple of int
-        The ending point coordinates (x1, y1).
+        The ending point coordinates (y1, x1).
 
     Returns
     -------
@@ -1457,7 +1457,7 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
 
 
 @njit()
-def create_ellipse(vsize_in, hsize_in):
+def create_ellipse(vsize: int, hsize: int, min_size: int=0) -> NDArray[np.uint8]:
     """
     Create a 2D array representing an ellipse with given vertical and horizontal sizes.
 
@@ -1467,9 +1467,9 @@ def create_ellipse(vsize_in, hsize_in):
 
     Parameters
     ----------
-    vsize_in : int
+    vsize : int
         Vertical size (number of rows) in the output 2D array.
-    hsize_in : int
+    hsize : int
         Horizontal size (number of columns) in the output 2D array.
 
     Returns
@@ -1477,14 +1477,10 @@ def create_ellipse(vsize_in, hsize_in):
     NDArray[bool]
         A boolean NumPy array of shape `(vsize, hsize)` where `True` indicates that a pixel lies within or on
         the boundary of an ellipse centered at the image's center with radii determined by half of the dimensions.
-
-    Notes
-    -----
-    If either vertical or horizontal size is zero, it defaults to 3 as in the original class behavior.
     """
     # Use default values if input sizes are zero
-    vsize = 3 if vsize_in == 0 else vsize_in
-    hsize = 3 if hsize_in == 0 else hsize_in
+    vsize = min_size if vsize == 0 else vsize
+    hsize = min_size if hsize == 0 else hsize
 
     # Compute radii (half of each size)
     vr = hsize // 2
@@ -1499,7 +1495,7 @@ def create_ellipse(vsize_in, hsize_in):
                 lhs = ((x - hr) ** 2 / (hr ** 2)) + ((y - vr) ** 2 / (vr ** 2))
                 result[i, j] = lhs <= 1
     else:
-        result[0, 0] = True
+        result[hr, vr] = True
     return result
 
 rhombus_55 = create_ellipse(5, 5).astype(np.uint8)
@@ -1690,7 +1686,7 @@ def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direct
     k_size = 3
     if original_shape_hsize is not None:
         k_size = int((np.ceil(original_shape_hsize / 5) * 2) + 1)
-    big_kernel = create_ellipse(k_size, k_size).astype(np.uint8)
+    big_kernel = create_ellipse(k_size, k_size, min_size=3).astype(np.uint8)
 
     ordered_stats, ordered_centroids, ordered_image = rank_from_top_to_bottom_from_left_to_right(
         binary_image, y_boundaries, get_ordered_image=True)

@@ -659,7 +659,7 @@ f"""Select to optimize arena detection for specimens moving move in the same dir
 - **Checked** → Uses motion pattern analysis for arena localization.
 - **Unchecked** → Employs standard centroid based algorithm.
 NB:
-- Both options work equally when growth is roughly isotropic
+- Both options work equally when growth is roughly isotropic.
 """
 # END_TIP
 
