@@ -1,6 +1,24 @@
+docs/static/icon-128.png »
+icon-128 filter=lfs diff=lfs merge=lfs -text
+docs/static/icon-256.png »
+icon-256
+icon-256 filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure1.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure2.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure3.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure4.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure5.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure6.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure7.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure8.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure9.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure9-1.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure10.png filter=lfs diff=lfs merge=lfs -text
+docs/static/UserManualFigure11.png filter=lfs diff=lfs merge=lfs -text
+data/** filter=lfs diff=lfs merge=lfs -text
+paper/figures/** filter=lfs diff=lfs merge=lfs -text
 docs/static/icon-128.png filter=lfs diff=lfs merge=lfs -text
 docs/static/icon-256.png filter=lfs diff=lfs merge=lfs -text
-docs/static/UserManualFigure1.png filter=lfs diff=lfs merge=lfs -text
 UserManualFigure2.png filter=lfs diff=lfs merge=lfs -text
 UserManualFigure3.png filter=lfs diff=lfs merge=lfs -text
 UserManualFigure4.png filter=lfs diff=lfs merge=lfs -text
