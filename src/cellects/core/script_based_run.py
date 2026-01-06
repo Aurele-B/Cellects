@@ -87,6 +87,10 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     l = [i, i + 1, po.vars, segment, False, show_seg, videos_already_in_ram]
     MA = MotionAnalysis(l)
     MA.get_descriptors_from_binary()
+    if os.path.isfile('colony_centroids1_20col_t20_y1000_x1000.csv'):
+        os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')
+    if os.path.isfile('data/experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
+        os.remove('data/experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)
