@@ -200,6 +200,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
                 thread.wait()
             for _, thread  in self.firstwindow.thread_dict.items():
                 thread.wait()
+            signal.signal(signal.SIGSEGV, signal.SIG_IGN) # Avoid a messagebox error to appear. In the future: Remove it and debug the true problem.
             logging.info("Closing main window.")
             event.accept()
         else:
