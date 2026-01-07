@@ -73,12 +73,12 @@ class FirstWindow(MainTabsType):
         self.data_tab.set_in_use()
         self.image_tab.set_not_usable()
         self.video_tab.set_not_usable()
-        self.thread = {}
-        self.thread["LookForData"] = LookForDataThreadInFirstW(self.parent())
-        self.thread["RunAll"] = RunAllThread(self.parent())
-        self.thread["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
-        self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
-        self.thread["GetExifDataThread"] = GetExifDataThread(self.parent())
+        self.thread_dict = {}
+        self.thread_dict["LookForData"] = LookForDataThreadInFirstW(self.parent())
+        self.thread_dict["RunAll"] = RunAllThread(self.parent())
+        self.thread_dict["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
+        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.parent())
+        self.thread_dict["GetExifDataThread"] = GetExifDataThread(self.parent())
         self.instantiate: bool = True
         self.title_label = FixedText('Cellects', police=60, night_mode=self.parent().po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
@@ -86,7 +86,7 @@ class FirstWindow(MainTabsType):
 
         self.Vlayout.addWidget(self.title_label)
         self.Vlayout.addWidget(self.subtitle_line)
-        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # 1) Set if this a Image list or Videos
         # Open the layout:
@@ -99,10 +99,10 @@ class FirstWindow(MainTabsType):
         self.im_or_vid.setFixedWidth(150)
         self.im_or_vid.currentTextChanged.connect(self.im2vid)
         # Set their positions on layout
-        self.second_row_layout.addItem(self.horizontal_space)
+        self.second_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.second_row_layout.addWidget(self.im_or_vid_label)
         self.second_row_layout.addWidget(self.im_or_vid)
-        self.second_row_layout.addItem(self.horizontal_space)
+        self.second_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.second_row_widget.setLayout(self.second_row_layout)
         self.Vlayout.addWidget(self.second_row_widget)
 
@@ -143,13 +143,13 @@ class FirstWindow(MainTabsType):
         self.extension.textChanged.connect(self.re_instantiate_widgets)
 
         # Set their positions on layout
-        self.third_row_layout.addItem(self.horizontal_space)
+        self.third_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.third_row_layout.addWidget(self.radical_label)
         self.third_row_layout.addWidget(self.radical)
-        # self.third_row_layout.addItem(self.horizontal_space)
+        # self.third_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.third_row_layout.addWidget(self.extension_label)
         self.third_row_layout.addWidget(self.extension)
-        self.third_row_layout.addItem(self.horizontal_space)
+        self.third_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.third_row_widget.setLayout(self.third_row_layout)
         self.Vlayout.addWidget(self.third_row_widget)
         # If im_or_vid changes, adjust these 2 widgets
@@ -180,13 +180,13 @@ class FirstWindow(MainTabsType):
 
         self.fourth_row_widget = QtWidgets.QWidget()
         self.fourth_row_layout = QtWidgets.QHBoxLayout()
-        self.fourth_row_layout.addItem(self.horizontal_space)
+        self.fourth_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.fourth_row_layout.addWidget(self.arena_number_label)
         self.fourth_row_layout.addWidget(self.arena_number)
-        self.fourth_row_layout.addItem(self.horizontal_space)
+        self.fourth_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.fourth_row_widget.setLayout(self.fourth_row_layout)
         self.Vlayout.addWidget(self.fourth_row_widget)
-        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # Add the central image display widget
         self.display_image = np.zeros((self.parent().im_max_height, self.parent().im_max_width, 3), np.uint8)
@@ -215,11 +215,11 @@ class FirstWindow(MainTabsType):
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Run_all_directly.setVisible(False)
 
-        self.shortcuts_layout.addItem(self.horizontal_space)
+        self.shortcuts_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.shortcuts_layout.addWidget(self.advanced_parameters)
         self.shortcuts_layout.addWidget(self.required_outputs)
         self.shortcuts_layout.addWidget(self.Run_all_directly)
-        self.shortcuts_layout.addItem(self.horizontal_space)
+        self.shortcuts_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.shortcuts_widget.setLayout(self.shortcuts_layout)
         self.Vlayout.addWidget(self.shortcuts_widget)
 
@@ -236,7 +236,7 @@ class FirstWindow(MainTabsType):
         self.image_tab.clicked.connect(self.next_is_clicked)
         self.next.clicked.connect(self.next_is_clicked)
         # Add widgets to the last_row_layout
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.next)
         # Close the last_row_layout
@@ -342,7 +342,7 @@ class FirstWindow(MainTabsType):
         Checks if certain threads are running, updates parent object's attributes,
         and starts a data-looking thread if conditions are met.
         """
-        if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
+        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["RunAll"].isRunning():
             self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
             self.parent().po.all['radical'] = self.radical.text()
             self.parent().po.all['extension'] = self.extension.text()
@@ -360,8 +360,8 @@ class FirstWindow(MainTabsType):
                     self.message.setText('')
                     self.message.setText(f"Looking for {self.parent().po.all['radical']}***{self.parent().po.all['extension']} Wait...")
                     self.message.setStyleSheet("color: rgb(230, 145, 18)")
-                    self.thread["LookForData"].start()
-                    self.thread["LookForData"].finished.connect(self.when_look_for_data_finished)
+                    self.thread_dict["LookForData"].start()
+                    self.thread_dict["LookForData"].finished.connect(self.when_look_for_data_finished)
         else:
             self.message.setText('Analysis has already begun, wait or restart Cellects.')
 
@@ -389,8 +389,8 @@ class FirstWindow(MainTabsType):
                 self.instantiate = False
                 self.parent().change_widget(1) # IfSeveralFoldersWindow
             else:
-                self.thread["GetFirstIm"].start()
-                self.thread["GetFirstIm"].message_when_thread_finished.connect(self.first_im_read)
+                self.thread_dict["GetFirstIm"].start()
+                self.thread_dict["GetFirstIm"].message_when_thread_finished.connect(self.first_im_read)
 
     def first_im_read(self, greyscale):
         """
@@ -409,7 +409,7 @@ class FirstWindow(MainTabsType):
         self.parent().change_widget(2) # imageanalysiswindow
         # From now on, image analysis will be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_in_use()
-        self.thread["GetExifDataThread"].start()
+        self.thread_dict["GetExifDataThread"].start()
 
     def required_outputs_is_clicked(self):
         """
@@ -433,7 +433,7 @@ class FirstWindow(MainTabsType):
         This function updates the display for advanced parameters only if no Exif data reading thread is running.
         If a thread is active, it informs the user to wait or restart Cellects.
         """
-        if self.thread["GetExifDataThread"].isRunning():
+        if self.thread_dict["GetExifDataThread"].isRunning():
             self.message.setText("Reading data, wait or restart Cellects")
         else:
             self.parent().last_is_first = True
@@ -451,7 +451,7 @@ class FirstWindow(MainTabsType):
         This function also save the id of the following window for later use.
         """
         if self.video_tab.state != "not_usable":
-            if self.thread["LookForData"].isRunning() or self.thread["LoadDataToRunCellectsQuickly"].isRunning() or self.thread["GetFirstIm"].isRunning() or self.thread["RunAll"].isRunning():
+            if self.thread_dict["LookForData"].isRunning() or self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning() or self.thread_dict["GetFirstIm"].isRunning() or self.thread_dict["RunAll"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 self.parent().last_tab = "data_specifications"
@@ -471,12 +471,12 @@ class FirstWindow(MainTabsType):
         - The method updates the UI to indicate that an analysis has started and displays
           progress messages.
         """
-        if not self.thread["LookForData"].isRunning() and not self.thread["RunAll"].isRunning():
+        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["RunAll"].isRunning():
             self.parent().po.motion = None
             self.message.setText("Complete analysis has started, wait until this message disappear...")
-            self.thread["RunAll"].start()
-            self.thread["RunAll"].message_from_thread.connect(self.display_message_from_thread)
-            self.thread["RunAll"].image_from_thread.connect(self.display_image_during_thread)
+            self.thread_dict["RunAll"].start()
+            self.thread_dict["RunAll"].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict["RunAll"].image_from_thread.connect(self.display_image_during_thread)
             self.display_image.setVisible(True)
 
     def pathway_changed(self):
@@ -496,8 +496,8 @@ class FirstWindow(MainTabsType):
         This method performs actions to prepare the application for loading data from a new pathway.
         It ensures that certain widgets are hidden and starts necessary background processes.
         """
-        if self.thread["LoadDataToRunCellectsQuickly"].isRunning():
-            self.thread["LoadDataToRunCellectsQuickly"].wait()
+        if self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
+            self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(Path(self.global_pathway.text())):
             self.parent().po.all['global_pathway'] = self.global_pathway.text()
             logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
@@ -514,8 +514,8 @@ class FirstWindow(MainTabsType):
             self.instantiate = True
             self.video_tab.set_not_usable()
             # 2) Load the dict
-            self.thread["LoadDataToRunCellectsQuickly"].start()
-            self.thread["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
+            self.thread_dict["LoadDataToRunCellectsQuickly"].start()
+            self.thread_dict["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
             # 3) go to another func to change, put visible and re_instantiate
         else:
             self.Run_all_directly.setVisible(False)
@@ -525,7 +525,7 @@ class FirstWindow(MainTabsType):
 
     def load_data_quickly_finished(self, message: str):
         """
-        Set up the UI components for a new experiment.
+        Set up the UI components for a new one_experiment.
 
         Parameters
         ----------
@@ -535,7 +535,7 @@ class FirstWindow(MainTabsType):
         Notes
         -----
         This function sets several visibility flags and values for UI components
-        in preparation for starting an experiment.
+        in preparation for starting an one_experiment.
         """
         self.image_tab.set_not_in_use()
         self.message.setText(message)
@@ -566,9 +566,3 @@ class FirstWindow(MainTabsType):
         self.instantiate = True
         # Since we re-instantiate everything, image analysis will no longer be available from video analysis:
         self.parent().videoanalysiswindow.image_tab.set_not_usable()
-
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept

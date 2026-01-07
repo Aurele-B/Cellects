@@ -16,9 +16,6 @@ print(font_names)
 "Baskerville" in font_names
 """
 
-# colorblind-friendly : rgb(42, 251, 97) , rgb(126, 85, 197)
-# titlesize = 40
-
 if os.name == 'nt':
     buttonfont = QFont("Century Gothic", 17, QFont.Bold)
     titlefont = f"Baskerville Old Face" #"40pt Baskerville Old Face"
@@ -60,6 +57,7 @@ class WindowType(QtWidgets.QWidget):
     def __init__(self, parent, night_mode=False):
         super().__init__()
 
+        self.thread_dict = {}
         self.setVisible(False)
         self.setParent(parent)
         self.frame = QtWidgets.QFrame(self)
@@ -67,10 +65,6 @@ class WindowType(QtWidgets.QWidget):
         self.display_image = None
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode_switch(night_mode)
-        self.horizontal_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-                                              QtWidgets.QSizePolicy.Maximum)
-        self.vertical_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum,
-                                              QtWidgets.QSizePolicy.MinimumExpanding)
 
     def resizeEvent(self, event):
         '''
@@ -125,7 +119,7 @@ class MainTabsType(WindowType):
         self.main_tabs_layout.addWidget(self.video_tab)
         self.main_tabs_widget.setLayout(self.main_tabs_layout)
         self.Vlayout.addWidget(self.main_tabs_widget)
-        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
 
 class FullScreenImage(QtWidgets.QLabel):
@@ -134,10 +128,8 @@ class FullScreenImage(QtWidgets.QLabel):
         self.true_shape = image.shape
         self.max_height = screen_height
         self.max_width = screen_width
-        # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
                                                     QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setSizePolicy(self.im_size_policy)
 
         self.height_width_ratio = image.shape[0] / image.shape[1]
@@ -149,10 +141,6 @@ class FullScreenImage(QtWidgets.QLabel):
             self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
             self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
-        # self.setFixedHeight(self.scaled_shape[0])
-        # self.setFixedWidth(self.scaled_shape[1])
-        # self.setMaximumHeight(self.scaled_shape[0])
-        # self.setMaximumWidth(self.scaled_shape[1])
         self.setMinimumSize(self.scaled_shape[1], self.scaled_shape[0])
         self.setPixmap(QPixmap(image))
         self.adjustSize()
@@ -164,10 +152,8 @@ class InsertImage(QtWidgets.QLabel):
         self.true_shape = image.shape
         self.max_height = max_height
         self.max_width = max_width
-        # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
                                                     QtWidgets.QSizePolicy.MinimumExpanding)
-        # self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.setSizePolicy(self.im_size_policy)
 
         self.height_width_ratio = image.shape[0] / image.shape[1]
@@ -179,12 +165,8 @@ class InsertImage(QtWidgets.QLabel):
             self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
         else:
             self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
-        # self.setFixedHeight(self.scaled_shape[0])
-        # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
         self.setMaximumWidth(self.scaled_shape[1])
-        # self.resize(self.scaled_shape[1], self.scaled_shape[0])
-        # self.setMinimumSize(self.scaled_shape[0], self.scaled_shape[1])
         self.setPixmap(QPixmap(image))
         self.adjustSize()
 
@@ -200,18 +182,8 @@ class InsertImage(QtWidgets.QLabel):
             self.scaled_shape = [int(np.round(self.max_width * self.height_width_ratio)), self.max_width]
         else:
             self.scaled_shape = [self.max_height, int(np.round(self.max_height / self.height_width_ratio))]
-        # self.setFixedHeight(self.scaled_shape[0])
-        # self.setFixedWidth(self.scaled_shape[1])
         self.setMaximumHeight(self.scaled_shape[0])
         self.setMaximumWidth(self.scaled_shape[1])
-        # self.resize(self.scaled_shape[1], self.scaled_shape[0])
-
-        # if text is not None:
-        #     pass
-            # pos = QtCore.QPoint(50, 50)
-            # painter = QPainter(self)
-            # painter.drawText(pos, text)
-            # painter.setPen(QColor(color, color, color))
         self.setPixmap(QPixmap(image))
 
     def update_image_scaling_factors(self):
@@ -233,19 +205,9 @@ class PButton(QtWidgets.QPushButton):
         self.setToolTip(tip)
         self.night_mode_switch(night_mode)
         self.setFont(buttonfont)
-        # self.setStyleSheet("background-color: rgb(50,50,65);\n" #50,50,65 150, 150, 150 153, 204, 205    122, 0, 61   30, 144, 220
-        #                         "border-color: rgb(255, 255, 255);\n"
-        #                         "color: rgb(255, 255, 255);\n"
-        #                         "font: 17pt \"Segoe UI Semibold\";\n"
-        #                         "border : 1px solid rgb(255, 255, 255);"
-        #                         "border-radius : 12px;\n"
-        #                    )
         self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.setFixedWidth(len(text)*15 + 25)
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        # if fade:
-        #     # self.mouseMoveEvent.connect(self.fade)
-        #     self.clicked.connect(self.fade)
 
     def night_mode_switch(self, night_mode):
         if night_mode:
@@ -322,7 +284,6 @@ class Spinbox(QtWidgets.QWidget):
 
         self._line_edit = QtWidgets.QLineEdit(self)
         self._line_edit.setAlignment(QtCore.Qt.AlignLeft)
-        # self._line_edit.setAlignment(QtCore.Qt.AlignRight)
         self._layout.addWidget(self._line_edit)
 
         button_layout = QtWidgets.QVBoxLayout()
@@ -354,17 +315,11 @@ class Spinbox(QtWidgets.QWidget):
         self.decimals = decimals
         if decimals is not None:
             self.setDecimals(decimals)
-            # self.setStepType(QtWidgets.QAbstractSpinBox.AdaptiveDecimalStepType)
         else:
             self.setDecimals(0)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode_switch(night_mode)
-        # self.setStyleSheet("""
-        #     QSpinBox::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 16px; }
-        #     QSpinBox::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 16px; }
-        #     QSpinBox::up-arrow, QSpinBox::down-arrow { width: 10px; height: 10px; }
-        # """)
 
         self.setStyleSheet("""
             QPushButton {
@@ -479,18 +434,9 @@ class Combobox(QtWidgets.QComboBox):
         if current_idx is not None:
             self.setCurrentIndex(current_idx)
         self.setFixedHeight(30)
-        #self.adjustSize()
-        #max([len(item) for item in items_list])
-        # width = self.minimumSizeHint().width()
-        # self.setMinimumWidth(width+30)
-        # self.setFixedWidth(self.minimumSizeHint().width() + 5)
-
-        # self.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.night_mode_switch(night_mode)
 
-        # self.setStyleSheet("QComboBox::drop - down:!editable{background: transparent; border: none;};"
-        #                    "QComboBox {border: '1px solid rgb(127, 127, 127)'; border-radius: 4px}")
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
     def night_mode_switch(self, night_mode):
         if night_mode:
@@ -543,11 +489,8 @@ class EditText(QtWidgets.QLineEdit):
         self.setText(str(text))
         self.night_mode_switch(night_mode)
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
-        # self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
 
     def night_mode_switch(self, night_mode):
-        # self.setStyleSheet("border: %s" % bordercolor)
-        # self.setStyleSheet("border: %s" % night_border_color)
         if night_mode:
             self.setStyleSheet(
                 "background-color: %s; color: %s; font: %s; border-bottom: %s; border-top: %s" % (
@@ -556,26 +499,6 @@ class EditText(QtWidgets.QLineEdit):
             self.setStyleSheet(
                 "background-color: %s; color: %s; font: %s; border-bottom: %s; border-top: %s" % (
                     backgroundcolor, textColor, f"{textsize}pt {textfont};", f"1px solid grey", f"1px dotted #adadad"))
-
-            # "QLineEdit"
-            #           "{"
-            #           "border : 5px solid black;"
-            #           "}"
-            #           "QLineEdit::hover"
-            #           "{"
-            #           "border-color : red green blue yellow"
-            #           "}")
-
-        # if night_mode:
-        #     self.setStyleSheet(
-        #         "background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; alternate-border-color: %s; selection-background-color: %s" % (
-        #             night_background_color, night_text_Color, f"{textsize}pt {textfont};", night_border_color,
-        #             night_selection_color, night_selection_border_color, night_selection_background_color))
-        # else:
-        #     self.setStyleSheet(
-        #         "background-color: %s; color: %s; font: %s; border-color: %s; selection-color: %s; alternate-border-color: %s;  selection-background-color: %s" % (
-        #             backgroundcolor, textColor, f"{textsize}pt {textfont};", bordercolor, selectioncolor,
-        #             selectionbordercolor, selectionbackgroundcolor))
 
 
 class FixedText(QtWidgets.QLabel):
@@ -597,18 +520,8 @@ class FixedText(QtWidgets.QLabel):
 
         if police is not None:
             if police > 23:
-                # self.setStyleSheet("font: %s; margin-bottom: %s" % (titlefont, "30%;"))
-
-                # self.night_mode_switch(night_mode, titlefont)
                 self.night_mode_switch(night_mode, f"{police}pt {titlefont}")
-
-                # self.setFont(titlefont)
-                # self.setStyleSheet("margin-bottom: 30%;\n")
                 self.setMargin(2)
-            # else:
-            #     self.night_mode_switch(night_mode, f"{police}pt {textfont}")
-                # self.night_mode_switch(night_mode, QFont(textfont, police + 2, QFont.Medium))
-                # self.setFont(QFont(textfont, police + 2, QFont.Medium))
 
         else:
             self.setFont(QFont(textfont, textsize + 2, QFont.Medium))
@@ -624,12 +537,6 @@ class FixedText(QtWidgets.QLabel):
                                                                                   border: black solid 1px
                                                                                   }""")
 
-            # self.setStyleSheet("""QToolTip {
-            #                               background-color: rgb(150, 150, 150);
-            #                               color: rgb(1, 1, 1);
-            #                               border: black solid 1px
-            #                               }""")
-
     def night_mode_switch(self, night_mode, font):
         if night_mode:
             self.setStyleSheet("font: %s; color: %s; margin-bottom: %s" % (font, night_text_Color, "30%"))
@@ -644,7 +551,6 @@ class LineWidget(QtWidgets.QWidget):
         self.line = QtWidgets.QFrame()
         if ori == "h":
             self.line.setFrameShape(QtWidgets.QFrame.HLine)
-            # self.setFrameShadow(QtWidgets.QFrame.Sunken)
         else:
             self.line.setFrameShape(QtWidgets.QFrame.VLine)
         self.night_mode_switch(night_mode)
@@ -652,11 +558,9 @@ class LineWidget(QtWidgets.QWidget):
             size = [1, 4]
         self.line.setFixedHeight(size[0])
         self.line.setFixedWidth(size[1])
-        horizontal_space = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding,
-                                                      QtWidgets.QSizePolicy.Maximum)
-        self.layout.addItem(horizontal_space)
+        self.layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.layout.addWidget(self.line)
-        self.layout.addItem(horizontal_space)
+        self.layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.setLayout(self.layout)
 
     def night_mode_switch(self, night_mode):
@@ -685,12 +589,9 @@ class MainTabsWidget(QtWidgets.QPushButton):
         self.state = "not_in_use"  # States: "not_in_use", "in_use", "not_usable"
         self.setFont(buttonfont)
 
-
         # Set basic properties
         self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        # self.setFixedWidth(len(text)*15 + 25)
         self.setFixedHeight(35)
-        # self.setMinimumWidth(80)
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
         self.night_mode_switch(night_mode)

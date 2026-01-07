@@ -558,24 +558,25 @@ class AdvancedParameters(WindowType):
         self.right_col_layout.addWidget(self.edit_widget)
 
         # VIII/ Finalize layout and add the night mode option and the ok button
-        self.left_col_layout.addItem(self.vertical_space)
-        self.right_col_layout.addItem(self.vertical_space)
+        self.left_col_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
+        self.right_col_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.left_col_widget.setLayout(self.left_col_layout)
         self.right_col_widget.setLayout(self.right_col_layout)
+        self.central_widget = QtWidgets.QWidget()
         self.central_layout = QtWidgets.QHBoxLayout()
-        self.central_layout.addItem(self.horizontal_space)
+        self.central_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.left_scroll_table.setWidget(self.left_col_widget)
         self.left_scroll_table.setWidgetResizable(True)
+        self.left_scroll_table.setParent(self.central_widget)
         self.central_layout.addWidget(self.left_scroll_table)
-        self.central_layout.addItem(self.horizontal_space)
+        self.central_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.right_scroll_table.setWidget(self.right_col_widget)
         self.right_scroll_table.setWidgetResizable(True)
+        self.right_scroll_table.setParent(self.central_widget)
         self.central_layout.addWidget(self.right_scroll_table)
-        self.central_layout.addItem(self.horizontal_space)
-        self.central_widget = QtWidgets.QWidget()
+        self.central_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.central_widget.setLayout(self.central_layout)
         self.layout.addWidget(self.central_widget)
-        # self.layout.addItem(self.vertical_space)
 
         # Last row
         self.last_row_layout = QtWidgets.QHBoxLayout()
@@ -595,7 +596,7 @@ class AdvancedParameters(WindowType):
         self.last_row_layout.addWidget(self.night_mode_cb)
         self.last_row_layout.addWidget(self.night_mode_label)
         self.last_row_layout.addWidget(self.reset_all_settings)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
@@ -746,15 +747,13 @@ class AdvancedParameters(WindowType):
         """
         self.edit_widget = QtWidgets.QWidget()
         self.edit_layout = QtWidgets.QVBoxLayout()
-        self.csc_table_widget = QtWidgets.QWidget()
-        self.csc_table_layout = QtWidgets.QVBoxLayout()
 
         # 2) Titles
         self.video_csc_label = FixedText(AP["Csc_for_video_analysis"]["label"] + ':',
                                          tip=AP["Csc_for_video_analysis"]["tips"],
                                          night_mode=self.parent().po.all['night_mode'])
         self.video_csc_label.setFixedHeight(30)
-        self.csc_table_layout.addWidget(self.video_csc_label)
+        self.edit_layout.addWidget(self.video_csc_label)
         self.both_csc_widget = QtWidgets.QWidget()
         self.both_csc_layout = QtWidgets.QHBoxLayout()
 
@@ -803,10 +802,10 @@ class AdvancedParameters(WindowType):
         self.second_csc_layout.setHorizontalSpacing(0)
         self.second_csc_layout.addItem(self.horizontal_space, 0, 5, 3, 1)
         self.second_csc_widget.setLayout(self.second_csc_layout)
-        self.both_csc_layout.addItem(self.horizontal_space)
+        self.both_csc_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.both_csc_layout.addWidget(self.second_csc_widget)
         self.both_csc_widget.setLayout(self.both_csc_layout)
-        self.csc_table_layout.addWidget(self.both_csc_widget)
+        self.edit_layout.addWidget(self.both_csc_widget)
 
         # 4) logical_operator
         self.logical_op_widget = QtWidgets.QWidget()
@@ -814,12 +813,12 @@ class AdvancedParameters(WindowType):
         self.logical_op_layout = QtWidgets.QHBoxLayout()
         self.logical_op_layout.addWidget(self.logical_operator_label)
         self.logical_op_layout.addWidget(self.logical_operator_between_combination_result)
-        self.logical_op_layout.addItem(self.horizontal_space)
+        self.logical_op_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.logical_operator_between_combination_result.setVisible(False)
         self.logical_operator_label.setVisible(False)
         self.logical_op_widget.setLayout(self.logical_op_layout)
         self.logical_op_widget.setFixedHeight(50)
-        self.csc_table_layout.addWidget(self.logical_op_widget)
+        self.edit_layout.addWidget(self.logical_op_widget)
 
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
@@ -843,15 +842,11 @@ class AdvancedParameters(WindowType):
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
         self.more_than_2_colors_layout.addWidget(self.distinct_colors_number)
-        self.more_than_2_colors_layout.addItem(self.horizontal_space)
+        self.more_than_2_colors_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.more_than_2_colors_widget.setLayout(self.more_than_2_colors_layout)
         self.more_than_2_colors_widget.setFixedHeight(50)
-        self.csc_table_layout.addWidget(self.more_than_2_colors_widget)
-        self.csc_table_layout.addItem(self.vertical_space)
-        self.csc_table_widget.setLayout(self.csc_table_layout)
-
-        self.edit_layout.addWidget(self.csc_table_widget)
-
+        self.edit_layout.addWidget(self.more_than_2_colors_widget)
+        self.edit_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.edit_widget.setLayout(self.edit_layout)
 
     def one_csc_editing(self):
@@ -1310,9 +1305,3 @@ class AdvancedParameters(WindowType):
             self.parent().change_widget(0) # FirstWidget
         else:
             self.parent().change_widget(3) # ImageAnalysisWindow ThirdWidget
-    
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept

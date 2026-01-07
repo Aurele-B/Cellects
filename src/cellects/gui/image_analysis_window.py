@@ -164,21 +164,20 @@ class ImageAnalysisWindow(MainTabsType):
         self.row1_layout.addWidget(self.image_number_label)
         self.row1_layout.addWidget(self.image_number)
         self.row1_layout.addWidget(self.read)
-        self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.row1_layout.addWidget(self.one_blob_per_arena_label)
         self.row1_layout.addWidget(self.one_blob_per_arena)
-        self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.row1_layout.addWidget(self.scale_with_label)
         self.row1_layout.addWidget(self.scale_with)
-        self.row1_layout.addItem(self.horizontal_space)
+        self.row1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.row1_layout.addWidget(self.scale_size_label)
         self.row1_layout.addWidget(self.horizontal_size)
 
         self.row1_widget.setLayout(self.row1_layout)
-        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.Vlayout.addWidget(self.row1_widget)
-        self.Vlayout.addItem(self.vertical_space)
-        self.Vlayout.setSpacing(0)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # 2) Open the central row layout
         self.central_row_widget = QtWidgets.QWidget()
@@ -255,11 +254,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
         # 2)c) The csc editing
-        self.central_right_widget = QtWidgets.QWidget()
-        self.central_right_layout = QtWidgets.QVBoxLayout()
         self.generate_csc_editing()
-        self.central_right_layout.addWidget(self.edit_widget)
-        self.central_right_widget.setLayout(self.central_right_layout)
 
         self.central_row_layout.addWidget(self.central_right_widget, 0, 2)
         self.central_row_layout.setAlignment(QtCore.Qt.AlignLeft)
@@ -267,7 +262,7 @@ class ImageAnalysisWindow(MainTabsType):
         # 2) Close the central row layout
         self.central_row_widget.setLayout(self.central_row_layout)
         self.Vlayout.addWidget(self.central_row_widget)
-        self.Vlayout.addItem(self.vertical_space)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # 3) Add Set supplementary parameters row 1
         self.sup_param_row1_widget = QtWidgets.QWidget()
@@ -300,7 +295,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.spot_size = Spinbox(min=0, max=100000, val=self.parent().po.all['starting_blob_hsize_in_mm'], decimals=2,
                                  night_mode=self.parent().po.all['night_mode'])
         self.spot_size.valueChanged.connect(self.spot_size_changed)
-        self.sup_param_row2_layout.addItem(self.horizontal_space)
+        self.sup_param_row2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.sup_param_row2_layout.addWidget(self.arena_shape_label)
         self.sup_param_row2_layout.addWidget(self.arena_shape)
         self.sup_param_row2_layout.addWidget(self.set_spot_shape)
@@ -310,9 +305,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row2_layout.addWidget(self.spot_size_label)
         self.sup_param_row2_layout.addWidget(self.spot_size)
         self.sup_param_row2_widget.setLayout(self.sup_param_row2_layout)
-        self.sup_param_row2_layout.addItem(self.horizontal_space)
+        self.sup_param_row2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.Vlayout.addWidget(self.sup_param_row2_widget)
-        self.Vlayout.setSpacing(0)
 
         self.one_blob_per_arena.setVisible(True)
         self.one_blob_per_arena_label.setVisible(True)
@@ -344,14 +338,13 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row1_layout.addWidget(self.generate_analysis_options)
         self.sup_param_row1_layout.addWidget(self.basic)
         self.sup_param_row1_layout.addWidget(self.network_shaped)
-        self.sup_param_row1_layout.addItem(self.horizontal_space)
-        self.sup_param_row1_layout.addItem(self.horizontal_space)
+        self.sup_param_row1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
+        self.sup_param_row1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.sup_param_row1_layout.addWidget(self.visualize_label)
         self.sup_param_row1_layout.addWidget(self.visualize)
 
         self.sup_param_row1_widget.setLayout(self.sup_param_row1_layout)
         self.Vlayout.addWidget(self.sup_param_row1_widget)
-        self.Vlayout.setSpacing(0)
 
         # 6) Open the choose best option row layout
         self.options_row_widget = QtWidgets.QWidget()
@@ -369,14 +362,13 @@ class ImageAnalysisWindow(MainTabsType):
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
         self.n_shapes_detected.setVisible(False)
-        self.options_row_layout.addItem(self.horizontal_space)
+        self.options_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.options_row_layout.addWidget(self.select_option_label)
         self.options_row_layout.addWidget(self.select_option)
         self.options_row_layout.addWidget(self.n_shapes_detected)
-        self.options_row_layout.addItem(self.horizontal_space)
+        self.options_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.options_row_widget.setLayout(self.options_row_layout)
         self.Vlayout.addWidget(self.options_row_widget)
-        self.Vlayout.setSpacing(0)
 
         # 7) Open decision row layout
         self.decision_row_widget = QtWidgets.QWidget()
@@ -390,11 +382,11 @@ class ImageAnalysisWindow(MainTabsType):
         self.decision_label.setVisible(False)
         self.yes.setVisible(False)
         self.no.setVisible(False)
-        self.decision_row_layout.addItem(self.horizontal_space)
+        self.decision_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.decision_row_layout.addWidget(self.decision_label)
         self.decision_row_layout.addWidget(self.yes)
         self.decision_row_layout.addWidget(self.no)
-        self.decision_row_layout.addItem(self.horizontal_space)
+        self.decision_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.decision_row_widget.setLayout(self.decision_row_layout)
         self.Vlayout.addWidget(self.decision_row_widget)
 
@@ -413,8 +405,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.special_cases_widget.setLayout(self.special_cases_layout)
         self.Vlayout.addWidget(self.special_cases_widget)
 
-        self.Vlayout.setSpacing(0)
-
         # 9) Open the last row layout
         self.last_row_widget = QtWidgets.QWidget()
         self.last_row_layout = QtWidgets.QHBoxLayout()
@@ -432,30 +422,30 @@ class ImageAnalysisWindow(MainTabsType):
         self.next.clicked.connect(self.go_to_next_widget)
         self.last_row_layout.addWidget(self.previous)
         self.last_row_layout.addWidget(self.message)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.complete_image_analysis)
         self.last_row_layout.addWidget(self.next)
         self.last_row_widget.setLayout(self.last_row_layout)
         self.Vlayout.addWidget(self.last_row_widget)
-        self.setLayout(self.Vlayout)
         self.Vlayout.setSpacing(0)
+        self.setLayout(self.Vlayout)
 
         self.advanced_mode_check()
 
-        self.thread = {}
-        self.thread["GetFirstIm"] = GetFirstImThread(self.parent())
+        self.thread_dict = {}
+        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.parent())
         self.reinitialize_image_and_masks(self.parent().po.first_im)
-        self.thread["GetLastIm"] = GetLastImThread(self.parent())
+        self.thread_dict["GetLastIm"] = GetLastImThread(self.parent())
         if self.parent().po.all['im_or_vid'] == 0:
-            self.thread["GetLastIm"].start()
+            self.thread_dict["GetLastIm"].start()
         self.parent().po.first_image = OneImageAnalysis(self.parent().po.first_im)
-        self.thread["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
-        self.thread["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
-        self.thread['UpdateImage'] = UpdateImageThread(self.parent())
-        self.thread['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.parent())
-        self.thread['SaveManualDelineation'] = SaveManualDelineationThread(self.parent())
-        self.thread['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.parent())
-        self.thread['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.parent())
+        self.thread_dict["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
+        self.thread_dict["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
+        self.thread_dict['UpdateImage'] = UpdateImageThread(self.parent())
+        self.thread_dict['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.parent())
+        self.thread_dict['SaveManualDelineation'] = SaveManualDelineationThread(self.parent())
+        self.thread_dict['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.parent())
+        self.thread_dict['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.parent())
 
     def previous_is_clicked(self):
         """
@@ -535,11 +525,11 @@ class ImageAnalysisWindow(MainTabsType):
         It ensures that only one thread runs at a time, updates the UI with relevant messages,
         and resets visual components once processing begins.
         """
-        if not self.thread["GetFirstIm"].isRunning():
+        if not self.thread_dict["GetFirstIm"].isRunning():
             self.parent().po.vars['first_detection_frame'] = int(self.image_number.value())
             self.message.setText(f"Reading image n°{self.parent().po.vars['first_detection_frame']}")
-            self.thread["GetFirstIm"].start()
-            self.thread["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
+            self.thread_dict["GetFirstIm"].start()
+            self.thread_dict["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
 
 
@@ -605,10 +595,10 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.parent().po.vars['arena_shape'] = self.arena_shape.currentText()
         if self.asking_delineation_flag:
-            if self.thread['CropScaleSubtractDelineate'].isRunning():
-                self.thread['CropScaleSubtractDelineate'].wait()
-            if self.thread['UpdateImage'].isRunning():
-                self.thread['UpdateImage'].wait()
+            if self.thread_dict['CropScaleSubtractDelineate'].isRunning():
+                self.thread_dict['CropScaleSubtractDelineate'].wait()
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
             self.message.setText("Updating display...")
             self.decision_label.setVisible(False)
             self.yes.setVisible(False)
@@ -616,10 +606,10 @@ class ImageAnalysisWindow(MainTabsType):
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
             self.delineation_done = True
-            if self.thread["UpdateImage"].isRunning():
-                self.thread["UpdateImage"].wait()
-            self.thread["UpdateImage"].start()
-            self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            if self.thread_dict["UpdateImage"].isRunning():
+                self.thread_dict["UpdateImage"].wait()
+            self.thread_dict["UpdateImage"].start()
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
     def reinitialize_bio_and_back_legend(self):
         """
@@ -834,7 +824,7 @@ class ImageAnalysisWindow(MainTabsType):
             The mouse event that triggered the function.
         """
         if self.back1_bio2 > 0 or self.manual_delineation_flag:
-            if not self.is_image_analysis_display_running and not self.thread["UpdateImage"].isRunning():
+            if not self.is_image_analysis_display_running and not self.thread_dict["UpdateImage"].isRunning():
                 self.hold_click_flag = True
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
         else:
@@ -851,10 +841,10 @@ class ImageAnalysisWindow(MainTabsType):
             The mouse event object containing position information.
         """
         if self.hold_click_flag:
-            if not self.thread["UpdateImage"].isRunning():
+            if not self.thread_dict["UpdateImage"].isRunning():
                 if self.saved_coord[0][0] != event.pos().y() and self.saved_coord[0][1] != event.pos().x():
                     self.temporary_mask_coord = [self.saved_coord[0], [event.pos().y(), event.pos().x()]]
-                    self.thread["UpdateImage"].start()
+                    self.thread_dict["UpdateImage"].start()
 
     def get_mouse_release_coordinates(self, event):
         """
@@ -876,16 +866,16 @@ class ImageAnalysisWindow(MainTabsType):
         state.
         """
         if self.hold_click_flag:
-            if self.thread["UpdateImage"].isRunning():
-                self.thread["UpdateImage"].wait()
+            if self.thread_dict["UpdateImage"].isRunning():
+                self.thread_dict["UpdateImage"].wait()
             self.temporary_mask_coord = []
             if self.manual_delineation_flag and len(self.parent().imageanalysiswindow.available_arena_names) == 0:
                 self.message.setText(f"The total number of arenas are already drawn ({self.parent().po.sample_number})")
                 self.saved_coord = []
             else:
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
-                self.thread["UpdateImage"].start()
-                self.thread["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
+                self.thread_dict["UpdateImage"].start()
+                self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
     def user_defined_shape_displayed(self, when_finished: bool):
@@ -936,7 +926,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.saved_coord = []
         self.back1_bio2 = 0
 
-        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def new_pbutton_on_the_left(self, pbutton_name: str):
         """
@@ -972,7 +962,7 @@ class ImageAnalysisWindow(MainTabsType):
         and updates the layout and available names accordingly. It starts the image update thread
         after removing the line.
         """
-        if not self.is_image_analysis_display_running and not self.thread["UpdateImage"].isRunning() and hasattr(self.sender(), 'text'):
+        if not self.is_image_analysis_display_running and not self.thread_dict["UpdateImage"].isRunning() and hasattr(self.sender(), 'text'):
             pbutton_name = self.sender().text()
             if pbutton_name[2:6] == "Back":
                 line_name = np.uint8(pbutton_name[6:])
@@ -1003,7 +993,7 @@ class ImageAnalysisWindow(MainTabsType):
 
                 self.arena_masks_number -= 1
                 self.available_arena_names = np.sort(np.concatenate(([line_name], self.available_arena_names)))
-            self.thread["UpdateImage"].start()
+            self.thread_dict["UpdateImage"].start()
 
     def network_shaped_is_clicked(self):
         """
@@ -1090,9 +1080,9 @@ class ImageAnalysisWindow(MainTabsType):
                 self.is_image_analysis_running = False
         if not self.parent().po.visualize or not self.csc_dict_is_empty:
             self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
-            self.thread["FirstImageAnalysis"].start()
-            self.thread["FirstImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
-            self.thread["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
+            self.thread_dict["FirstImageAnalysis"].start()
+            self.thread_dict["FirstImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
 
     def run_last_image_analysis(self):
         """
@@ -1110,9 +1100,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.message.setText('Select non null value(s) to combine colors')
             self.message.setStyleSheet("color: rgb(230, 145, 18)")
         else:
-            self.thread["LastImageAnalysis"].start()
-            self.thread["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
-            self.thread["LastImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
+            self.thread_dict["LastImageAnalysis"].start()
+            self.thread_dict["LastImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict["LastImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
 
     def when_image_analysis_finishes(self):
         """
@@ -1156,10 +1146,10 @@ class ImageAnalysisWindow(MainTabsType):
         if self.parent().po.visualize or len(im_combinations) > 0:
             self.is_image_analysis_display_running = True
             # Update image display
-            if self.thread["UpdateImage"].isRunning():
-                self.thread["UpdateImage"].wait()
-            self.thread["UpdateImage"].start()
-            self.thread["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
+            if self.thread_dict["UpdateImage"].isRunning():
+                self.thread_dict["UpdateImage"].wait()
+            self.thread_dict["UpdateImage"].start()
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
 
     def image_analysis_displayed(self):
         """
@@ -1229,7 +1219,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
             self.complete_image_analysis.setVisible(True)
 
-        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
 
@@ -1272,9 +1262,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.init_drawn_image(im_combinations)
         if im_combinations is not None and len(im_combinations) > 0:
             # Update image display
-            if self.thread["UpdateImage"].isRunning():
-                self.thread["UpdateImage"].wait()
-            self.thread["UpdateImage"].start()
+            if self.thread_dict["UpdateImage"].isRunning():
+                self.thread_dict["UpdateImage"].wait()
+            self.thread_dict["UpdateImage"].start()
             # Update csc editing
             self.update_csc_editing_display()
 
@@ -1314,8 +1304,8 @@ class ImageAnalysisWindow(MainTabsType):
         including checkboxes, labels, and drop-down menus. It also configures the layout
         and connections between components.
         """
-        self.edit_widget = QtWidgets.QWidget()
-        self.edit_layout = QtWidgets.QVBoxLayout()
+        self.central_right_widget = QtWidgets.QWidget()
+        self.central_right_layout = QtWidgets.QVBoxLayout()
 
         # 1) Advanced mode option
         self.advanced_mode_widget = QtWidgets.QWidget()
@@ -1336,9 +1326,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.advanced_mode_label.setAlignment(QtCore.Qt.AlignTop)
         self.advanced_mode_layout.addWidget(self.advanced_mode_cb)
         self.advanced_mode_layout.addWidget(self.advanced_mode_label)
-        self.advanced_mode_layout.addItem(self.horizontal_space)
+        self.advanced_mode_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.advanced_mode_widget.setLayout(self.advanced_mode_layout)
-        self.edit_layout.addWidget(self.advanced_mode_widget)
+        self.central_right_layout.addWidget(self.advanced_mode_widget)
 
         self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
@@ -1358,7 +1348,7 @@ class ImageAnalysisWindow(MainTabsType):
                                     night_mode=self.parent().po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
-        self.edit_labels_layout.addItem(self.horizontal_space)
+        self.edit_labels_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.space_label.setVisible(False)
         self.edit_labels_widget.setLayout(self.edit_labels_layout)
         self.csc_table_layout.addWidget(self.edit_labels_widget)
@@ -1436,10 +1426,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.filter1_param2.valueChanged.connect(self.filter1_param2_changed)
         self.filter1_layout.addWidget(self.filter1)
         # self.filter1_layout.addWidget(self.filter1_label)
-        self.filter1_layout.addItem(self.horizontal_space)
+        self.filter1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.filter1_layout.addWidget(self.filter1_param1_label)
         self.filter1_layout.addWidget(self.filter1_param1)
-        self.filter1_layout.addItem(self.horizontal_space)
+        self.filter1_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.filter1_layout.addWidget(self.filter1_param2_label)
         self.filter1_layout.addWidget(self.filter1_param2)
         self.filter1.setVisible(False)
@@ -1456,7 +1446,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.logical_op_layout = QtWidgets.QHBoxLayout()
         self.logical_op_layout.addWidget(self.logical_operator_label)
         self.logical_op_layout.addWidget(self.logical_operator_between_combination_result)
-        self.logical_op_layout.addItem(self.horizontal_space)
+        self.logical_op_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.logical_operator_between_combination_result.setVisible(False)
         self.logical_operator_label.setVisible(False)
         self.logical_op_widget.setLayout(self.logical_op_layout)
@@ -1480,8 +1470,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.csc_table_widget.setLayout(self.csc_table_layout)
         self.csc_scroll_table.setWidget(self.csc_table_widget)
         self.csc_scroll_table.setWidgetResizable(True)
-        self.edit_layout.addWidget(self.csc_scroll_table)
-        self.edit_layout.addItem(self.vertical_space)
+        self.central_right_layout.addWidget(self.csc_scroll_table)
+        self.central_right_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # Second filters
         self.filter2_label = FixedText(IAW["Filter"]["label"] + ': ', halign='l',
@@ -1515,10 +1505,10 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.filter1_param2.valueChanged.connect(self.filter2_param2_changed)
         self.filter2_layout.addWidget(self.filter2)
-        self.filter2_layout.addItem(self.horizontal_space)
+        self.filter2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.filter2_layout.addWidget(self.filter2_param1_label)
         self.filter2_layout.addWidget(self.filter2_param1)
-        self.filter2_layout.addItem(self.horizontal_space)
+        self.filter2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.filter2_layout.addWidget(self.filter2_param2_label)
         self.filter2_layout.addWidget(self.filter2_param2)
         self.filter2.setVisible(False)
@@ -1551,9 +1541,9 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.rolling_window_segmentation_layout.addWidget(self.rolling_window_segmentation)
         self.rolling_window_segmentation_layout.addWidget(self.rolling_window_segmentation_label)
-        self.rolling_window_segmentation_layout.addItem(self.horizontal_space)
+        self.rolling_window_segmentation_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.rolling_window_segmentation_widget.setLayout(self.rolling_window_segmentation_layout)
-        self.edit_layout.addWidget(self.rolling_window_segmentation_widget)
+        self.central_right_layout.addWidget(self.rolling_window_segmentation_widget)
 
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
@@ -1586,11 +1576,11 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
         self.more_than_2_colors_layout.addWidget(self.distinct_colors_number)
-        self.more_than_2_colors_layout.addItem(self.horizontal_space)
+        self.more_than_2_colors_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.more_than_2_colors_widget.setLayout(self.more_than_2_colors_layout)
-        self.edit_layout.addWidget(self.more_than_2_colors_widget)
+        self.central_right_layout.addWidget(self.more_than_2_colors_widget)
 
-        self.edit_widget.setLayout(self.edit_layout)
+        self.central_right_widget.setLayout(self.central_right_layout)
 
     def update_filter_display(self):
         self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
@@ -2031,11 +2021,11 @@ class ImageAnalysisWindow(MainTabsType):
         subtract, and delineate operations on the image. It also updates the
         UI elements to reflect the ongoing process.
         """
-        if not self.thread['CropScaleSubtractDelineate'].isRunning():
+        if not self.thread_dict['CropScaleSubtractDelineate'].isRunning():
             self.message.setText("Looking for each arena contour, wait...")
-            self.thread['CropScaleSubtractDelineate'].start()
-            self.thread['CropScaleSubtractDelineate'].message_from_thread.connect(self.display_message_from_thread)
-            self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.connect(self.delineate_is_done)
+            self.thread_dict['CropScaleSubtractDelineate'].start()
+            self.thread_dict['CropScaleSubtractDelineate'].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict['CropScaleSubtractDelineate'].message_when_thread_finished.connect(self.delineate_is_done)
 
             self.yes.setVisible(False)
             self.no.setVisible(False)
@@ -2074,14 +2064,14 @@ class ImageAnalysisWindow(MainTabsType):
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
             self.delineation_done = True
-            if self.thread["UpdateImage"].isRunning():
-                self.thread["UpdateImage"].wait()
-            self.thread["UpdateImage"].start()
-            self.thread["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            if self.thread_dict["UpdateImage"].isRunning():
+                self.thread_dict["UpdateImage"].wait()
+            self.thread_dict["UpdateImage"].start()
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
             try:
-                self.thread['CropScaleSubtractDelineate'].message_from_thread.disconnect()
-                self.thread['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
+                self.thread_dict['CropScaleSubtractDelineate'].message_from_thread.disconnect()
+                self.thread_dict['CropScaleSubtractDelineate'].message_when_thread_finished.disconnect()
             except RuntimeError:
                 pass
             if not self.slower_delineation_flag:
@@ -2116,7 +2106,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.yes.setVisible(True)
         self.no.setVisible(True)
 
-        self.thread["UpdateImage"].message_when_thread_finished.disconnect()
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -2220,7 +2210,7 @@ class ImageAnalysisWindow(MainTabsType):
             elif self.manual_delineation_flag:
                 if is_yes:
                     if self.parent().po.sample_number == self.arena_masks_number:
-                        self.thread['SaveManualDelineation'].start()
+                        self.thread_dict['SaveManualDelineation'].start()
                         self.last_image_question()
                         self.manual_delineation_flag = False
                     else:
@@ -2407,8 +2397,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.starting_differs_from_growing_label.setVisible(False)
         self.message.setText('Gathering data and visualizing last image analysis result')
         self.parent().po.get_last_image()
-        if self.thread['SaveManualDelineation'].isRunning():
-            self.thread['SaveManualDelineation'].wait()
+        if self.thread_dict['SaveManualDelineation'].isRunning():
+            self.thread_dict['SaveManualDelineation'].wait()
         self.parent().po.cropping(is_first_image=False)
         self.reinitialize_image_and_masks(self.parent().po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
@@ -2428,12 +2418,12 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Completes the image analysis process if no listed threads are running.
         """
-        if (not self.thread['SaveManualDelineation'].isRunning() or not self.thread[
-            'PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning() or not
-        self.thread['CompleteImageAnalysisThread'].isRunning()):
+        if (not self.thread_dict['SaveManualDelineation'].isRunning() or not self.thread_dict[
+            'PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning() or not
+        self.thread_dict['CompleteImageAnalysisThread'].isRunning()):
             self.message.setText(f"Analyzing and saving the segmentation result, wait... ")
-            self.thread['CompleteImageAnalysisThread'].start()
-            self.thread['CompleteImageAnalysisThread'].message_when_thread_finished.connect(self.complete_image_analysis_done)
+            self.thread_dict['CompleteImageAnalysisThread'].start()
+            self.thread_dict['CompleteImageAnalysisThread'].message_when_thread_finished.connect(self.complete_image_analysis_done)
 
     def complete_image_analysis_done(self, res):
         self.message.setText(f"Complete image analysis done.")
@@ -2449,7 +2439,7 @@ class ImageAnalysisWindow(MainTabsType):
             - Waits for some background threads to complete their execution.
             - Advances the UI to the video analysis window if certain conditions are met.
         """
-        if not self.thread['SaveManualDelineation'].isRunning() or not self.thread['PrepareVideoAnalysis'].isRunning() or not self.thread['SaveData'].isRunning():
+        if not self.thread_dict['SaveManualDelineation'].isRunning() or not self.thread_dict['PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning():
 
             self.popup = QtWidgets.QMessageBox()
             self.popup.setWindowTitle("Info")
@@ -2465,14 +2455,14 @@ class ImageAnalysisWindow(MainTabsType):
 
             self.message.setText(f"Final checks, wait... ")
             self.parent().last_tab = "image_analysis"
-            self.thread['PrepareVideoAnalysis'].start()
+            self.thread_dict['PrepareVideoAnalysis'].start()
             if self.parent().po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
                 self.parent().videoanalysiswindow.select_option.addItem(f"1) Kmeans")
                 self.parent().videoanalysiswindow.select_option.setCurrentIndex(0)
                 self.parent().po.all['video_option'] = 0
             time.sleep(1 / 10)
-            self.thread['PrepareVideoAnalysis'].wait()
+            self.thread_dict['PrepareVideoAnalysis'].wait()
             self.message.setText(f"")
 
             self.video_tab.set_not_in_use()
@@ -2480,9 +2470,3 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().change_widget(3)  # VideoAnalysisWindow
 
             self.popup.close()
-
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept

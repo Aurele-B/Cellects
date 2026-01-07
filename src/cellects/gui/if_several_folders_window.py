@@ -66,15 +66,15 @@ class IfSeveralFoldersWindow(WindowType):
         This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
         """
         logging.info("Initialize IfSeveralFoldersWindow")
-        self.thread = {}
-        self.thread["LoadFirstFolderIfSeveral"] = LoadFirstFolderIfSeveralThread(self.parent())
+        self.thread_dict = {}
+        self.thread_dict["LoadFirstFolderIfSeveral"] = LoadFirstFolderIfSeveralThread(self.parent())
         self.next_clicked_once:bool = False
         self.layout = QtWidgets.QVBoxLayout()
 
         self.title_label = FixedText('Select folders to analyze', police=30, night_mode=self.parent().po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.layout.addWidget(self.title_label)
-        self.layout.addItem(self.vertical_space)
+        self.layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # 1) add a check box allowing to select every folders
         self.cb_layout = QtWidgets.QHBoxLayout()
@@ -85,7 +85,7 @@ class IfSeveralFoldersWindow(WindowType):
         self.cb.clicked.connect(self.checked)
         self.cb_layout.addWidget(self.cb_label)
         self.cb_layout.addWidget(self.cb)
-        self.cb_layout.addItem(self.horizontal_space)
+        self.cb_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.cb_widget.setLayout(self.cb_layout)
         self.layout.addWidget(self.cb_widget)
 
@@ -122,7 +122,7 @@ class IfSeveralFoldersWindow(WindowType):
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Video_analysis_window.setVisible(False)
         self.Run_all_directly.setVisible(False)
-        self.shortcuts_layout.addItem(self.vertical_space)
+        self.shortcuts_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.shortcuts_layout.addWidget(self.Video_analysis_window)
         self.shortcuts_layout.addWidget(self.Run_all_directly)
         self.shortcuts_widget.setLayout(self.shortcuts_layout)
@@ -144,11 +144,11 @@ class IfSeveralFoldersWindow(WindowType):
         self.next = PButton('Next', night_mode=self.parent().po.all['night_mode'])
         self.next.clicked.connect(self.next_is_clicked)
         self.last_row_layout.addWidget(self.previous)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.next)
         self.last_row_widget.setLayout(self.last_row_layout)
-        self.layout.addItem(self.vertical_space)
+        self.layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.layout.addWidget(self.last_row_widget)
         self.setLayout(self.layout)
 
@@ -219,8 +219,8 @@ class IfSeveralFoldersWindow(WindowType):
                 self.parent().po.all['sample_number_per_folder'] = sample_number_per_folder
                 self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'],
                                                   self.parent().po.all['folder_list'][0])
-                self.thread["LoadFirstFolderIfSeveral"].start()
-                self.thread["LoadFirstFolderIfSeveral"].message_when_thread_finished.connect(self.first_folder_loaded)
+                self.thread_dict["LoadFirstFolderIfSeveral"].start()
+                self.thread_dict["LoadFirstFolderIfSeveral"].message_when_thread_finished.connect(self.first_folder_loaded)
 
     def first_folder_loaded(self, first_exp_ready_to_run: bool):
         """
@@ -229,7 +229,7 @@ class IfSeveralFoldersWindow(WindowType):
         Parameters
         ----------
         first_exp_ready_to_run : bool
-            Indicates if the experiment data is ready to be run.
+            Indicates if the one_experiment data is ready to be run.
         """
         if first_exp_ready_to_run:
             self.cb_widget.setVisible(False)
@@ -279,10 +279,3 @@ class IfSeveralFoldersWindow(WindowType):
         """
         self.parent().firstwindow.Run_all_directly_is_clicked()
         self.previous_is_clicked()
-
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept
-

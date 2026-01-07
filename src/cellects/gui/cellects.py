@@ -110,8 +110,8 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
         self.instantiate_widgets()
 
-        self.thread = {}
-        self.thread['SaveAllVars'] = SaveAllVarsThread(self)
+        self.thread_dict = {}
+        self.thread_dict['SaveAllVars'] = SaveAllVarsThread(self)
         self.change_widget(0)
         self.center()
 
@@ -192,9 +192,15 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             QtWidgets.QMessageBox.No)
 
         if reply == QtWidgets.QMessageBox.Yes:
-            signal.signal(signal.SIGSEGV, signal.SIG_IGN)
+            for _, thread in self.imageanalysiswindow.thread_dict.items():
+                thread.wait()
+            for _, thread  in self.ifseveralfolderswindow.thread_dict.items():
+                thread.wait()
+            for _, thread  in self.videoanalysiswindow.thread_dict.items():
+                thread.wait()
+            for _, thread  in self.firstwindow.thread_dict.items():
+                thread.wait()
             logging.info("Closing main window.")
             event.accept()
-            self.close()
         else:
             event.ignore()

@@ -152,7 +152,7 @@ class RequiredOutput(WindowType):
         self.cancel.clicked.connect(self.cancel_is_clicked)
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
 
@@ -271,9 +271,3 @@ class RequiredOutput(WindowType):
             self.parent().change_widget(0) # FirstWidget
         else:
             self.parent().change_widget(3) # ThirdWidget
-
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept
