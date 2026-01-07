@@ -1390,7 +1390,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.row2[i].setVisible(False)
             self.row3[i].setVisible(False)
         self.first_csc_layout.setHorizontalSpacing(0)
-        self.first_csc_layout.addItem(self.horizontal_space, 0, 5, 3, 1)
+        self.first_csc_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum), 0, 5, 3, 1)
         self.first_csc_widget.setLayout(self.first_csc_layout)
         self.csc_table_layout.addWidget(self.first_csc_widget)
 
@@ -1463,7 +1463,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.row22[i].setVisible(False)
             self.row23[i].setVisible(False)
         self.second_csc_layout.setHorizontalSpacing(0)
-        self.second_csc_layout.addItem(self.horizontal_space, 0, 5, 3, 1)
+        self.second_csc_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum), 0, 5, 3, 1)
         self.second_csc_widget.setLayout(self.second_csc_layout)
         self.csc_table_layout.addWidget(self.second_csc_widget)
 
