@@ -42,7 +42,7 @@ Any difficulties? follow our [complete installation tutorial](https://aurele-b.g
 ## Quick Start
 Run in terminal:
 ```bash
-Cellects
+cellects
 ```
 
 ---

@@ -61,7 +61,7 @@ Choose the method that matches your OS and how you want to use Cellects.
     #### Run
 
     ```bash
-    Cellects
+    cellects
     ```
 
     #### Uninstall
@@ -117,5 +117,5 @@ Choose the method that matches your OS and how you want to use Cellects.
     #### Run
 
     ```bash
-    Cellects
+    cellects
     ```
