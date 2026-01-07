@@ -635,7 +635,7 @@ def read_and_rotate(image_name, prev_img: NDArray=None, raw_images: bool=False, 
 
     Examples
     ------
-    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "experiment"
+    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "single_experiment"
     >>> image_name = 'image1.tif'
     >>> image = read_and_rotate(pathway /image_name)
     >>> print(image.shape)
@@ -1084,7 +1084,7 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
 
     Examples
     --------
-    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "experiment"
+    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "single_experiment"
     >>> image_list = ['image1.tif', 'image2.tif']
     >>> time = extract_time(image_list, pathway)
     >>> print(time)

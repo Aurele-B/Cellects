@@ -102,7 +102,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
 
     def test_look_for_data_in_sub_folder(self):
         po = ProgramOrganizer()
-        po.all['global_pathway'] = self.d / "experiments"
+        po.all['global_pathway'] = self.d / "multiple_experiments"
         po.all['radical'] = "im"
         po.all['extension'] = "tif"
         po.all['sample_number_per_folder'] = 1
@@ -158,7 +158,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.save_data_to_run_cellects_quickly()
         po.load_data_to_run_cellects_quickly()
         po = ProgramOrganizer()
-        po.all['global_pathway'] = self.d / "experiments"
+        po.all['global_pathway'] = self.d / "multiple_experiments"
         po.load_variable_dict()
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
@@ -188,8 +188,8 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         """Remove all written files."""
         if os.path.isfile(ALL_VARS_PKL_FILE):
             os.remove(ALL_VARS_PKL_FILE)
-        if os.path.isfile(self.d / "experiments" / "f1" / "Data to run Cellects quickly.pkl"):
-            os.remove(self.d / "experiments" / "f1" / "Data to run Cellects quickly.pkl")
+        if os.path.isfile(self.d / "multiple_experiments" / "f1" / "Data to run Cellects quickly.pkl"):
+            os.remove(self.d / "multiple_experiments" / "f1" / "Data to run Cellects quickly.pkl")
 
 class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     """Test suite for delineating arenas using ProgramOrganizer class"""
@@ -375,7 +375,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         """Initialize data set for testing"""
         super().setUpClass()
         cls.po = ProgramOrganizer()
-        cls.po.all['global_pathway'] = cls.d / "experiment"
+        cls.po.all['global_pathway'] = cls.d / "single_experiment"
         cls.po.all['radical'] = "vid"
         cls.po.all['extension'] = "mp4"
         cls.po.all['sample_number_per_folder'] = 1

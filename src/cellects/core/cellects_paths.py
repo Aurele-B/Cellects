@@ -24,7 +24,7 @@ REPO_ROOT = CELLECTS_DIR.parent.parent
 
 # Repo-level dirs
 DATA_DIR = REPO_ROOT / "data"
-EXPERIMENTS_DIR = DATA_DIR / "experiment"
+EXPERIMENTS_DIR = DATA_DIR / "single_experiment"
 TEST_DIR = REPO_ROOT / "tests"
 
 # Example packaged file

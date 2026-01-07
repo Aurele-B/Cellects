@@ -19,7 +19,7 @@ from cellects.utils.load_display_save import write_video_sets
 
 
 def load_test_folder(pathway, sample_number):
-    # pathway="/Users/Directory/Scripts/python/Cellects/data/experiment"
+    # pathway="/Users/Directory/Scripts/python/Cellects/data/single_experiment"
     # sample_number=1
     po = ProgramOrganizer()
     dd = DefaultDicts()
