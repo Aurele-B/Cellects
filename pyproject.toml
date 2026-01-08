@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cellects"
-version = "0.3.4"
+version = "0.3.5"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
 license = { file = "LICENSE" }
