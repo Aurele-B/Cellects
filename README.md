@@ -100,6 +100,7 @@ To cite Cellects, use:
 
 Run unit tests with:
 ```bash
+pip install -e ".[test]"
 pytest
 ```
 
