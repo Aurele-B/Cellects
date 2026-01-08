@@ -459,7 +459,7 @@ class VideoAnalysisWindow(MainTabsType):
         This function displays an error message when a thread relative to the current window is running.
         This function also save the id of the following window for later use.
         """
-        if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+        if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
             self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
             self.parent().last_tab = "data_specifications"
@@ -477,7 +477,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         if self.image_tab.state != "not_usable":
             if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict[
-                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 self.parent().last_tab = "video_analysis"
@@ -527,8 +527,8 @@ class VideoAnalysisWindow(MainTabsType):
         This method is used to ensure that variable saving operations are performed
         in a separate thread to avoid blocking the main application.
         """
-        if not self.parent().thread['SaveAllVars'].isRunning():
-            self.parent().thread['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
+        if not self.parent().thread_dict_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict_dict['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
 
     def save_current_settings(self):
         """
@@ -792,7 +792,7 @@ class VideoAnalysisWindow(MainTabsType):
         else:
             if self.thread_dict['VideoReader'].isRunning():
                 self.thread_dict['VideoReader'].wait()
-            if self.parent().firstwindow.thread["RunAll"].isRunning():
+            if self.parent().firstwindow.thread_dict["RunAll"].isRunning():
                 self.message.setText('Analysis has already begun in the first window.')
             else:
                 if not self.thread_dict['RunAll'].isRunning():

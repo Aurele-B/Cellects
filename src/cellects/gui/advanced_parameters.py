@@ -1298,8 +1298,8 @@ class AdvancedParameters(WindowType):
             if not are_dicts_equal:
                 self.parent().po.find_if_lighter_background()
 
-        if not self.parent().thread['SaveAllVars'].isRunning():
-            self.parent().thread['SaveAllVars'].start()
+        if not self.parent().thread_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict['SaveAllVars'].start()
 
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget

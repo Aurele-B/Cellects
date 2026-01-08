@@ -261,8 +261,8 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['oscilacyto_analysis'] = checked_status
             if name == 'fractal_analysis':
                 self.parent().po.vars['fractal_analysis'] = checked_status
-        if not self.parent().thread['SaveAllVars'].isRunning():
-            self.parent().thread['SaveAllVars'].start()
+        if not self.parent().thread_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict['SaveAllVars'].start()
         self.parent().po.update_output_list()
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
