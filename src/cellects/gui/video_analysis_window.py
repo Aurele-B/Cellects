@@ -527,8 +527,8 @@ class VideoAnalysisWindow(MainTabsType):
         This method is used to ensure that variable saving operations are performed
         in a separate thread to avoid blocking the main application.
         """
-        if not self.parent().thread_dict_dict['SaveAllVars'].isRunning():
-            self.parent().thread_dict_dict['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
+        if not self.parent().thread_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
 
     def save_current_settings(self):
         """
