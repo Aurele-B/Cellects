@@ -16,3 +16,12 @@ Run in terminal:
 ```bash
 Cellects
 ```
+
+## Testing
+
+In order to validate your installation, you can run the test using the following commands:
+
+```bash
+pip install -e ".[test]"
+pytest
+```
