@@ -72,8 +72,7 @@ class RequiredOutput(WindowType):
         # Create the main layout
         self.vlayout = QtWidgets.QVBoxLayout()
         self.vlayout.addWidget(self.title) #
-        horzspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.vlayout.addItem(horzspaceItem) #
+        self.vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)) #
 
         # Create the stylesheet for the boxes allowing to categorize required outputs.
         boxstylesheet = \
@@ -156,18 +155,16 @@ class RequiredOutput(WindowType):
         self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
 
-        self.vlayout.addItem(horzspaceItem)
-        vertspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
-
+        self.vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.last_row_widget.setLayout(self.last_row_layout)
         self.vlayout.addWidget(self.last_row_widget)
 
         self.hlayout = QtWidgets.QHBoxLayout()
         self.vwidget = QtWidgets.QWidget()
         self.vwidget.setLayout(self.vlayout)
-        self.hlayout.addItem(vertspaceItem)
+        self.hlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.hlayout.addWidget(self.vwidget)
-        self.hlayout.addItem(vertspaceItem)
+        self.hlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.setLayout(self.hlayout)
 
     def create_check_boxes_table(self):
