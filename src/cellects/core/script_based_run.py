@@ -35,7 +35,7 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
     po = ProgramOrganizer()
     if rgb_video is None:
         if len(pathway) == 0:
-            pathway = Path(os.getcwd() + "/data/experiment")
+            pathway = Path(os.getcwd() + "/data/single_experiment")
         po.all['global_pathway'] = pathway
         po.all['first_folder_sample_number'] = sample_number
         po.all['radical'] = radical
@@ -89,8 +89,8 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     MA.get_descriptors_from_binary()
     if os.path.isfile('colony_centroids1_20col_t20_y1000_x1000.csv'):
         os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
-        os.remove('data/experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
+    if os.path.isfile('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
+        os.remove('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)

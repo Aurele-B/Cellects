@@ -15,7 +15,7 @@ class CellectsUnitTest(unittest.TestCase):
         cls.d = Path(__file__).resolve().parents[1] / "data" # set up data path for the tests
         cls.path_input = cls.d / "input"
         cls.path_output = cls.d / "output"
-        cls.path_experiment = cls.d / "experiment"
+        cls.path_experiment = cls.d / "single_experiment"
 
         if not os.path.isdir(cls.path_output):
             os.mkdir(cls.path_output)

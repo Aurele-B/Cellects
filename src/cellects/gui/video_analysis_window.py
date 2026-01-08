@@ -76,15 +76,15 @@ class VideoAnalysisWindow(MainTabsType):
         self.video_tab.set_in_use()
         self.data_tab.clicked.connect(self.data_tab_is_clicked)
         self.image_tab.clicked.connect(self.image_tab_is_clicked)
-        self.thread = {}
-        self.thread['VideoReader'] = VideoReaderThread(self.parent())
-        self.thread['OneArena'] = OneArenaThread(self.parent())
-        self.thread['ChangeOneRepResult'] = ChangeOneRepResultThread(self.parent())
-        self.thread['RunAll'] = RunAllThread(self.parent())
+        self.thread_dict = {}
+        self.thread_dict['VideoReader'] = VideoReaderThread(self.parent())
+        self.thread_dict['OneArena'] = OneArenaThread(self.parent())
+        self.thread_dict['ChangeOneRepResult'] = ChangeOneRepResultThread(self.parent())
+        self.thread_dict['RunAll'] = RunAllThread(self.parent())
         self.previous_arena = 0
         curr_row_main_layout = 0
         ncol = 1
-        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
 
         # Open subtitle
@@ -94,10 +94,11 @@ class VideoAnalysisWindow(MainTabsType):
         self.general_step_label = FixedText('Step 1: Tune parameters to improve Detection', night_mode=self.parent().po.all['night_mode'])
         self.general_step_button = PButton('Done', night_mode=self.parent().po.all['night_mode'])
         self.general_step_button.clicked.connect(self.step_done_is_clicked)
-        self.general_step_layout.addItem(self.horizontal_space)
+        self.general_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.general_step_layout.addWidget(self.general_step_label)
         self.general_step_layout.addWidget(self.general_step_button)
-        self.general_step_layout.addItem(self.horizontal_space)
+        self.general_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
+
         self.general_step_widget.setLayout(self.general_step_layout)
         self.Vlayout.addWidget(self.general_step_widget)#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
@@ -105,7 +106,7 @@ class VideoAnalysisWindow(MainTabsType):
         # Open central widget
         self.video_display_widget = QtWidgets.QWidget()
         self.video_display_layout = QtWidgets.QHBoxLayout()
-        self.video_display_layout.addItem(self.horizontal_space)
+        self.video_display_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         #   Open left widget
         self.left_options_widget = QtWidgets.QWidget()
         self.left_options_layout = QtWidgets.QVBoxLayout()
@@ -240,10 +241,10 @@ class VideoAnalysisWindow(MainTabsType):
         self.right_options_layout.addWidget(self.read, alignment=QtCore.Qt.AlignCenter)
 
 
-        self.right_options_layout.addItem(self.horizontal_space)
+        self.right_options_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.right_options_widget.setLayout(self.right_options_layout)
         self.video_display_layout.addWidget(self.right_options_widget)
-        self.video_display_layout.addItem(self.horizontal_space)
+        self.video_display_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         # Close central widget
         self.video_display_widget.setLayout(self.video_display_layout)
         self.Vlayout.addWidget(self.video_display_widget)#, curr_row_main_layout, 0)
@@ -252,7 +253,7 @@ class VideoAnalysisWindow(MainTabsType):
         # Open Second step row
         self.second_step_widget = QtWidgets.QWidget()
         self.second_step_layout = QtWidgets.QHBoxLayout()
-        self.second_step_layout.addItem(self.horizontal_space)
+        self.second_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.second_step_widget.setVisible(False)
 
         self.fading_widget = QtWidgets.QWidget()
@@ -292,9 +293,9 @@ class VideoAnalysisWindow(MainTabsType):
 
         # Close Second step row
         self.second_step_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.second_step_layout.addItem(self.horizontal_space)
+        self.second_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.second_step_widget.setLayout(self.second_step_layout)
-        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
         self.Vlayout.addWidget(self.second_step_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
@@ -302,7 +303,7 @@ class VideoAnalysisWindow(MainTabsType):
         # Open last options row widget
         self.last_options_widget = QtWidgets.QWidget()
         self.last_options_layout = QtWidgets.QHBoxLayout()
-        self.last_options_layout.addItem(self.horizontal_space)
+        self.last_options_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
 
         self.advanced_parameters = PButton(FW["Advanced_parameters"]["label"], tip=FW["Advanced_parameters"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
@@ -322,7 +323,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_options_layout.addWidget(self.save_all_vars)
 
         # Close last options widget
-        self.last_options_layout.addItem(self.horizontal_space)
+        self.last_options_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_options_widget.setLayout(self.last_options_layout)
         self.Vlayout.addWidget(self.last_options_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
@@ -343,12 +344,12 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_row_widget = QtWidgets.QWidget()
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_layout.addWidget(self.previous)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.message)
         self.last_row_layout.addWidget(self.run_all)
         # Close last row widget
         self.last_row_widget.setLayout(self.last_row_layout)
-        self.Vlayout.addItem(self.vertical_space)#, curr_row_main_layout, 0, 1, ncol)
+        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
         self.Vlayout.addWidget(self.last_row_widget)#, curr_row_main_layout + 1, 0)
 
         self.setLayout(self.Vlayout)
@@ -458,7 +459,7 @@ class VideoAnalysisWindow(MainTabsType):
         This function displays an error message when a thread relative to the current window is running.
         This function also save the id of the following window for later use.
         """
-        if self.thread['VideoReader'].isRunning() or self.thread['OneArena'].isRunning() or self.thread['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+        if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
             self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
             self.parent().last_tab = "data_specifications"
@@ -475,8 +476,8 @@ class VideoAnalysisWindow(MainTabsType):
         This function also save the id of the following window for later use.
         """
         if self.image_tab.state != "not_usable":
-            if self.thread['VideoReader'].isRunning() or self.thread['OneArena'].isRunning() or self.thread[
-                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread["RunAll"].isRunning():
+            if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict[
+                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 self.parent().last_tab = "video_analysis"
@@ -526,8 +527,8 @@ class VideoAnalysisWindow(MainTabsType):
         This method is used to ensure that variable saving operations are performed
         in a separate thread to avoid blocking the main application.
         """
-        if not self.parent().thread['SaveAllVars'].isRunning():
-            self.parent().thread['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
+        if not self.parent().thread_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict['SaveAllVars'].start()  # SaveAllVarsThreadInThirdWidget
 
     def save_current_settings(self):
         """
@@ -581,7 +582,7 @@ class VideoAnalysisWindow(MainTabsType):
         arena processing threads. It should be called when all relevant threads are not
         running to ensure the arena's state is properly reset.
         """
-        if not self.thread['VideoReader'].isRunning() and not self.thread['OneArena'].isRunning() and not self.thread['ChangeOneRepResult'].isRunning():
+        if not self.thread_dict['VideoReader'].isRunning() and not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['ChangeOneRepResult'].isRunning():
             self.parent().po.motion = None
             self.reset_general_step()
             self.parent().po.computed_video_options = np.zeros(5, bool)
@@ -647,17 +648,17 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
-        if self.thread['OneArena']._isRunning:
-            self.thread['OneArena'].stop()
+        if self.thread_dict['OneArena']._isRunning:
+            self.thread_dict['OneArena'].stop()
         self.save_current_settings()
         if self.previous_arena != self.parent().po.all['arena']:
             self.parent().po.motion = None
         self.message.setText("Load the video and initialize analysis, wait...")
-        self.thread['OneArena'].start()  # OneArenaThreadInThirdWidget
-        self.thread['OneArena'].message_from_thread_starting.connect(self.display_message_from_thread)
-        self.thread['OneArena'].when_loading_finished.connect(self.when_loading_thread_finished)
-        self.thread['OneArena'].when_detection_finished.connect(self.when_detection_finished)
-        self.thread['OneArena'].image_from_thread.connect(self.display_image_during_thread)
+        self.thread_dict['OneArena'].start()  # OneArenaThreadInThirdWidget
+        self.thread_dict['OneArena'].message_from_thread_starting.connect(self.display_message_from_thread)
+        self.thread_dict['OneArena'].when_loading_finished.connect(self.when_loading_thread_finished)
+        self.thread_dict['OneArena'].when_detection_finished.connect(self.when_detection_finished)
+        self.thread_dict['OneArena'].image_from_thread.connect(self.display_image_during_thread)
 
     def when_loading_thread_finished(self, save_loaded_video: bool):
         """
@@ -671,8 +672,8 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.previous_arena = self.parent().po.all['arena']
         if save_loaded_video:
-            self.thread['WriteVideo'] = WriteVideoThread(self.parent())
-            self.thread['WriteVideo'].start()
+            self.thread_dict['WriteVideo'] = WriteVideoThread(self.parent())
+            self.thread_dict['WriteVideo'].start()
         if self.parent().po.load_quick_full == 0:
             self.message.setText("Loading done, you can watch the video")
         self.read.setVisible(True)
@@ -699,8 +700,8 @@ class VideoAnalysisWindow(MainTabsType):
         `image_to_display`, and methods like `display_image.update_image`.
         """
         self.previous_arena = self.parent().po.all['arena']
-        if self.thread['VideoReader'].isRunning():  # VideoReaderThreadInThirdWidget
-            self.thread['VideoReader'].wait()
+        if self.thread_dict['VideoReader'].isRunning():  # VideoReaderThreadInThirdWidget
+            self.thread_dict['VideoReader'].wait()
         if self.parent().po.load_quick_full > 0:
             image = self.parent().po.motion.segmented[-1, ...]
         if self.parent().po.motion.visu is None:
@@ -742,10 +743,10 @@ class VideoAnalysisWindow(MainTabsType):
         """
         if self.parent().po.motion is not None:
             if self.parent().po.load_quick_full == 2:
-                if not self.thread['OneArena'].isRunning() and not self.thread['ChangeOneRepResult'].isRunning():
+                if not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['ChangeOneRepResult'].isRunning():
                     self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
-                    self.thread['ChangeOneRepResult'].start()  # ChangeOneRepResultThreadInThirdWidget
-                    self.thread['ChangeOneRepResult'].message_from_thread.connect(self.display_message_from_thread)
+                    self.thread_dict['ChangeOneRepResult'].start()  # ChangeOneRepResultThreadInThirdWidget
+                    self.thread_dict['ChangeOneRepResult'].message_from_thread.connect(self.display_message_from_thread)
                     self.message.setText("Complete analysis + change that result")
                 else:
                     self.message.setText("Wait for the analysis to end")
@@ -763,9 +764,9 @@ class VideoAnalysisWindow(MainTabsType):
         """
         if self.parent().po.motion is not None:
             if self.parent().po.motion.segmented is not None:
-                if not self.thread['OneArena'].isRunning() and not self.thread['VideoReader'].isRunning():
-                    self.thread['VideoReader'].start()  # VideoReaderThreadInThirdWidget
-                    self.thread['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
+                if not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['VideoReader'].isRunning():
+                    self.thread_dict['VideoReader'].start()  # VideoReaderThreadInThirdWidget
+                    self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
                 else:
                     self.message.setText("Wait for the analysis to end")
             else:
@@ -786,24 +787,24 @@ class VideoAnalysisWindow(MainTabsType):
         This function will only start the analysis if no other threads
         are running. It updates several attributes of the parent object.
         """
-        if self.thread['OneArena'].isRunning() or self.thread['ChangeOneRepResult'].isRunning():
+        if self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning():
             self.message.setText("Wait for the current analysis to end")
         else:
-            if self.thread['VideoReader'].isRunning():
-                self.thread['VideoReader'].wait()
-            if self.parent().firstwindow.thread["RunAll"].isRunning():
+            if self.thread_dict['VideoReader'].isRunning():
+                self.thread_dict['VideoReader'].wait()
+            if self.parent().firstwindow.thread_dict["RunAll"].isRunning():
                 self.message.setText('Analysis has already begun in the first window.')
             else:
-                if not self.thread['RunAll'].isRunning():
+                if not self.thread_dict['RunAll'].isRunning():
                     self.save_current_settings()
                     self.parent().po.motion = None
                     self.parent().po.converted_video = None
                     self.parent().po.converted_video2 = None
                     self.parent().po.visu = None
                     self.message.setText("Complete analysis has started, wait...")
-                    self.thread['RunAll'].start()  # RunAllThread
-                    self.thread['RunAll'].message_from_thread.connect(self.display_message_from_thread)
-                    self.thread['RunAll'].image_from_thread.connect(self.display_image_during_thread)
+                    self.thread_dict['RunAll'].start()  # RunAllThread
+                    self.thread_dict['RunAll'].message_from_thread.connect(self.display_message_from_thread)
+                    self.thread_dict['RunAll'].image_from_thread.connect(self.display_image_during_thread)
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -816,19 +817,3 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.message.setText(text_from_thread)
 
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept
-
-
-# if __name__ == "__main__":
-#     from cellects.gui.cellects import CellectsMainWidget
-#     import sys
-#     app = QtWidgets.QApplication([])
-#     parent = CellectsMainWidget()
-#     session = VideoAnalysisWindow(parent, False)
-#     parent.insertWidget(0, session)
-#     parent.show()
-#     sys.exit(app.exec())

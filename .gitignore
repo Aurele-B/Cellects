@@ -1,14 +1,14 @@
 # Ignore the .idea directory
 .tool-versions
 .idea/
-data/experiment/ind*
-data/experiment/Data to run Cellects quickly.pkl
-data/experiment/Analysis efficiency, last image.JPG
-data/experiment/Analysis efficiency, 3th image.JPG
-data/experiment/one_row_per_arena.csv
-data/experiment/one_row_per_frame.csv
-data/experiment/one_row_per_oscillating_cluster.csv
-data/experiment/software_settings.csv
+data/single_experiment/ind*
+data/single_experiment/Data to run Cellects quickly.pkl
+data/single_experiment/Analysis efficiency, last image.JPG
+data/single_experiment/Analysis efficiency, 3th image.JPG
+data/single_experiment/one_row_per_arena.csv
+data/single_experiment/one_row_per_frame.csv
+data/single_experiment/one_row_per_oscillating_cluster.csv
+data/single_experiment/software_settings.csv
 src/cellects/config/all_vars.pkl
 src/cellects/paper_illustrations/
 src/cellects/__main__.spec

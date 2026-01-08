@@ -72,8 +72,7 @@ class RequiredOutput(WindowType):
         # Create the main layout
         self.vlayout = QtWidgets.QVBoxLayout()
         self.vlayout.addWidget(self.title) #
-        horzspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.vlayout.addItem(horzspaceItem) #
+        self.vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)) #
 
         # Create the stylesheet for the boxes allowing to categorize required outputs.
         boxstylesheet = \
@@ -152,22 +151,20 @@ class RequiredOutput(WindowType):
         self.cancel.clicked.connect(self.cancel_is_clicked)
         self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
-        self.last_row_layout.addItem(self.horizontal_space)
+        self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.cancel)
         self.last_row_layout.addWidget(self.ok)
 
-        self.vlayout.addItem(horzspaceItem)
-        vertspaceItem = QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
-
+        self.vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
         self.last_row_widget.setLayout(self.last_row_layout)
         self.vlayout.addWidget(self.last_row_widget)
 
         self.hlayout = QtWidgets.QHBoxLayout()
         self.vwidget = QtWidgets.QWidget()
         self.vwidget.setLayout(self.vlayout)
-        self.hlayout.addItem(vertspaceItem)
+        self.hlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.hlayout.addWidget(self.vwidget)
-        self.hlayout.addItem(vertspaceItem)
+        self.hlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.setLayout(self.hlayout)
 
     def create_check_boxes_table(self):
@@ -264,16 +261,10 @@ class RequiredOutput(WindowType):
                 self.parent().po.vars['oscilacyto_analysis'] = checked_status
             if name == 'fractal_analysis':
                 self.parent().po.vars['fractal_analysis'] = checked_status
-        if not self.parent().thread['SaveAllVars'].isRunning():
-            self.parent().thread['SaveAllVars'].start()
+        if not self.parent().thread_dict['SaveAllVars'].isRunning():
+            self.parent().thread_dict['SaveAllVars'].start()
         self.parent().po.update_output_list()
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
         else:
             self.parent().change_widget(3) # ThirdWidget
-
-    def closeEvent(self, event):
-        """
-        Handle the close event for a QWidget.
-        """
-        event.accept
