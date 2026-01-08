@@ -2475,7 +2475,13 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
 <span class="normal"><a href="#__codelineno-0-198">198</a></span>
 <span class="normal"><a href="#__codelineno-0-199">199</a></span>
-<span class="normal"><a href="#__codelineno-0-200">200</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="k">class</span><span class="w"> </span><span class="nc">CellectsMainWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="k">class</span><span class="w"> </span><span class="nc">CellectsMainWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">):</span>
 <a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot; Main widget: this is the main window of the Cellects application. &quot;&quot;&quot;</span>
 <a id="__codelineno-0-34" name="__codelineno-0-34"></a>
 <a id="__codelineno-0-35" name="__codelineno-0-35"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -2556,8 +2562,8 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <a id="__codelineno-0-110" name="__codelineno-0-110"></a>
 <a id="__codelineno-0-111" name="__codelineno-0-111"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">instantiate_widgets</span><span class="p">()</span>
 <a id="__codelineno-0-112" name="__codelineno-0-112"></a>
-<a id="__codelineno-0-113" name="__codelineno-0-113"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-114" name="__codelineno-0-114"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="p">[</span><span class="s1">&#39;SaveAllVars&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveAllVarsThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span><span class="p">[</span><span class="s1">&#39;SaveAllVars&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveAllVarsThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-115" name="__codelineno-0-115"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">change_widget</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-116" name="__codelineno-0-116"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">()</span>
 <a id="__codelineno-0-117" name="__codelineno-0-117"></a>
@@ -2638,12 +2644,18 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>            <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">No</span><span class="p">)</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>        <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
-<a id="__codelineno-0-195" name="__codelineno-0-195"></a>            <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGSEGV</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIG_IGN</span><span class="p">)</span>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Closing main window.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-197" name="__codelineno-0-197"></a>            <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
-<a id="__codelineno-0-198" name="__codelineno-0-198"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-200" name="__codelineno-0-200"></a>            <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>                <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a>            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a>                <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>                <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>            <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>                <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Closing main window.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>            <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>            <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -3105,7 +3117,13 @@ handling purposes only.</p>
 <span class="normal"><a href="#__codelineno-0-197">197</a></span>
 <span class="normal"><a href="#__codelineno-0-198">198</a></span>
 <span class="normal"><a href="#__codelineno-0-199">199</a></span>
-<span class="normal"><a href="#__codelineno-0-200">200</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="k">def</span><span class="w"> </span><span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="k">def</span><span class="w"> </span><span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
 <a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">    Close the application window and handle cleanup.</span>
 <a id="__codelineno-0-176" name="__codelineno-0-176"></a>
@@ -3127,12 +3145,18 @@ handling purposes only.</p>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a>        <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">No</span><span class="p">)</span>
 <a id="__codelineno-0-193" name="__codelineno-0-193"></a>
 <a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
-<a id="__codelineno-0-195" name="__codelineno-0-195"></a>        <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGSEGV</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIG_IGN</span><span class="p">)</span>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Closing main window.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-197" name="__codelineno-0-197"></a>        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
-<a id="__codelineno-0-198" name="__codelineno-0-198"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>            <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a>            <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>            <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">thread</span>  <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>            <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Closing main window.&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3233,8 +3257,8 @@ the code and should not be set directly.</p>
 <a id="__codelineno-0-110" name="__codelineno-0-110"></a>
 <a id="__codelineno-0-111" name="__codelineno-0-111"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">instantiate_widgets</span><span class="p">()</span>
 <a id="__codelineno-0-112" name="__codelineno-0-112"></a>
-<a id="__codelineno-0-113" name="__codelineno-0-113"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">thread</span> <span class="o">=</span> <span class="p">{}</span>
-<a id="__codelineno-0-114" name="__codelineno-0-114"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">thread</span><span class="p">[</span><span class="s1">&#39;SaveAllVars&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveAllVarsThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-113" name="__codelineno-0-113"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span> <span class="o">=</span> <span class="p">{}</span>
+<a id="__codelineno-0-114" name="__codelineno-0-114"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span><span class="p">[</span><span class="s1">&#39;SaveAllVars&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SaveAllVarsThread</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 <a id="__codelineno-0-115" name="__codelineno-0-115"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">change_widget</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-116" name="__codelineno-0-116"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">center</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
