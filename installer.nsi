@@ -33,8 +33,8 @@ RequestExecutionLevel admin
 ; --------------------------------
 
 !define MUI_ABORTWARNING
-!define MUI_ICON "icons\cellects_icon.ico"
-!define MUI_UNICON "icons\cellects_icon.ico"
+!define MUI_ICON "src\cellects\icons\cellects_icon.ico"
+!define MUI_UNICON "src\cellects\icons\cellects_icon.ico"
 
 ; Welcome page with description
 !define MUI_WELCOMEPAGE_TITLE "Welcome to ${APPNAME} Setup"
