@@ -5,6 +5,8 @@
 ; uninstaller, and proper Windows integration
 
 !include "MUI2.nsh"
+!include "FileFunc.nsh"
+!insertmacro GetSize
 
 ; --------------------------------
 ; Configuration
@@ -123,10 +125,3 @@ Section "Uninstall"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}"
     DeleteRegKey HKLM "Software\${APPNAME}"
 SectionEnd
-
-; --------------------------------
-; GetSize function for install size calculation
-; --------------------------------
-
-!include "FileFunc.nsh"
-!insertmacro GetSize
