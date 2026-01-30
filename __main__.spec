@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['__main__.py'],
+    ['src/cellects/__main__.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -37,7 +37,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="icons/cellects_icon.ico",
+    icon="src/cellects/icons/cellects_icon.ico",
 )
 coll = COLLECT(
     exe,
