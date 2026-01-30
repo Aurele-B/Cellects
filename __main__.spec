@@ -8,7 +8,9 @@ a = Analysis(
     ['src/cellects/__main__.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ("src/cellects/icons/cellects_icon.ico", "icons"),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
