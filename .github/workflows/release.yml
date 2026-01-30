@@ -196,6 +196,11 @@ jobs:
       - name: Install NSIS
         run: |
           choco install nsis -y
+
+      - name: Add NSIS to PATH
+        shell: powershell
+        run: |
+          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
       
       - name: Build NSIS installer
         shell: bash
