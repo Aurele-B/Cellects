@@ -147,3 +147,73 @@ jobs:
           publish_dir: ./site
           publish_branch: gh-pages
           keep_files: true
+
+  windows-installer:
+    runs-on: windows-latest
+    needs: [resolve, build-test]
+    if: ${{ needs.resolve.outputs.is_tag == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve.outputs.ref }}
+          lfs: true
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+      
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller __main__.spec
+      
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
+      - name: Create ZIP archive
+        shell: bash
+        run: |
+          cd dist
+          7z a -tzip ../Cellects-${{ steps.get_version.outputs.version }}-windows.zip Cellects/
+      
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+      
+      - name: Build NSIS installer
+        shell: bash
+        run: |
+          export INSTALLER_VERSION="${{ steps.get_version.outputs.version }}"
+          export INSTALLER_NAME="Cellects-${{ steps.get_version.outputs.version }}-setup.exe"
+          makensis installer.nsi
+      
+      - name: Upload ZIP to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Cellects-${{ steps.get_version.outputs.version }}-windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload installer to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Cellects-${{ steps.get_version.outputs.version }}-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
