@@ -85,13 +85,6 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller __main__.spec
-
-      - name: Show PyInstaller output
-        run: |
-          echo "PWD=$(pwd)"
-          ls
-          ls dist
-          find dist -maxdepth 3 -type d -name "*.app"
       
       - name: Test executable exists
         shell: bash
@@ -201,6 +194,13 @@ jobs:
           APP_VERSION: ${{ steps.version.outputs.name }}
         run: |
           pyinstaller __main__.spec
+
+      - name: Show PyInstaller output
+        run: |
+          echo "PWD=$(pwd)"
+          ls
+          ls dist
+          find dist -maxdepth 3 -type d -name "*.app"
       
       - name: Test app bundle exists
         run: |
