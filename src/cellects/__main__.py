@@ -12,14 +12,30 @@ import coloredlogs
 from PySide6 import QtWidgets, QtGui
 from pathlib import Path
 
+
+def get_icon_path():
+    if hasattr(sys, "_MEIPASS"):
+        return Path(sys._MEIPASS) / "icons"
+    return Path(__file__).parent / "icons"
+
+
+ICON_DIR = get_icon_path()
+
+
 if sys.platform.startswith('win'):
     try:
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("cellects.app")
     except Exception as e:
         logging.getLogger(__name__).debug(f"Windows taskbar icon setup failed: {e}")
+    icon_path = ICON_DIR / "cellects_icon.ico"
+elif sys.platform == "darwin":
+    icon_path = ICON_DIR / "cellects_icon.icns"
+else:
+    icon_path = ICON_DIR / "cellects_icon.png"
 
 LOGLEVEL = "INFO" # Set to DEBUG for development
+
 
 def _initialize_coloredlogs(loglevel: str = 'DEBUG') -> None:
 
@@ -67,17 +83,7 @@ def run_cellects():
         app = QtWidgets.QApplication([])
 
         # Set custom window icon for taskbar (platform-specific handling)
-        icon = QtGui.QIcon()
-        if hasattr(sys, "_MEIPASS"):
-            ICONS_DIR = Path(sys._MEIPASS) / "icons"
-        else:
-            ICONS_DIR = Path(__file__).parent / "icons"
-        platform_icon_path = (
-            ICONS_DIR / "cellects_icon.ico" if sys.platform.startswith('win')
-            else ICONS_DIR / "cellects_icon.icns"
-        )
-        icon.addPixmap(QtGui.QPixmap(str(platform_icon_path)))
-        app.setWindowIcon(icon)
+        app.setWindowIcon(QtGui.QIcon(str(icon_path)))
 
         # Create and display main window
         session = CellectsMainWidget()

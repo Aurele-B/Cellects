@@ -16,8 +16,8 @@ elif IS_WINDOWS:
     icon_file = "src/cellects/icons/cellects_icon.ico"
     icon_data = ("src/cellects/icons/cellects_icon.ico", "icons")
 else:
-    icon_file = None
-    icon_data = None
+    icon_file = "src/cellects/icons/cellects_icon.png"
+    icon_data = ("src/cellects/icons/cellects_icon.png", "icons")
 
 # Data files to include
 datas = []
