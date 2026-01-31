@@ -210,10 +210,10 @@ jobs:
           fi
           echo "App bundle built successfully"
           ls -lh dist/Cellects.app/Contents/MacOS/Cellects
-      
+
       - name: Install create-dmg
         run: |
-          npm install -g create-dmg
+          brew install create-dmg
       
       - name: Create DMG
         run: |
