@@ -9,7 +9,6 @@ loads Cellects icon, and launches the main GUI interface.
 import sys
 import logging
 import coloredlogs
-from PySide6 import QtWidgets, QtGui
 from pathlib import Path
 
 
@@ -33,6 +32,8 @@ elif sys.platform == "darwin":
     icon_path = ICON_DIR / "cellects_icon.icns"
 else:
     icon_path = ICON_DIR / "cellects_icon.png"
+
+from PySide6 import QtWidgets, QtGui
 
 LOGLEVEL = "INFO" # Set to DEBUG for development
 
