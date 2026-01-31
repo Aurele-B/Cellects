@@ -23,7 +23,6 @@ echo "Building DMG with create-dmg..."
 create-dmg \
   --volname "Cellects" \
   --volicon "src/cellects/icons/cellects_icon.icns" \
-  --window-pos 200 120 \
   --window-size 800 400 \
   --icon-size 100 \
   --icon "Cellects.app" 200 190 \
