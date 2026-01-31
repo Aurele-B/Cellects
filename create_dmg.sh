@@ -23,14 +23,8 @@ echo "Building DMG with create-dmg..."
 create-dmg \
   --volname "Cellects" \
   --volicon "src/cellects/icons/cellects_icon.icns" \
-  --window-size 800 400 \
-  --icon-size 100 \
-  --icon "Cellects.app" 200 190 \
-  --hide-extension "Cellects.app" \
-  --app-drop-link 600 185 \
   "dist/Cellects.dmg" \
-  "dist/dmg" \
-  || true  # create-dmg returns non-zero even on success sometimes
+  "dist/dmg"
 
 # Verify DMG was created
 if [ -f "dist/Cellects.dmg" ]; then
