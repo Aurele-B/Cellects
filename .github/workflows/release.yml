@@ -226,7 +226,7 @@ jobs:
   mac-installer:
     runs-on: macos-latest
     needs: [ resolve, build-test ]
-    if: ${{ needs.resolve.outputs.is_tag == 'true' && needs.resolve.outputs.mac == 'true' }}
+    if: ${{ needs.resolve.outputs.is_tag == 'true'}}
     permissions:
       contents: write
     steps:
