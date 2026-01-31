@@ -1,7 +1,9 @@
 # Getting Started with Cellects
 
 ## Installation (Short version)
-Install using our Windows installer: [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
+Install using our installers: 
+- Windows: [Cellects-x.x.x-setup.exe](https://github.com/Aurele-B/Cellects/releases/)
+- macOS: [Cellects-x.x.x-setup.dmg](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
 ```bash

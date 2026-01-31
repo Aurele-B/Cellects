@@ -222,3 +222,122 @@ jobs:
           files: Cellects-${{ steps.get_version.outputs.version }}-setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  mac-installer:
+    runs-on: macos-latest
+    needs: [ resolve, build-test ]
+    if: ${{ needs.resolve.outputs.is_tag == 'true' && needs.resolve.outputs.mac == 'true' }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve.outputs.ref }}
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Build with PyInstaller
+        env:
+          APP_VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          pyinstaller __main__.spec
+
+      - name: Verify app bundle
+        run: |
+          if [ ! -d "dist/Cellects.app" ]; then
+            echo "App bundle not found!"
+            exit 1
+          fi
+          echo "App bundle created successfully"
+          ls -lh dist/Cellects.app/Contents/MacOS/Cellects
+
+      - name: Install create-dmg
+        run: |
+          brew install create-dmg
+
+      - name: Create DMG
+        run: |
+          chmod +x create_dmg.sh
+          ./create_dmg.sh
+
+      - name: Rename DMG with version
+        run: |
+          mv dist/Cellects.dmg Cellects-${{ steps.get_version.outputs.version }}.dmg
+          echo "DMG created: Cellects-${{ steps.get_version.outputs.version }}.dmg"
+          ls -lh Cellects-${{ steps.get_version.outputs.version }}.dmg
+
+      - name: Upload DMG to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Cellects-${{ steps.get_version.outputs.version }}.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-summary:
+    runs-on: ubuntu-latest
+    needs: [ resolve, windows-installer, mac-installer ]
+    if: always() && needs.resolve.outputs.is_tag == 'true'
+    steps:
+      - name: Create release summary
+        shell: bash
+        run: |
+          echo "### Release Build Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Ref:** \`${{ needs.resolve.outputs.ref }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.windows-installer.result }}" = "success" ]; then
+            echo "- **Windows**: ZIP + Installer uploaded" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.windows-installer.result }}" = "skipped" ]; then
+            echo "- **Windows**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Windows**: Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.mac-installer.result }}" = "success" ]; then
+            echo "- **Mac**: DMG uploaded" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.mac-installer.result }}" = "skipped" ]; then
+            echo "- **Mac**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Mac**: Build failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Release Assets" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the [Releases page](https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}) for:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Windows:**" >> $GITHUB_STEP_SUMMARY
+          echo "- \`Cellects-X.X.X-windows.zip\` - Portable version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`Cellects-X.X.X-setup.exe\` - Windows installer" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**macOS:**" >> $GITHUB_STEP_SUMMARY
+          echo "- \`Cellects-X.X.X.dmg\` - Mac installer" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Other:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Source code (auto-generated)" >> $GITHUB_STEP_SUMMARY

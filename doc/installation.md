@@ -4,14 +4,14 @@ Choose the method that matches your OS and how you want to use Cellects.
 
 === "Windows (Installer)"
 
-    ### Install with `Cellects_installer.exe`
+    ### Install with `Cellects-x.x.x-setup.exe`
 
-    1. Download **Cellects_installer.exe**:  
-       [Cellects_installer.exe](https://github.com/Aurele-B/Cellects/releases/)
+    1. Download **Cellects-x.x.x-setup.exe**:  
+       [Cellects-x.x.x-setup.exe](https://github.com/Aurele-B/Cellects/releases/)
 
-    2. Double-click `Cellects_installer.exe` to start the installation.
+    2. Double-click `Cellects-x.x.x-setup.exe` to start the installation. 
 
-    3. To run Cellects, open the newly created folder and launch **`Cellects.exe`**.
+    3. To run Cellects, use desktop or start menu shortcuts.
 
     !!! info "Windows security warning"
         Windows may warn you that the installer is unsafe (because we are not a registered developer).  
@@ -20,6 +20,16 @@ Choose the method that matches your OS and how you want to use Cellects.
     !!! warning "Antivirus software"
         Some antivirus software may block or slow down the installation for the same reason.
 
+=== "macOS (Mac DMG)"
+
+    ### Install with `Cellects-x.x.x-setup.dmg`
+
+    1. Download **Cellects-x.x.x-setup.dmg**:  
+       [Cellects-x.x.x-setup.dmg](https://github.com/Aurele-B/Cellects/releases/)
+
+    2. Drag-to-Applications `Cellects-x.x.x-setup.dmg` to start the installation. 
+
+    3. To run Cellects, use Applications.
 
 === "All OS (pip)"
 
