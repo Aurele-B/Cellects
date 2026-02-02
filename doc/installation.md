@@ -29,9 +29,10 @@ Choose the method that matches your OS and how you want to use Cellects.
 
     2. Double-click `Cellects-x.x.x.dmg` and double-click Cellects logo to run.
 
-    !!! info "Cellects" Not Opened
+    !!! info "Cellects Not Opened"
         macOS may warn you that the installer is unsafe (because we are not a registered developer).  
-        Open Apple menu > System Settings > Privacy & Security > Security > "Cellects" was blocked... → **Open Anyway**.
+        Open Apple menu > System Settings > Privacy & Security > Security 
+        "Cellects" was blocked... → Click **Open Anyway**.
 
 === "All OS (pip)"
 
