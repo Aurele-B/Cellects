@@ -30,9 +30,7 @@ easy installation and user-friendly interface.
 ---
 
 ## Installation (Short version)
-Install using our installers: 
-- Windows: [Cellects-x.x.x-setup.exe](https://github.com/Aurele-B/Cellects/releases/)
-- macOS: [Cellects-x.x.x-setup.dmg](https://github.com/Aurele-B/Cellects/releases/)
+Install on [Windows (.exe) and macOS (.dmg)](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
 ```bash

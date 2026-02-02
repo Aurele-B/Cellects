@@ -2,7 +2,7 @@
 
 Choose the method that matches your OS and how you want to use Cellects.
 
-=== "Windows (Installer)"
+=== "Windows (.exe)"
 
     ### Install with `Cellects-x.x.x-setup.exe`
 
@@ -11,8 +11,6 @@ Choose the method that matches your OS and how you want to use Cellects.
 
     2. Double-click `Cellects-x.x.x-setup.exe` to start the installation. 
 
-    3. To run Cellects, use desktop or start menu shortcuts.
-
     !!! info "Windows security warning"
         Windows may warn you that the installer is unsafe (because we are not a registered developer).  
         Click **More info** → **Run anyway**.
@@ -20,16 +18,20 @@ Choose the method that matches your OS and how you want to use Cellects.
     !!! warning "Antivirus software"
         Some antivirus software may block or slow down the installation for the same reason.
 
-=== "macOS (Mac DMG)"
+    3. To run Cellects, use desktop or start menu shortcuts.
 
-    ### Install with `Cellects-x.x.x-setup.dmg`
+=== "macOS (.dmg)"
 
-    1. Download **Cellects-x.x.x-setup.dmg**:  
-       [Cellects-x.x.x-setup.dmg](https://github.com/Aurele-B/Cellects/releases/)
+    ### Install with `Cellects-x.x.x.dmg`
 
-    2. Drag-to-Applications `Cellects-x.x.x-setup.dmg` to start the installation. 
+    1. Download **Cellects-x.x.x.dmg**:  
+       [Cellects-x.x.x.dmg](https://github.com/Aurele-B/Cellects/releases/)
 
-    3. To run Cellects, use Applications.
+    2. Double-click `Cellects-x.x.x.dmg` and double-click Cellects logo to run.
+
+    !!! info "Cellects" Not Opened
+        macOS may warn you that the installer is unsafe (because we are not a registered developer).  
+        Open Apple menu > System Settings > Privacy & Security > Security > "Cellects" was blocked... → **Open Anyway**.
 
 === "All OS (pip)"
 
