@@ -12,6 +12,7 @@
 ; Configuration
 ; --------------------------------
 
+SetCompressor /SOLID lzma
 !define APPNAME "Cellects"
 !define COMPANYNAME "Cellects Project"
 !define DESCRIPTION "Advanced cell analysis and tracking software"
