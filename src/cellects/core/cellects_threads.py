@@ -36,6 +36,8 @@ import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 from PySide6 import QtCore
+
+from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
@@ -43,6 +45,38 @@ from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, r
                                               create_empty_videos, write_video)
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.core.motion_analysis import MotionAnalysis
+
+
+class PrecompileNJITThread(QtCore.QThread):
+    """
+    Precompile njit functions for speed optimization.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the worker thread for recompiling njit functions.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+        super(PrecompileNJITThread, self).__init__(parent)
+        self.setParent(parent)
+
+    def run(self):
+        """
+        Execute the main functions for basic image segmentation to make it faster for true images.
+        """
+        po = ProgramOrganizer()
+        im = np.zeros((3, 3, 3), dtype=np.uint8)
+        im[1, 1, :] = 1
+        po.get_first_image(im, sample_number=1)
+        po.fast_first_image_segmentation()
 
 
 class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):

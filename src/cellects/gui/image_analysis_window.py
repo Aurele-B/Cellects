@@ -1065,6 +1065,8 @@ class ImageAnalysisWindow(MainTabsType):
         This method assumes that the parent object has already been initialized and contains all
         necessary variables for image analysis.
         """
+        if self.parent().thread_dict['PrecompileNJIT'].isRunning():
+            self.parent().thread_dict['PrecompileNJIT'].wait()
         if self.first_im_parameters_answered:
             self.several_blob_per_arena_check()
             self.horizontal_size_changed()
