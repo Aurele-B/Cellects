@@ -97,7 +97,6 @@ class TestOneImageAnalysisConvertAndSegment(CellectsUnitTest):
         c_space_dict['hsv2'] = np.array((0, 1, 0), dtype=np.uint8)
         c_space_dict['logical'] = "And"
         self.oia.convert_and_segment(c_space_dict)
-        print(rgb_several_arenas_img.shape)
         self.assertIsInstance(self.oia.binary_image, np.ndarray)
         c_space_dict['logical'] = "Or"
         self.oia.convert_and_segment(c_space_dict)
@@ -142,18 +141,19 @@ class TestSegmentBlobOneLargeCentralBlob(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='luv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
     def test_find_csc_as_first_image(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations(self.params)
+        print('test_find_csc_as_first_image')
+        self.oia.find_color_space_combinations(self.params, color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
     def test_find_csc_as_any_image(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
         self.params['is_first_image'] = False
-        self.oia.find_color_space_combinations(self.params)
+        self.oia.find_color_space_combinations(self.params, color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
     def test_network_detection(self):
@@ -179,7 +179,7 @@ class TestSegmentBlobOneLargeSideBlob(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations(self.params)
+        self.oia.find_color_space_combinations(self.params, color_space='yuv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -197,7 +197,7 @@ class TestSegmentBlobOneSmallCentralBlob(CellectsUnitTest):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
         params = init_params()
         params['blob_nb'] = 1
-        self.oia.find_color_space_combinations(params)
+        self.oia.find_color_space_combinations(params, color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -213,7 +213,7 @@ class TestSegmentBlobOneSmallSideBlob(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='luv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -240,7 +240,7 @@ class TestSegmentBlobManySmallBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations(self.params)
+        self.oia.find_color_space_combinations(self.params, color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == small_blob_nb).any())
 
 
@@ -256,15 +256,15 @@ class TestSegmentBlobManyMediumBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='hsv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
     def test_with_other_params(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
         params = init_params()
         params['kmeans_clust_nb'] = 2
-        self.oia.find_color_space_combinations(params)
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(params, color_space='hsv')
+        self.oia.find_color_space_combinations(color_space='hsv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
 class TestSegmentBlobManyVaryingBlobs(CellectsUnitTest):
@@ -279,7 +279,7 @@ class TestSegmentBlobManyVaryingBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='hsv')
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
 
@@ -295,7 +295,7 @@ class TestSegmentBackOneLargeCentralBlob(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -311,7 +311,7 @@ class TestSegmentBackOneLargeSideBlob(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -347,7 +347,7 @@ class TestSegmentBackOneSmallSideBlob(CellectsUnitTest):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
         params = init_params()
         params['blob_nb'] = 1
-        self.oia.find_color_space_combinations(params)
+        self.oia.find_color_space_combinations(params, color_space='lab')
         self.assertTrue((self.oia.combination_features['blob_nb'] == 1).any())
 
 
@@ -363,7 +363,7 @@ class TestSegmentBackManySmallBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='lab')
         self.assertTrue((self.oia.combination_features['blob_nb'] == small_blob_nb).any())
 
 class TestSegmentBackManyMediumBlobs(CellectsUnitTest):
@@ -378,7 +378,7 @@ class TestSegmentBackManyMediumBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
 class TestSegmentBackManyVaryingBlobs(CellectsUnitTest):
@@ -393,7 +393,7 @@ class TestSegmentBackManyVaryingBlobs(CellectsUnitTest):
 
     def test_find_color_space_combinations(self):
         """test if the number of detected connected components is the same as the number of connected components used to create the image"""
-        self.oia.find_color_space_combinations()
+        self.oia.find_color_space_combinations(color_space='bgr')
         self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
 
 

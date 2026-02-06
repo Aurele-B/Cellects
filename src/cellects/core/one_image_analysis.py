@@ -390,7 +390,7 @@ class OneImageAnalysis:
         self.saved_color_space_list = list()
         self.saved_csc_nb = 0
 
-    def find_color_space_combinations(self, params: dict=None, only_bgr: bool = False):
+    def find_color_space_combinations(self, params: dict=None, color_space: str=None):
         logging.info(f"Start automatic finding of color space combinations...")
         self.init_combinations_lists()
         if self.image.any():
@@ -426,11 +426,17 @@ class OneImageAnalysis:
                 params['total_surface_area'] = .99 * im_size
 
             # 2. Get color_space_dictionaries
-            if only_bgr:
-                if not 'bgr' in self.all_c_spaces:
-                    self.all_c_spaces['bgr'] = self.bgr
-            else:
+            if color_space is None:
+                # Test all color_spaces
                 self._get_all_color_spaces()
+                each_channel_of_each_color_space = one_dict_per_channel.copy()
+            else:
+                if not color_space in self.all_c_spaces:
+                    self.all_c_spaces[color_space] = get_color_spaces(self.bgr, [color_space])
+                each_channel_of_each_color_space = list()
+                for c_sp in one_dict_per_channel:
+                    if color_space in c_sp.keys():
+                        each_channel_of_each_color_space.append(c_sp)
 
             # 3. Init combination_features table
             unaltered_blob_nb_idx, blob_number_idx, blob_shape_idx, blob_size_idx, total_area_idx, width_std_idx, height_std_idx, area_std_idx, out_of_arenas_idx, in_arena_idx, common_with_ref_idx, bio_sum_idx, back_sum_idx, score_idx = np.arange(3, 17)
@@ -439,7 +445,7 @@ class OneImageAnalysis:
 
             # 4. Test every channel separately
             process = 'one'
-            for csc_dict in one_dict_per_channel:
+            for csc_dict in each_channel_of_each_color_space:
                 ProcessImage([self, params, process, csc_dict])
             # If the blob number is known, try applying filters to improve detection
             if params['blob_nb'] is not None and (params['filter_spec'] is None or params['filter_spec']['filter1_type'] == ''):
@@ -452,7 +458,7 @@ class OneImageAnalysis:
                             params['filter_spec']['filter1_param'] = [filter_dict[tested_filter]['Param1']['Default']]
                             if 'Param2' in filter_dict[tested_filter]:
                                 params['filter_spec']['filter1_param'].append(filter_dict[tested_filter]['Param2']['Default'])
-                        for csc_dict in one_dict_per_channel:
+                        for csc_dict in each_channel_of_each_color_space:
                             ProcessImage([self, params, process, csc_dict])
                         if (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
                             break
@@ -472,11 +478,15 @@ class OneImageAnalysis:
 
             # 5.2. Try combining each selected channel with every other in all possible order
             params['possibilities'] = possibilities
-            pool = mp.ThreadPool(processes=os.cpu_count() - 1)
             process = 'add'
             list_args = [[self, params, process, i] for i in possibilities]
-            for process_i in pool.imap_unordered(ProcessImage, list_args):
-                pass
+            if len(possibilities) < 6:
+                for list_arg in list_args:
+                    ProcessImage(list_arg)
+            else:
+                pool = mp.ThreadPool(processes=os.cpu_count() - 1)
+                for process_i in pool.imap_unordered(ProcessImage, list_args):
+                    pass
 
             # 6. Take a combination of all selected channels and try to remove each color space one by one
             ProcessImage([self, params, 'subtract', 0])
@@ -532,19 +542,20 @@ class OneImageAnalysis:
             self.im_combinations = []
             for saved_csc in cc_efficiency_order:
                 if len(self.saved_color_space_list[saved_csc]) > 0:
+                    combi_i = len(self.im_combinations) - 1
                     self.im_combinations.append({})
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
+                    self.im_combinations[combi_i]["csc"] = {}
+                    self.im_combinations[combi_i]["csc"]['logical'] = 'None'
                     for k, v in self.saved_color_space_list[saved_csc].items():
                         if isinstance(v, np.ndarray):
-                            self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v.tolist()
+                            self.im_combinations[combi_i]["csc"][k] = v.tolist()
                         else:
-                            self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                    self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                    self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
+                            self.im_combinations[combi_i]["csc"][k] = v
+                    self.im_combinations[combi_i]["binary_image"] = self.saved_images_list[saved_csc]
+                    self.im_combinations[combi_i]["converted_image"] = np.round(self.converted_images_list[
                         saved_csc]).astype(np.uint8)
-                    self.im_combinations[len(self.im_combinations) - 1]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
-                    self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= params['filter_spec']
+                    self.im_combinations[combi_i]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
+                    self.im_combinations[combi_i]['filter_spec']= params['filter_spec']
             self.saved_color_space_list = []
             del self.saved_images_list
             del self.converted_images_list
