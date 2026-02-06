@@ -11,6 +11,7 @@ import os
 import pickle
 import time
 import h5py
+import json
 from timeit import default_timer
 import numpy as np
 from numpy.typing import NDArray
@@ -20,9 +21,9 @@ from pathlib import Path
 import exifread
 from exif import Image
 from matplotlib import pyplot as plt
-from cellects.image_analysis.image_segmentation import combine_color_spaces, get_color_spaces, generate_color_space_combination
+from cellects.image_analysis.image_segmentation import generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
-from cellects.utils.utilitarian import translate_dict, split_dict
+from cellects.utils.utilitarian import translate_dict, split_dict, insensitive_glob
 
 
 class PickleRick:
@@ -252,7 +253,7 @@ def write_video(np_array: NDArray[np.uint8], vid_name: str, is_color: bool=True,
     """
     Write video from numpy array.
 
-    Save a numpy array as a video file. Supports .npy format for saving raw
+    Save a numpy array as a video file. Supports .h5 format for saving raw
     numpy arrays and various video formats (mp4, avi, mkv) using OpenCV.
     For video formats, automatically selects a suitable codec and handles
     file extensions.
@@ -274,14 +275,13 @@ def write_video(np_array: NDArray[np.uint8], vid_name: str, is_color: bool=True,
     >>> write_video(video_array, 'output.mp4', True, 30)
     Saves `video_array` as a color video 'output.mp4' with FPS 30.
     >>> video_array = np.random.randint(0, 255, size=(10, 100, 100), dtype=np.uint8)
-    >>> write_video(video_array, 'raw_data.npy')
+    >>> write_video(video_array, 'raw_data.h5')
     Saves `video_array` as a raw numpy array file without frame rate.
     """
     #h265 ou h265 (mp4)
     # linux: fourcc = 0x00000021 -> don't forget to change it bellow as well
-    if vid_name[-4:] == '.npy':
-        with open(vid_name, 'wb') as file:
-             np.save(file, np_array)
+    if vid_name[-4:] == '.h5':
+        write_h5(vid_name, np_array, 'video')
     else:
         valid_extensions = ['.mp4', '.avi', '.mkv']
         vid_ext = vid_name[-4:]
@@ -370,12 +370,12 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
                         video_bunch[image_i, :, :, arena_i] = sub_img
         for arena_i, arena_name in enumerate(arenas):
             if use_list_of_vid:
-                 np.save(pathway + vid_names[arena_name], video_bunch[arena_i])
+                 write_h5(pathway + vid_names[arena_name], video_bunch[arena_i], 'video')
             else:
                 if len(video_bunch.shape) == 5:
-                     np.save(pathway + vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                     write_h5(pathway + vid_names[arena_name], video_bunch[:, :, :, :, arena_i], 'video')
                 else:
-                     np.save(pathway + vid_names[arena_name], video_bunch[:, :, :, arena_i])
+                     write_h5(pathway + vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
 
 
 def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, background2: NDArray=None,
@@ -386,7 +386,7 @@ def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, b
     Parameters
     ----------
     vid_name : str
-        The path to the video file. Can be a `.mp4` or `.npy`.
+        The path to the video file. Can be a `.mp4` or `.h5`.
     conversion_dict : dict, optional
         Dictionary containing color space conversion parameters.
     background : NDArray, optional
@@ -407,9 +407,9 @@ def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, b
     -----
     This function uses OpenCV to read the contents of a `.mp4` video file.
     """
-    np_loading = vid_name[-4:] == ".npy"
-    if np_loading:
-        video = np.load(vid_name)
+    h5_loading = vid_name[-3:] == ".h5"
+    if h5_loading:
+        video = read_h5(vid_name, 'video')
         dims = list(video.shape)
     else:
         cap = cv2.VideoCapture(vid_name)
@@ -424,7 +424,7 @@ def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, b
         converted_video = np.empty(dims[:3], dtype=np.uint8)
         if conversion_dict['logical'] == 'None':
             converted_video2 = np.empty(dims[:3], dtype=np.uint8)
-        if np_loading:
+        if h5_loading:
             for counter in np.arange(video.shape[0]):
                 img = video[counter, :, :dims[2], :]
                 greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector = generate_color_space_combination(img, c_spaces,
@@ -435,7 +435,7 @@ def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, b
                     converted_video2[counter, ...] = greyscale_image2
             video = video[:, :, :dims[2], ...]
 
-    if not np_loading:
+    if not h5_loading:
         # 2) Create empty arrays to store video analysis data
         video = np.empty((dims[0], dims[1], dims[2], 3), dtype=np.uint8)
         # 3) Read and convert the video frame by frame
@@ -668,6 +668,43 @@ def read_and_rotate(image_name, prev_img: NDArray=None, raw_images: bool=False, 
 
 def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_coord: list, cr: list,
                                       raw_images: bool, is_landscape: bool, reduce_image_dim: bool):
+    """
+    Reads, rotates, crops (if specified), and reduces image dimensionality if required.
+
+    Parameters
+    ----------
+    image_name : str
+        Name of the image file to read.
+    prev_img : NDArray
+        Previous image array used for rotation reference or state tracking.
+    crop_coord : list
+        List of four integers [x_start, x_end, y_start, y_end] specifying cropping region. If None, no initial crop is applied.
+    cr : list
+        List of four integers [x_start, x_end, y_start, y_end] for final cropping after rotation.
+    raw_images : bool
+        Flag indicating whether to process raw image data (True) or processed image (False).
+    is_landscape : bool
+        Boolean determining if the image is landscape-oriented and requires specific rotation handling.
+    reduce_image_dim : bool
+        Whether to reduce the cropped image to a single channel (e.g., grayscale from RGB).
+
+    Returns
+    -------
+    img : NDArray
+        Processed image after rotation, cropping, and optional dimensionality reduction.
+    prev_img : NDArray
+        Copy of the image immediately after rotation but before any cropping operations.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> img = np.random.rand(200, 300, 3)
+    >>> new_img, prev = read_rotate_crop_and_reduce_image("example.jpg", img, [50, 150, 75, 225], [20, 180, 40, 250], False, True, True)
+    >>> new_img.shape == (160, 210)
+    True
+    >>> prev.shape == (200, 300, 3)
+    True
+    """
     img = read_and_rotate(image_name, prev_img, raw_images, is_landscape)
     prev_img = img.copy()
     if crop_coord is not None:
@@ -676,6 +713,42 @@ def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_c
     if reduce_image_dim:
         img = img[:, :, 0]
     return img, prev_img
+
+
+def write_json(file_name: str, data: dict):
+    with open(file_name, 'w') as f:
+        json.dump(data, f)
+
+
+def read_json(file_name: str):
+    if os.path.isfile(file_name):
+        try:
+            with open(file_name) as f:
+                data = json.load(f)
+            return data
+        except:
+            return None
+    else:
+        return None
+
+
+def write_h5(file_name: str, table: NDArray, key: str="data"):
+    """
+    Write a file using the h5 format.
+
+    Parameters
+    ----------
+    file_name : str
+        Name of the file to write.
+    table : NDArray[]
+        An array.
+    key: str
+        The identifier of the data in this h5 file.
+    """
+    with h5py.File(file_name, 'a') as h5f:
+        if key in h5f:
+            del h5f[key]
+        h5f.create_dataset(key, data=table)
 
 
 def vstack_h5_array(file_name, table: NDArray, key: str="data"):
@@ -716,7 +789,7 @@ def vstack_h5_array(file_name, table: NDArray, key: str="data"):
             h5f.create_dataset(key, data=table)
 
 
-def read_h5_array(file_name, key: str="data"):
+def read_h5(file_name, key: str="data"):
     """
     Read data array from an HDF5 file.
 
@@ -734,15 +807,15 @@ def read_h5_array(file_name, key: str="data"):
     ndarray
         The data array from the specified dataset in the HDF5 file.
     """
-    try:
+    if os.path.isfile(file_name):
         with h5py.File(file_name, 'r') as h5f:
             if key in h5f:
                 data = h5f[key][:]
                 return data
             else:
-                raise KeyError(f"Dataset '{key}' not found in file '{file_name}'.")
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file '{file_name}' does not exist.")
+                return None
+    else:
+        return None
 
 
 def get_h5_keys(file_name):
@@ -803,14 +876,10 @@ def remove_h5_key(file_name, key: str="data"):
     -----
     This function modifies the HDF5 file in place. Ensure you have a backup if necessary.
     """
-    try:
+    if os.path.isfile(file_name):
         with h5py.File(file_name, 'a') as h5f:  # Open in append mode to modify the file
             if key in h5f:
                 del h5f[key]
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The file '{file_name}' does not exist.")
-    except Exception as e:
-        raise RuntimeError(f"An error occurred: {e}")
 
 
 def get_mpl_colormap(cmap_name: str):
@@ -1194,8 +1263,9 @@ def read_one_arena(arena_label, already_greyscale:bool, csc_dict: dict, videos_a
             else:
                 visu = video2numpy(vid_name, None, background, background2, true_frame_width)
         else:
-            vid_name = f"ind_{arena_label}.npy"
-            if os.path.isfile(vid_name):
+            vid_name = f"ind_{arena_label}.h5"
+            h5_keys = get_h5_keys(vid_name)
+            if os.path.isfile(vid_name) and 'video' in h5_keys:
                 if already_greyscale:
                     converted_video = video2numpy(vid_name, None, background, background2, true_frame_width)
                     if len(converted_video.shape) == 4:
@@ -1305,3 +1375,17 @@ def display_network_methods(network_detection: object, save_path: str=None):
         plt.close()
     else:
         plt.show()
+
+def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_videos: bool) -> bool:
+    """"""
+    look_for_existing_videos = insensitive_glob('ind_' + '*' + '.h5')
+    there_already_are_videos = len(look_for_existing_videos) > 0
+    if there_already_are_videos:
+        h5_keys = get_h5_keys(look_for_existing_videos[-1])
+        there_already_are_videos = 'video' in h5_keys and there_already_are_videos
+        if not there_already_are_videos:
+            look_for_existing_videos = []
+        there_already_are_videos = len(look_for_existing_videos) == arena_nb and there_already_are_videos
+    logging.info(f"{len(look_for_existing_videos)} .h5 video files found for {arena_nb} arenas to analyze")
+    do_write_videos = not im_or_vid and (not there_already_are_videos or (there_already_are_videos and overwrite_unaltered_videos))
+    return do_write_videos

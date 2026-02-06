@@ -21,8 +21,7 @@ class TestFullMotionAnalysis(CellectsUnitTest):
         cls.videos_already_in_ram = [rgb_video_test[:, :, :, :], rgb_video_test[:, :, :, 0]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
-        cls.vars['background_list'] = []
+        write_h5(f'ind_{1}.h5', np.array(np.nonzero(binary_video_test[0])), 'origin_coord')
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
         cls.vars['average_pixel_size'] = 1.
@@ -42,8 +41,7 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.videos_already_in_ram = [rgb_video_test[0, :, :, :][None, :, :, :], rgb_video_test[0, :, :, 0][None, :, :]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
-        cls.vars['origin_list'] = [np.nonzero(binary_video_test[0])]
-        cls.vars['background_list'] = []
+        write_h5(f'ind_{1}.h5', np.array(np.nonzero(binary_video_test[0])), 'origin_coord')
         cls.vars['lighter_background'] = False
         cls.vars['first_move_threshold'] = 1
         cls.vars['average_pixel_size'] = 1.
@@ -72,8 +70,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars = cls.dd.vars
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [np.nonzero(binary_video_test[0])]
-        cls.vars['origin_list'] = cls.origin_list
+        write_h5(f'ind_{1}.h5', np.array(np.nonzero(binary_video_test[0])), 'origin_coord')
         cls.vars['already_greyscale'] = True
         cls.vars['drift_already_corrected'] = True # Will automatically become False
         cls.vars['lose_accuracy_to_save_memory'] = False
@@ -170,6 +167,7 @@ class TestMotionAnalysisStep1(TestMotionAnalysisWithOneBlob):
 class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
     """Test suite for OneImageAnalysis class"""
     def test_post_processing(self):
+        write_h5(f'ind_{1}.h5', np.array(np.nonzero(binary_video_test[0])), 'origin_coord')
         self.ma = MotionAnalysis(self.l)
         self.ma.get_origin_shape()
         self.ma.get_covering_duration(1)
@@ -217,12 +215,10 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.i = 0
         cls.dd = DefaultDicts()
         cls.vars = cls.dd.vars
-        cls.vars["convert_for_motion"] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'And',
-                                         'lab2': np.array([0, 0, 1], dtype=np.int8)}
+        cls.vars["convert_for_motion"] = {'lab': [0, 0, 1], 'logical': 'And', 'lab2': [0, 0, 1]}
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        cls.origin_list = [np.nonzero(several_arenas_bin_vid[0])]
-        cls.vars['origin_list'] = cls.origin_list
+        write_h5(f'ind_{1}.h5', np.array(np.nonzero(several_arenas_bin_vid[0])), 'origin_coord')
         cls.vars['greyscale2'] = False
         cls.vars['drift_already_corrected'] = True
         cls.vars['already_greyscale'] = False
@@ -234,8 +230,8 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.vars['do_fading'] = True
         cls.vars['correct_errors_around_initial'] = False
         cls.vars['prevent_fast_growth_near_periphery'] = False
-        cls.vars['background_list'] = [several_arenas_vid[:, :, :, 0]]
-        cls.vars['background_list2'] = [several_arenas_vid[:, :, :, 2]]
+        write_h5(f'ind_{1}.h5', several_arenas_vid[:, :, :, 0], 'background')
+        write_h5(f'ind_{1}.h5', several_arenas_vid[:, :, :, 2], 'background2')
         cls.vars['origin_state'] = "fluctuating"
         cls.vars['filter_spec'] = {'filter1_type': "Gaussian", 'filter1_param': [1., 1.], 'filter2_type': "Median", 'filter2_param': [1., 1.]}
         cls.vars['save_coord_specimen'] = True

@@ -100,7 +100,7 @@ class TestNetworkDetection(CellectsUnitTest):
     def test_change_greyscale(self):
         """Check that change greyscale function works"""
         img = np.random.randint(255, size=(self.dims[0], self.dims[1], 3), dtype=np.uint8)
-        first_dict = {"hsv": np.array([0, 1, 0])}
+        first_dict = {"hsv": [0, 0, 1]}
         previous_greyscale = self.greyscale_image.copy()
         self.NetDet.change_greyscale(img, first_dict)
         self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))

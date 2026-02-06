@@ -29,7 +29,7 @@ import pandas as pd
 from scipy.stats import rankdata
 from skimage.measure import perimeter
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, spot_size_coefficients
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import ProcessImage
 from cellects.image_analysis.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
@@ -536,7 +536,10 @@ class OneImageAnalysis:
                     self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
                     self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
                     for k, v in self.saved_color_space_list[saved_csc].items():
-                        self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
+                        if isinstance(v, np.ndarray):
+                            self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v.tolist()
+                        else:
+                            self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
                     self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
                     self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
                         saved_csc]).astype(np.uint8)
@@ -611,7 +614,7 @@ class OneImageAnalysis:
             The minimum size for pseudopods to be detected.
         csc_dict : dict, optional
             A dictionary containing color space conversion parameters. If None,
-            defaults to {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+            defaults to {'bgr': [1, 1, 1], 'logical': 'None'}
         lighter_background : bool, optional
             Whether the background is lighter or not
         bio_mask : NDArray, optional
@@ -627,14 +630,10 @@ class OneImageAnalysis:
         logging.info(f"Start automatic detection of network(s) in the last image")
         if len(self.bgr.shape) == 3:
             if csc_dict is None:
-                csc_dict = {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+                csc_dict = {'bgr': [1, 1, 1], 'logical': 'None'}
             self._get_all_color_spaces()
-            # csc_dict = translate_dict(csc_dict)
-            # self.image = combine_color_spaces(csc_dict, self.all_c_spaces)
             first_dict, second_dict, c_spaces = split_dict(csc_dict)
             self.image, _, _, first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, all_c_spaces=self.all_c_spaces)
-            # if first_pc_vector is not None:
-            #     csc_dict = {"bgr": first_pc_vector, "logical": 'None'}
         greyscale = self.image
         NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
         NetDet.get_best_network_detection_method()
@@ -681,14 +680,14 @@ class OneImageAnalysis:
         x_boundary_number = (self.x_boundaries == 1).sum()
         if x_boundary_number > 1:
             if x_boundary_number < 4:
-                x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2
+                x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2)
             else:
                 if are_zigzag == "columns":
-                    x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0][::2]))) // 2
+                    x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0][::2]))) // 2)
                 else:
-                    x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2
-            cx_min = np.where(self.x_boundaries == - 1)[0][0] - x_interval.astype(int)
-            cx_max = np.where(self.x_boundaries == 1)[0][col_number - 1] + x_interval.astype(int)
+                    x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2)
+            cx_min = int(np.where(self.x_boundaries == - 1)[0][0]) - x_interval
+            cx_max = int(np.where(self.x_boundaries == 1)[0][col_number - 1]) + x_interval
             if cx_min < 0: cx_min = 0
             if cx_max > len(self.x_boundaries): cx_max = len(self.x_boundaries) - 1
         else:
@@ -698,14 +697,14 @@ class OneImageAnalysis:
         y_boundary_number = (self.y_boundaries == 1).sum()
         if y_boundary_number > 1:
             if y_boundary_number < 4:
-                y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2
+                y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2)
             else:
                 if are_zigzag == "rows":
-                    y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0][::2]))) // 2
+                    y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0][::2]))) // 2)
                 else:
-                    y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2
-            cy_min = np.where(self.y_boundaries == - 1)[0][0] - y_interval.astype(int)
-            cy_max = np.where(self.y_boundaries == 1)[0][row_number - 1] + y_interval.astype(int)
+                    y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2)
+            cy_min = int(np.where(self.y_boundaries == - 1)[0][0]) - y_interval
+            cy_max = int(np.where(self.y_boundaries == 1)[0][row_number - 1]) + y_interval
             if cy_min < 0: cy_min = 0
             if cy_max > len(self.y_boundaries): cy_max = len(self.y_boundaries) - 1
         else:

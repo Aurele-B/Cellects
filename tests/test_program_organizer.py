@@ -8,8 +8,8 @@ from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import rhombus_55
-from cellects.utils.load_display_save import write_video_sets, PickleRick
-from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
+from cellects.utils.load_display_save import write_video_sets, read_json, write_json
+from cellects.core.cellects_paths import ALL_VARS_JSON_FILE
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 import cv2
@@ -26,21 +26,16 @@ class TestProgramOrganizerLoading(CellectsUnitTest):
         cls.po.all['global_pathway'] = cls.path_experiment
         cls.po.look_for_data()
 
-    def test_save_as_pkl_and_load_vars_exception(self):
+    def test_save_as_json_and_load_vars_exception(self):
         dd = DefaultDicts()
-        dd.save_as_pkl()
-        with open(ALL_VARS_PKL_FILE, 'rb') as source:
-            data = bytearray(source.read())
-            if len(data) < 10:  # Avoid truncating too much
-                raise ValueError("Original pickle is too small to safely truncate")
-            truncated_data = data[:-10]  # Remove last 10 bytes
-
-        with open(ALL_VARS_PKL_FILE, 'wb') as broken_file:
-            broken_file.write(truncated_data)
+        dd.save_as_h5()
+        data = read_json('cellects_settings.json')
+        del data['global_pathway']
+        write_json('cellects_settings.json', data)
         po = ProgramOrganizer()
         po.load_variable_dict()
-        dd.save_as_pkl(self.po)
-        self.assertTrue(os.path.isfile(ALL_VARS_PKL_FILE))
+        dd.save_as_h5(self.po)
+        self.assertTrue(os.path.isfile(ALL_VARS_JSON_FILE))
 
     def test_look_for_data(self):
         self.assertEqual(len(self.po.data_list), 25)
@@ -48,20 +43,11 @@ class TestProgramOrganizerLoading(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(ALL_VARS_PKL_FILE):
-            os.remove(ALL_VARS_PKL_FILE)
-        if os.path.isfile(self.path_experiment / "Data to run Cellects quickly.pkl"):
-            os.remove(self.path_experiment / "Data to run Cellects quickly.pkl")
+        if os.path.isfile(ALL_VARS_JSON_FILE):
+            os.remove(ALL_VARS_JSON_FILE)
+        if os.path.isfile(self.path_experiment + '/' + "cellects_settings.json"):
+            os.remove(self.path_experiment  + '/' +  "cellects_settings.json")
 
-
-class TestProgramOrganizerPickleDeletion(CellectsUnitTest):
-    def test_pickle_rick_deletion(self):
-        os.chdir(self.path_output)
-        PickleRick()._write_pickle_rick()
-        PickleRick(0)._write_pickle_rick()
-        po = ProgramOrganizer()
-        self.assertFalse(os.path.isfile('PickleRick.pkl'))
-        self.assertFalse(os.path.isfile('PickleRick0.pkl'))
 
 class TestProgramOrganizerUpdateVariableDict(CellectsUnitTest):
     def test_update_variable_dict(self):
@@ -80,7 +66,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize two data sets for testing"""
         super().setUpClass()
-        cls.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        cls.color_space_combination = {"logical": 'None', "PCA": [1, 1, 1]}
         cls.img_list = several_arenas_vid
         cls.image = several_arenas_vid[0]
         cls.shape_number = 2
@@ -94,15 +80,15 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
 
     def test_save_and_load_variable_dict(self):
         self.po.save_variable_dict()
-        self.assertTrue(os.path.isfile(ALL_VARS_PKL_FILE))
+        self.assertTrue(os.path.isfile(ALL_VARS_JSON_FILE))
         self.po.load_variable_dict()
-        if os.path.isfile(ALL_VARS_PKL_FILE):
-            os.remove(ALL_VARS_PKL_FILE)
+        if os.path.isfile(ALL_VARS_JSON_FILE):
+            os.remove(ALL_VARS_JSON_FILE)
         self.po.load_variable_dict()
 
     def test_look_for_data_in_sub_folder(self):
         po = ProgramOrganizer()
-        po.all['global_pathway'] = self.d / "multiple_experiments"
+        po.all['global_pathway'] = self.d + '/' + "multiple_experiments"
         po.all['radical'] = "im"
         po.all['extension'] = "tif"
         po.all['sample_number_per_folder'] = 1
@@ -118,8 +104,8 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.get_first_image()
         back_mask = np.zeros(po.first_im.shape[:2], np.uint8)
         back_mask[-30:, :] = 1
-        po.all['back_mask'] = np.nonzero(back_mask)
-        po.vars['convert_for_origin'] = {'PCA': np.array([0, 0, 1], dtype=np.int8), 'logical': 'None'}
+        po.back_mask = np.nonzero(back_mask)
+        po.vars['convert_for_origin'] = {'PCA': [0, 0, 1], 'logical': 'None'}
         po.vars['convert_for_motion'] = po.vars['convert_for_origin']
         po.all['automatically_crop'] = True
 
@@ -138,7 +124,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.bot), 1)
         po.get_background_to_subtract()
         po.get_origins_and_backgrounds_lists()
-        self.assertTrue(len(po.vars['origin_list'][0]) > 0)
+        self.assertTrue(os.path.isfile('ind_1.h5'))
         po.get_last_image()
         po.fast_last_image_segmentation()
         self.assertTrue(po.last_image.binary_image.any())
@@ -158,7 +144,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.save_data_to_run_cellects_quickly()
         po.load_data_to_run_cellects_quickly()
         po = ProgramOrganizer()
-        po.all['global_pathway'] = self.d / "multiple_experiments"
+        po.all['global_pathway'] = self.d + '/' + "multiple_experiments"
         po.load_variable_dict()
         po.update_folder_id(sample_number=1, folder_name="f1")
         po.load_data_to_run_cellects_quickly()
@@ -186,10 +172,16 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(ALL_VARS_PKL_FILE):
-            os.remove(ALL_VARS_PKL_FILE)
-        if os.path.isfile(self.d / "multiple_experiments" / "f1" / "Data to run Cellects quickly.pkl"):
-            os.remove(self.d / "multiple_experiments" / "f1" / "Data to run Cellects quickly.pkl")
+        if os.path.isfile(ALL_VARS_JSON_FILE):
+            os.remove(ALL_VARS_JSON_FILE)
+        if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/cellects_settings.json"):
+            os.remove(self.d  + '/' +  "multiple_experiments/f1/cellects_settings.json")
+        if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/cellects_data.h5"):
+            os.remove(self.d  + '/' +  "multiple_experiments/f1/cellects_data.h5")
+        if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/ind_1.h5"):
+            os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_1.h5")
+        if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5"):
+            os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5")
 
 class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     """Test suite for delineating arenas using ProgramOrganizer class"""
@@ -198,7 +190,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     def setUpClass(cls):
         """Initialize two data sets for testing"""
         super().setUpClass()
-        cls.color_space_combination = {"logical": "None", "PCA": np.ones(3, dtype=np.uint8)}
+        cls.color_space_combination = {"logical": "None", "PCA": [1, 1 ,1]}
         cls.img_list = several_arenas_vid
         cls.image = several_arenas_vid[0]
         # Simulate a drift correction:
@@ -219,14 +211,6 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         cls.po.get_average_pixel_size()
         cls.po.vars['subtract_background'] = True
         cls.po.get_background_to_subtract()
-        # print(cls.po.first_image.validated_shapes)
-        # cls.po.get_first_image(several_arenas_vid[0], sample_number=2)
-        # cls.po.vars["convert_for_origin"] = cls.color_space_combination
-        # cls.po.vars["convert_for_motion"] = cls.color_space_combination
-        # cls.po.update_variable_dict()
-        # cls.po.first_image.validated_shapes = several_arenas_bin_vid[0]
-        # cls.po.data_list = [several_arenas_vid]
-        #
         cls.image2 = rgb_several_arenas_img[:, :, 0]
         cls.shape_number2 = 6
         cls.po2 = ProgramOrganizer()
@@ -271,7 +255,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         po.first_image.validated_shapes = image
         po.first_image.shape_number = po.sample_number
         po.update_variable_dict()
-        po.vars["convert_for_motion"] = {"logical": "None", "PCA": np.ones(3, dtype=np.uint8)}
+        po.vars["convert_for_motion"] = {"logical": "None", "PCA": [1, 1, 1]}
         motion_list = [image]
         are_gravity_centers_moving=True
         all_specimens_have_same_direction=True
@@ -325,7 +309,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     def test_write_videos_with_different_video_dimensions(self):
         """Test write_videos_as_np_arrays when the dimensions of each video are different"""
         os.chdir(self.path_experiment)
-        img_list = [self.path_experiment / "image1.tif", self.path_experiment / "image2.tif"]
+        img_list = [self.path_experiment + '/' + "image1.tif", self.path_experiment + '/' + "image2.tif"]
         self.po.top=np.array([0, 3])
         self.po.bot=np.array([2, 6])
         self.po.left=np.array([0, 3])
@@ -339,11 +323,11 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
                          (self.po.top, self.po.bot, self.po.left, self.po.right), bunch_nb, video_nb_per_bunch,
                          remaining, self.po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, self.po.reduce_image_dim,
                          pathway="")
-        self.assertTrue(os.path.isfile(self.path_experiment / f"ind_1.npy"))
-        self.assertTrue(os.path.isfile(self.path_experiment / f"ind_2.npy"))
+        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"ind_1.h5"))
+        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"ind_2.h5"))
         self.po.get_origins_and_backgrounds_lists()
-        self.po.vars['bb_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0], self.po.top, self.po.bot, self.po.left, self.po.right
-        self.po.vars['convert_for_motion']['PCA2'] = np.ones(3)
+        self.po.vars['bb_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0], self.po.top.tolist(), self.po.bot.tolist(), self.po.left.tolist(), self.po.right.tolist()
+        self.po.vars['convert_for_motion']['PCA2'] = [1, 1, 1]
         self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
         self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)
@@ -362,10 +346,10 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(self.path_experiment / f"ind_1.npy"):
-            os.remove(self.path_experiment / f"ind_1.npy")
-        if os.path.isfile(self.path_experiment / f"ind_2.npy"):
-            os.remove(self.path_experiment / f"ind_2.npy")
+        if os.path.isfile(self.path_experiment  + '/' +  f"ind_1.h5"):
+            os.remove(self.path_experiment  + '/' +  f"ind_1.h5")
+        if os.path.isfile(self.path_experiment  + '/' +  f"ind_2.h5"):
+            os.remove(self.path_experiment  + '/' +  f"ind_2.h5")
 
 
 class TestProgramOrganizerWithVideo(CellectsUnitTest):
@@ -375,7 +359,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         """Initialize data set for testing"""
         super().setUpClass()
         cls.po = ProgramOrganizer()
-        cls.po.all['global_pathway'] = cls.d / "single_experiment"
+        cls.po.all['global_pathway'] = cls.d + '/' + "single_experiment"
         cls.po.all['radical'] = "vid"
         cls.po.all['extension'] = "mp4"
         cls.po.all['sample_number_per_folder'] = 1
@@ -389,7 +373,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.po.get_last_image()
         self.assertTrue(self.po.last_image.image.any())
         timings = self.po.extract_exif()
-        self.assertTrue(timings.any())
+        self.assertTrue(np.any(timings))
         self.po.fast_first_image_segmentation()
         self.po.fast_last_image_segmentation()
         self.po.cropping(True)
@@ -406,8 +390,8 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.po.vars['exif'] = np.arange(len(self.po.data_list))
         self.po.vars['do_fading'] = True
         self.po.complete_image_analysis()
-        self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_frame.csv"))
-        self.assertTrue(os.path.isfile(self.path_experiment / f"one_row_per_arena.csv"))
+        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_frame.csv"))
+        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_arena.csv"))
         self.po.get_origins_and_backgrounds_lists()
         self.po.vars['save_coord_network'] = True
         self.po.vars['save_graph'] = True
@@ -420,27 +404,28 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(self.path_experiment / f"ind_1.mp4"):
-            os.remove(self.path_experiment / f"ind_1.mp4")
-        if os.path.isfile(self.path_experiment / f"one_row_per_frame.csv"):
-            os.remove(self.path_experiment / f"one_row_per_frame.csv")
-        if os.path.isfile(self.path_experiment / f"one_row_per_arena.csv"):
-            os.remove(self.path_experiment / f"one_row_per_arena.csv")
-        if os.path.isfile(self.path_experiment / f"Analysis efficiency, 3th image.JPG"):
-            os.remove(self.path_experiment / f"Analysis efficiency, 3th image.JPG")
-        if os.path.isfile(self.path_experiment / f"Analysis efficiency, last image.JPG"):
-            os.remove(self.path_experiment / f"Analysis efficiency, last image.JPG")
-        if os.path.isfile(self.path_experiment / f"software_settings.csv"):
-            os.remove(self.path_experiment / f"software_settings.csv")
-        if os.path.isfile(self.path_experiment / f"coord_network1_t25_y244_x300.npy"):
-            os.remove(self.path_experiment / f"coord_network1_t25_y244_x300.npy")
-        if os.path.isfile(self.path_experiment / f"coord_pseudopods1_t25_y244_x300.npy"):
-            os.remove(self.path_experiment / f"coord_pseudopods1_t25_y244_x300.npy")
-        if os.path.isfile(self.path_experiment / f"vertex_table1_t25_y244_x300.csv"):
-            os.remove(self.path_experiment / f"vertex_table1_t25_y244_x300.csv")
-        if os.path.isfile(self.path_experiment / f"edge_table1_t25_y244_x300.csv"):
-            os.remove(self.path_experiment / f"edge_table1_t25_y244_x300.csv")
-
+        if os.path.isfile(self.path_experiment + '/' + f"ind_1.mp4"):
+            os.remove(self.path_experiment + '/' + f"ind_1.mp4")
+        if os.path.isfile(self.path_experiment + '/' + f"ind_1.h5"):
+            os.remove(self.path_experiment + '/' + f"ind_1.h5")
+        if os.path.isfile(self.path_experiment + '/' + f"cellects_data.h5"):
+            os.remove(self.path_experiment + '/' + f"cellects_data.h5")
+        if os.path.isfile(self.path_experiment + '/' + f"one_row_per_frame.csv"):
+            os.remove(self.path_experiment + '/' + f"one_row_per_frame.csv")
+        if os.path.isfile(self.path_experiment + '/' + f"one_row_per_arena.csv"):
+            os.remove(self.path_experiment + '/' + f"one_row_per_arena.csv")
+        if os.path.isfile(self.path_experiment + '/' + f"Analysis efficiency, 3th image.JPG"):
+            os.remove(self.path_experiment + '/' + f"Analysis efficiency, 3th image.JPG")
+        if os.path.isfile(self.path_experiment + '/' + f"Analysis efficiency, last image.JPG"):
+            os.remove(self.path_experiment + '/' + f"Analysis efficiency, last image.JPG")
+        if os.path.isfile(self.path_experiment + '/' + f"coord_network1_t25_y244_x300.h5"):
+            os.remove(self.path_experiment + '/' + f"coord_network1_t25_y244_x300.h5")
+        if os.path.isfile(self.path_experiment + '/' + f"coord_pseudopods1_t25_y244_x300.h5"):
+            os.remove(self.path_experiment + '/' + f"coord_pseudopods1_t25_y244_x300.h5")
+        if os.path.isfile(self.path_experiment + '/' + f"vertex_table1_t25_y244_x300.csv"):
+            os.remove(self.path_experiment + '/' + f"vertex_table1_t25_y244_x300.csv")
+        if os.path.isfile(self.path_experiment + '/' + f"edge_table1_t25_y244_x300.csv"):
+            os.remove(self.path_experiment + '/' + f"edge_table1_t25_y244_x300.csv")
 
 if __name__ == '__main__':
     unittest.main()

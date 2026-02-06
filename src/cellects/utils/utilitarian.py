@@ -31,7 +31,7 @@ from numpy.typing import NDArray
 from typing import Tuple
 from timeit import default_timer
 import time
-from numba.typed import Dict
+from numba.typed import Dict, List
 from cellects.utils.decorators import njit
 from glob import glob
 vectorized_len = np.vectorize(len)
@@ -137,6 +137,8 @@ def translate_dict(old_dict: dict) -> Dict:
     numba_dict = Dict()
     for k, v in old_dict.items():
         if not isinstance(v, str):
+            if isinstance(v, list):
+                v = List(v)
             numba_dict[k] = v
     return numba_dict
 
@@ -192,10 +194,10 @@ def split_dict(c_space_dict: dict) -> Tuple[Dict, Dict, list]:
     for k, v in c_space_dict.items():
         if k == 'PCA' or k != 'logical' and np.absolute(v).sum() > 0:
             if k[-1] != '2':
-                first_dict[k] = v
+                first_dict[k] = List(v)
                 c_spaces.append(k)
             else:
-                second_dict[k[:-1]] = v
+                second_dict[k[:-1]] = List(v)
                 c_spaces.append(k[:-1])
     return first_dict, second_dict, c_spaces
 
@@ -229,8 +231,6 @@ def reduce_path_len(pathway: str, to_start: int, from_end: int) -> str:
     >>> reduce_path_len("example/complicated/path/to/resource", 8, 12)
     'example/.../to/resource'
     """
-    if not isinstance(pathway, str):
-        pathway = str(pathway)
     max_size = to_start + from_end + 3
     if len(pathway) > max_size:
         pathway = pathway[:to_start] + "..." + pathway[-from_end:]

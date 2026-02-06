@@ -33,6 +33,7 @@ from tqdm import tqdm
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
 from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
                                      get_newly_explored_area)
+from cellects.utils.load_display_save import write_h5
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,
@@ -137,7 +138,7 @@ def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label:
         for descriptor in to_compute_from_sd:
             one_row_per_frame.loc[t, descriptor] = SD.descriptors[descriptor]
     if save_coord_specimen:
-        np.save(f"coord_specimen{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+        write_h5(f"coord_specimen{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5",
                 smallest_memory_array(np.nonzero(binary_vid), "uint"))
     # Adjust descriptors scale if output_in_mm is specified
     if do_fading:
@@ -218,7 +219,6 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
 
                 # Compute shape descriptors
                 SD = ShapeDescriptors(current_colony_img, to_compute_from_sd)
-                # descriptors = list(SD.descriptors.values())
                 descriptors = SD.descriptors
                 # Adjust descriptors if output_in_mm is specified
                 if output_in_mm:
@@ -258,12 +258,11 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
         one_row_per_frame['newly_explored_area'] = get_newly_explored_area(binary_vid)
     if output_in_mm:
         one_row_per_frame = scale_descriptors(one_row_per_frame, pixel_size)
-
-    column_names = np.char.add(np.repeat(to_compute_from_sd, colony_number),
-                               np.tile((np.arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
-    time_descriptor_colony = pd.DataFrame(time_descriptor_colony, columns=column_names)
-    one_row_per_frame = pd.concat([one_row_per_frame, time_descriptor_colony], axis=1)
-
+    if len(to_compute_from_sd) > 0:
+        column_names = np.char.add(np.repeat(to_compute_from_sd, colony_number),
+                                   np.tile((np.arange(colony_number) + 1).astype(str), len(to_compute_from_sd)))
+        time_descriptor_colony = pd.DataFrame(time_descriptor_colony, columns=column_names)
+        one_row_per_frame = pd.concat([one_row_per_frame, time_descriptor_colony], axis=1)
     return one_row_per_frame
 
 def initialize_descriptor_computation(descriptors_dict: dict) -> Tuple[list, list, list, list]:

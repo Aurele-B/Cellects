@@ -36,9 +36,7 @@ from typing import Tuple
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
-from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
-from skimage.filters import threshold_otsu
 from skimage.measure import label
 from scipy.stats import linregress
 from scipy.ndimage import distance_transform_edt

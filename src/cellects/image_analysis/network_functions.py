@@ -183,9 +183,9 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
         network_dynamics[pseudopod_vid > 0] = 2
         pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
         if save_coord_network:
-            np.save(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", pseudopod_coord)
+            write_h5(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", pseudopod_coord)
     if save_coord_network:
-        np.save(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", network_coord)
+        write_h5(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", network_coord)
     return network_coord, pseudopod_coord
 
 

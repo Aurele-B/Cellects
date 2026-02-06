@@ -20,7 +20,7 @@ For example:
 
 <!-- START_coord_specimen -->
 ## Pixels covered by the specimen(s):
-Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
+Save a .h5 file containing coordinates (t, y, x) of specimen pixel presence as detected by current
 parameters.
 !!! note
 
@@ -50,7 +50,7 @@ initial position, connection status with other vertices.
 
 <!-- START_coord_oscillating -->
 ## Oscillating areas in the specimen(s):
-Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
+Compute and save (as .h5 files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
 files are generated: one for thickening regions and one for slimming regions.
 
 <!-- END_coord_oscillating -->
@@ -60,7 +60,7 @@ files are generated: one for thickening regions and one for slimming regions.
 
 <!-- START_coord_network -->
 ## Network in the specimen(s):
-Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
+Detect and save (as .h5 file) coordinates (t, y, x) of a distinct network within the specimen(s).
 specimen(s).
 
 <!-- END_coord_network -->

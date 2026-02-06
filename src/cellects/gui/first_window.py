@@ -284,7 +284,7 @@ class FirstWindow(MainTabsType):
         This function assumes that `self.parent().po.all` is a dictionary with a key `'global_pathway'`.
         """
         dialog = QtWidgets.QFileDialog()
-        dialog.setDirectory(str(self.parent().po.all['global_pathway']))
+        dialog.setDirectory(self.parent().po.all['global_pathway'])
         self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
                                                                              'Select a folder containing images (/videos) or folders of data images (/videos)')
         self.global_pathway.setText(self.parent().po.all['global_pathway'])
@@ -353,8 +353,8 @@ class FirstWindow(MainTabsType):
                 logging.info("No need to look for data, images or videos already found previously.")
                 self.first_im_read(True)
             else:
-                self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
-                if not os.path.isdir(Path(self.parent().po.all['global_pathway'])):
+                self.parent().po.all['global_pathway'] = self.global_pathway.text()
+                if not os.path.isdir(self.parent().po.all['global_pathway']):
                     self.message.setText('The folder selected is not valid')
                 else:
                     self.message.setText('')

@@ -20,6 +20,7 @@ from numpy.typing import NDArray
 from typing import Tuple
 import logging
 from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes, cc, get_contours, CompareNeighborsWithValue
+from cellects.utils.load_display_save import write_h5
 from cellects.utils.utilitarian import smallest_memory_array, PercentAndTimeTracker
 from psutil import virtual_memory
 
@@ -53,7 +54,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
     lose_accuracy_to_save_memory : bool, optional (default=False)
         If True, uses low-precision calculations to reduce memory usage at the cost of accuracy
     save_coord_thickening_slimming : bool, optional (default=True)
-        If True, saves detected cluster coordinates as .npy files
+        If True, saves detected cluster coordinates as .h5 files
 
     Returns
     -------
@@ -120,11 +121,9 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
             oscillations_video[t, :, :] = oscillations_image
         oscillations_video[:starting_time, :, :] = 0
         if save_coord_thickening_slimming:
-            np.save(
-                f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
-                smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
-            np.save(
-                f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+            write_h5(f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5",
+                     smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
+            write_h5(f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5",
                 smallest_memory_array(np.nonzero(oscillations_video == 2), "uint"))
     return oscillations_video
 

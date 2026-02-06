@@ -28,4 +28,4 @@ EXPERIMENTS_DIR = DATA_DIR / "single_experiment"
 TEST_DIR = REPO_ROOT / "tests"
 
 # Example packaged file
-ALL_VARS_PKL_FILE = CONFIG_DIR / "all_vars.pkl"
+ALL_VARS_JSON_FILE = CONFIG_DIR / "cellects_settings.json"

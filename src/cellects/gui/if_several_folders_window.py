@@ -94,7 +94,7 @@ class IfSeveralFoldersWindow(WindowType):
         self.tableau.setColumnCount(2)
         self.tableau.setRowCount(len(self.parent().po.all['folder_list']))
         self.tableau.setHorizontalHeaderLabels(['Folders', 'Sample size'])
-        self.parent().po.all['sample_number_per_folder'] = np.repeat(int(self.parent().po.all['first_folder_sample_number']), self.parent().po.all['folder_number'])
+        self.parent().po.all['sample_number_per_folder'] = np.repeat(int(self.parent().po.all['first_folder_sample_number']), self.parent().po.all['folder_number']).tolist()
 
         for i, folder in enumerate(self.parent().po.all['folder_list']):
             self.tableau.setItem(i, 0, QtWidgets.QTableWidgetItem(folder))
@@ -235,8 +235,7 @@ class IfSeveralFoldersWindow(WindowType):
             self.cb_widget.setVisible(False)
             self.tableau.setVisible(False)
             if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.all['first_folder_sample_number']:
-                self.parent().po.vars['analyzed_individuals'] = np.arange(
-                    self.parent().po.all['first_folder_sample_number']) + 1
+                self.parent().po.vars['analyzed_individuals'] = list(range(1, self.parent().po.all['first_folder_sample_number'] + 1))
                 self.parent().po.sample_number = self.parent().po.all['first_folder_sample_number']
             self.message.setText("Data found, shortcuts are available. Click Next again to redo/improve the image analysis")
             self.next_clicked_once = True
@@ -257,7 +256,7 @@ class IfSeveralFoldersWindow(WindowType):
             - Remember to not re-instantiate the image analysis window if the user goes back to the first window.
             - Changing the current widget to ImageAnalysisWindow.
         """
-        self.parent().instantiate_widgets(severalfolder_included=False)
+        self.parent().instantiate_widgets(several_folder_included=False)
         self.parent().imageanalysiswindow.true_init()
         self.parent().firstwindow.instantiate = False
         self.parent().change_widget(2)# ImageAnalysisWindow

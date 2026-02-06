@@ -246,7 +246,7 @@ Frames per second of validation videos.
 
 <!-- START_Keep_unaltered_videos -->
 ## Keep unaltered videos:
-Keeps unaltered `.npy` videos in hard drive.
+Keeps unaltered videos (`.h5` format) in hard drive.
 
 - **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.

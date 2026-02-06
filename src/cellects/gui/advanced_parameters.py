@@ -33,7 +33,7 @@ class AdvancedParameters(WindowType):
     """
         This class creates the Advanced Parameters window.
         In the app, it is accessible from the first and the Video tracking window. It allows the user to fill in
-        some parameters stored in the directory po.all (in RAM) and in all_vars.pkl (in ROM).
+        some parameters stored in the directory po.all (in RAM) and in cellects_settings.json (in ROM).
         Clicking "Ok" save the directory in RAM and in ROM.
     """
     def __init__(self, parent, night_mode):
@@ -1060,7 +1060,7 @@ class AdvancedParameters(WindowType):
         Save user-defined combination of color spaces and channels.
         """
         self.parent().po.vars['convert_for_motion'] = {}
-        spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
+        spaces = [self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()]
         channels = np.array(
             ((self.row1[1].value(), self.row1[2].value(), self.row1[3].value()),
              (self.row2[1].value(), self.row2[2].value(), self.row2[3].value()),
@@ -1068,25 +1068,25 @@ class AdvancedParameters(WindowType):
              (self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-            dtype=np.int8)
+            dtype=np.float64)
         if self.logical_operator_between_combination_result.currentText() != 'None':
-            spaces = np.concatenate((spaces, np.array((
-                        self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
-                        self.row23[0].currentText() + "2"))))
-            channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
-             (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
-             (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
-             dtype=np.int8)))
+            spaces.append(self.row21[0].currentText() + "2")
+            spaces.append(self.row22[0].currentText() + "2")
+            spaces.append(self.row23[0].currentText() + "2")
+            channels = np.concatenate(
+                (channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
+                                     (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
+                                     (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
+                                    dtype=np.float64)))
             self.parent().po.vars['convert_for_motion']['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.parent().po.vars['convert_for_motion']['logical'] = 'None'
+        channels = channels.tolist()
         if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
-                    if np.any(channels[i, :] < 0.):
-                        channels[i, :] + channels[i, :].min()
-                    self.parent().po.vars['convert_for_motion'][space] = channels[i, :]
-        if len(self.parent().po.vars['convert_for_motion']) == 1 or channels.sum() == 0:
+                    self.parent().po.vars['convert_for_motion'][space] = channels[i]
+        if len(self.parent().po.vars['convert_for_motion']) == 1 or np.sum(channels) == 0:
             self.csc_dict_is_empty = True
         else:
             self.csc_dict_is_empty = False
@@ -1130,21 +1130,11 @@ class AdvancedParameters(WindowType):
         - This function removes specific pickle files to reset settings.
         - The function changes the current working directory temporarily.
         """
-        if os.path.isfile('Data to run Cellects quickly.pkl'):
-            os.remove('Data to run Cellects quickly.pkl')
-        if os.path.isfile('PickleRick.pkl'):
-            os.remove('PickleRick.pkl')
-        if os.path.isfile('PickleRick0.pkl'):
-            os.remove('PickleRick0.pkl')
-        if os.path.isfile(Path(CELLECTS_DIR.parent / 'PickleRick.pkl')):
-            os.remove(Path(CELLECTS_DIR.parent / 'PickleRick.pkl'))
-        if os.path.isfile(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl')):
-            os.remove(Path(CELLECTS_DIR.parent / 'PickleRick0.pkl'))
-        if os.path.isfile(Path(CONFIG_DIR / 'PickleRick1.pkl')):
-            os.remove(Path(CONFIG_DIR / 'PickleRick1.pkl'))
+        if os.path.isfile('cellects_settings.json'):
+            os.remove('cellects_settings.json')
         current_dir = os.getcwd()
         os.chdir(CONFIG_DIR)
-        DefaultDicts().save_as_pkl(self.parent().po)
+        DefaultDicts().save_as_h5(self.parent().po)
         os.chdir(current_dir)
         self.message.setText('Close and restart Cellects to apply the settings reset')
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
@@ -1256,7 +1246,7 @@ class AdvancedParameters(WindowType):
         self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
 
         self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
-        self.parent().po.all['cores'] = np.uint8(self.max_core_nb.value())
+        self.parent().po.all['cores'] = int(self.max_core_nb.value())
         self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
         self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
         self.parent().po.vars['video_fps'] = float(self.video_fps.value())

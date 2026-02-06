@@ -34,8 +34,7 @@ def load_test_folder(pathway, sample_number):
 def run_image_analysis_for_testing(po):
     if not po.first_exp_ready_to_run:
         po.get_first_image()
-        po.vars['convert_for_motion'] = {'lab': np.array([0, 0, 1], dtype=np.int8), 'logical': 'Or',
-                                         'luv2': np.array([0, 0, 1], dtype=np.int8)}
+        po.vars['convert_for_motion'] = {'lab': [0, 0, 1], 'logical': 'Or', 'luv2': [0, 0, 1]}
         po.fast_first_image_segmentation()
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()

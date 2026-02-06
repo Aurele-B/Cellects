@@ -609,7 +609,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            self.thread_dict["UpdateImage"].finished.connect(self.automatic_delineation_display_done)
 
     def reinitialize_bio_and_back_legend(self):
         """
@@ -875,10 +875,10 @@ class ImageAnalysisWindow(MainTabsType):
             else:
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
                 self.thread_dict["UpdateImage"].start()
-                self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
+                self.thread_dict["UpdateImage"].finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
-    def user_defined_shape_displayed(self, when_finished: bool):
+    def user_defined_shape_displayed(self):
         """
         Display user-defined shapes or elements based on specific conditions and update the UI accordingly.
 
@@ -925,8 +925,6 @@ class ImageAnalysisWindow(MainTabsType):
             self.available_arena_names = self.available_arena_names[1:]
         self.saved_coord = []
         self.back1_bio2 = 0
-
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def new_pbutton_on_the_left(self, pbutton_name: str):
         """
@@ -1151,7 +1149,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
+            self.thread_dict["UpdateImage"].finished.connect(self.image_analysis_displayed)
 
     def image_analysis_displayed(self):
         """
@@ -1220,8 +1218,6 @@ class ImageAnalysisWindow(MainTabsType):
                 self.video_tab.set_not_usable()
                 self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
             self.complete_image_analysis.setVisible(True)
-
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
 
@@ -1941,7 +1937,7 @@ class ImageAnalysisWindow(MainTabsType):
         Save user-defined combination of color spaces and channels.
         """
         self.csc_dict = {}
-        spaces = np.array((self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()))
+        spaces = [self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()]
         channels = np.array(
             ((self.row1[1].value(), self.row1[2].value(), self.row1[3].value()),
              (self.row2[1].value(), self.row2[2].value(), self.row2[3].value()),
@@ -1951,9 +1947,9 @@ class ImageAnalysisWindow(MainTabsType):
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
             dtype=np.float64)
         if self.logical_operator_between_combination_result.currentText() != 'None':
-            spaces = np.concatenate((spaces, np.array((
-                        self.row21[0].currentText() + "2", self.row22[0].currentText() + "2",
-                        self.row23[0].currentText() + "2"))))
+            spaces.append(self.row21[0].currentText() + "2")
+            spaces.append(self.row22[0].currentText() + "2")
+            spaces.append(self.row23[0].currentText() + "2")
             channels = np.concatenate((channels, np.array(((self.row21[1].value(), self.row21[2].value(), self.row21[3].value()),
              (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
              (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
@@ -1961,10 +1957,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.csc_dict['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
             self.csc_dict['logical'] = 'None'
+        channels = channels.tolist()
         if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
-                    self.csc_dict[space] = channels[i, :]
+                    self.csc_dict[space] = channels[i]
         if not 'PCA' in self.csc_dict and (len(self.csc_dict) == 1 or np.absolute(channels).sum() == 0):
             self.csc_dict_is_empty = True
         else:
@@ -2069,7 +2066,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            self.thread_dict["UpdateImage"].finished.connect(self.automatic_delineation_display_done)
 
             try:
                 self.thread_dict['CropScaleSubtractDelineate'].message_from_thread.disconnect()
@@ -2086,7 +2083,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.slower_delineation_flag = False
             self.manual_delineation()
 
-    def automatic_delineation_display_done(self, boole):
+    def automatic_delineation_display_done(self):
         """
         Automatically handles the delineation display status for the user interface.
 
@@ -2107,8 +2104,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
         self.no.setVisible(True)
-
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -2230,16 +2225,16 @@ class ImageAnalysisWindow(MainTabsType):
                 else:
                     if "PCA" in self.csc_dict:
                         if self.parent().po.last_image.first_pc_vector is None:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.first_image.first_pc_vector), "logical": None}
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.first_image.first_pc_vector).tolist(), "logical": None}
                         else:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.last_image.first_pc_vector), "logical": None}
-                    self.parent().po.vars['convert_for_origin'] = deepcopy(self.csc_dict)
-                    self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.last_image.first_pc_vector).tolist(), "logical": None}
+                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
+                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
                     self.go_to_next_widget()
                 self.asking_last_image_flag = False
         else:
             if is_yes:
-                self.parent().po.vars['convert_for_motion'] = deepcopy(self.csc_dict)
+                self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
                 self.go_to_next_widget()
 
     def first_im_parameters(self):
