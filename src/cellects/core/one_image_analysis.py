@@ -542,7 +542,7 @@ class OneImageAnalysis:
             self.im_combinations = []
             for saved_csc in cc_efficiency_order:
                 if len(self.saved_color_space_list[saved_csc]) > 0:
-                    combi_i = len(self.im_combinations) - 1
+                    combi_i = len(self.im_combinations)
                     self.im_combinations.append({})
                     self.im_combinations[combi_i]["csc"] = {}
                     self.im_combinations[combi_i]["csc"]['logical'] = 'None'
