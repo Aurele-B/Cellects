@@ -933,7 +933,6 @@ class ProgramOrganizer:
                 are_dicts_equal = are_dicts_equal and np.all(key in self.vars['convert_for_origin'] and self.vars['convert_for_motion'][key] == self.vars['convert_for_origin'][key])
         else:
             self.vars['convert_for_origin'] = {"logical": 'None', "PCA": [1, 1, 1]}
-            are_dicts_equal = True
         if are_dicts_equal:
             if self.first_im is None:
                 self.get_first_image()
