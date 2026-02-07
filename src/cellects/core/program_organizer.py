@@ -741,6 +741,7 @@ class ProgramOrganizer:
             self.all['initial_back_mask'] = np.nonzero(back_mask)
 
     def full_first_image_segmentation(self, first_param_known: bool, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
+        shape_nb = 1
         if bio_mask is not None and bio_mask.any():
             shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
             shape_nb -= 1
