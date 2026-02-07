@@ -493,48 +493,50 @@ class OneImageAnalysis:
             # 7. Add PCA:
             ProcessImage([self, params, 'PCA', None])
 
-            # 8. Make logical operations between pairs of segmentation result
-            coverage = np.argsort(self.combination_features['total_area'].iloc[:self.saved_csc_nb])
-
-            # 8.1 Try a logical And between the most covered images
-            most1, most2 = coverage.values[-1], coverage.values[-2]
-            operation = {0: most1, 1: most2, 'logical': 'And'}
-            ProcessImage([self, params, 'logical', operation])
-
-            # 8.2 Try a logical Or between the least covered images
-            least1, least2 = coverage.values[0], coverage.values[1]
-            operation = {0: least1, 1: least2, 'logical': 'Or'}
-            ProcessImage([self, params, 'logical', operation])
-
-
-            # 8.3 Try a logical And between the best bio_mask images
-            if params['bio_mask'] is not None:
-                bio_sort = np.argsort(self.combination_features['bio_sum'].iloc[:self.saved_csc_nb])
-                bio1, bio2 = bio_sort.values[-1], bio_sort.values[-2]
-                operation = {0: bio1, 1: bio2, 'logical': 'And'}
+            if self.saved_csc_nb > 0:
+                # 8. Make logical operations between pairs of segmentation result
+                coverage = np.argsort(self.combination_features['total_area'].iloc[:self.saved_csc_nb])
+                # 8.1 Try a logical And between the most covered images
+                most1, most2 = coverage.values[-1], coverage.values[-2]
+                operation = {0: most1, 1: most2, 'logical': 'And'}
                 ProcessImage([self, params, 'logical', operation])
 
-            # 8.4 Try a logical And between the best back_mask images
-            if params['back_mask'] is not None:
-                back_sort = np.argsort(self.combination_features['back_sum'].iloc[:self.saved_csc_nb])
-                back1, back2 = back_sort.values[-1], back_sort.values[-2]
-                operation = {0: back1, 1: back2, 'logical': 'And'}
+                # 8.2 Try a logical Or between the least covered images
+                least1, least2 = coverage.values[0], coverage.values[1]
+                operation = {0: least1, 1: least2, 'logical': 'Or'}
                 ProcessImage([self, params, 'logical', operation])
 
-            # 8.5 Try a logical Or between the best bio_mask and the best back_mask images
-            if params['bio_mask'] is not None and params['back_mask'] is not None:
-                operation = {0: bio1, 1: back1, 'logical': 'Or'}
-                ProcessImage([self, params, 'logical', operation])
+                # 8.3 Try a logical And between the best bio_mask images
+                if params['bio_mask'] is not None:
+                    bio_sort = np.argsort(self.combination_features['bio_sum'].iloc[:self.saved_csc_nb])
+                    bio1, bio2 = bio_sort.values[-1], bio_sort.values[-2]
+                    operation = {0: bio1, 1: bio2, 'logical': 'And'}
+                    ProcessImage([self, params, 'logical', operation])
 
-            # 9. Order all saved features
-            self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
-            self.score_combination_features()
-            if params['is_first_image'] and params['blob_nb'] is not None:
-                distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
-                cc_efficiency_order = np.argsort(distances)
+                # 8.4 Try a logical And between the best back_mask images
+                if params['back_mask'] is not None:
+                    back_sort = np.argsort(self.combination_features['back_sum'].iloc[:self.saved_csc_nb])
+                    back1, back2 = back_sort.values[-1], back_sort.values[-2]
+                    operation = {0: back1, 1: back2, 'logical': 'And'}
+                    ProcessImage([self, params, 'logical', operation])
+
+                # 8.5 Try a logical Or between the best bio_mask and the best back_mask images
+                if params['bio_mask'] is not None and params['back_mask'] is not None:
+                    operation = {0: bio1, 1: back1, 'logical': 'Or'}
+                    ProcessImage([self, params, 'logical', operation])
+
+                # 9. Order all saved features
+                self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
+                self.score_combination_features()
+                if params['is_first_image'] and params['blob_nb'] is not None:
+                    distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
+                    cc_efficiency_order = np.argsort(distances)
+                else:
+                    cc_efficiency_order = np.argsort(self.combination_features['score'])
+                    cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
             else:
-                cc_efficiency_order = np.argsort(self.combination_features['score'])
-                cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
+                logging.info("No accurate combinations found")
+                cc_efficiency_order = []
 
             # 7. Save and return a dictionary containing the selected color space combinations
             # and their corresponding binary images
