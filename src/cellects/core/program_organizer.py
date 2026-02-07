@@ -163,7 +163,7 @@ class ProgramOrganizer:
         -----
         This method is used to preserve state between Cellects sessions or restart scenarios.
         """
-        logging.info("Save the parameters dictionaries in the Cellects folder")
+        logging.info("Update -cellects_settings.json- in the Cellects folder")
         all_vars = self.all.copy()
         all_vars['vars'] = self.vars.copy()
         all_vars['vars'].pop('crop_coord', None)
