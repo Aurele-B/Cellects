@@ -758,7 +758,6 @@ class ProgramOrganizer:
                 self.first_image.validated_shapes = (ordered_image > 0).astype(np.uint8)
                 self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
         else:
-
             params = init_params()
             params['is_first_image'] = True
             params['blob_nb'] = self.sample_number
