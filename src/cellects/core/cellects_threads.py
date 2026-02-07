@@ -612,6 +612,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         """
         logging.info("Start cropping if required")
         analysis_status = {"continue": True, "message": ""}
+        self.parent().po.first_image.get_setup_boundaries()
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.get_average_pixel_size()
         if os.path.isfile('cellects_settings.json'):

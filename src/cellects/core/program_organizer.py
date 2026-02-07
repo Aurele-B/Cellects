@@ -1100,8 +1100,8 @@ class ProgramOrganizer:
         # 7) Create required empty arrays: especially the bounding box coordinates of each video
         self.ordered_first_image = None
         self.shapes_to_remove = None
-        if self.first_image.crop_coord is None:
-            self.first_image.get_crop_coordinates()
+        if self.first_image.y_boundaries is None:
+            self.first_image.get_setup_boundaries()
 
         logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
         if self.first_image.validated_shapes.any() and self.first_image.shape_number > 0:

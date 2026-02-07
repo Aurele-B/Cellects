@@ -664,6 +664,15 @@ class OneImageAnalysis:
             self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= {'filter1_type': res_i['filter'], 'filter1_param': [np.min(res_i['sigmas']), np.max(res_i['sigmas'])], 'filter2_type': "", 'filter2_param': [1., 1.]}
             self.im_combinations[len(self.im_combinations) - 1]['rolling_window']= res_i['rolling_window']
 
+    def get_setup_boundaries(self):
+        """
+        Get the y and x potential boundaries delimiting arenas' rows and columns
+        """
+        logging.info("Project the image on the y axis to detect rows of arenas")
+        self.y_boundaries, self.y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
+        logging.info("Project the image on the x axis to detect columns of arenas")
+        self.x_boundaries, self.x_max_sum = self.projection_to_get_peaks_boundaries(axis=0)
+
     def get_crop_coordinates(self):
         """
         Get the crop coordinates for image processing.
@@ -673,18 +682,16 @@ class OneImageAnalysis:
         and determines if the arenas are zigzagged.-
 
         """
-        logging.info("Project the image on the y axis to detect rows of arenas")
-        self.y_boundaries, y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
-        logging.info("Project the image on the x axis to detect columns of arenas")
-        self.x_boundaries, x_max_sum = self.projection_to_get_peaks_boundaries(axis=0)
         logging.info("Get crop coordinates using the get_crop_coordinates method of OneImageAnalysis class")
+        if self.y_boundaries is None:
+            self.get_setup_boundaries()
         row_number = len(np.nonzero(self.y_boundaries)[0]) // 2
         col_number = len(np.nonzero(self.x_boundaries)[0]) // 2
         are_zigzag = None
         if col_number > 0 and row_number > 0:
-            if (x_max_sum / col_number) * 2 < (y_max_sum / row_number):
+            if (self.x_max_sum / col_number) * 2 < (self.y_max_sum / row_number):
                 are_zigzag = "columns"
-            elif (x_max_sum / col_number) > (y_max_sum / row_number) * 2:
+            elif (self.x_max_sum / col_number) > (self.y_max_sum / row_number) * 2:
                 are_zigzag = "rows"
         # here automatically determine if are zigzag
         x_boundary_number = (self.x_boundaries == 1).sum()
