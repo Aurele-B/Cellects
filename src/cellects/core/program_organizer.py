@@ -877,16 +877,16 @@ class ProgramOrganizer:
                 self.vars['output_in_mm'] = False
 
         if self.all['set_spot_size']:
-            self.starting_blob_hsize_in_pixels = (self.all['starting_blob_hsize_in_mm'] /
-                                                  np.sqrt(self.vars['average_pixel_size']))
+            self.starting_blob_hsize_in_pixels = float((self.all['starting_blob_hsize_in_mm'] /
+                                                  np.sqrt(self.vars['average_pixel_size'])))
         else:
             self.starting_blob_hsize_in_pixels = None
 
         if self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = 10
         else:
-            self.vars['first_move_threshold'] = np.round(self.all['first_move_threshold_in_mm²'] /
-                                                         self.vars['average_pixel_size']).astype(np.uint8)
+            self.vars['first_move_threshold'] = int(np.round(self.all['first_move_threshold_in_mm²'] /
+                                                         self.vars['average_pixel_size']))
         logging.info(f"The average pixel size is: {self.vars['average_pixel_size']} mm²")
 
     def get_background_to_subtract(self):
@@ -1689,6 +1689,11 @@ class ProgramOrganizer:
         Generates the following output:
         - one_row_per_arena.csv, one_row_per_frame.csv : Tracking data per arena/frame.
         - cellects_settings.json : Full configuration settings for reproducibility.
+
+        Parameters
+        ----------
+        with_last_image : bool, optional
+            Also save the last image. Create duplicate when the analysis contains only one image.
 
         Raises
         ------
