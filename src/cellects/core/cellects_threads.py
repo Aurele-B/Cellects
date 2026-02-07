@@ -254,10 +254,16 @@ class UpdateImageThread(QtCore.QThread):
     """
     Thread for updating GUI image.
 
+    Signals
+    -------
+    message_when_thread_finished : Signal(bool)
+        Emitted when the thread finishes execution, indicating whether image displaying was successful.
+
     Notes
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
+    message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, parent=None):
         """
@@ -415,6 +421,7 @@ class UpdateImageThread(QtCore.QThread):
                     mask_shape = self.parent().po.vars['arena_shape']
                 image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.parent().imageanalysiswindow.display_image.update_image(image)
+        self.message_when_thread_finished.emit(True)
 
 
 class FirstImageAnalysisThread(QtCore.QThread):

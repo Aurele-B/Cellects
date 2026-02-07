@@ -609,7 +609,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].finished.connect(self.automatic_delineation_display_done)
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
     def reinitialize_bio_and_back_legend(self):
         """
@@ -875,10 +875,10 @@ class ImageAnalysisWindow(MainTabsType):
             else:
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
                 self.thread_dict["UpdateImage"].start()
-                self.thread_dict["UpdateImage"].finished.connect(self.user_defined_shape_displayed)
+                self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
-    def user_defined_shape_displayed(self):
+    def user_defined_shape_displayed(self, when_finished: bool):
         """
         Display user-defined shapes or elements based on specific conditions and update the UI accordingly.
 
@@ -925,6 +925,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.available_arena_names = self.available_arena_names[1:]
         self.saved_coord = []
         self.back1_bio2 = 0
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def new_pbutton_on_the_left(self, pbutton_name: str):
         """
@@ -1149,7 +1150,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].finished.connect(self.image_analysis_displayed)
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
 
     def image_analysis_displayed(self):
         """
@@ -1220,6 +1221,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.complete_image_analysis.setVisible(True)
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def init_drawn_image(self, im_combinations: list=None):
         """
@@ -2066,7 +2068,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
             self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].finished.connect(self.automatic_delineation_display_done)
+            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
             try:
                 self.thread_dict['CropScaleSubtractDelineate'].message_from_thread.disconnect()
@@ -2083,7 +2085,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.slower_delineation_flag = False
             self.manual_delineation()
 
-    def automatic_delineation_display_done(self):
+    def automatic_delineation_display_done(self, boole):
         """
         Automatically handles the delineation display status for the user interface.
 
@@ -2104,6 +2106,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
         self.no.setVisible(True)
+        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
 
     def display_message_from_thread(self, text_from_thread: str):
         """
