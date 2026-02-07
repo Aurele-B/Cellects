@@ -272,7 +272,9 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         self.ma.study_cytoscillations(False)
         self.ma.fractal_descriptions()
         # self.ma.fractal_descriptions()
+        self.ma.save_results(False, False)
         self.ma.save_results()
+
     def tearDown(self):
         """Remove all written files."""
         file_names = os.listdir(self.path_output)

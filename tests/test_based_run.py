@@ -41,11 +41,11 @@ def run_image_analysis_for_testing(po):
         analysis_status = po.delineate_each_arena()
         po.vars['subtract_background'] = True
         po.get_background_to_subtract()
-        po.get_origins_and_backgrounds_lists()
+        po.save_origins_and_backgrounds_lists()
         po.get_last_image()
         po.fast_last_image_segmentation()
         po.find_if_lighter_background()
-        timing = po.extract_exif()
+        po.save_exif()
     else:
         print('Image analysis already done, run video analysis')
     return po
