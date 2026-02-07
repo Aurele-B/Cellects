@@ -553,7 +553,7 @@ class ProgramOrganizer:
 
     def load_masks(self):
         """"""
-        if self.parent().po.all['keep_cell_and_back_for_all_folders']:
+        if self.all['keep_cell_and_back_for_all_folders']:
             self.bio_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
             self.back_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
 
