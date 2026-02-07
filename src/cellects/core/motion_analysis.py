@@ -135,7 +135,6 @@ class MotionAnalysis:
             self.vars['contour_color']: np.uint8 = 0
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
-        self.dims = self.converted_video.shape
         self.segmented = np.zeros(self.dims, dtype=np.uint8)
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
@@ -1568,16 +1567,25 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             vid_name = f"ind_{self.one_descriptor_per_arena['arena']}{self.vars['videos_extension']}"
             write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
 
-    def save_results(self):
+    def save_results(self, with_efficiency_tests: bool = True, with_video:bool = True):
         """
         Save the results of testing and video processing.
 
         This method handles the saving of efficiency tests, video files,
         and CSV data related to test results. It checks for existing files before writing new data.
         Additionally, it cleans up temporary files if configured to do so.
+
+        Parameters
+        ----------
+        with_efficiency_tests : bool, optional
+            Also save two images showing the analysis efficiency.
+        with_video : bool, optional
+            Also save a video showing the analysis efficiency.
         """
-        self.save_efficiency_tests()
-        self.save_video()
+        if with_efficiency_tests:
+            self.save_efficiency_tests()
+        if with_video:
+            self.save_video()
         if self.vars['several_blob_per_arena']:
             try:
                 with open(f"one_row_per_frame_arena{self.one_descriptor_per_arena['arena']}.csv", 'w') as file:
