@@ -27,6 +27,7 @@ from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Spinbox, Combobox, Checkbox, FixedText)
 from cellects.gui.ui_strings import AP, IAW
+from cellects.utils.load_display_save import remove_h5_key
 
 
 class AdvancedParameters(WindowType):
@@ -1134,7 +1135,7 @@ class AdvancedParameters(WindowType):
             os.remove('cellects_settings.json')
         current_dir = os.getcwd()
         os.chdir(CONFIG_DIR)
-        DefaultDicts().save_as_h5(self.parent().po)
+        DefaultDicts().save_as_json(self.parent().po, reset_params=True)
         os.chdir(current_dir)
         self.message.setText('Close and restart Cellects to apply the settings reset')
         self.message.setStyleSheet("color: rgb(230, 145, 18)")

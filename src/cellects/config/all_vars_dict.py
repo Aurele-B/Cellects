@@ -143,11 +143,11 @@ class DefaultDicts:
             'filter_spec': {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]},
         }
 
-    def save_as_h5(self, po=None):
+    def save_as_json(self, po=None, reset_params: bool=False):
         if po is None:
             write_json('cellects_settings.json', self.all)
         else:
-            po = po
-            po.all = self.all
-            po.vars = self.vars
+            if reset_params:
+                po.all = self.all
+                po.vars = self.vars
             po.save_variable_dict()

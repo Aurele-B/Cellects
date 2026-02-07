@@ -9,8 +9,8 @@ from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import rhombus_55
 from cellects.utils.load_display_save import write_video_sets, read_json, write_json
-from cellects.core.cellects_paths import ALL_VARS_JSON_FILE
-from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid
+from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
+from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid, rgb_video_test, binary_video_test, back_vary_rgb_many_small_blobs, small_blob_nb, many_small_blobs
 import numpy as np
 import cv2
 import os
@@ -28,13 +28,13 @@ class TestProgramOrganizerLoading(CellectsUnitTest):
 
     def test_save_as_json_and_load_vars_exception(self):
         dd = DefaultDicts()
-        dd.save_as_h5()
+        dd.save_as_json(reset_params=True)
         data = read_json('cellects_settings.json')
         del data['global_pathway']
         write_json('cellects_settings.json', data)
         po = ProgramOrganizer()
         po.load_variable_dict()
-        dd.save_as_h5(self.po)
+        dd.save_as_json(self.po, reset_params=True)
         self.assertTrue(os.path.isfile(ALL_VARS_JSON_FILE))
 
     def test_look_for_data(self):
