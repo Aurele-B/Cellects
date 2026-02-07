@@ -1870,10 +1870,10 @@ class RunAllThread(QtCore.QThread):
                                                         core_number=self.parent().po.cores)
 
                     fair_core_workload = arena_number // self.parent().po.cores
-                    cores_with_1_more = int(arena_number % self.parent().po.cores)
+                    cores_with_1_more = arena_number % self.parent().po.cores
                     EXTENTS_OF_SUBRANGES = []
                     bound: int = 0
-                    parallel_organization = [fair_core_workload + 1 for _ in range(cores_with_1_more)] + [fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
+                    parallel_organization = [fair_core_workload + 1 for _ in range(int(cores_with_1_more))] + [fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
                     # Emit message to the interface
                     self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
                                                  "message": f"{message} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
@@ -1884,8 +1884,7 @@ class RunAllThread(QtCore.QThread):
                         PROCESSES = []
                         subtotals = Manager().Queue()# Queue()
                         for extent in EXTENTS_OF_SUBRANGES:
-                            print(extent)
-                            p = Process(target=motion_analysis_process, args=(extent[0], extent[1], self.parent().po.vars, subtotals))
+                            p = Process(target=motion_analysis_process, args=(int(extent[0]), int(extent[1]), self.parent().po.vars, subtotals))
                             p.start()
                             PROCESSES.append(p)
 
