@@ -38,11 +38,12 @@ class TestProgramOrganizerBasicFunctions(CellectsUnitTest):
         po.save_first_image()
         self.assertTrue(os.path.isfile('cellects_data.h5'))
 
-    def test_save_masks(self):
+    def test_save_and_load_masks(self):
         self.po.all['keep_cell_and_back_for_all_folders'] = True
         self.po.bio_mask = np.array((0, 1))
         self.po.back_mask = np.array((1, 0))
         self.po.save_masks()
+        self.po.load_masks()
 
     def test_save_none_masks(self):
         self.po.all['keep_cell_and_back_for_all_folders'] = True
@@ -226,6 +227,29 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.get_background_to_subtract()
         po.vars['output_in_mm'] = True
 
+    def test_when_user_drew_all_blobs(self):
+        po = ProgramOrganizer()
+        image = several_arenas_vid[0].copy()
+        bio_mask = several_arenas_bin_vid[0]
+        sample = image[np.nonzero(bio_mask)]
+        image[10, 15, :] = sample[0]
+        image[10, 14, :] = sample[1]
+        image[10, 16, :] = sample[2]
+        image[9, 15, :] = sample[3]
+        image[11, 15, :] = sample[4]
+        sample_number = 2
+        po.get_first_image(image, sample_number)
+        po.get_last_image(image)
+        po.visualize = True
+        po.all['keep_cell_and_back_for_all_folders'] = False
+        po.all['scale_with_image_or_cells'] = 0
+        po.all['image_horizontal_size_in_mm'] = 20
+        po.all['starting_blob_hsize_in_mm'] = 2
+        po.all['automatic_size_thresholding'] = True
+        po.all['set_spot_size'] = True
+        po.vars['several_blob_per_arena'] = False
+        po.full_first_image_segmentation(first_param_known=True, bio_mask=bio_mask)
+
     def test_full_images_segmentations(self):
         po = ProgramOrganizer()
         po.update_variable_dict()
@@ -237,6 +261,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         bio_mask = cv2.erode(binary_video_test[0], cross_33)
         back_mask = np.zeros_like(binary_video_test[0])
         back_mask[-1, -4] = 1
+        # po.vars['several_blob_per_arena'] = True  # Uncommenting this generates warnings !!!
         po.all['keep_cell_and_back_for_all_folders'] = True
         po.vars["color_number"] = 3
         po.all['scale_with_image_or_cells'] = 0
@@ -260,6 +285,27 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
             os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_1.h5")
         if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5"):
             os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5")
+
+
+class TestProgramOrganizerFindIfLighterBackground(CellectsUnitTest):
+    """Test suite for testing the find_if_lighter_background method of the ProgramOrganizer class"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialize two data sets for testing"""
+        super().setUpClass()
+        os.chdir(cls.d + '/' + 'multiple_experiments' + '/' + 'f1')
+        cls.po = ProgramOrganizer()
+        cls.po.update_variable_dict()
+        cls.po.data_list = ['image1.tif', 'image2.tif']
+        cls.po.look_for_data()
+        cls.po.get_first_image()
+        cls.po.first_image.validated_shapes = (cls.po.first_image.image.mean(2) < 80).astype(np.uint8)
+        cls.po.vars['convert_for_motion'] = {"logical": 'None', "luv": [0, 0, 1]}
+
+    def test_find_if_lighter_background_with_invisible_origin(self):
+        self.po.vars['origin_state'] = "invisible"
+        self.po.find_if_lighter_background()
 
 
 class TestProgramOrganizerCompleteImageAnalysis(CellectsUnitTest):
@@ -392,6 +438,36 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.assertTrue(np.sum(po.left) > 0)
         self.assertTrue(np.sum(po.right) > 0)
 
+    def test_delineate_each_arena(self):
+        """Test delineate_each_arena"""
+        image = np.zeros((70, 70), dtype=np.uint8)
+        image[10, 8] = 1
+        image[35, 8] = 1
+        image[60, 8] = 1
+        image[10, 35] = 1
+        image[10, 60] = 1
+        # image[35, 35] = 1
+        image[60, 35] = 1
+        image[35, 60] = 1
+        image[61, 61] = 1
+        image = cv2.dilate(image, rhombus_55, iterations=3)
+        shape_number = 8
+        po = ProgramOrganizer()
+        po.get_first_image(image, sample_number=shape_number)
+        po.first_image.validated_shapes = image
+        po.first_image.shape_number = po.sample_number
+        po.update_variable_dict()
+        po.data_list = []
+        po.vars["convert_for_motion"] = {"logical": "None", "PCA": [1, 1, 1]}
+        po.vars['several_blob_per_arena'] = False
+        po.all['are_gravity_centers_moving'] = False
+        po.all['all_specimens_have_same_direction'] = True
+        po.delineate_each_arena()
+        self.assertTrue(np.sum(po.top) > 0)
+        self.assertTrue(np.sum(po.bot) > 0)
+        self.assertTrue(np.sum(po.left) > 0)
+        self.assertTrue(np.sum(po.right) > 0)
+
     def test_get_quick_bounding_boxes(self):
         """Test get_bounding_boxes using a fast algorithm"""
         self.po.first_image.validated_shapes = several_arenas_bin_vid[0]
@@ -460,6 +536,8 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.po.all['automatically_crop'] = True
         self.po.vars['arenas_coord'] = self.po.top.tolist(), self.po.bot.tolist(), self.po.left.tolist(), self.po.right.tolist()
         self.po.save_coordinates()
+        self.po.vars.pop('dims', None)
+        self.po.all.pop('extract_time_interval', None)
         self.po.save_exif()
         self.po.vars['convert_for_motion']['PCA2'] = [1, 1, 1]
         self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
