@@ -55,6 +55,47 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
     def test_one_frame_motion_analysis(self):
         self.ma = MotionAnalysis(self.l)
 
+class TestMotionAnalysisWithMP4(CellectsUnitTest):
+    """Test MotionAnalysis with a .mp4 file"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.chdir(cls.path_experiment)
+        image = readim('image1.tif')
+        cls.bin_image = (image[:, :, 2] < 80).astype(np.uint8)
+        cls.dims = image.shape[:2]
+        cls.vars = DefaultDicts().vars
+        cls.vars['crop_coord'] = [0, cls.dims[0], 0, cls.dims[1]]
+        cls.vars['arenas_coord'] = [[0], [cls.dims[0]], [0], [cls.dims[1]]]
+        cls.videos_already_in_ram = None
+        cls.i = 0
+
+    def test_mp4_loading(self):
+        write_h5(f'ind_{1}.h5', self.bin_image, 'origin_coord')
+        self.vars['video_list'] = ['video.mp4']
+        image = readim('image1.tif')
+        self.color_space_combination = {"logical": 'None', "PCA": np.ones(3, dtype=np.uint8)}
+        self.l = [self.i, self.i + 1, self.vars, False, False, False, self.videos_already_in_ram]
+        self.ma = MotionAnalysis(self.l)
+
+    def test_mp4_loading_of_a_greyscale_video(self):
+        write_h5(f'ind_{1}.h5', self.bin_image, 'origin_coord')
+        self.vars['convert_for_motion'] = {'lab': [0, 0, 1], 'logical': 'Or', 'luv2': [0, 0, 1]}
+        vid, grey_vid = video2numpy('video.mp4', self.vars['convert_for_motion'])
+        write_h5('video_grey.h5', grey_vid, 'video')
+        self.vars['video_list'] = ['video_grey.h5']
+        self.vars['already_greyscale'] = True
+        self.l = [self.i, self.i + 1, self.vars, False, False, False, self.videos_already_in_ram]
+        self.ma = MotionAnalysis(self.l)
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(f'ind_{1}.h5'):
+            os.remove(f'ind_{1}.h5')
+        if os.path.isfile(f'video_grey.h5'):
+            os.remove(f'video_grey.h5')
+
 
 class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
     """Parent for testing the MotionAnalysis class with one blob"""
@@ -218,7 +259,8 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.vars["convert_for_motion"] = {'lab': [0, 0, 1], 'logical': 'And', 'lab2': [0, 0, 1]}
         for k in cls.vars['descriptors'].keys():
             cls.vars['descriptors'][k] = True
-        write_h5(f'ind_{1}.h5', np.array(np.nonzero(several_arenas_bin_vid[0])), 'origin_coord')
+        cls.origin_coord = np.array(np.nonzero(several_arenas_bin_vid[0]))
+        write_h5(f'ind_{1}.h5', cls.origin_coord, 'origin_coord')
         cls.vars['greyscale2'] = False
         cls.vars['drift_already_corrected'] = True
         cls.vars['already_greyscale'] = False
@@ -247,6 +289,19 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
 
     def test_get_origin_shape(self):
         self.assertTrue(self.ma.start is not None)
+
+    def test_get_origin_shape_invisible(self):
+        write_h5(f'ind_{1}.h5', self.origin_coord, 'origin_coord')
+        variables = self.vars.copy()
+        variables["origin_state"] = "invisible"
+        l = [self.i, self.i + 1, variables, False, False, False, self.videos_already_in_ram]
+        ma = MotionAnalysis(l)
+        ma.get_origin_shape()
+        variables['several_blob_per_arena'] = False
+        variables['appearance_detection_method'] = 'most_central'
+        l = [self.i, self.i + 1, variables, False, False, False, self.videos_already_in_ram]
+        ma = MotionAnalysis(l)
+        ma.get_origin_shape()
 
     def test_get_covering_duration(self):
         self.assertGreater(self.ma.substantial_time, 0)
