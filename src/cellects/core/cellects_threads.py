@@ -1759,7 +1759,7 @@ class RunAllThread(QtCore.QThread):
                                             write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
-                        logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
+                        logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
                     logging.info("When they exist, do not overwrite unaltered video")
                     self.parent().po.all['overwrite_unaltered_videos'] = False
                     self.parent().po.save_variable_dict()
@@ -1872,7 +1872,7 @@ class RunAllThread(QtCore.QThread):
                     fair_core_workload = arena_number // self.parent().po.cores
                     cores_with_1_more = int(arena_number % self.parent().po.cores)
                     EXTENTS_OF_SUBRANGES = []
-                    bound = 0
+                    bound: int = 0
                     parallel_organization = [fair_core_workload + 1 for _ in range(cores_with_1_more)] + [fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
                     # Emit message to the interface
                     self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
@@ -1884,7 +1884,7 @@ class RunAllThread(QtCore.QThread):
                         PROCESSES = []
                         subtotals = Manager().Queue()# Queue()
                         for extent in EXTENTS_OF_SUBRANGES:
-                            # print(extent)
+                            print(extent)
                             p = Process(target=motion_analysis_process, args=(extent[0], extent[1], self.parent().po.vars, subtotals))
                             p.start()
                             PROCESSES.append(p)
