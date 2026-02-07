@@ -80,7 +80,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
         converted_video = converted_video[:, :, :, 0]
         average_intensities = np.mean(converted_video, (1, 2))
         if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
-            oscillations_video = np.zeros(dims, dtype=np.float16)
+            oscillations_video = np.zeros(dims[:3], dtype=np.float16)
             for cy in np.arange(dims[1]):
                 for cx in np.arange(dims[2]):
                     oscillations_video[:, cy, cx] = np.round(
@@ -92,7 +92,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
         oscillations_video[binary == 0] = 0
 
         for t in np.arange(starting_time, dims[0]):
-            oscillations_image = np.zeros(dims[1:], np.uint8)
+            oscillations_image = np.zeros(dims[1:3], np.uint8)
             # Add in or ef if a pixel has at least 4 neighbor in or ef
             neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=np.int8)
             neigh_comp.is_inf(0, and_itself=False)
