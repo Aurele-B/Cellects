@@ -2441,12 +2441,12 @@ class ImageAnalysisWindow(MainTabsType):
         """
         if not self.thread_dict['SaveManualDelineation'].isRunning() or not self.thread_dict['PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning():
 
-            self.popup = QtWidgets.QMessageBox()
-            self.popup.setWindowTitle("Info")
-            self.popup.setText("Final checks...")
-            self.popup.setInformativeText("Close and wait until the video tracking window appears.")
-            self.popup.setStandardButtons(QtWidgets.QMessageBox.Close)
-            x = self.popup.exec_()
+            # self.popup = QtWidgets.QMessageBox()
+            # self.popup.setWindowTitle("Info")
+            # self.popup.setText("Final checks...")
+            # self.popup.setInformativeText("Close and wait until the video tracking window appears.")
+            # self.popup.setStandardButtons(QtWidgets.QMessageBox.Close)
+            # x = self.popup.exec_()
             self.decision_label.setVisible(False)
             self.yes.setVisible(False)
             self.no.setVisible(False)
