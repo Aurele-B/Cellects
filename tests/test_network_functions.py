@@ -1564,7 +1564,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         greyscale[greyscale > 0] = np.random.randint(170, 255, self.valid_skeleton.sum())
         greyscale[greyscale == 0] = np.random.randint(0, 50, self.valid_skeleton.size - self.valid_skeleton.sum())
         greyscale = un_pad(greyscale)
-        edge_id.make_edge_table(greyscale)
+        edge_id.make_edge_table(greyscale, True)
 
         # Check 5 edges are documented
         self.assertEqual(edge_id.edge_table.shape[0], 4)
