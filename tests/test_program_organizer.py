@@ -7,7 +7,7 @@ import psutil
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.morphological_operations import rhombus_55
+from cellects.image_analysis.morphological_operations import rhombus_55, cross_33
 from cellects.utils.load_display_save import write_video_sets, read_json, write_json
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid, rgb_video_test, binary_video_test, back_vary_rgb_many_small_blobs, small_blob_nb, many_small_blobs
@@ -15,6 +15,70 @@ import numpy as np
 import cv2
 import os
 
+
+class TestProgramOrganizerBasicFunctions(CellectsUnitTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        os.chdir(cls.path_output)
+        cls.po = ProgramOrganizer()
+        cls.po.all['descriptors'] = {}
+        cls.po.vars['descriptors'] = {}
+        cls.po.update_variable_dict()
+
+    def test_update_variable_dict(self):
+        self.assertGreater(len(self.po.all['descriptors']), 0)
+        self.assertGreater(len(self.po.vars['descriptors']), 0)
+
+    def test_save_first_image(self):
+        po = ProgramOrganizer()
+        po.get_first_image(cross_33)
+        dictio = {'binary_image': cross_33}
+        po.first_image.im_combinations = [dictio]
+        po.save_first_image()
+        self.assertTrue(os.path.isfile('cellects_data.h5'))
+
+    def test_save_masks(self):
+        self.po.all['keep_cell_and_back_for_all_folders'] = True
+        self.po.bio_mask = np.array((0, 1))
+        self.po.back_mask = np.array((1, 0))
+        self.po.save_masks()
+
+    def test_save_none_masks(self):
+        self.po.all['keep_cell_and_back_for_all_folders'] = True
+        self.po.bio_mask = None
+        self.po.back_mask = None
+        self.po.save_masks()
+
+    def test_save_no_masks(self):
+        self.po.all['keep_cell_and_back_for_all_folders'] = False
+        self.po.bio_mask = None
+        self.po.back_mask = None
+        self.po.save_masks()
+
+    def test_set_analyzed_individuals(self):
+        self.po.sample_number = 2
+        self.po.not_analyzed_individuals = [1]
+        self.po._set_analyzed_individuals()
+
+    def test_update_available_core_nb(self):
+        self.po.top, self.po.bot, self.po.left, self.po.right = [0], [10], [0], [10]
+        self.po.vars['convert_for_motion'] = {'rgb': [1, 1, 1], 'logical': 'And'}
+        self.po.update_available_core_nb()
+        self.po.vars['lose_accuracy_to_save_memory'] = True
+        self.po.vars['already_greyscale'] = True
+        self.po.vars['save_coord_thickening_slimming'] = True
+        self.po.vars['save_coord_network'] = True
+        self.po.all['cores'] = 3
+        self.po.top, self.po.bot, self.po.left, self.po.right = np.array(0), np.array(10), np.array(0), np.array(10)
+        self.po.update_available_core_nb()
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile('cellects_data.h5'):
+            os.remove('cellects_data.h5')
+        if os.path.isfile(CONFIG_DIR / 'masks.h5'):
+            os.remove(CONFIG_DIR / 'masks.h5')
 
 class TestProgramOrganizerLoading(CellectsUnitTest):
     @classmethod
@@ -47,16 +111,6 @@ class TestProgramOrganizerLoading(CellectsUnitTest):
             os.remove(ALL_VARS_JSON_FILE)
         if os.path.isfile(self.path_experiment + '/' + "cellects_settings.json"):
             os.remove(self.path_experiment  + '/' +  "cellects_settings.json")
-
-
-class TestProgramOrganizerUpdateVariableDict(CellectsUnitTest):
-    def test_update_variable_dict(self):
-        po = ProgramOrganizer()
-        po.all['descriptors'] = {}
-        po.vars['descriptors'] = {}
-        po.update_variable_dict()
-        self.assertGreater(len(po.all['descriptors']), 0)
-        self.assertGreater(len(po.vars['descriptors']), 0)
 
 
 class TestProgramOrganizerSegmentation(CellectsUnitTest):
@@ -157,16 +211,42 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         sample_number = 2
         po.get_first_image(image, sample_number)
         po.get_last_image(image)
-        po.fast_first_image_segmentation()
-        po.fast_last_image_segmentation()
+        po.visualize = True
+        po.all['keep_cell_and_back_for_all_folders'] = False
+        po.all['scale_with_image_or_cells'] = 0
+        po.all['image_horizontal_size_in_mm'] = 20
+        po.all['starting_blob_hsize_in_mm'] = 2
+        po.all['automatic_size_thresholding'] = True
+        po.all['set_spot_size'] = True
+        po.full_first_image_segmentation(first_param_known=False)
+        po.full_last_image_segmentation()
         print(po.all['automatically_crop']) # False currently
         po.cropping(True)
-        po.get_average_pixel_size()
-        po.all['scale_with_image_or_cells'] = 0
-        po.get_average_pixel_size()
         po.vars['subtract_background'] = True
         po.get_background_to_subtract()
         po.vars['output_in_mm'] = True
+
+    def test_full_images_segmentations(self):
+        po = ProgramOrganizer()
+        po.update_variable_dict()
+        image = rgb_video_test[0].copy()
+        sample_number = 1
+        po.get_first_image(image, sample_number)
+        po.get_last_image(rgb_video_test[-1].copy())
+        po.visualize = False
+        bio_mask = cv2.erode(binary_video_test[0], cross_33)
+        back_mask = np.zeros_like(binary_video_test[0])
+        back_mask[-1, -4] = 1
+        po.all['keep_cell_and_back_for_all_folders'] = True
+        po.vars["color_number"] = 3
+        po.all['scale_with_image_or_cells'] = 0
+        po.all['image_horizontal_size_in_mm'] = 10
+        po.all['starting_blob_hsize_in_mm'] = 5
+        po.full_first_image_segmentation(True, bio_mask, back_mask)
+        po.vars["color_number"] = 2
+        po.full_first_image_segmentation(True)
+        po._whole_image_bounding_boxes()
+        po.full_last_image_segmentation(bio_mask, back_mask)
 
     def tearDown(self):
         """Remove all written files."""
@@ -180,6 +260,53 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
             os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_1.h5")
         if os.path.isfile(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5"):
             os.remove(self.d  + '/' +  "multiple_experiments/f1/ind_2.h5")
+
+
+class TestProgramOrganizerCompleteImageAnalysis(CellectsUnitTest):
+    """Test suite for completely analyzing images using ProgramOrganizer class"""
+
+    @classmethod
+    def setUpClass(cls):
+        """Initialize two data sets for testing"""
+        super().setUpClass()
+        os.chdir(cls.path_output)
+        cls.color_space_combination = {"logical": 'None', "PCA": [1, 1, 1]}
+        cls.image = back_vary_rgb_many_small_blobs[:, :, 0]
+        cls.shape_number = 2
+        cls.po = ProgramOrganizer()
+        cls.po.update_variable_dict()
+        cls.visualize = False
+        cls.po.get_first_image(cls.image, sample_number=small_blob_nb)
+        cls.po.get_last_image(cls.image)
+        cls.po.top, cls.po.bot, cls.po.left, cls.po.right = [0], [back_vary_rgb_many_small_blobs.shape[0]], [0], [back_vary_rgb_many_small_blobs.shape[1]]
+        cls.po.current_combination_id = 0
+        cls.po.last_image.im_combinations = []
+        combination = {'binary_image': many_small_blobs, 'converted_image': cls.image}
+        cls.po.last_image.im_combinations.append(combination)
+        cls.po.vars['exif'] = [0, 1]
+        cls.po.bio_mask = cv2.erode(many_small_blobs, cross_33)
+        cls.po.back_mask = np.zeros_like(many_small_blobs)
+        cls.po.back_mask[0, :] = 1
+        cls.po.vars['analyzed_individuals'] = [1]
+        cls.po.vars['several_blob_per_arena'] = True
+        cls.po.vars['fractal_analysis'] = True
+        cls.po.vars['already_greyscale'] = True
+        cls.po.vars['average_pixel_size'] = 1.
+        cls.po.vars['do_fading'] = True
+        cls.po.vars['first_move_threshold'] = 1
+        cls.po.vars['save_coord_specimen'] = True
+
+    def test_complete_image_analysis(self):
+        self.po.complete_image_analysis()
+        os.getcwd()
+
+    def tearDown(self):
+        """Remove all written files."""
+        file_names = os.listdir(self.path_output)
+        for file_name in file_names:
+            if os.path.isfile(file_name):
+                os.remove(file_name)
+
 
 class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     """Test suite for delineating arenas using ProgramOrganizer class"""
@@ -307,9 +434,13 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
     def test_write_videos_with_different_video_dimensions(self):
         """Test write_videos_as_np_arrays when the dimensions of each video are different"""
         os.chdir(self.path_experiment)
-        img_list = [self.path_experiment + '/' + "image1.tif", self.path_experiment + '/' + "image2.tif"]
+        img_list = ["image1.tif", "image2.tif"]
+        self.po.get_first_image(cross_33)
+        dictio = {'binary_image': cross_33}
+        self.po.first_image.im_combinations = [dictio]
+        self.po.save_first_image()
         self.po.top=np.array([0, 3])
-        self.po.bot=np.array([2, 6])
+        self.po.bot=np.array([3, 7])
         self.po.left=np.array([0, 3])
         self.po.right=np.array([3, 5])
         self.po.first_image.shape_number = 2
