@@ -617,9 +617,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         if os.path.isfile('cellects_settings.json'):
             os.remove('cellects_settings.json')
         logging.info("Save data to run Cellects quickly")
-        self.parent().po.data_to_save['first_image'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['first_image'] = False
         if not self.parent().po.vars['several_blob_per_arena']:
             logging.info("Check whether the detected shape number is ok")
             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
@@ -635,6 +633,8 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
                 self.parent().po.first_image.y_boundaries = None
                 analysis_status['continue'] = False
         if analysis_status['continue']:
+            self.parent().po.save_first_image()
+            self.parent().po.save_masks()
             logging.info("Start automatic video delineation")
             analysis_status = self.parent().po.delineate_each_arena()
         else:
@@ -677,7 +677,7 @@ class SaveManualDelineationThread(QtCore.QThread):
             self.parent().po.right.append(int(np.max(x)))
             self.parent().po.top.append(int(np.min(y)))
             self.parent().po.bot.append(int(np.max(y)))
-        self.parent().po.list_coordinates()
+        self.parent().po.save_coordinates()
         self.parent().po.save_data_to_run_cellects_quickly()
 
         logging.info("Save manual video delineation")
@@ -709,7 +709,7 @@ class GetExifDataThread(QtCore.QThread):
         """
         Do extract exif data..
         """
-        self.parent().po.extract_exif()
+        self.parent().po.save_exif()
 
 
 class CompleteImageAnalysisThread(QtCore.QThread):
@@ -741,8 +741,7 @@ class CompleteImageAnalysisThread(QtCore.QThread):
 
     def run(self):
         self.parent().po.get_background_to_subtract()
-        self.parent().po.get_origins_and_backgrounds_lists()
-        self.parent().po.data_to_save['exif'] = True
+        self.parent().po.save_origins_and_backgrounds_lists()
         self.parent().po.save_data_to_run_cellects_quickly()
         self.parent().po.bio_mask = None
         self.parent().po.back_mask = None
@@ -783,16 +782,14 @@ class PrepareVideoAnalysisThread(QtCore.QThread):
         image segmentation, and data saving.
         """
         self.parent().po.get_background_to_subtract()
-        self.parent().po.get_origins_and_backgrounds_lists()
+        self.parent().po.save_origins_and_backgrounds_lists()
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
             self.parent().po.fast_last_image_segmentation()
         self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
-        self.parent().po.data_to_save['exif'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['exif'] = False
 
 
 class SaveAllVarsThread(QtCore.QThread):
@@ -995,15 +992,13 @@ class OneArenaThread(QtCore.QThread):
                 self.message_from_thread_starting.emit(analysis_status["message"])
                 logging.error(analysis_status['message'])
             else:
-                self.parent().po.data_to_save['exif'] = True
                 self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.data_to_save['exif'] = False
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
                     analysis_status["continue"] = False
                 else:
-                    self.parent().po.get_origins_and_backgrounds_lists()
+                    self.parent().po.save_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
@@ -1644,10 +1639,8 @@ class RunAllThread(QtCore.QThread):
                 analysis_status["continue"] = False
 
             if analysis_status["continue"]:
-                self.parent().po.data_to_save['exif'] = True
+                self.parent().po.save_exif()
                 self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.data_to_save['exif'] = False
-                # self.parent().po.extract_exif()
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     analysis_status["message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
@@ -1656,7 +1649,7 @@ class RunAllThread(QtCore.QThread):
                     analysis_status["message"] = f"Auto video delineation failed, use manual delineation tool"
                     analysis_status["continue"] = False
                 else:
-                    self.parent().po.get_origins_and_backgrounds_lists()
+                    self.parent().po.save_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()

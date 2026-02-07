@@ -1212,6 +1212,9 @@ class AdvancedParameters(WindowType):
         options variables. This allows the software to retain user preferences across
         sessions and ensures that all settings are correctly applied before processing.
         """
+        if self.automatically_crop.isChecked() != self.parent().po.all['automatically_crop']:
+            if os.path.isfile('cellects_data.h5'):
+                remove_h5_key('cellects_data.h5', 'crop_coord')
         self.parent().po.all['automatically_crop'] = self.automatically_crop.isChecked()
         self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
         self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()

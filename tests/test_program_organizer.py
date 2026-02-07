@@ -123,7 +123,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         self.assertEqual(len(po.top), 1)
         self.assertEqual(len(po.bot), 1)
         po.get_background_to_subtract()
-        po.get_origins_and_backgrounds_lists()
+        po.save_origins_and_backgrounds_lists()
         self.assertTrue(os.path.isfile('ind_1.h5'))
         po.get_last_image()
         po.fast_last_image_segmentation()
@@ -138,8 +138,6 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.update_output_list()
         po.instantiate_tables()
         po.vars['maximal_growth_factor'] = 0.25
-        for k in po.data_to_save.keys():
-            po.data_to_save[k] = True
         po.save_variable_dict()
         po.save_data_to_run_cellects_quickly()
         po.load_data_to_run_cellects_quickly()
@@ -272,7 +270,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
         self.po.first_image.validated_shapes = several_arenas_bin_vid[0]
         are_gravity_centers_moving = False
         self.po.get_bounding_boxes(are_gravity_centers_moving)
-        self.po.get_origins_and_backgrounds_lists()
+        self.po.save_origins_and_backgrounds_lists()
         self.assertTrue(np.sum(self.po.top) > 0)
         self.assertTrue(np.sum(self.po.bot) > 0)
         self.assertTrue(np.sum(self.po.left) > 0)
@@ -323,14 +321,24 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
                          (self.po.top, self.po.bot, self.po.left, self.po.right), bunch_nb, video_nb_per_bunch,
                          remaining, self.po.all["raw_images"], is_landscape, use_list_of_vid, in_colors, self.po.reduce_image_dim,
                          pathway="")
-        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"ind_1.h5"))
-        self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"ind_2.h5"))
-        self.po.get_origins_and_backgrounds_lists()
-        self.po.vars['bb_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0], self.po.top.tolist(), self.po.bot.tolist(), self.po.left.tolist(), self.po.right.tolist()
+        self.assertTrue(os.path.isfile(f"ind_1.h5"))
+        self.assertTrue(os.path.isfile(f"ind_2.h5"))
+        self.po.vars['subtract_background'] = True
+        self.po.save_origins_and_backgrounds_lists()
+        self.po.vars['crop_coord'] = 0, self.po.first_image.image.shape[0], 0, self.po.first_image.image.shape[0]
+        self.po.all['automatically_crop'] = True
+        self.po.vars['arenas_coord'] = self.po.top.tolist(), self.po.bot.tolist(), self.po.left.tolist(), self.po.right.tolist()
+        self.po.save_coordinates()
+        self.po.save_exif()
         self.po.vars['convert_for_motion']['PCA2'] = [1, 1, 1]
         self.po.vars['filter_spec'] = {'filter1_type': 'Gaussian', 'filter1_param': [.5, 1.], 'filter2_type': "Median", 'filter2_param': [.5, 1.]}
+        self.po.save_data_to_run_cellects_quickly()
+        self.po.load_data_to_run_cellects_quickly()
         self.l = [0, 1, self.po.vars, False, False, False, None]
         self.ma = MotionAnalysis(self.l)
+        write_json('cellects_settings.json', None)
+        self.po.load_data_to_run_cellects_quickly()
+        self.po.save_data_to_run_cellects_quickly()
 
     def test_prepare_video_writing_using_too_much_memory(self):
         """Test prepare_video_writing when writing all videos at the same time is not possible with current memory"""
@@ -372,8 +380,8 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.assertTrue(self.po.first_image.image.any())
         self.po.get_last_image()
         self.assertTrue(self.po.last_image.image.any())
-        timings = self.po.extract_exif()
-        self.assertTrue(np.any(timings))
+        self.po.save_exif()
+        self.assertTrue(np.any(self.po.vars['exif']))
         self.po.fast_first_image_segmentation()
         self.po.fast_last_image_segmentation()
         self.po.cropping(True)
@@ -392,7 +400,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.po.complete_image_analysis()
         self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_frame.csv"))
         self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_arena.csv"))
-        self.po.get_origins_and_backgrounds_lists()
+        self.po.save_origins_and_backgrounds_lists()
         self.po.vars['save_coord_network'] = True
         self.po.vars['save_graph'] = True
         self.po.vars['study_cytoscillations'] = True

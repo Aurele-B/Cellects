@@ -188,20 +188,19 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        if 'bb_coord' in self.vars:
-            crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
-        elif videos_already_in_ram is not None:
-            if isinstance(videos_already_in_ram, list):
-                crop_bot, crop_right = videos_already_in_ram[0].shape[1], videos_already_in_ram[0].shape[2]
-            else:
-                crop_bot, crop_right = videos_already_in_ram.shape[1], videos_already_in_ram.shape[2]
-            crop_top, crop_left, top, bot, left, right = 0, 0, [0], [crop_bot], [0], [crop_right]
-        self.origin_idx = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'origin_coord')
+        if 'crop_coord' in self.vars and self.vars['crop_coord'] is not None:
+            crop_top, crop_bot, crop_left, crop_right = self.vars['crop_coord']
+        else:
+            crop_top, crop_bot, crop_left, crop_right = 0, -1, 0, -1
+        if 'arenas_coord' in self.vars:
+            top, bot, left, right = self.vars['arenas_coord']
+        else:
+            top, bot, left, right = [0], [crop_bot], [0], [crop_right]
         frame_height = bot[i] - top[i]
         true_frame_width = right[i] - left[i]
-        self.origin = np.zeros((frame_height, true_frame_width), dtype=np.uint8)
-        self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
 
+        if true_frame_width == -1:
+            true_frame_width = None
         vid_name = None
         if self.vars['video_list'] is not None:
             vid_name = self.vars['video_list'][i]
@@ -212,7 +211,7 @@ class MotionAnalysis:
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
         # When the video(s) already exists (not just written as .pny), they need to be sliced:
-        if self.visu is not None:
+        if self.visu is not None and frame_height != - 1:
             if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
                 self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
                 self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
@@ -231,6 +230,11 @@ class MotionAnalysis:
                                                      self.vars['lose_accuracy_to_save_memory'],
                                                      self.vars['filter_spec'])
             self.converted_video, self.converted_video2 = vids
+
+        self.dims = self.converted_video.shape
+        self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
+        self.origin_idx = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'origin_coord')
+        self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
 
     def assess_motion_detection(self):
         """

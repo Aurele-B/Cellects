@@ -62,11 +62,11 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         po.get_average_pixel_size()
         po.delineate_each_arena()
         po.get_background_to_subtract()
-        po.get_origins_and_backgrounds_lists()
+        po.save_origins_and_backgrounds_lists()
         po.get_last_image(last_im)
         po.fast_last_image_segmentation()
         po.find_if_lighter_background()
-        po.extract_exif()
+        po.save_exif()
     else:
         print('Image analysis already done, run video analysis')
     return po
