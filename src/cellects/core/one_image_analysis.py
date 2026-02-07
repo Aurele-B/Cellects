@@ -462,7 +462,6 @@ class OneImageAnalysis:
                             ProcessImage([self, params, process, csc_dict])
                         if (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
                             break
-
             self.score_combination_features()
             # 5. Try adding each valid channel with one another
             # 5.1. Generate an index vector containing, for each color space, the channel maximizing the score

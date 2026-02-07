@@ -50,8 +50,8 @@ class DefaultDicts:
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
-            'bio_mask': None,
-            'back_mask': None,
+            'initial_bio_mask': None,
+            'initial_back_mask': None,
             'keep_cell_and_back_for_all_folders': False,
 
             # 'overwrite_cellects_data': True,

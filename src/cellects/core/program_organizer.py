@@ -169,20 +169,24 @@ class ProgramOrganizer:
         logging.info("Save the parameters dictionaries in the Cellects folder")
         self.all['vars'] = self.vars
         all_vars = self.all.copy()
+        all_vars.pop('initial_bio_mask', None)
+        all_vars.pop('initial_back_mask', None)
         write_json(ALL_VARS_JSON_FILE, all_vars)
         self.save_masks()
 
     def save_masks(self):
         if self.all['keep_cell_and_back_for_all_folders']:
             if self.bio_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'bio_mask')
+                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
             else:
-                write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask, 'bio_mask')
+                write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask, 'initial_bio_mask')
             if self.back_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'bio_mask')
+                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
             else:
-                write_h5(CONFIG_DIR / 'masks.h5', self.back_mask, 'back_mask')
+                write_h5(CONFIG_DIR / 'masks.h5', self.back_mask, 'initial_back_mask')
         else:
+            self.all.pop('initial_bio_mask', None)
+            self.all.pop('initial_back_mask', None)
             if os.path.isfile(CONFIG_DIR / 'masks.h5'):
                 os.remove(CONFIG_DIR / 'masks.h5')
 
@@ -466,6 +470,8 @@ class ProgramOrganizer:
                 self.vars['exif'] = self.extract_exif()
             self.all['vars'] = self.vars
             data_to_run_cellects_quickly['all'] = self.all
+            all_vars.pop('initial_bio_mask', None)
+            all_vars.pop('initial_back_mask', None)
             write_json('cellects_settings.json', data_to_run_cellects_quickly)
 
     def list_coordinates(self):
@@ -541,8 +547,8 @@ class ProgramOrganizer:
     def load_masks(self):
         """"""
         if self.parent().po.all['keep_cell_and_back_for_all_folders']:
-            self.bio_mask = read_h5(CONFIG_DIR / 'masks.h5', 'bio_mask')
-            self.back_mask = read_h5(CONFIG_DIR / 'masks.h5', 'back_mask')
+            self.bio_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
+            self.back_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
 
     def get_last_image(self, last_im: NDArray=None):
         """
@@ -632,7 +638,7 @@ class ProgramOrganizer:
         if self.vars['convert_for_origin'] is None:
             self.vars['convert_for_origin'] = {"logical": 'None', "PCA": [1, 1, 1]}
         self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                             self.all["bio_mask"], self.all["back_mask"], subtract_background=None,
+                                             self.all['initial_bio_mask'], self.all['initial_back_mask'], subtract_background=None,
                                              subtract_background2=None,
                                              rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                              filter_spec=self.vars["filter_spec"])
@@ -641,7 +647,7 @@ class ProgramOrganizer:
             if self.vars['drift_already_corrected']:
                 logging.info("Cellects detected that the images have already been corrected for drift")
                 self.first_image.convert_and_segment(self.vars['convert_for_origin'], self.vars["color_number"],
-                                                     self.all["bio_mask"], self.all["back_mask"],
+                                                     self.all['initial_bio_mask'], self.all['initial_back_mask'],
                                                      subtract_background=None, subtract_background2=None,
                                                      rolling_window_segmentation=self.vars["rolling_window_segmentation"],
                                                      filter_spec=self.vars["filter_spec"],
@@ -651,7 +657,7 @@ class ProgramOrganizer:
                                           horizontal_size=self.starting_blob_hsize_in_pixels,
                                           spot_shape=self.all['starting_blob_shape'],
                                           several_blob_per_arena=self.vars['several_blob_per_arena'],
-                                          bio_mask=self.all["bio_mask"], back_mask=self.all["back_mask"])
+                                          bio_mask=self.all['initial_bio_mask'], back_mask=self.all['initial_back_mask'])
         self.first_image.validated_shapes, shape_number, stats, centroids = shapes_features
         self.first_image.shape_number = shape_number
         if self.first_image.im_combinations is None:
@@ -719,33 +725,26 @@ class ProgramOrganizer:
             greyscale = self.last_image.image
         self.last_image.im_combinations[self.current_combination_id]['converted_image'] = bracket_to_uint8_image_contrast(greyscale)
 
-    def save_user_masks(self, bio_mask=None, back_mask=None):
-        self.all["bio_mask"] = None
-        self.all["back_mask"] = None
-        if self.all['keep_cell_and_back_for_all_folders']:
-            self.all["bio_mask"] = bio_mask
-            self.all["back_mask"] = back_mask
+    def pre_save_user_masks(self, bio_mask=None, back_mask=None):
+        self.all['initial_bio_mask'] = None
+        self.all['initial_back_mask'] = None
+        if bio_mask is not None and bio_mask.any():
+            self.all['initial_bio_mask'] = np.nonzero(bio_mask)
+        if back_mask is not None and back_mask.any():
+            self.all['initial_back_mask'] = np.nonzero(back_mask)
 
     def full_first_image_segmentation(self, first_param_known: bool, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
-        if bio_mask.any():
+        if bio_mask is not None and bio_mask.any():
             shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
             shape_nb -= 1
-            bio_mask = np.nonzero(bio_mask)
-        else:
-            shape_nb = 0
-            bio_mask = None
-        if back_mask.any():
-            back_mask = np.nonzero(back_mask)
-        else:
-            back_mask = None
-        self.save_user_masks(bio_mask=bio_mask, back_mask=back_mask)
+        self.pre_save_user_masks(bio_mask=bio_mask, back_mask=back_mask)
         if self.visualize or len(self.first_im.shape) == 2:
             if not first_param_known and self.all['scale_with_image_or_cells'] == 0 and self.all["set_spot_size"]:
                 self.get_average_pixel_size()
             else:
                 self.starting_blob_hsize_in_pixels = None
             self.fast_first_image_segmentation()
-            if not self.vars['several_blob_per_arena'] and bio_mask is not None and shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
+            if not self.vars['several_blob_per_arena'] and self.all['initial_bio_mask'] is not None and shape_nb == self.sample_number and self.first_image.im_combinations[self.current_combination_id]['shape_number'] != self.sample_number:
                 self.first_image.im_combinations[self.current_combination_id]['shape_number'] = shape_nb
                 self.first_image.shape_number = shape_nb
                 self.first_image.validated_shapes = (ordered_image > 0).astype(np.uint8)
@@ -757,8 +756,8 @@ class ProgramOrganizer:
             params['blob_nb'] = self.sample_number
             if self.vars["color_number"] > 2:
                 params['kmeans_clust_nb'] = self.vars["color_number"]
-            params['bio_mask'] = self.all["bio_mask"]
-            params['back_mask'] = self.all["back_mask"]
+            params['bio_mask'] = self.all['initial_bio_mask']
+            params['back_mask'] = self.all['initial_back_mask']
             params['filter_spec'] = self.vars["filter_spec"]
 
             if first_param_known:
@@ -773,11 +772,11 @@ class ProgramOrganizer:
             self.first_image.find_color_space_combinations(params)
 
     def full_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
-        if bio_mask.any():
+        if bio_mask is not None and bio_mask.any():
             bio_mask = np.nonzero(bio_mask)
         else:
             bio_mask = None
-        if back_mask.any():
+        if back_mask is not None and back_mask.any():
             back_mask = np.nonzero(back_mask)
         else:
             back_mask = None
@@ -812,7 +811,6 @@ class ProgramOrganizer:
                 params['bio_mask'] = bio_mask
                 params['back_mask'] = back_mask
                 params['filter_spec'] = self.vars["filter_spec"]
-
                 self.last_image.find_color_space_combinations(params)
 
     def cropping(self, is_first_image: bool):
