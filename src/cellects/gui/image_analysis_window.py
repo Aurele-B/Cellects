@@ -2469,4 +2469,4 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().last_tab = "image_analysis"
             self.parent().change_widget(3)  # VideoAnalysisWindow
 
-            self.popup.close()
+            # self.popup.close()
