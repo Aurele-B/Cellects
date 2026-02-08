@@ -695,13 +695,8 @@ class AdvancedParameters(WindowType):
         """
         Update the visibility of `max_core_nb` and `max_core_nb_label` based on the checkbox state of `do_multiprocessing`.
         """
-        if sys.platform == "darwin":
-            self.message.setText('Multiprocessing not available on manOS yet')
-            self.message.setStyleSheet("color: rgb(230, 145, 18)")
-            self.do_multiprocessing.setChecked(False)
-        else:
-            self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
-            self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
+        self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
+        self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
 
     def do_distant_shape_int_changed(self):
         """
