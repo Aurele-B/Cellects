@@ -1189,13 +1189,13 @@ class MotionAnalysis:
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
         if release_memory:
-            self.substantial_image = None
-            self.covering_intensity = None
-            self.segmented = None
-            self.gravity_field = None
-            self.sun = None
-            self.rays = None
-            self.holes = None
+            del self.substantial_image
+            del self.covering_intensity
+            del self.segmented
+            del self.gravity_field
+            del self.sun
+            del self.rays
+            del self.holes
             collect()
         self.surfarea = self.binary.sum((1, 2))
         timings = np.array(self.vars['exif'])
@@ -1225,7 +1225,7 @@ class MotionAnalysis:
                                                                       self.vars['output_in_mm'],
                                                                       self.vars['average_pixel_size'],
                                                                       self.vars['do_fading'],
-                                                                       self.vars['save_coord_specimen'])
+                                                                      self.vars['save_coord_specimen'])
         else:
             self.one_row_per_frame = compute_one_descriptor_per_colony(self.binary,
                                                                        self.one_descriptor_per_arena['arena'], timings,
