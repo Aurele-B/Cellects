@@ -1970,5 +1970,6 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
         results_i['efficiency_test_1'] = analysis_i.efficiency_test_1
         results_i['efficiency_test_2'] = analysis_i.efficiency_test_2
         grouped_results.append(results_i)
+        del analysis_i
 
     subtotals.put(grouped_results)
