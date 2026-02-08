@@ -19,7 +19,7 @@ import logging
 import os
 from copy import deepcopy
 from pathlib import Path
-
+import sys
 from PySide6 import QtWidgets, QtCore
 import numpy as np
 from cellects.config.all_vars_dict import DefaultDicts
@@ -695,8 +695,12 @@ class AdvancedParameters(WindowType):
         """
         Update the visibility of `max_core_nb` and `max_core_nb_label` based on the checkbox state of `do_multiprocessing`.
         """
-        self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
-        self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
+        if sys.platform == "darwin":
+            self.message('Multiprocessing not yet available on manOS')
+            self.do_multiprocessing.setChecked(False)
+        else:
+            self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
+            self.max_core_nb_label.setVisible(self.do_multiprocessing.isChecked())
 
     def do_distant_shape_int_changed(self):
         """
