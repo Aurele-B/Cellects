@@ -766,7 +766,7 @@ number of available CPU cores minus one.
 # END_TIP
 
 AP["Minimal_RAM_let_free"] = {}
-AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free"
+AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free (Go)"
 # START_TIP
 AP["Minimal_RAM_let_free"]["tips"] = \
 f"""Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
