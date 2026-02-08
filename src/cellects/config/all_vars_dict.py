@@ -119,7 +119,7 @@ class DefaultDicts:
             'repeat_video_smoothing': 1,
             'keep_unaltered_videos': False,
             'maximal_growth_factor': 0.05,
-            'min_ram_free': 0.87,
+            'min_ram_free': 1.,
             'expected_oscillation_period': 2,  # (min)
             'minimal_oscillating_cluster_size': 50,  # (pixels)
             'output_in_mm': True,
