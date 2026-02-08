@@ -974,7 +974,6 @@ class MotionAnalysis:
         """
         # Get from gradients, a 2D matrix of potentially covered pixels
         # I/ dilate the shape made with covered pixels to assess for covering
-
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
         if self.dims[0] < 100:
             new_potentials = self.segmented[self.t, :, :]
@@ -1033,10 +1032,11 @@ class MotionAnalysis:
                             pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
                                                       self.segmented[(self.step):(self.t + 1), :, :])
                         new_shape = self.binary[self.t, :, :].copy()
-                pads = None
+                del pads
 
             # Fill holes
             new_shape = cv2.morphologyEx(new_shape, cv2.MORPH_CLOSE, cross_33)
+        del new_potentials
 
         if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
             # Shape Erosion
@@ -1052,6 +1052,7 @@ class MotionAnalysis:
             if self.vars['origin_state'] == 'constant':
                 protect_from_fading = self.origin
             new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, protect_from_fading)
+            del new_idx
 
         self.covering_intensity *= new_shape
         self.binary[self.t, :, :] = new_shape * self.borders
@@ -1085,8 +1086,10 @@ class MotionAnalysis:
                                     self.holes[np.nonzero(ray_through_back)] = 1
                             else:
                                 self.rays = np.concatenate((self.rays[:(ray - 2)], self.rays[(ray - 1):]))
-                        ray_through_shape = None
-                        ray_through_back = None
+                        del ray_through_shape
+                        del ray_through_back
+                    del shape
+                    del back
             if np.any(self.surfarea[:self.t] > self.substantial_growth * 2):
 
                 if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
@@ -1126,6 +1129,11 @@ class MotionAnalysis:
                     shapes, stats, centers = cc(self.binary[self.t, ...])
                     shapes[shapes != 1] = 0
                     self.binary[self.t, ...] = shapes
+                del periphery_to_remove
+                del shapes
+                del stats
+                del centers
+            del growth_near_periphery
 
         # Display
         if show_seg:
