@@ -1650,7 +1650,7 @@ class RunAllThread(QtCore.QThread):
                     self.parent().po.save_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_last_image_segmentation()
-                    self.parent().po.find_if_lighter_backgnp.round()
+                    self.parent().po.find_if_lighter_background()
             return analysis_status
         else:
             analysis_status["message"] = f"Wrong folder or parameters"
