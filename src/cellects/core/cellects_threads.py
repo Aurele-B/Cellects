@@ -23,7 +23,6 @@ activity tracking.
 """
 
 import logging
-import weakref
 from multiprocessing import Queue, Process, Manager
 import os
 import time
@@ -1084,7 +1083,6 @@ class OneArenaThread(QtCore.QThread):
             self.videos_in_ram = None
         l = [i, arena, self.parent().po.vars, False, False, False, self.videos_in_ram]
         self.parent().po.motion = MotionAnalysis(l)
-        r = weakref.ref(self.parent().po.motion)
 
         if self.videos_in_ram is None:
             self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
@@ -1202,7 +1200,6 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
-            r = weakref.ref(analysis_i)
             analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
@@ -1839,7 +1836,6 @@ class RunAllThread(QtCore.QThread):
 
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
                         analysis_i = MotionAnalysis(l)
-                        r = weakref.ref(analysis_i)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
                             self.parent().po.update_one_row_per_arena(i, analysis_i.one_descriptor_per_arena)
@@ -1953,7 +1949,6 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
     grouped_results = []
     for i in range(lower_bound, upper_bound):
         analysis_i = MotionAnalysis([i, i + 1, vars, True, True, False, None])
-        r = weakref.ref(analysis_i)
         results_i = dict()
         results_i['arena'] = analysis_i.one_descriptor_per_arena['arena']
         results_i['i'] = analysis_i.one_descriptor_per_arena['arena'] - 1

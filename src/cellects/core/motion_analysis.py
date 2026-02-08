@@ -36,7 +36,6 @@ The features of this module include:
 - Fractal dimension calculation
 """
 
-import weakref
 from gc import collect
 import numpy as np
 from numba.typed import Dict as TDict
@@ -1019,7 +1018,6 @@ class MotionAnalysis:
                 new_shape = deepcopy(new_potentials)
             else:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
-                r = weakref.ref(pads)
                 # If max_distance is non nul look for distant shapes
                 pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
                                                      self.vars['max_size_for_connection'])
