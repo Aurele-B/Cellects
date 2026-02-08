@@ -697,6 +697,7 @@ class AdvancedParameters(WindowType):
         """
         if sys.platform == "darwin":
             self.message.setText('Multiprocessing not available on manOS yet')
+            self.message.setStyleSheet("color: rgb(230, 145, 18)")
             self.do_multiprocessing.setChecked(False)
         else:
             self.max_core_nb.setVisible(self.do_multiprocessing.isChecked())
