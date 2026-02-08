@@ -1756,6 +1756,7 @@ class RunAllThread(QtCore.QThread):
                                             write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
+                        del video_bunch
                         logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
                     logging.info("When they exist, do not overwrite unaltered video")
                     self.parent().po.all['overwrite_unaltered_videos'] = False
@@ -1888,7 +1889,7 @@ class RunAllThread(QtCore.QThread):
                             p.join()
 
                         self.message_from_thread.emit(f"{message}, Step 2/2:  Saving all results...")
-                        for i in range(subtotals.qsize()):
+                        for _ in range(len(PROCESSES)):
                             grouped_results = subtotals.get()
                             for j, results_i in enumerate(grouped_results):
                                 if not self.parent().po.vars['several_blob_per_arena']:
@@ -1901,6 +1902,8 @@ class RunAllThread(QtCore.QThread):
 
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])
+                            del grouped_results
+                        del subtotals
                         self.image_from_thread.emit(
                             {"current_image": self.parent().po.last_image.bgr,
                              "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
