@@ -26,14 +26,10 @@ import logging
 from multiprocessing import Queue, Process, Manager
 import os
 import time
-from glob import glob
 from timeit import default_timer
-from copy import deepcopy
 import cv2
 from numba.typed import Dict as TDict
 import numpy as np
-from numpy.typing import NDArray
-import pandas as pd
 from PySide6 import QtCore
 
 from cellects.core.program_organizer import ProgramOrganizer
@@ -327,7 +323,7 @@ class UpdateImageThread(QtCore.QThread):
             # 2) The back_mask and bio_mask
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
-            self.parent().imageanalysiswindow.drawn_image = deepcopy(self.parent().po.current_image)
+            self.parent().imageanalysiswindow.drawn_image = self.parent().po.current_image.copy()
             contour_width = get_contour_width_from_im_shape(dims)
             # 1) Add the segmentation mask to the image
             if self.parent().imageanalysiswindow.is_first_image_flag:
@@ -1074,10 +1070,10 @@ class OneArenaThread(QtCore.QThread):
                 self.videos_in_ram = self.parent().po.converted_video
             else:
                 if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
-                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video)]
+                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy()]
                 else:
-                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video),
-                                          deepcopy(self.parent().po.converted_video2)]
+                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy(),
+                                          self.parent().po.converted_video2.copy()]
         else:
             logging.info(f"Starting to load arena n°{arena} from .h5 saved file")
             self.videos_in_ram = None
@@ -1085,9 +1081,9 @@ class OneArenaThread(QtCore.QThread):
         self.parent().po.motion = MotionAnalysis(l)
 
         if self.videos_in_ram is None:
-            self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
+            self.parent().po.converted_video = self.parent().po.motion.converted_video.copy()
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                self.parent().po.converted_video2 = deepcopy(self.parent().po.motion.converted_video2)
+                self.parent().po.converted_video2 = self.parent().po.motion.converted_video2.copy()
         self.parent().po.motion.assess_motion_detection()
         self.when_loading_finished.emit(save_loaded_video)
 
@@ -1106,9 +1102,9 @@ class OneArenaThread(QtCore.QThread):
         video options.
         """
         self.message_from_thread_starting.emit(f"Quick video segmentation")
-        self.parent().po.motion.converted_video = deepcopy(self.parent().po.converted_video)
+        self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-            self.parent().po.motion.converted_video2 = deepcopy(self.parent().po.converted_video2)
+            self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         if self.parent().po.all['compute_all_options']:
             self.parent().po.computed_video_options = np.ones(5, bool)
@@ -1229,7 +1225,7 @@ class OneArenaThread(QtCore.QThread):
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
                 contours = np.nonzero(get_contours(analysis_i.binary[analysis_i.t - 1, :, :]))
-                current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
+                current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
                     {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
@@ -1302,7 +1298,7 @@ class VideoReaderThread(QtCore.QThread):
         This method emits signals to update the UI with progress messages and current images.
         It uses OpenCV for morphological operations on video frames.
         """
-        video_analysis = deepcopy(self.parent().po.motion.visu)
+        video_analysis = self.parent().po.motion.visu.copy()
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
         if self.parent().po.load_quick_full > 0:
@@ -1334,7 +1330,7 @@ class VideoReaderThread(QtCore.QThread):
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
-            current_image = deepcopy(video_analysis[t, ...])
+            current_image = video_analysis[t, ...].copy()
             current_image[mask > 0] = self.parent().po.vars['contour_color']
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
@@ -1718,7 +1714,7 @@ class RunAllThread(QtCore.QThread):
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape, self.parent().po.first_image.crop_coord)
-                            prev_img = deepcopy(img)
+                            prev_img = img.copy()
                             if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                                 img = img[:, :, 0]
 

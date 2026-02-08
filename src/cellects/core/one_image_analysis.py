@@ -17,7 +17,6 @@ Uses QThread for background operations during combination processing.
 
 import logging
 import os
-from copy import deepcopy
 import numpy as np
 import cv2  # named opencv-python
 import multiprocessing.pool as mp
@@ -27,13 +26,12 @@ from numpy.typing import NDArray
 from typing import Tuple
 import pandas as pd
 from scipy.stats import rankdata
-from skimage.measure import perimeter
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, spot_size_coefficients
+from cellects.image_analysis.morphological_operations import cross_33, create_ellipse
 from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import ProcessImage
 from cellects.image_analysis.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.utils.utilitarian import split_dict, translate_dict
+from cellects.utils.utilitarian import split_dict
 
 def init_params():
     params = {}
@@ -779,7 +777,7 @@ class OneImageAnalysis:
             logging.info("Crop using the automatically_crop method of OneImageAnalysis class")
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
-            self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])
+            self.bgr = self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...].copy()
             self._get_all_color_spaces()
             if self.im_combinations is not None:
                 for i in np.arange(len(self.im_combinations)):

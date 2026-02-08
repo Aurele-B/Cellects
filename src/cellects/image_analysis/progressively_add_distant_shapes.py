@@ -25,8 +25,6 @@ Functions:
 This module is particularly useful in image analysis tasks where shapes need to be tracked and connected over time based on spatial relationships.
 """
 
-
-from copy import deepcopy
 import numpy as np
 import cv2
 from numpy.typing import NDArray
@@ -184,7 +182,7 @@ class ProgressivelyAddDistantShapes:
                 self.new_order[not_one_idx[0], not_one_idx[1]] = 1
                 self.new_order[one_idx[0], one_idx[1]] = main_shape_label
                 # Do the same for stats
-                not_one_stats = deepcopy(self.stats[main_shape_label - 1, :])
+                not_one_stats = self.stats[main_shape_label - 1, :].copy()
                 self.stats[main_shape_label - 1, :] = self.stats[1, :]
                 self.stats[1, :] = not_one_stats
             else:
@@ -226,10 +224,10 @@ class ProgressivelyAddDistantShapes:
             if min_shape_size is not None or max_shape_size is not None:
                 if min_shape_size is not None:
                     small_shapes = self.stats[:, 4] < min_shape_size
-                    extreme_shapes = deepcopy(small_shapes)
+                    extreme_shapes = small_shapes.copy()
                 if max_shape_size is not None:
                     large_shapes = self.stats[:, 4] > max_shape_size
-                    extreme_shapes = deepcopy(large_shapes)
+                    extreme_shapes = large_shapes.copy()
                 if min_shape_size is not None and max_shape_size is not None:
                     extreme_shapes = np.nonzero(np.logical_or(small_shapes, large_shapes))[0]
                 is_main_in_it = np.isin(extreme_shapes, 1)
@@ -244,8 +242,8 @@ class ProgressivelyAddDistantShapes:
         # Dilate the main shape, progressively to infer in what order other shapes should be expanded toward it
         other_shapes = np.zeros(self.main_shape.shape, np.uint8)
         other_shapes[self.new_order > 1] = 1
-        new_order = deepcopy(self.new_order)
-        dil_main_shape = deepcopy(self.main_shape)
+        new_order = self.new_order.copy()
+        dil_main_shape = self.main_shape.copy()
         order_of_shapes_to_expand = np.empty(0, dtype=np.uint32)
         nb = 3
         while nb > 2:
@@ -292,7 +290,7 @@ class ProgressivelyAddDistantShapes:
         """
         simple_disk = cross_33
         order_of_shapes_to_expand = self._find_shape_connection_order()
-        expanded_main = deepcopy(self.main_shape)
+        expanded_main = self.main_shape.copy()
         max_field_feelings = np.empty(0, dtype=np.uint32)
         # Loop over each shape to connect, from the nearest to the furthest to the main shape
         for shape_i in order_of_shapes_to_expand:#  shape_i = order_of_shapes_to_expand[0]
@@ -451,7 +449,7 @@ class ProgressivelyAddDistantShapes:
             image_garbage = (self.expanded_shape >= distance_against_time[t]).astype(np.uint8)
             new_order, stats, centers = cc(image_garbage)
             for comp_i in np.arange(1, stats.shape[0]):
-                past_image = deepcopy(self.binary_video[time_start + t, :, :])
+                past_image = self.binary_video[time_start + t, :, :].copy()
                 with_new_comp = new_order == comp_i
                 past_image[with_new_comp] = 1
                 nb_comp, image_garbage = cv2.connectedComponents(past_image)

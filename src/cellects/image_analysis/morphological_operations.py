@@ -566,7 +566,7 @@ def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_d
     """
     if with_erosion > 0:
         original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
-    expand = deepcopy(original_shape)
+    expand = original_shape.copy()
     if max_distance is not None:
         if max_distance > np.max(original_shape.shape):
             max_distance = np.max(original_shape.shape).astype(np.uint32)
@@ -1214,7 +1214,7 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
     """
     previous_shape_to_expand = shape_to_expand.copy()
     if shape_to_expand.any():
-        without_shape = deepcopy(without_shape_i)
+        without_shape = without_shape_i.copy()
         if ref_centroids.shape[0] > 1:
             # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
             centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
@@ -1432,7 +1432,7 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
         for t in np.arange(len(distance_against_time)):
             new_order, stats, centers = cc((holes >= distance_against_time[t]).astype(np.uint8))
             for comp_i in np.arange(1, stats.shape[0]):
-                past_image = deepcopy(binary_video[holes_time_start + t, :, :])
+                past_image = binary_video[holes_time_start + t, :, :].copy()
                 with_new_comp = new_order == comp_i
                 past_image[with_new_comp] = 1
                 nb_comp, image_garbage = cv2.connectedComponents(past_image)
@@ -1686,10 +1686,10 @@ def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direct
         binary_image, y_boundaries, get_ordered_image=True)
     blob_number = ordered_stats.shape[0]
 
-    ordered_image_i = deepcopy(ordered_image)
+    ordered_image_i = ordered_image.copy()
     logging.info("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
     for step_i in np.arange(1, len(motion_list)):
-        previously_ordered_centroids = deepcopy(ordered_centroids)
+        previously_ordered_centroids = ordered_centroids.copy()
         new_image_i = motion_list[step_i].copy()
         detected_shape_number = blob_number + 1
         c = 0
@@ -1833,7 +1833,7 @@ def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, 
         max_x = np.max(binary_idx[1])
         max_x = np.min((max_x + 1, binary_image.shape[1] - 1))
 
-        zoomed_binary = deepcopy(binary_image[min_y:(max_y + 1), min_x: (max_x + 1)])
+        zoomed_binary = binary_image[min_y:(max_y + 1), min_x: (max_x + 1)].copy()
         min_side = np.min(zoomed_binary.shape)
         if min_side >= min_im_side:
             if contours:

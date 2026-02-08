@@ -874,7 +874,7 @@ def get_inner_vertices(pad_skeleton: NDArray[np.uint8], potential_tips: NDArray[
     """
 
     # Initiate the vertices final matrix as a copy of the potential_tips
-    pad_vertices = deepcopy(potential_tips)
+    pad_vertices = potential_tips.copy()
     for neighbor_nb in [8, 7, 6, 5, 4]:
         # All pixels having neighbor_nb neighbor are potential vertices
         potential_vertices = np.zeros(potential_tips.shape, dtype=np.uint8)

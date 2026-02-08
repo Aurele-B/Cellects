@@ -17,9 +17,6 @@ Uses QThread for background operations to maintain UI responsiveness during para
 
 import logging
 import os
-from copy import deepcopy
-from pathlib import Path
-import sys
 from PySide6 import QtWidgets, QtCore
 import numpy as np
 from cellects.config.all_vars_dict import DefaultDicts
@@ -1277,7 +1274,7 @@ class AdvancedParameters(WindowType):
 
         self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
 
-        previous_csc = deepcopy(self.parent().po.vars['convert_for_motion'])
+        previous_csc = self.parent().po.vars['convert_for_motion'].copy()
         self.save_user_defined_csc()
         if self.parent().po.first_exp_ready_to_run:
             are_dicts_equal: bool = True

@@ -901,7 +901,7 @@ class MotionAnalysis:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .h5 videos and cellects_settings.json and re-run")
 
         if self.vars['origin_state'] == "invisible":
-            self.binary[self.start - 1, :, :] = deepcopy(self.origin)
+            self.binary[self.start - 1, :, :] = self.origin.copy()
             self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = self.converted_video[self.start, self.origin_idx[0], self.origin_idx[1]]
         else:
             if self.vars['origin_state'] == "fluctuating":
@@ -1008,14 +1008,14 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
-        new_shape = deepcopy(self.binary[self.t - 1, :, :])
+        new_shape = self.binary[self.t - 1, :, :].copy()
         new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_CLOSE, cross_33)
         new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_OPEN, cross_33) * self.borders
         new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
         # Add distant shapes within a radius, score every added pixels according to their distance
         if not self.vars['several_blob_per_arena']:
             if new_shape.sum() == 0:
-                new_shape = deepcopy(new_potentials)
+                new_shape = new_potentials.copy()
             else:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
                 # If max_distance is non nul look for distant shapes
@@ -1023,7 +1023,7 @@ class MotionAnalysis:
                                                      self.vars['max_size_for_connection'])
                 pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
 
-                new_shape = deepcopy(pads.expanded_shape)
+                new_shape = pads.expanded_shape.copy()
                 new_shape[new_shape > 1] = 1
                 if np.logical_and(self.t > self.step, self.t < self.dims[0]):
                     if np.any(pads.expanded_shape > 5):
@@ -1032,7 +1032,7 @@ class MotionAnalysis:
                         self.binary[(self.step):(self.t + 1), :, :] = \
                             pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
                                                       self.segmented[(self.step):(self.t + 1), :, :])
-                        new_shape = deepcopy(self.binary[self.t, :, :])
+                        new_shape = self.binary[self.t, :, :].copy()
                 pads = None
 
             # Fill holes
@@ -1130,7 +1130,7 @@ class MotionAnalysis:
         # Display
         if show_seg:
             if self.visu is not None:
-                im_to_display = deepcopy(self.visu[self.t, ...])
+                im_to_display = self.visu[self.t, ...].copy()
                 contours = np.nonzero(cv2.morphologyEx(self.binary[self.t, :, :], cv2.MORPH_GRADIENT, cross_33))
                 if self.vars['lighter_background']:
                     im_to_display[contours[0], contours[1]] = 0
@@ -1474,11 +1474,11 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             if len(self.converted_video.shape) == 3:
                 self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video),
                                              axis=3)
-            self.efficiency_test_1 = deepcopy(self.converted_video[after_one_tenth_of_time, ...])
-            self.efficiency_test_2 = deepcopy(self.converted_video[last_good_detection, ...])
+            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, ...].copy()
+            self.efficiency_test_2 = self.converted_video[last_good_detection, ...].copy()
         else:
-            self.efficiency_test_1 = deepcopy(self.visu[after_one_tenth_of_time, :, :, :])
-            self.efficiency_test_2 = deepcopy(self.visu[last_good_detection, :, :, :])
+            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
 
         position = (25, self.dims[1] // 2)
         text = str(self.one_descriptor_per_arena['arena'])

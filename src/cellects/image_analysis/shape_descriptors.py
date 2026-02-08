@@ -27,7 +27,6 @@ import cv2
 import numpy as np
 from typing import Tuple
 from numpy.typing import NDArray
-from copy import deepcopy
 import pandas as pd
 from tqdm import tqdm
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
@@ -60,7 +59,7 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
 length_descriptors = ['perimeter', 'major_axis_len', 'minor_axis_len']
 area_descriptors = ['area', 'area_total', 'total_hole_area', 'newly_explored_area', 'final_area']
 
-descriptors = deepcopy(from_shape_descriptors_class)
+descriptors = from_shape_descriptors_class.copy()
 descriptors.update({'minkowski_dimension': False})
 
 def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label: int, timings: NDArray,

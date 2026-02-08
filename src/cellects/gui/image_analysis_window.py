@@ -19,7 +19,6 @@ Uses QThread for background operations to maintain UI responsiveness.
 """
 import logging
 import time
-from copy import deepcopy
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 from cellects.core.cellects_threads import (
@@ -671,8 +670,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.visualize.setVisible(True)
             self.visualize_label.setVisible(True)
         else:
-            self.parent().po.current_image = deepcopy(image)
-        self.drawn_image = deepcopy(self.parent().po.current_image)
+            self.parent().po.current_image = image.copy()
+        self.drawn_image = self.parent().po.current_image.copy()
         self.display_image.update_image(self.parent().po.current_image)
         self.arena_mask = None
         self.bio_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
@@ -1241,7 +1240,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.parent().po.current_image = np.stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image'],
                                                     im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
-            self.drawn_image = deepcopy(self.parent().po.current_image)
+            self.drawn_image = self.parent().po.current_image.copy()
 
     def option_changed(self):
         """

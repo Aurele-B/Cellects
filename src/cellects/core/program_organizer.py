@@ -8,11 +8,9 @@
  Fifth, Cellects extract variables and store them in .csv files.
 """
 
-import pickle
 import sys
 import os
 import logging
-from copy import deepcopy
 import psutil
 import cv2
 from numba.typed import Dict as TDict
@@ -962,7 +960,7 @@ class ProgramOrganizer:
             if self.last_image.bgr[among[0], among[1], ...].mean() > self.last_image.bgr[not_among[0], not_among[1], ...].mean():
                 self.vars['contour_color'] = 255
         if self.vars['origin_state'] == "invisible":
-            binary_image = deepcopy(self.first_image.binary_image)
+            binary_image = self.first_image.binary_image.copy()
             self.first_image.convert_and_segment(self.vars['convert_for_motion'], self.vars["color_number"],
                                                  None, None, subtract_background=None,
                                                  subtract_background2=None,
@@ -1106,8 +1104,8 @@ class ProgramOrganizer:
         if self.first_image.validated_shapes.any() and self.first_image.shape_number > 0:
             self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                 self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-            self.unchanged_ordered_fimg = deepcopy(self.ordered_first_image)
-            self.modif_validated_shapes = deepcopy(self.first_image.validated_shapes)
+            self.unchanged_ordered_fimg = self.ordered_first_image.copy()
+            self.modif_validated_shapes = self.first_image.validated_shapes.copy()
             self.standard = - 1
             counter = 0
             while np.any(np.less(self.standard, 0)) and counter < 20:
@@ -1209,7 +1207,7 @@ class ProgramOrganizer:
         self.standard[:, 3] = self.right + np.uint8(np.ceil(add_to_x))
 
         # Monitor if one bounding box gets out of picture shape
-        out_of_pic = deepcopy(self.standard)
+        out_of_pic = self.standard.copy()
         out_of_pic[:, 1] = self.ordered_first_image.shape[0] - out_of_pic[:, 1] - 1
         out_of_pic[:, 3] = self.ordered_first_image.shape[1] - out_of_pic[:, 3] - 1
 
