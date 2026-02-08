@@ -559,7 +559,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
             self.po.bot=np.array([500, 1000])
             self.po.right=np.array([500, 1000])
             bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape  = self.po.prepare_video_writing(img_list, min_ram_free)
-            self.assertGreater(bunch_nb, 0)
+            self.assertTrue(sizes.all())
 
     def tearDown(self):
         """Remove all written files."""
