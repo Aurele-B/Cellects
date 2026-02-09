@@ -126,10 +126,14 @@ class MotionAnalysis:
         self.origin_idx = None
         self.smoothing_flag: bool = False
         self.drift_mask_coord = None
-        self.coord_network = None
+        self.substantial_image = None
+        self.segmented = None
+        self.covering_intensity = None
+        self.gravity_field = None
         self.rays = None
         self.sun = None
         self.holes = None
+        self.coord_network = None
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
