@@ -17,6 +17,7 @@ Uses QThread for background operations to maintain UI responsiveness during para
 
 import logging
 import os
+import psutil
 from PySide6 import QtWidgets, QtCore
 import numpy as np
 from cellects.config.all_vars_dict import DefaultDicts
@@ -486,7 +487,9 @@ class AdvancedParameters(WindowType):
         self.max_core_nb_label = FixedText(AP["Proc_max_core_nb"]["label"],
                                            tip=AP["Proc_max_core_nb"]["tips"],
                                            night_mode=self.parent().po.all['night_mode'])
-        self.min_memory_left = Spinbox(min=0, max=1024, val=self.parent().po.vars['min_ram_free'], decimals=1,
+        # Min should be 10% of the total And 1G0
+        total_ram_gb = psutil.virtual_memory().total / (1024 ** 3)
+        self.min_memory_left = Spinbox(min=np.max((total_ram_gb * .1, 1.)), max=total_ram_gb * .9, val=self.parent().po.vars['min_ram_free'], decimals=1,
                                        night_mode=self.parent().po.all['night_mode'])
         self.min_memory_left_label = FixedText(AP["Minimal_RAM_let_free"]["label"],
                                                 tip=AP["Minimal_RAM_let_free"]["tips"],
