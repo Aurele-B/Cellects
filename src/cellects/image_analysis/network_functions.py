@@ -130,6 +130,8 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             NetDet_fast.merge_network_with_pseudopods()
             pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         potential_network[t, ...] = NetDet_fast.complete_network
+    del NetDet_fast
+    del NetDet
     if dims[0] == 1:
         network_dynamics = potential_network
     else:

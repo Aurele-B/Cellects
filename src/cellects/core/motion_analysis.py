@@ -49,9 +49,9 @@ from cellects.image_analysis.morphological_operations import (find_major_incline
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import smallest_memory_array
+from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
+from memory_profiler import profile
 
 
 class MotionAnalysis:
@@ -127,6 +127,9 @@ class MotionAnalysis:
         self.smoothing_flag: bool = False
         self.drift_mask_coord = None
         self.coord_network = None
+        self.rays = None
+        self.sun = None
+        self.holes = None
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
@@ -1367,6 +1370,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             else:
                 extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
                                        0, None, coord_pseudopods)
+        del coord_pseudopods
 
     def study_cytoscillations(self, show_seg: bool=False):
         """
