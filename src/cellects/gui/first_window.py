@@ -112,20 +112,18 @@ class FirstWindow(MainTabsType):
         # Set default images radical and extension widgets
         if self.parent().po.all['im_or_vid'] == 0:
             what = 'Images'
-            if self.parent().po.all['extension'] == '.mp4':
-                self.parent().po.all['radical'] = 'IMG_'
-                self.parent().po.all['extension'] = '.JPG'
+            self.parent().po.all['radical'] = 'img'
+            self.parent().po.all['extension'] = '.jpg'
             self.arena_number_label = FixedText('Arena number per folder:',
                                                 tip=FW["Arena_number_per_folder"]["tips"] , #"If this number is not always the same (depending on the folder), it can be changed later",
                                                 night_mode=self.parent().po.all['night_mode'])
         else:
-            if self.parent().po.all['extension'] == '.JPG':
-                self.parent().po.all['radical'] = ''
-                self.parent().po.all['extension'] = '.mp4'
+            what = 'Videos'
+            self.parent().po.all['radical'] = ''
+            self.parent().po.all['extension'] = '.mp4'
             self.arena_number_label = FixedText('Arena number per folder:',
                                                 tip=FW["Arena_number_per_folder"]["tips"], #"If this number is not always the same (depending on the video), it can be changed later",
                                                 night_mode=self.parent().po.all['night_mode'])
-            what = 'Videos'
         self.arena_number_label.setAlignment(QtCore.Qt.AlignVCenter)
         self.arena_number = Spinbox(min=0, max=255, val=self.parent().po.all['first_folder_sample_number'],
                                      decimals=0, night_mode=self.parent().po.all['night_mode'])
@@ -284,7 +282,7 @@ class FirstWindow(MainTabsType):
         This function assumes that `self.parent().po.all` is a dictionary with a key `'global_pathway'`.
         """
         dialog = QtWidgets.QFileDialog()
-        dialog.setDirectory(str(self.parent().po.all['global_pathway']))
+        dialog.setDirectory(self.parent().po.all['global_pathway'])
         self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
                                                                              'Select a folder containing images (/videos) or folders of data images (/videos)')
         self.global_pathway.setText(self.parent().po.all['global_pathway'])
@@ -296,13 +294,11 @@ class FirstWindow(MainTabsType):
         self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
         if self.im_or_vid.currentIndex() == 0:
             what = 'Images'
-            if self.parent().po.all['extension'] == '.mp4':
-                self.parent().po.all['radical'] = 'IMG_'
-                self.parent().po.all['extension'] = '.JPG'
+            self.parent().po.all['radical'] = 'img'
+            self.parent().po.all['extension'] = '.jpg'
         else:
-            if self.parent().po.all['extension'] == '.JPG':
-                self.parent().po.all['radical'] = ''
-                self.parent().po.all['extension'] = '.mp4'
+            self.parent().po.all['radical'] = ''
+            self.parent().po.all['extension'] = '.mp4'
             what = 'Videos'
         self.radical_label.setText(what + ' prefix:')
         self.extension_label.setText(what + ' extension:')
@@ -353,8 +349,8 @@ class FirstWindow(MainTabsType):
                 logging.info("No need to look for data, images or videos already found previously.")
                 self.first_im_read(True)
             else:
-                self.parent().po.all['global_pathway'] = Path(self.global_pathway.text())
-                if not os.path.isdir(Path(self.parent().po.all['global_pathway'])):
+                self.parent().po.all['global_pathway'] = self.global_pathway.text()
+                if not os.path.isdir(self.parent().po.all['global_pathway']):
                     self.message.setText('The folder selected is not valid')
                 else:
                     self.message.setText('')

@@ -156,8 +156,8 @@ class TestCombineColorSpaces(CellectsUnitTest):
     def test_basic_combination(self):
         """Test basic combination of color spaces without background subtraction."""
         c_space_dict = Dict()
-        c_space_dict['bgr'] = np.array([1.0, 0.5, 0.2])
-        c_space_dict['hsv'] = np.array([0.3, 0.8, 0.1])
+        c_space_dict['bgr'] = List([1.0, 0.5, 0.2])
+        c_space_dict['hsv'] = List([0.3, 0.8, 0.1])
         all_c_spaces = Dict()
         all_c_spaces['bgr'] = np.ones((5, 5, 3))
         all_c_spaces['hsv'] = np.full((5, 5, 3), 0.5)
@@ -173,8 +173,8 @@ class TestCombineColorSpaces(CellectsUnitTest):
     def test_background_subtraction_larger_image(self):
         """Test background subtraction when image sum > background sum."""
         c_space_dict = Dict()
-        c_space_dict['bgr'] = np.array([1.0, 0.5, 0.2])
-        c_space_dict['hsv'] = np.array([0.3, 0.8, 0.1])
+        c_space_dict['bgr'] = List([1.0, 0.5, 0.2])
+        c_space_dict['hsv'] = List([0.3, 0.8, 0.1])
         all_c_spaces = Dict()
         all_c_spaces['bgr'] = np.random.rand(5, 5, 3)
         all_c_spaces['hsv'] = np.random.rand(5, 5, 3)
@@ -189,8 +189,8 @@ class TestCombineColorSpaces(CellectsUnitTest):
     def test_negative_coefficients(self):
         """Test with negative coefficients."""
         c_space_dict = Dict()
-        c_space_dict['bgr'] = np.array([-1.0, 0.5, -2.0])
-        c_space_dict['hsv'] = np.array([-1.0, 0.5, -2.0])
+        c_space_dict['bgr'] = List([-1.0, 0.5, -2.0])
+        c_space_dict['hsv'] = List([-1.0, 0.5, -2.0])
         all_c_spaces = Dict()
         all_c_spaces['bgr'] = np.random.rand(5, 5, 3)
         all_c_spaces['hsv'] = np.random.rand(5, 5, 3)
@@ -689,7 +689,7 @@ class TestExtractFirstPC(CellectsUnitTest):
 
         greyscale, _, first_pc_vector = extract_first_pc(bgr_image)
         pca = bracket_to_uint8_image_contrast(greyscale)
-        from_csc, _, _, _ = generate_color_space_combination(bgr_image, ["bgr"], {"bgr": first_pc_vector})
+        from_csc, _, _, _ = generate_color_space_combination(bgr_image, ["bgr"], {"bgr": List(first_pc_vector)})
         from_csc = bracket_to_uint8_image_contrast(from_csc)
 
         self.assertTrue(np.allclose(pca, from_csc, atol=1))

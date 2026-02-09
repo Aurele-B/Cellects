@@ -27,7 +27,6 @@ Notes:
 - All Numba-accelerated functions require congruent NumPy arrays as inputs
 - Image processing functions expect binary (boolean/int8) input matrices
 """
-from copy import deepcopy
 import pandas as pd
 from cellects.utils.decorators import njit
 import numpy as np
@@ -592,7 +591,7 @@ def moving_average(vector: NDArray, step: int) -> NDArray[float]:
     """
     substep = np.array((- int(np.floor((step - 1) / 2)), int(np.ceil((step - 1) / 2))))
     sums = np.zeros(vector.shape)
-    n_okays = deepcopy(sums)
+    n_okays = sums.copy()
     true_numbers = np.logical_not(np.isnan(vector))
     vector[np.logical_not(true_numbers)] = 0
     for step_i in np.arange(substep[1] + 1):

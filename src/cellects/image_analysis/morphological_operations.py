@@ -36,9 +36,7 @@ from typing import Tuple
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
-from cellects.image_analysis.shape_descriptors import ShapeDescriptors
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
-from skimage.filters import threshold_otsu
 from skimage.measure import label
 from scipy.stats import linregress
 from scipy.ndimage import distance_transform_edt
@@ -568,7 +566,7 @@ def rounded_inverted_distance_transform(original_shape: NDArray[np.uint8], max_d
     """
     if with_erosion > 0:
         original_shape = cv2.erode(original_shape, cross_33, iterations=with_erosion, borderType=cv2.BORDER_CONSTANT, borderValue=0)
-    expand = deepcopy(original_shape)
+    expand = original_shape.copy()
     if max_distance is not None:
         if max_distance > np.max(original_shape.shape):
             max_distance = np.max(original_shape.shape).astype(np.uint32)
@@ -798,7 +796,7 @@ def draw_me_a_sun(main_shape: NDArray, ray_length_coef: int=4) -> Tuple[NDArray,
             r += 1
             fy, fx, sy, sx = first_ring_idx[0][j], first_ring_idx[1][j], second_ring_y[j], second_ring_x[j]
             line = get_line_points((fy, fx), (sy, sx))
-            sun[line[:, 1], line[:, 0]] = r
+            sun[line[:, 0], line[:, 1]] = r
             rays.append(r)
     return np.array(rays), sun
 
@@ -1214,57 +1212,53 @@ def expand_until_neighbor_center_gets_nearer_than_own(shape_to_expand: NDArray[n
     ndarray of uint8
         The expanded shape.
     """
-    # shape_to_expand=test_shape
-    # shape_i=0
-    # shape_original_centroid=ordered_centroids[shape_i, :]
-    # ref_centroids=np.delete(ordered_centroids, shape_i, axis=0)
-    # kernel=self.small_kernels
     previous_shape_to_expand = shape_to_expand.copy()
-    without_shape = deepcopy(without_shape_i)
-    if ref_centroids.shape[0] > 1:
-        # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
-        centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
-            ref_centroids[1:, 1] - shape_original_centroid[1]))
-        nearest_shapes = np.where(np.greater_equal(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
+    if shape_to_expand.any():
+        without_shape = without_shape_i.copy()
+        if ref_centroids.shape[0] > 1:
+            # Calculate the distance between the focal shape centroid and its 10% nearest neighbor centroids
+            centroid_distances = np.sqrt(np.square(ref_centroids[1:, 0] - shape_original_centroid[0]) + np.square(
+                ref_centroids[1:, 1] - shape_original_centroid[1]))
+            nearest_shapes = np.where(np.greater_equal(np.quantile(centroid_distances, 0.1), centroid_distances))[0]
 
-        # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
-        neighbor_mindist = np.min(centroid_distances)
-        idx = np.nonzero(shape_to_expand)
-        for shape_j in nearest_shapes:
-            neighbor_mindist = np.minimum(neighbor_mindist, np.min(
-                np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
-        neighbor_mindist *= 0.5
-        # Get the maximal distance of the focal shape between its contour and its centroids
-        itself_maxdist = np.max(
-            np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
-    else:
-        itself_maxdist = np.max(shape_to_expand.shape)
-        neighbor_mindist = itself_maxdist
-        nearest_shapes = []
-    # Put 1 at the border of the reference image in order to be able to stop the while loop once border reached
-    without_shape[0, :] = 1
-    without_shape[:, 0] = 1
-    without_shape[without_shape.shape[0] - 1, :] = 1
-    without_shape[:, without_shape.shape[1] - 1] = 1
+            # Use the nearest neighbor distance as a maximal reference to get the minimal distance between the border of the shape and the neighboring centroids
+            neighbor_mindist = np.min(centroid_distances)
+            idx = np.nonzero(shape_to_expand)
+            for shape_j in nearest_shapes:
+                neighbor_mindist = np.minimum(neighbor_mindist, np.min(
+                    np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
+            neighbor_mindist *= 0.5
+            # Get the maximal distance of the focal shape between its contour and its centroids
+            itself_maxdist = np.max(
+                np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
+        else:
+            itself_maxdist = np.max(shape_to_expand.shape)
+            neighbor_mindist = itself_maxdist
+            nearest_shapes = []
+        # Put 1 at the border of the reference image in order to be able to stop the while loop once border reached
+        without_shape[0, :] = 1
+        without_shape[:, 0] = 1
+        without_shape[without_shape.shape[0] - 1, :] = 1
+        without_shape[:, without_shape.shape[1] - 1] = 1
 
-    # Compare the distance between the contour of the shape and its centroid with this contour with the centroids of neighbors
-    # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
-    while np.logical_and(np.any(np.less_equal(itself_maxdist, neighbor_mindist)),
-                         np.count_nonzero(shape_to_expand * without_shape) == 0):
-        previous_shape_to_expand = shape_to_expand.copy()
-        # Dilate the shape by the kernel size
-        shape_to_expand = cv2.dilate(shape_to_expand, kernel, iterations=1,
-                                     borderType=cv2.BORDER_CONSTANT | cv2.BORDER_ISOLATED)
-        # Extract the new connected component
-        shape_nb, shape_to_expand = cv2.connectedComponents(shape_to_expand, ltype=cv2.CV_16U)
-        shape_to_expand = shape_to_expand.astype(np.uint8)
-        # Use the nex shape coordinates to calculate the new distances of the shape with its centroid and with neighboring centroids
-        idx = np.nonzero(shape_to_expand)
-        for shape_j in nearest_shapes:
-            neighbor_mindist = np.minimum(neighbor_mindist, np.min(
-                np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
-        itself_maxdist = np.max(
-            np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
+        # Compare the distance between the contour of the shape and its centroid with this contour with the centroids of neighbors
+        # Continue as the distance made by the shape (from its centroid) keeps being smaller than its distance with the nearest centroid.
+        while np.logical_and(np.any(np.less_equal(itself_maxdist, neighbor_mindist)),
+                             np.count_nonzero(shape_to_expand * without_shape) == 0):
+            previous_shape_to_expand = shape_to_expand.copy()
+            # Dilate the shape by the kernel size
+            shape_to_expand = cv2.dilate(shape_to_expand, kernel, iterations=1,
+                                         borderType=cv2.BORDER_CONSTANT | cv2.BORDER_ISOLATED)
+            # Extract the new connected component
+            shape_nb, shape_to_expand = cv2.connectedComponents(shape_to_expand, ltype=cv2.CV_16U)
+            shape_to_expand = shape_to_expand.astype(np.uint8)
+            # Use the nex shape coordinates to calculate the new distances of the shape with its centroid and with neighboring centroids
+            idx = np.nonzero(shape_to_expand)
+            for shape_j in nearest_shapes:
+                neighbor_mindist = np.minimum(neighbor_mindist, np.min(
+                    np.sqrt(np.square(ref_centroids[shape_j, 0] - idx[1]) + np.square(ref_centroids[shape_j, 1] - idx[0]))))
+            itself_maxdist = np.max(
+                np.sqrt(np.square(shape_original_centroid[0] - idx[1]) + np.square(shape_original_centroid[1] - idx[0])))
     return previous_shape_to_expand
 
 
@@ -1438,7 +1432,7 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
         for t in np.arange(len(distance_against_time)):
             new_order, stats, centers = cc((holes >= distance_against_time[t]).astype(np.uint8))
             for comp_i in np.arange(1, stats.shape[0]):
-                past_image = deepcopy(binary_video[holes_time_start + t, :, :])
+                past_image = binary_video[holes_time_start + t, :, :].copy()
                 with_new_comp = new_order == comp_i
                 past_image[with_new_comp] = 1
                 nb_comp, image_garbage = cv2.connectedComponents(past_image)
@@ -1692,10 +1686,10 @@ def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direct
         binary_image, y_boundaries, get_ordered_image=True)
     blob_number = ordered_stats.shape[0]
 
-    ordered_image_i = deepcopy(ordered_image)
+    ordered_image_i = ordered_image.copy()
     logging.info("For each frame, expand each previously confirmed shape to add area to its maximal bounding box")
     for step_i in np.arange(1, len(motion_list)):
-        previously_ordered_centroids = deepcopy(ordered_centroids)
+        previously_ordered_centroids = ordered_centroids.copy()
         new_image_i = motion_list[step_i].copy()
         detected_shape_number = blob_number + 1
         c = 0
@@ -1708,8 +1702,10 @@ def get_bb_with_moving_centers(motion_list: list, all_specimens_have_same_direct
             break
         else:
             for shape_i in range(blob_number):
-                shape_to_expand = np.zeros(image_i.shape, dtype=np.uint8)
-                shape_to_expand[ordered_image_i == (shape_i + 1)] = 1
+                shape_to_expand = ordered_image_i == (shape_i + 1)
+                if not shape_to_expand.any():
+                    continue
+                shape_to_expand = shape_to_expand.astype(np.uint8)
                 without_shape_i = ordered_image_i.copy()
                 without_shape_i[ordered_image_i == (shape_i + 1)] = 0
                 if k_size != 3:
@@ -1837,7 +1833,7 @@ def prepare_box_counting(binary_image: NDArray[np.uint8], min_im_side: int=128, 
         max_x = np.max(binary_idx[1])
         max_x = np.min((max_x + 1, binary_image.shape[1] - 1))
 
-        zoomed_binary = deepcopy(binary_image[min_y:(max_y + 1), min_x: (max_x + 1)])
+        zoomed_binary = binary_image[min_y:(max_y + 1), min_x: (max_x + 1)].copy()
         min_side = np.min(zoomed_binary.shape)
         if min_side >= min_im_side:
             if contours:

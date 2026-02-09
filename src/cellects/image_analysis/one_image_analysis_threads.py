@@ -25,6 +25,7 @@ from numba.typed import Dict, List
 import pandas as pd
 from cellects.image_analysis.image_segmentation import combine_color_spaces, apply_filter, kmeans, extract_first_pc, otsu_thresholding
 from cellects.image_analysis.morphological_operations import shape_selection
+from cellects.utils.utilitarian import translate_dict
 
 
 class ProcessImage:
@@ -90,7 +91,7 @@ class ProcessImage:
         """
         if csc_dict is None:
             csc_dict = self.csc_dict
-        self.image = combine_color_spaces(csc_dict, self.all_c_spaces)
+        self.image = combine_color_spaces(translate_dict(csc_dict), self.all_c_spaces)
         self.apply_filter_and_segment()
 
     def pca_and_segment(self):
@@ -103,7 +104,7 @@ class ProcessImage:
         """
         self.image, _, first_pc_vector = extract_first_pc(self.all_c_spaces['bgr'])
         self.csc_dict = Dict()
-        self.csc_dict['bgr'] = first_pc_vector
+        self.csc_dict['bgr'] = List(first_pc_vector)
         self.apply_filter_and_segment()
 
     def apply_filter_and_segment(self):
@@ -281,12 +282,9 @@ class ProcessImage:
                 previous_blob_nb -= 1
             previous_sum = self.validated_shapes.sum()
             color_space_to_remove = List()
-            previous_c_space = list(potentials.keys())[-1]
             for c_space in potentials.keys():
                 try_potentials = potentials.copy()
                 try_potentials.pop(c_space)
-                if i > 0:
-                    try_potentials.pop(previous_c_space)
                 self.combine_and_segment(try_potentials)
                 if self.params['is_first_image']:
                     self.process_first_binary_image()
@@ -303,9 +301,6 @@ class ProcessImage:
                     self.save_combination()
                     # If removing that color space helps, we remove it from potentials
                     color_space_to_remove.append(c_space)
-                    if i > 0:
-                        color_space_to_remove.append(previous_c_space)
-                previous_c_space = c_space
             if len(color_space_to_remove) == 0:
                 break
             color_space_to_remove = np.unique(color_space_to_remove)

@@ -23,26 +23,56 @@ activity tracking.
 """
 
 import logging
-import weakref
 from multiprocessing import Queue, Process, Manager
 import os
 import time
-from glob import glob
 from timeit import default_timer
-from copy import deepcopy
 import cv2
 from numba.typed import Dict as TDict
 import numpy as np
-from numpy.typing import NDArray
-import pandas as pd
 from PySide6 import QtCore
+
+from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
 from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
-                                              create_empty_videos, write_video)
+                                              create_empty_videos, write_video, read_h5, remove_h5_key,
+                                              video_writing_decision, write_h5)
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.core.motion_analysis import MotionAnalysis
+
+
+class PrecompileNJITThread(QtCore.QThread):
+    """
+    Precompile njit functions for speed optimization.
+
+    Notes
+    -----
+    This class uses `QThread` to manage the process asynchronously.
+    """
+
+    def __init__(self, parent=None):
+        """
+        Initialize the worker thread for recompiling njit functions.
+
+        Parameters
+        ----------
+        parent : QObject, optional
+            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
+        """
+        super(PrecompileNJITThread, self).__init__(parent)
+        self.setParent(parent)
+
+    def run(self):
+        """
+        Execute the main functions for basic image segmentation to make it faster for true images.
+        """
+        po = ProgramOrganizer()
+        im = np.zeros((3, 3, 3), dtype=np.uint8)
+        im[1, 1, :] = 1
+        po.get_first_image(im, sample_number=1)
+        po.fast_first_image_segmentation()
 
 
 class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
@@ -293,7 +323,7 @@ class UpdateImageThread(QtCore.QThread):
             # 2) The back_mask and bio_mask
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
-            self.parent().imageanalysiswindow.drawn_image = deepcopy(self.parent().po.current_image)
+            self.parent().imageanalysiswindow.drawn_image = self.parent().po.current_image.copy()
             contour_width = get_contour_width_from_im_shape(dims)
             # 1) Add the segmentation mask to the image
             if self.parent().imageanalysiswindow.is_first_image_flag:
@@ -577,14 +607,13 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         """
         logging.info("Start cropping if required")
         analysis_status = {"continue": True, "message": ""}
+        self.parent().po.first_image.get_setup_boundaries()
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.get_average_pixel_size()
-        if os.path.isfile('Data to run Cellects quickly.pkl'):
-            os.remove('Data to run Cellects quickly.pkl')
+        if os.path.isfile('cellects_settings.json'):
+            os.remove('cellects_settings.json')
         logging.info("Save data to run Cellects quickly")
-        self.parent().po.data_to_save['first_image'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['first_image'] = False
         if not self.parent().po.vars['several_blob_per_arena']:
             logging.info("Check whether the detected shape number is ok")
             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
@@ -600,6 +629,8 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
                 self.parent().po.first_image.y_boundaries = None
                 analysis_status['continue'] = False
         if analysis_status['continue']:
+            self.parent().po.save_first_image()
+            self.parent().po.save_masks()
             logging.info("Start automatic video delineation")
             analysis_status = self.parent().po.delineate_each_arena()
         else:
@@ -632,21 +663,21 @@ class SaveManualDelineationThread(QtCore.QThread):
         """
         Do save the coordinates.
         """
-        self.parent().po.left = np.zeros(self.parent().po.sample_number)
-        self.parent().po.right = np.zeros(self.parent().po.sample_number)
-        self.parent().po.top = np.zeros(self.parent().po.sample_number)
-        self.parent().po.bot = np.zeros(self.parent().po.sample_number)
+        self.parent().po.left = []
+        self.parent().po.right = []
+        self.parent().po.top = []
+        self.parent().po.bot = []
         for arena_i in np.arange(self.parent().po.sample_number):
             y, x = np.nonzero(self.parent().imageanalysiswindow.arena_mask == arena_i + 1)
-            self.parent().po.left[arena_i] = np.min(x)
-            self.parent().po.right[arena_i] = np.max(x)
-            self.parent().po.top[arena_i] = np.min(y)
-            self.parent().po.bot[arena_i] = np.max(y)
-        self.parent().po.list_coordinates()
+            self.parent().po.left.append(int(np.min(x)))
+            self.parent().po.right.append(int(np.max(x)))
+            self.parent().po.top.append(int(np.min(y)))
+            self.parent().po.bot.append(int(np.max(y)))
+        self.parent().po.save_coordinates()
         self.parent().po.save_data_to_run_cellects_quickly()
 
         logging.info("Save manual video delineation")
-        self.parent().po.vars['analyzed_individuals'] = np.arange(self.parent().po.sample_number) + 1
+        self.parent().po.vars['analyzed_individuals'] = list(range(1, self.parent().po.sample_number + 1))
 
 
 class GetExifDataThread(QtCore.QThread):
@@ -674,7 +705,7 @@ class GetExifDataThread(QtCore.QThread):
         """
         Do extract exif data..
         """
-        self.parent().po.extract_exif()
+        self.parent().po.save_exif()
 
 
 class CompleteImageAnalysisThread(QtCore.QThread):
@@ -706,15 +737,14 @@ class CompleteImageAnalysisThread(QtCore.QThread):
 
     def run(self):
         self.parent().po.get_background_to_subtract()
-        self.parent().po.get_origins_and_backgrounds_lists()
-        self.parent().po.data_to_save['exif'] = True
+        self.parent().po.save_origins_and_backgrounds_lists()
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.all['bio_mask'] = None
-        self.parent().po.all['back_mask'] = None
+        self.parent().po.bio_mask = None
+        self.parent().po.back_mask = None
         if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            self.parent().po.all['bio_mask'] = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
+            self.parent().po.bio_mask = np.array(np.nonzero(self.parent().imageanalysiswindow.bio_mask))
         if self.parent().imageanalysiswindow.back_masks_number != 0:
-            self.parent().po.all['back_mask'] = np.nonzero(self.parent().imageanalysiswindow.back_mask)
+            self.parent().po.back_mask = np.array(np.nonzero(self.parent().imageanalysiswindow.back_mask))
         self.parent().po.complete_image_analysis()
         self.message_when_thread_finished.emit(True)
 
@@ -748,18 +778,14 @@ class PrepareVideoAnalysisThread(QtCore.QThread):
         image segmentation, and data saving.
         """
         self.parent().po.get_background_to_subtract()
-
-        self.parent().po.get_origins_and_backgrounds_lists()
-
+        self.parent().po.save_origins_and_backgrounds_lists()
         if self.parent().po.last_image is None:
             self.parent().po.get_last_image()
             self.parent().po.fast_last_image_segmentation()
         self.parent().po.find_if_lighter_background()
         logging.info("The current (or the first) folder is ready to run")
         self.parent().po.first_exp_ready_to_run = True
-        self.parent().po.data_to_save['exif'] = True
         self.parent().po.save_data_to_run_cellects_quickly()
-        self.parent().po.data_to_save['exif'] = False
 
 
 class SaveAllVarsThread(QtCore.QThread):
@@ -885,7 +911,7 @@ class OneArenaThread(QtCore.QThread):
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
             if not self.parent().po.first_exp_ready_to_run:
-                #Need a look for data when Data to run Cellects quickly.pkl and 1 folder selected amon several
+                #Need a look for data when cellects_settings.json and 1 folder selected amon several
                 continue_analysis = self.pre_processing()
         if continue_analysis:
             memory_diff = self.parent().po.update_available_core_nb()
@@ -962,15 +988,13 @@ class OneArenaThread(QtCore.QThread):
                 self.message_from_thread_starting.emit(analysis_status["message"])
                 logging.error(analysis_status['message'])
             else:
-                self.parent().po.data_to_save['exif'] = True
                 self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.data_to_save['exif'] = False
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     self.message_from_thread_starting.emit(f"Wrong specimen number: (re)do the complete analysis.")
                     analysis_status["continue"] = False
                 else:
-                    self.parent().po.get_origins_and_backgrounds_lists()
+                    self.parent().po.save_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_last_image_segmentation()
                     self.parent().po.find_if_lighter_backgnp.round()
@@ -983,16 +1007,16 @@ class OneArenaThread(QtCore.QThread):
         Load a single arena from images or video to perform motion analysis.
         """
         arena = self.parent().po.all['arena']
-        i = np.nonzero(self.parent().po.vars['analyzed_individuals'] == arena)[0][0]
-        true_frame_width = self.parent().po.right[i] - self.parent().po.left[i]# self.parent().po.vars['origin_list'][i].shape[1]
-        if self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile(f'ind_{arena}.npy'):
-            os.remove(f'ind_{arena}.npy')
+        i = np.nonzero(np.array(self.parent().po.vars['analyzed_individuals']) == arena)[0][0]
+        true_frame_width = self.parent().po.right[i] - self.parent().po.left[i]
+        if self.parent().po.all['overwrite_unaltered_videos'] and os.path.isfile(f'ind_{arena}.h5'):
+            remove_h5_key(f'ind_{arena}.h5', 'video')
         background = None
         background2 = None
         if self.parent().po.vars['subtract_background']:
-            background = self.parent().po.vars['background_list'][i]
+            background = read_h5(f'ind_{arena}.h5', 'background')
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                background2 = self.parent().po.vars['background_list2'][i]
+                background2 = read_h5(f'ind_{arena}.h5', 'background2')
         vid_name = None
         if self.parent().po.vars['video_list'] is not None:
             vid_name = self.parent().po.vars['video_list'][i]
@@ -1046,21 +1070,20 @@ class OneArenaThread(QtCore.QThread):
                 self.videos_in_ram = self.parent().po.converted_video
             else:
                 if self.parent().po.vars['convert_for_motion']['logical'] == 'None':
-                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video)]
+                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy()]
                 else:
-                    self.videos_in_ram = [self.parent().po.visu, deepcopy(self.parent().po.converted_video),
-                                          deepcopy(self.parent().po.converted_video2)]
+                    self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy(),
+                                          self.parent().po.converted_video2.copy()]
         else:
-            logging.info(f"Starting to load arena n°{arena} from .npy saved file")
+            logging.info(f"Starting to load arena n°{arena} from .h5 saved file")
             self.videos_in_ram = None
         l = [i, arena, self.parent().po.vars, False, False, False, self.videos_in_ram]
         self.parent().po.motion = MotionAnalysis(l)
-        r = weakref.ref(self.parent().po.motion)
 
         if self.videos_in_ram is None:
-            self.parent().po.converted_video = deepcopy(self.parent().po.motion.converted_video)
+            self.parent().po.converted_video = self.parent().po.motion.converted_video.copy()
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-                self.parent().po.converted_video2 = deepcopy(self.parent().po.motion.converted_video2)
+                self.parent().po.converted_video2 = self.parent().po.motion.converted_video2.copy()
         self.parent().po.motion.assess_motion_detection()
         self.when_loading_finished.emit(save_loaded_video)
 
@@ -1079,9 +1102,9 @@ class OneArenaThread(QtCore.QThread):
         video options.
         """
         self.message_from_thread_starting.emit(f"Quick video segmentation")
-        self.parent().po.motion.converted_video = deepcopy(self.parent().po.converted_video)
+        self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
-            self.parent().po.motion.converted_video2 = deepcopy(self.parent().po.converted_video2)
+            self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
         self.parent().po.motion.detection(compute_all_possibilities=self.parent().po.all['compute_all_options'])
         if self.parent().po.all['compute_all_options']:
             self.parent().po.computed_video_options = np.ones(5, bool)
@@ -1173,7 +1196,6 @@ class OneArenaThread(QtCore.QThread):
             self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
-            r = weakref.ref(analysis_i)
             analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
             if self.parent().po.all['compute_all_options']:
                 if seg_i == 0:
@@ -1203,7 +1225,7 @@ class OneArenaThread(QtCore.QThread):
             while self._isRunning and analysis_i.t < analysis_i.binary.shape[0]:
                 analysis_i.update_shape(False)
                 contours = np.nonzero(get_contours(analysis_i.binary[analysis_i.t - 1, :, :]))
-                current_image = deepcopy(self.parent().po.motion.visu[analysis_i.t - 1, :, :, :])
+                current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
                 current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                 self.image_from_thread.emit(
                     {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
@@ -1276,7 +1298,7 @@ class VideoReaderThread(QtCore.QThread):
         This method emits signals to update the UI with progress messages and current images.
         It uses OpenCV for morphological operations on video frames.
         """
-        video_analysis = deepcopy(self.parent().po.motion.visu)
+        video_analysis = self.parent().po.motion.visu.copy()
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
         if self.parent().po.load_quick_full > 0:
@@ -1308,7 +1330,7 @@ class VideoReaderThread(QtCore.QThread):
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
-            current_image = deepcopy(video_analysis[t, ...])
+            current_image = video_analysis[t, ...].copy()
             current_image[mask > 0] = self.parent().po.vars['contour_color']
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
@@ -1415,7 +1437,7 @@ class WriteVideoThread(QtCore.QThread):
 
     def run(self):
         """
-        Run the visualization or converted video for a specific arena and save it as an .npy file.
+        Run the visualization or converted video for a specific arena and save it as an .h5 file.
 
         Parameters
         ----------
@@ -1437,9 +1459,9 @@ class WriteVideoThread(QtCore.QThread):
         """
         arena = self.parent().po.all['arena']
         if not self.parent().po.vars['already_greyscale']:
-            write_video(self.parent().po.visu, f'ind_{arena}.npy')
+            write_video(self.parent().po.visu, f'ind_{arena}.h5')
         else:
-            write_video(self.parent().po.converted_video, f'ind_{arena}.npy')
+            write_video(self.parent().po.converted_video, f'ind_{arena}.h5', is_color=False)
 
 
 class RunAllThread(QtCore.QThread):
@@ -1496,7 +1518,6 @@ class RunAllThread(QtCore.QThread):
         """
         analysis_status = {"continue": True, "message": ""}
         message = self.set_current_folder(0)
-
         if self.parent().po.first_exp_ready_to_run:
             self.message_from_thread.emit(message + ": Write videos...")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
@@ -1600,6 +1621,7 @@ class RunAllThread(QtCore.QThread):
         logging.info("Pre-processing has started")
         if len(self.parent().po.data_list) > 0:
             self.parent().po.get_first_image()
+            self.parent().po.load_masks()
             self.parent().po.fast_first_image_segmentation()
             self.parent().po.cropping(is_first_image=True)
             self.parent().po.get_average_pixel_size()
@@ -1611,10 +1633,8 @@ class RunAllThread(QtCore.QThread):
                 analysis_status["continue"] = False
 
             if analysis_status["continue"]:
-                self.parent().po.data_to_save['exif'] = True
+                self.parent().po.save_exif()
                 self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.data_to_save['exif'] = False
-                # self.parent().po.extract_exif()
                 self.parent().po.get_background_to_subtract()
                 if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
                     analysis_status["message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
@@ -1623,10 +1643,10 @@ class RunAllThread(QtCore.QThread):
                     analysis_status["message"] = f"Auto video delineation failed, use manual delineation tool"
                     analysis_status["continue"] = False
                 else:
-                    self.parent().po.get_origins_and_backgrounds_lists()
+                    self.parent().po.save_origins_and_backgrounds_lists()
                     self.parent().po.get_last_image()
                     self.parent().po.fast_last_image_segmentation()
-                    self.parent().po.find_if_lighter_backgnp.round()
+                    self.parent().po.find_if_lighter_background()
             return analysis_status
         else:
             analysis_status["message"] = f"Wrong folder or parameters"
@@ -1662,13 +1682,10 @@ class RunAllThread(QtCore.QThread):
         and handling errors related to file sizes or missing images
         """
         analysis_status = {"continue": True, "message": ""}
-        look_for_existing_videos = glob('ind_' + '*' + '.npy')
-        there_already_are_videos = len(look_for_existing_videos) == len(self.parent().po.vars['analyzed_individuals'])
-        logging.info(f"{len(look_for_existing_videos)} .npy video files found for {len(self.parent().po.vars['analyzed_individuals'])} arenas to analyze")
-        do_write_videos = not self.parent().po.all['im_or_vid'] and (not there_already_are_videos or (there_already_are_videos and self.parent().po.all['overwrite_unaltered_videos']))
+        do_write_videos = video_writing_decision(len(self.parent().po.vars['analyzed_individuals']), self.parent().po.all['im_or_vid'],
+                               self.parent().po.all['overwrite_unaltered_videos'])
         if do_write_videos:
             logging.info(f"Starting video writing")
-            # self.videos.write_videos_as_np_arrays(self.data_list, self.vars['convert_for_motion'], in_colors=self.vars['save_in_colors'])
             in_colors = not self.parent().po.vars['already_greyscale']
             self.parent().po.first_image.shape_number = self.parent().po.sample_number
             bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = self.parent().po.prepare_video_writing(
@@ -1697,7 +1714,7 @@ class RunAllThread(QtCore.QThread):
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape, self.parent().po.first_image.crop_coord)
-                            prev_img = deepcopy(img)
+                            prev_img = img.copy()
                             if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
                                 img = img[:, :, 0]
 
@@ -1727,15 +1744,16 @@ class RunAllThread(QtCore.QThread):
                                     arena_percentage, eta = pat_tracker2.get_progress()
                                     self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
                                     if use_list_of_vid:
-                                        np.save(vid_names[arena_name], video_bunch[arena_i])
+                                        write_h5(vid_names[arena_name], video_bunch[arena_i], 'video')
                                     else:
                                         if len(video_bunch.shape) == 5:
-                                            np.save(vid_names[arena_name], video_bunch[:, :, :, :, arena_i])
+                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, :, arena_i], 'video')
                                         else:
-                                            np.save(vid_names[arena_name], video_bunch[:, :, :, arena_i])
+                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
                                     self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
-                        logging.info(f"Bunch n°{bunch + 1} over {bunch_nb} saved.")
+                        del video_bunch
+                        logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
                     logging.info("When they exist, do not overwrite unaltered video")
                     self.parent().po.all['overwrite_unaltered_videos'] = False
                     self.parent().po.save_variable_dict()
@@ -1815,7 +1833,6 @@ class RunAllThread(QtCore.QThread):
 
                         l = [i, arena, self.parent().po.vars, True, True, False, None]
                         analysis_i = MotionAnalysis(l)
-                        r = weakref.ref(analysis_i)
                         if not self.parent().po.vars['several_blob_per_arena']:
                             # Save basic statistics
                             self.parent().po.update_one_row_per_arena(i, analysis_i.one_descriptor_per_arena)
@@ -1848,8 +1865,8 @@ class RunAllThread(QtCore.QThread):
                     fair_core_workload = arena_number // self.parent().po.cores
                     cores_with_1_more = arena_number % self.parent().po.cores
                     EXTENTS_OF_SUBRANGES = []
-                    bound = 0
-                    parallel_organization = [fair_core_workload + 1 for _ in range(cores_with_1_more)] + [fair_core_workload for _ in range(self.parent().po.cores - cores_with_1_more)]
+                    bound: int = 0
+                    parallel_organization = [fair_core_workload + 1 for _ in range(int(cores_with_1_more))] + [fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
                     # Emit message to the interface
                     self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
                                                  "message": f"{message} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
@@ -1860,8 +1877,7 @@ class RunAllThread(QtCore.QThread):
                         PROCESSES = []
                         subtotals = Manager().Queue()# Queue()
                         for extent in EXTENTS_OF_SUBRANGES:
-                            # print(extent)
-                            p = Process(target=motion_analysis_process, args=(extent[0], extent[1], self.parent().po.vars, subtotals))
+                            p = Process(target=motion_analysis_process, args=(int(extent[0]), int(extent[1]), self.parent().po.vars, subtotals))
                             p.start()
                             PROCESSES.append(p)
 
@@ -1869,7 +1885,7 @@ class RunAllThread(QtCore.QThread):
                             p.join()
 
                         self.message_from_thread.emit(f"{message}, Step 2/2:  Saving all results...")
-                        for i in range(subtotals.qsize()):
+                        for _ in range(len(PROCESSES)):
                             grouped_results = subtotals.get()
                             for j, results_i in enumerate(grouped_results):
                                 if not self.parent().po.vars['several_blob_per_arena']:
@@ -1882,6 +1898,8 @@ class RunAllThread(QtCore.QThread):
 
                                 self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
                                                                                          results_i['efficiency_test_2'])
+                            del grouped_results
+                        del subtotals
                         self.image_from_thread.emit(
                             {"current_image": self.parent().po.last_image.bgr,
                              "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
@@ -1930,7 +1948,6 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
     grouped_results = []
     for i in range(lower_bound, upper_bound):
         analysis_i = MotionAnalysis([i, i + 1, vars, True, True, False, None])
-        r = weakref.ref(analysis_i)
         results_i = dict()
         results_i['arena'] = analysis_i.one_descriptor_per_arena['arena']
         results_i['i'] = analysis_i.one_descriptor_per_arena['arena'] - 1
@@ -1947,5 +1964,6 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
         results_i['efficiency_test_1'] = analysis_i.efficiency_test_1
         results_i['efficiency_test_2'] = analysis_i.efficiency_test_2
         grouped_results.append(results_i)
+        del analysis_i
 
     subtotals.put(grouped_results)

@@ -36,7 +36,6 @@ The features of this module include:
 - Fractal dimension calculation
 """
 
-import weakref
 from gc import collect
 import numpy as np
 from numba.typed import Dict as TDict
@@ -50,9 +49,9 @@ from cellects.image_analysis.morphological_operations import (find_major_incline
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors, from_shape_descriptors_class
-from cellects.utils.utilitarian import smallest_memory_array
+from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
+from memory_profiler import profile
 
 
 class MotionAnalysis:
@@ -127,17 +126,21 @@ class MotionAnalysis:
         self.origin_idx = None
         self.smoothing_flag: bool = False
         self.drift_mask_coord = None
+        self.substantial_image = None
+        self.segmented = None
+        self.covering_intensity = None
+        self.gravity_field = None
+        self.rays = None
+        self.sun = None
+        self.holes = None
         self.coord_network = None
         logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
 
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
-        if not 'background_list' in self.vars:
-            self.vars['background_list'] = []
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
-        self.dims = self.converted_video.shape
         self.segmented = np.zeros(self.dims, dtype=np.uint8)
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
@@ -190,49 +193,42 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
-        if 'bb_coord' in self.vars:
-            crop_top, crop_bot, crop_left, crop_right, top, bot, left, right = self.vars['bb_coord']
-        elif videos_already_in_ram is not None:
-            if isinstance(videos_already_in_ram, list):
-                crop_bot, crop_right = videos_already_in_ram[0].shape[1], videos_already_in_ram[0].shape[2]
-            else:
-                crop_bot, crop_right = videos_already_in_ram.shape[1], videos_already_in_ram.shape[2]
-            crop_top, crop_left, top, bot, left, right = 0, 0, [0], [crop_bot], [0], [crop_right]
-        if isinstance(self.vars['origin_list'][i], Tuple):
-            self.origin_idx = self.vars['origin_list'][i]
-            frame_height = bot[i] - top[i]
-            true_frame_width = right[i] - left[i]
-            self.origin = np.zeros((frame_height, true_frame_width), dtype=np.uint8)
-            self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
+        if 'crop_coord' in self.vars and self.vars['crop_coord'] is not None:
+            crop_top, crop_bot, crop_left, crop_right = self.vars['crop_coord']
         else:
-            self.origin = self.vars['origin_list'][i]
-            frame_height = self.origin.shape[0]
-            true_frame_width = self.origin.shape[1]
+            crop_top, crop_bot, crop_left, crop_right = 0, -1, 0, -1
+        if 'arenas_coord' in self.vars:
+            top, bot, left, right = self.vars['arenas_coord']
+        else:
+            top, bot, left, right = [0], [crop_bot], [0], [crop_right]
+        frame_height = bot[i] - top[i]
+        true_frame_width = right[i] - left[i]
 
+        if true_frame_width == -1:
+            true_frame_width = None
         vid_name = None
         if self.vars['video_list'] is not None:
             vid_name = self.vars['video_list'][i]
-        self.background = None
-        if len(self.vars['background_list']) > 0:
-            self.background = self.vars['background_list'][i]
-        self.background2 = None
-        if 'background_list2' in self.vars and len(self.vars['background_list2']) > 0:
-            self.background2 = self.vars['background_list2'][i]
+        self.background = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'background')
+        self.background2 = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'background2')
         vids = read_one_arena(self.one_descriptor_per_arena['arena'], self.vars['already_greyscale'],
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
-        # When the video(s) already exists (not just written as .pny), they need to be sliced:
+
         if self.visu is not None:
-            if self.visu.shape[1] != frame_height or self.visu.shape[2] != true_frame_width:
+            self.dims = self.visu.shape[:3]
+        else:
+            self.dims = self.converted_video.shape[:3]
+
+        # When video(s) need to be sliced (only occurs with datasets originally stored as videos):
+        if frame_height != - 1 and (self.dims[1] != frame_height or self.dims[2] != true_frame_width):
+            if self.visu is not None:
                 self.visu = self.visu[:, crop_top:crop_bot, crop_left:crop_right, ...]
                 self.visu = self.visu[:, top[i]:bot[i], left[i]:right[i], ...]
-                if self.converted_video is not None:
-                    self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
-                    self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
-                    if self.converted_video2 is not None:
-                        self.converted_video2 = self.converted_video2[:, crop_top:crop_bot, crop_left:crop_right]
-                        self.converted_video2 = self.converted_video2[:, top[i]:bot[i], left[i]:right[i]]
+            if self.converted_video is not None:
+                self.converted_video = self.converted_video[:, crop_top:crop_bot, crop_left:crop_right]
+                self.converted_video = self.converted_video[:, top[i]:bot[i], left[i]:right[i]]
 
         if self.converted_video is None:
             logging.info(
@@ -242,6 +238,10 @@ class MotionAnalysis:
                                                      self.vars['lose_accuracy_to_save_memory'],
                                                      self.vars['filter_spec'])
             self.converted_video, self.converted_video2 = vids
+
+        self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
+        self.origin_idx = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'origin_coord')
+        self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
 
     def assess_motion_detection(self):
         """
@@ -409,7 +409,6 @@ class MotionAnalysis:
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: the time for a pixel to get covered is set to {self.step}")
             else:
                 logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Pre-processing detection: could not automatically find the time for a pixel to get covered. Default value is 1 for video length < 40 and 10 otherwise")
-
             # Make sure to avoid a step overestimation
             if self.step > self.dims[0] // 20:
                 self.step: int = self.dims[0] // 20
@@ -906,10 +905,10 @@ class MotionAnalysis:
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
         self.binary = np.zeros(self.dims[:3], dtype=np.uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
-            logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .npy videos and Data to run Cellects quickly.pkl and re-run")
+            logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .h5 videos and cellects_settings.json and re-run")
 
         if self.vars['origin_state'] == "invisible":
-            self.binary[self.start - 1, :, :] = deepcopy(self.origin)
+            self.binary[self.start - 1, :, :] = self.origin.copy()
             self.covering_intensity[self.origin_idx[0], self.origin_idx[1]] = self.converted_video[self.start, self.origin_idx[0], self.origin_idx[1]]
         else:
             if self.vars['origin_state'] == "fluctuating":
@@ -982,7 +981,6 @@ class MotionAnalysis:
         """
         # Get from gradients, a 2D matrix of potentially covered pixels
         # I/ dilate the shape made with covered pixels to assess for covering
-
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
         if self.dims[0] < 100:
             new_potentials = self.segmented[self.t, :, :]
@@ -1016,23 +1014,22 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
-        new_shape = deepcopy(self.binary[self.t - 1, :, :])
+        new_shape = self.binary[self.t - 1, :, :].copy()
         new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_CLOSE, cross_33)
         new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_OPEN, cross_33) * self.borders
         new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
         # Add distant shapes within a radius, score every added pixels according to their distance
         if not self.vars['several_blob_per_arena']:
             if new_shape.sum() == 0:
-                new_shape = deepcopy(new_potentials)
+                new_shape = new_potentials.copy()
             else:
                 pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
-                r = weakref.ref(pads)
                 # If max_distance is non nul look for distant shapes
                 pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
                                                      self.vars['max_size_for_connection'])
                 pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
 
-                new_shape = deepcopy(pads.expanded_shape)
+                new_shape = pads.expanded_shape.copy()
                 new_shape[new_shape > 1] = 1
                 if np.logical_and(self.t > self.step, self.t < self.dims[0]):
                     if np.any(pads.expanded_shape > 5):
@@ -1041,11 +1038,12 @@ class MotionAnalysis:
                         self.binary[(self.step):(self.t + 1), :, :] = \
                             pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
                                                       self.segmented[(self.step):(self.t + 1), :, :])
-                        new_shape = deepcopy(self.binary[self.t, :, :])
-                pads = None
+                        new_shape = self.binary[self.t, :, :].copy()
+                del pads
 
             # Fill holes
             new_shape = cv2.morphologyEx(new_shape, cv2.MORPH_CLOSE, cross_33)
+        del new_potentials
 
         if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
             # Shape Erosion
@@ -1061,6 +1059,7 @@ class MotionAnalysis:
             if self.vars['origin_state'] == 'constant':
                 protect_from_fading = self.origin
             new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, protect_from_fading)
+            del new_idx
 
         self.covering_intensity *= new_shape
         self.binary[self.t, :, :] = new_shape * self.borders
@@ -1094,8 +1093,10 @@ class MotionAnalysis:
                                     self.holes[np.nonzero(ray_through_back)] = 1
                             else:
                                 self.rays = np.concatenate((self.rays[:(ray - 2)], self.rays[(ray - 1):]))
-                        ray_through_shape = None
-                        ray_through_back = None
+                        del ray_through_shape
+                        del ray_through_back
+                    del shape
+                    del back
             if np.any(self.surfarea[:self.t] > self.substantial_growth * 2):
 
                 if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
@@ -1135,11 +1136,16 @@ class MotionAnalysis:
                     shapes, stats, centers = cc(self.binary[self.t, ...])
                     shapes[shapes != 1] = 0
                     self.binary[self.t, ...] = shapes
+                del periphery_to_remove
+                del shapes
+                del stats
+                del centers
+            del growth_near_periphery
 
         # Display
         if show_seg:
             if self.visu is not None:
-                im_to_display = deepcopy(self.visu[self.t, ...])
+                im_to_display = self.visu[self.t, ...].copy()
                 contours = np.nonzero(cv2.morphologyEx(self.binary[self.t, :, :], cv2.MORPH_GRADIENT, cross_33))
                 if self.vars['lighter_background']:
                     im_to_display[contours[0], contours[1]] = 0
@@ -1198,16 +1204,16 @@ class MotionAnalysis:
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
         if release_memory:
-            self.substantial_image = None
-            self.covering_intensity = None
-            self.segmented = None
-            self.gravity_field = None
-            self.sun = None
-            self.rays = None
-            self.holes = None
+            del self.substantial_image
+            del self.covering_intensity
+            del self.segmented
+            del self.gravity_field
+            del self.sun
+            del self.rays
+            del self.holes
             collect()
         self.surfarea = self.binary.sum((1, 2))
-        timings = self.vars['exif']
+        timings = np.array(self.vars['exif'])
         if len(timings) < self.dims[0]:
             timings = np.arange(self.dims[0])
         if np.any(timings > 0):
@@ -1234,7 +1240,7 @@ class MotionAnalysis:
                                                                       self.vars['output_in_mm'],
                                                                       self.vars['average_pixel_size'],
                                                                       self.vars['do_fading'],
-                                                                       self.vars['save_coord_specimen'])
+                                                                      self.vars['save_coord_specimen'])
         else:
             self.one_row_per_frame = compute_one_descriptor_per_colony(self.binary,
                                                                        self.one_descriptor_per_arena['arena'], timings,
@@ -1368,6 +1374,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             else:
                 extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
                                        0, None, coord_pseudopods)
+        del coord_pseudopods
 
     def study_cytoscillations(self, show_seg: bool=False):
         """
@@ -1483,11 +1490,11 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             if len(self.converted_video.shape) == 3:
                 self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video),
                                              axis=3)
-            self.efficiency_test_1 = deepcopy(self.converted_video[after_one_tenth_of_time, ...])
-            self.efficiency_test_2 = deepcopy(self.converted_video[last_good_detection, ...])
+            self.efficiency_test_1 = self.converted_video[after_one_tenth_of_time, ...].copy()
+            self.efficiency_test_2 = self.converted_video[last_good_detection, ...].copy()
         else:
-            self.efficiency_test_1 = deepcopy(self.visu[after_one_tenth_of_time, :, :, :])
-            self.efficiency_test_2 = deepcopy(self.visu[last_good_detection, :, :, :])
+            self.efficiency_test_1 = self.visu[after_one_tenth_of_time, :, :, :].copy()
+            self.efficiency_test_2 = self.visu[last_good_detection, :, :, :].copy()
 
         position = (25, self.dims[1] // 2)
         text = str(self.one_descriptor_per_arena['arena'])
@@ -1544,12 +1551,11 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             collect()
             if self.visu is None:
                 true_frame_width = self.dims[2]
-                if len(self.vars['background_list']) == 0:
-                    self.background = None
-                else:
-                    self.background = self.vars['background_list'][self.one_descriptor_per_arena['arena'] - 1]
-                if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
-                    self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.npy",
+                h5_keys = []
+                if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.h5"):
+                    h5_keys = get_h5_keys(f"ind_{self.one_descriptor_per_arena['arena']}.h5")
+                if 'video' in h5_keys:
+                    self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.h5",
                               None, true_frame_width=true_frame_width)
                 else:
                     self.visu = self.converted_video
@@ -1577,16 +1583,25 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             vid_name = f"ind_{self.one_descriptor_per_arena['arena']}{self.vars['videos_extension']}"
             write_video(self.converted_video, vid_name, is_color=True, fps=self.vars['video_fps'])
 
-    def save_results(self):
+    def save_results(self, with_efficiency_tests: bool = True, with_video:bool = True):
         """
         Save the results of testing and video processing.
 
         This method handles the saving of efficiency tests, video files,
         and CSV data related to test results. It checks for existing files before writing new data.
         Additionally, it cleans up temporary files if configured to do so.
+
+        Parameters
+        ----------
+        with_efficiency_tests : bool, optional
+            Also save two images showing the analysis efficiency.
+        with_video : bool, optional
+            Also save a video showing the analysis efficiency.
         """
-        self.save_efficiency_tests()
-        self.save_video()
+        if with_efficiency_tests:
+            self.save_efficiency_tests()
+        if with_video:
+            self.save_video()
         if self.vars['several_blob_per_arena']:
             try:
                 with open(f"one_row_per_frame_arena{self.one_descriptor_per_arena['arena']}.csv", 'w') as file:
@@ -1619,8 +1634,8 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                                columns=list(self.one_descriptor_per_arena.keys()))
                     stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
-        if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.npy"):
-            os.remove(f"ind_{self.one_descriptor_per_arena['arena']}.npy")
+        if not self.vars['keep_unaltered_videos'] and os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.h5"):
+            remove_h5_key(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'video')
 
     def change_results_of_one_arena(self, save_video: bool = True):
         """
@@ -1657,7 +1672,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
                                columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values() #  np.array(list(self.one_descriptor_per_arena.values()), dtype=np.uint32)
+                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")

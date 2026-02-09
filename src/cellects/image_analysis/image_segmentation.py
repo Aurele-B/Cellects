@@ -20,7 +20,7 @@ Uses Numba's @njit decorator for JIT compilation of performance-critical functio
 import numpy as np
 import cv2
 from tqdm import tqdm
-from numba.typed import Dict
+from numba.typed import Dict, List
 from cellects.utils.decorators import njit
 from numpy.typing import NDArray
 from typing import Tuple
@@ -241,10 +241,10 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
     Examples
     --------
     >>> c_space_dict = Dict()
-    >>> c_space_dict['hsv'] = np.array((0, 1, 1))
+    >>> c_space_dict['hsv'] = [0, 1, 1]
     >>> all_c_spaces = Dict()
-    >>> all_c_spaces['bgr'] = np.random.rand(5, 5, 3)
-    >>> all_c_spaces['hsv'] = np.random.rand(5, 5, 3)
+    >>> all_c_spaces['bgr'] = list(np.random.rand(5, 5, 3))
+    >>> all_c_spaces['hsv'] = list(np.random.rand(5, 5, 3))
     >>> background = np.zeros((5, 5))
     >>> result = combine_color_spaces(c_space_dict, all_c_spaces)
     >>> print(result.shape)
@@ -275,7 +275,7 @@ def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_backgr
 # c_space_dict=first_dict; all_c_spaces=self.all_c_spaces; subtract_background=background
 
 
-def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict={}, background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False, all_c_spaces: dict={}) -> NDArray[np.uint8]:
+def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: list, first_dict: Dict, second_dict: Dict=Dict(), background: NDArray=None, background2: NDArray=None, convert_to_uint8: bool=False, all_c_spaces: dict={}) -> NDArray[np.uint8]:
     """
     Generate color space combinations for an input image.
 
@@ -310,9 +310,9 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
     >>> bgr_image = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
     >>> c_spaces = ['bgr', 'hsv']
     >>> first_dict = Dict()
-    >>> first_dict['bgr'] = np.array((0, 1, 1))
+    >>> first_dict['bgr'] = [0, 1, 1]
     >>> second_dict = Dict()
-    >>> second_dict['hsv'] = np.array((0, 0, 1))
+    >>> second_dict['hsv'] = [0, 0, 1]
     >>> greyscale_image1, greyscale_image2 = generate_color_space_combination(bgr_image, c_spaces, first_dict, second_dict)
     >>> print(greyscale_image1.shape)
     (100, 100)
@@ -321,6 +321,7 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
     first_pc_vector = None
     if "PCA" in c_spaces:
         greyscale_image, var_ratio, first_pc_vector = extract_first_pc(bgr_image)
+        first_pc_vector = first_pc_vector.tolist()
     else:
         if len(all_c_spaces) == 0:
             all_c_spaces = get_color_spaces(bgr_image, c_spaces)
@@ -1046,12 +1047,12 @@ def convert_subtract_and_filter_video(video: NDArray, color_space_combination: d
         if 'PCA' in first_dict:
             greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
             first_dict = Dict()
-            first_dict['bgr'] = bracket_to_uint8_image_contrast(first_pc_vector)
+            first_dict['bgr'] = List(bracket_to_uint8_image_contrast(first_pc_vector))
             c_spaces = ['bgr']
         if 'PCA' in second_dict:
             greyscale_image, var_ratio, first_pc_vector = extract_first_pc(video[0])
             second_dict = Dict()
-            second_dict['bgr'] = bracket_to_uint8_image_contrast(first_pc_vector)
+            second_dict['bgr'] = List(bracket_to_uint8_image_contrast(first_pc_vector))
             c_spaces = ['bgr']
 
         converted_video = np.zeros(video.shape[:3], dtype=array_type)

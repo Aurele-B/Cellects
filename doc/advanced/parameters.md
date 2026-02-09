@@ -217,7 +217,7 @@ number of available CPU cores minus one.
 ---
 
 <!-- START_Minimal_RAM_let_free -->
-## Minimal RAM let free:
+## Minimal RAM let free (Go):
 Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
 memory, but increases crash risk if other apps are open.
 
@@ -246,7 +246,7 @@ Frames per second of validation videos.
 
 <!-- START_Keep_unaltered_videos -->
 ## Keep unaltered videos:
-Keeps unaltered `.npy` videos in hard drive.
+Keeps unaltered videos (`.h5` format) in hard drive.
 
 - **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.

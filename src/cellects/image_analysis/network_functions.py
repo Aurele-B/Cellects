@@ -130,6 +130,8 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             NetDet_fast.merge_network_with_pseudopods()
             pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         potential_network[t, ...] = NetDet_fast.complete_network
+    del NetDet_fast
+    del NetDet
     if dims[0] == 1:
         network_dynamics = potential_network
     else:
@@ -183,9 +185,9 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
         network_dynamics[pseudopod_vid > 0] = 2
         pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
         if save_coord_network:
-            np.save(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", pseudopod_coord)
+            write_h5(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", pseudopod_coord)
     if save_coord_network:
-        np.save(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy", network_coord)
+        write_h5(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", network_coord)
     return network_coord, pseudopod_coord
 
 
@@ -874,7 +876,7 @@ def get_inner_vertices(pad_skeleton: NDArray[np.uint8], potential_tips: NDArray[
     """
 
     # Initiate the vertices final matrix as a copy of the potential_tips
-    pad_vertices = deepcopy(potential_tips)
+    pad_vertices = potential_tips.copy()
     for neighbor_nb in [8, 7, 6, 5, 4]:
         # All pixels having neighbor_nb neighbor are potential vertices
         potential_vertices = np.zeros(potential_tips.shape, dtype=np.uint8)

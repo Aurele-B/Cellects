@@ -10,8 +10,8 @@ These parameters are stored in a dictionary with keys corresponding to the param
 import os
 from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
 import numpy as np
-from cellects.core.cellects_paths import ALL_VARS_PKL_FILE
-from cellects.utils.load_display_save import PickleRick
+from cellects.core.cellects_paths import ALL_VARS_JSON_FILE
+from cellects.utils.load_display_save import write_json, read_json
 from cellects.core.cellects_paths import EXPERIMENTS_DIR
 
 
@@ -50,8 +50,8 @@ class DefaultDicts:
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
-            'bio_mask': None,
-            'back_mask': None,
+            'initial_bio_mask': None,
+            'initial_back_mask': None,
             'keep_cell_and_back_for_all_folders': False,
 
             # 'overwrite_cellects_data': True,
@@ -71,16 +71,16 @@ class DefaultDicts:
 
         self.vars = {
             'video_list': None,
-            'analyzed_individuals': np.array([1], dtype=np.uint16),
+            'analyzed_individuals': [1],
             'arena_shape': 'rectangle', # 'circle',
             'bio_label': 1,
             'bio_label2': 1,
             'color_number': 2,
             'convert_for_motion': {
-                'lab': np.array((0, 0, 1), np.int8),
+                'lab': [0, 0, 1],
                 'logical': 'None'},
             'convert_for_origin': {
-                'lab': np.array((0, 0, 1), np.int8),
+                'lab': [0, 0, 1],
                 'logical': 'None'},
             'detection_range_factor': 2,
             'first_move_threshold': None,
@@ -119,7 +119,7 @@ class DefaultDicts:
             'repeat_video_smoothing': 1,
             'keep_unaltered_videos': False,
             'maximal_growth_factor': 0.05,
-            'min_ram_free': 0.87,
+            'min_ram_free': 1.,
             'expected_oscillation_period': 2,  # (min)
             'minimal_oscillating_cluster_size': 50,  # (pixels)
             'output_in_mm': True,
@@ -143,14 +143,11 @@ class DefaultDicts:
             'filter_spec': {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]},
         }
 
-    def save_as_pkl(self, po=None):
+    def save_as_json(self, po=None, reset_params: bool=False):
         if po is None:
-            if os.path.isfile('PickleRick0.pkl'):
-                os.remove('PickleRick0.pkl')
-            pickle_rick = PickleRick(0)
-            pickle_rick.write_file(self.all, ALL_VARS_PKL_FILE)
+            write_json('cellects_settings.json', self.all)
         else:
-            po = po
-            po.all = self.all
-            po.vars = self.vars
+            if reset_params:
+                po.all = self.all
+                po.vars = self.vars
             po.save_variable_dict()

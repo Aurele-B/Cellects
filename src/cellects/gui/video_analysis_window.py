@@ -480,6 +480,8 @@ class VideoAnalysisWindow(MainTabsType):
                 'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
+                # Reset OneArena tracking
+                self.parent().po.motion = None
                 self.parent().last_tab = "video_analysis"
                 self.parent().change_widget(2)
 
@@ -495,6 +497,8 @@ class VideoAnalysisWindow(MainTabsType):
         """
         Modifies the interface to display advanced parameters.
         """
+        # Reset OneArena tracking
+        self.parent().po.motion = None
         self.parent().last_is_first = False
         self.parent().widget(5).update_csc_editing_display()
         self.parent().change_widget(5)  # AdvancedParameters

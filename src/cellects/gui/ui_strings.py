@@ -139,7 +139,7 @@ NB:
 - Advanced parameters allow disabling scaling and outputting in pixels.
 - Using specimen width reduces initial detection efficiency. We recommend using image width unless
 specimen dimensions are known with higher accuracy than imaging equipment.
-- Pixel size is stored in a file named `software_settings.csv`.
+- Pixel size is stored in a file named `cellects_settings.json`.
 """
 # END_TIP
 
@@ -357,8 +357,8 @@ NB:
 - Cellects automatically names the arena by their position (left to right, top to bottom).
 - For single arena setups, use 1.
 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-- Videos can be saved (as .npy files) for later analysis using the Advanced parameter *Keep
-unaltered videos*.
+- Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unaltered
+videos*.
 """
 # END_TIP
 
@@ -532,7 +532,7 @@ RO["coord_specimen"] = {}
 RO["coord_specimen"]["label"] = "Pixels covered by the specimen(s)"
 # START_TIP
 RO["coord_specimen"]["tips"] = \
-f"""Save a .npy file containing coordinates (t, y, x) of specimen pixel presence as detected by current
+f"""Save a .h5 file containing coordinates (t, y, x) of specimen pixel presence as detected by current
 parameters.
 NB:
 - These files may consume significant memory depending on the total frame count.
@@ -560,7 +560,7 @@ RO["coord_oscillating"] = {}
 RO["coord_oscillating"]["label"] = "Oscillating areas in the specimen(s)"
 # START_TIP
 RO["coord_oscillating"]["tips"] = \
-f"""Compute and save (as .npy files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
+f"""Compute and save (as .h5 files) coordinates (t, y, x) of oscillating areas in the specimen(s).  Two
 files are generated: one for thickening regions and one for slimming regions.
 """
 # END_TIP
@@ -569,7 +569,7 @@ RO["coord_network"] = {}
 RO["coord_network"]["label"] = "Network in the specimen(s)"
 # START_TIP
 RO["coord_network"]["tips"] = \
-f"""Detect and save (as .npy file) coordinates (t, y, x) of a distinct network within the specimen(s).
+f"""Detect and save (as .h5 file) coordinates (t, y, x) of a distinct network within the specimen(s).
 specimen(s).
 """
 # END_TIP
@@ -766,7 +766,7 @@ number of available CPU cores minus one.
 # END_TIP
 
 AP["Minimal_RAM_let_free"] = {}
-AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free"
+AP["Minimal_RAM_let_free"]["label"] = "Minimal RAM let free (Go)"
 # START_TIP
 AP["Minimal_RAM_let_free"]["tips"] = \
 f"""Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
@@ -796,7 +796,7 @@ AP["Keep_unaltered_videos"] = {}
 AP["Keep_unaltered_videos"]["label"] = 'Keep unaltered videos'
 # START_TIP
 AP["Keep_unaltered_videos"]["tips"] = \
-f"""Keeps unaltered `.npy` videos in hard drive.
+f"""Keeps unaltered videos (`.h5` format) in hard drive.
 - **Checked** → Rerunning the same analysis will be faster.
 - **Unchecked** → These videos will be written and removed each run of the same analysis.
 NB:

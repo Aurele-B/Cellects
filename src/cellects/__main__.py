@@ -92,7 +92,7 @@ def run_cellects():
         session.show()
         sys.exit(app.exec())
     except Exception as e:
-        logging.getLogger(__name__).critical("Application failed to start", exc_info=True)
+        logging.getLogger(__name__).critical("Cellects failed to start", exc_info=True)
         raise
 
 

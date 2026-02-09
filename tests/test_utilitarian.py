@@ -151,7 +151,7 @@ class TestReducePathLen(CellectsUnitTest):
         self.assertEqual(result, expected_result)
     def test_reduce_path_len_no_str(self):
         """Test basic functionality."""
-        pathway = Path("some/long/path/to/a/file.txt")
+        pathway = "some/long/path/to/a/file.txt"
         to_start = 15
         from_end = 8
 

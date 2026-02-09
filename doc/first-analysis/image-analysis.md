@@ -49,7 +49,7 @@ Specify how to compute true pixel size (in mm). Cellects can determine this scal
 
 	 - Advanced parameters allow disabling scaling and outputting in pixels.
 	 - Using specimen width reduces initial detection efficiency. We recommend using image width unlessspecimen dimensions are known with higher accuracy than imaging equipment.
-	 - Pixel size is stored in a file named `software_settings.csv`.
+	 - Pixel size is stored in a file named `cellects_settings.json`.
 <!-- END_Scale_with -->
 
 ---

@@ -2,14 +2,16 @@
 .tool-versions
 .idea/
 data/single_experiment/ind*
-data/single_experiment/Data to run Cellects quickly.pkl
+data/multiple_experiments/f1/ind*
+data/single_experiment/cellects_data.h5
+data/single_experiment/cellects_settings.json
 data/single_experiment/Analysis efficiency, last image.JPG
 data/single_experiment/Analysis efficiency, 3th image.JPG
 data/single_experiment/one_row_per_arena.csv
 data/single_experiment/one_row_per_frame.csv
 data/single_experiment/one_row_per_oscillating_cluster.csv
-data/single_experiment/software_settings.csv
-src/cellects/config/all_vars.pkl
+src/cellects/config/cellects_settings.json
+src/cellects/config/masks.h5
 src/cellects/paper_illustrations/
 src/cellects/__main__.spec
 setup.py

@@ -83,7 +83,7 @@ class RequiredOutput(WindowType):
 
         # I/ First box: Save presence coordinates
         # I/A/ Title
-        self.save_presence_coordinates_label = FixedText('Save presence coordinates:', tip="Saved in the python numpy format: .npy",
+        self.save_presence_coordinates_label = FixedText('Save presence coordinates:', tip="Saved in the h5 format",
                                                  night_mode=self.parent().po.all['night_mode'])
         self.vlayout.addWidget(self.save_presence_coordinates_label) #
 

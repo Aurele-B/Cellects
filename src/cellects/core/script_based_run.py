@@ -14,7 +14,7 @@ from cellects.core.motion_analysis import MotionAnalysis
 from cellects.image_analysis.morphological_operations import create_ellipse
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.core.one_image_analysis import init_params
-from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods
+from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods, video_writing_decision
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
@@ -35,7 +35,7 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
     po = ProgramOrganizer()
     if rgb_video is None:
         if len(pathway) == 0:
-            pathway = Path(os.getcwd() + "/data/single_experiment")
+            pathway = os.getcwd() + '/' + "/data/single_experiment"
         po.all['global_pathway'] = pathway
         po.all['first_folder_sample_number'] = sample_number
         po.all['radical'] = radical
@@ -62,11 +62,11 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         po.get_average_pixel_size()
         po.delineate_each_arena()
         po.get_background_to_subtract()
-        po.get_origins_and_backgrounds_lists()
+        po.save_origins_and_backgrounds_lists()
         po.get_last_image(last_im)
         po.fast_last_image_segmentation()
         po.find_if_lighter_background()
-        po.extract_exif()
+        po.save_exif()
     else:
         print('Image analysis already done, run video analysis')
     return po
@@ -91,6 +91,12 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
         os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')
     if os.path.isfile('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
         os.remove('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
+    if os.path.isfile('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv'):
+        os.remove('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv')
+    if os.path.isfile('data/single_experiment/ind_1.h5'):
+        os.remove('data/single_experiment/ind_1.h5')
+    if os.path.isfile('data/single_experiment/cellects_data.h5'):
+        os.remove('data/single_experiment/cellects_data.h5')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)
@@ -98,12 +104,7 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
 
 def write_videos(po):
     po.update_output_list()
-    look_for_existing_videos = insensitive_glob('ind_' + '*' + '.npy')
-    there_already_are_videos = len(look_for_existing_videos) == len(po.vars['analyzed_individuals'])
-    logging.info(
-        f"{len(look_for_existing_videos)} .npy video files found for {len(po.vars['analyzed_individuals'])} arenas to analyze")
-    do_write_videos = not there_already_are_videos or (
-            there_already_are_videos and po.all['overwrite_unaltered_videos'])
+    do_write_videos = video_writing_decision(len(po.vars['analyzed_individuals']), po.all['im_or_vid'], po.all['overwrite_unaltered_videos'])
     if do_write_videos:
         po.first_image.shape_number = po.sample_number
         in_colors = not po.vars['already_greyscale']

@@ -17,7 +17,6 @@ Uses QThread for background operations during combination processing.
 
 import logging
 import os
-from copy import deepcopy
 import numpy as np
 import cv2  # named opencv-python
 import multiprocessing.pool as mp
@@ -27,13 +26,12 @@ from numpy.typing import NDArray
 from typing import Tuple
 import pandas as pd
 from scipy.stats import rankdata
-from skimage.measure import perimeter
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, spot_size_coefficients
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, extract_first_pc, combine_color_spaces, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image_analysis.morphological_operations import cross_33, create_ellipse
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import ProcessImage
 from cellects.image_analysis.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.utils.utilitarian import split_dict, translate_dict
+from cellects.utils.utilitarian import split_dict
 
 def init_params():
     params = {}
@@ -390,7 +388,7 @@ class OneImageAnalysis:
         self.saved_color_space_list = list()
         self.saved_csc_nb = 0
 
-    def find_color_space_combinations(self, params: dict=None, only_bgr: bool = False):
+    def find_color_space_combinations(self, params: dict=None, color_space: str=None):
         logging.info(f"Start automatic finding of color space combinations...")
         self.init_combinations_lists()
         if self.image.any():
@@ -426,11 +424,17 @@ class OneImageAnalysis:
                 params['total_surface_area'] = .99 * im_size
 
             # 2. Get color_space_dictionaries
-            if only_bgr:
-                if not 'bgr' in self.all_c_spaces:
-                    self.all_c_spaces['bgr'] = self.bgr
-            else:
+            if color_space is None:
+                # Test all color_spaces
                 self._get_all_color_spaces()
+                each_channel_of_each_color_space = one_dict_per_channel.copy()
+            else:
+                if not color_space in self.all_c_spaces:
+                    self.all_c_spaces[color_space] = get_color_spaces(self.bgr, [color_space])
+                each_channel_of_each_color_space = list()
+                for c_sp in one_dict_per_channel:
+                    if color_space in c_sp.keys():
+                        each_channel_of_each_color_space.append(c_sp)
 
             # 3. Init combination_features table
             unaltered_blob_nb_idx, blob_number_idx, blob_shape_idx, blob_size_idx, total_area_idx, width_std_idx, height_std_idx, area_std_idx, out_of_arenas_idx, in_arena_idx, common_with_ref_idx, bio_sum_idx, back_sum_idx, score_idx = np.arange(3, 17)
@@ -439,7 +443,7 @@ class OneImageAnalysis:
 
             # 4. Test every channel separately
             process = 'one'
-            for csc_dict in one_dict_per_channel:
+            for csc_dict in each_channel_of_each_color_space:
                 ProcessImage([self, params, process, csc_dict])
             # If the blob number is known, try applying filters to improve detection
             if params['blob_nb'] is not None and (params['filter_spec'] is None or params['filter_spec']['filter1_type'] == ''):
@@ -452,11 +456,10 @@ class OneImageAnalysis:
                             params['filter_spec']['filter1_param'] = [filter_dict[tested_filter]['Param1']['Default']]
                             if 'Param2' in filter_dict[tested_filter]:
                                 params['filter_spec']['filter1_param'].append(filter_dict[tested_filter]['Param2']['Default'])
-                        for csc_dict in one_dict_per_channel:
+                        for csc_dict in each_channel_of_each_color_space:
                             ProcessImage([self, params, process, csc_dict])
                         if (self.combination_features['blob_nb'].iloc[:self.saved_csc_nb] == params['blob_nb']).any():
                             break
-
             self.score_combination_features()
             # 5. Try adding each valid channel with one another
             # 5.1. Generate an index vector containing, for each color space, the channel maximizing the score
@@ -472,11 +475,15 @@ class OneImageAnalysis:
 
             # 5.2. Try combining each selected channel with every other in all possible order
             params['possibilities'] = possibilities
-            pool = mp.ThreadPool(processes=os.cpu_count() - 1)
             process = 'add'
             list_args = [[self, params, process, i] for i in possibilities]
-            for process_i in pool.imap_unordered(ProcessImage, list_args):
-                pass
+            if len(possibilities) < 6:
+                for list_arg in list_args:
+                    ProcessImage(list_arg)
+            else:
+                pool = mp.ThreadPool(processes=os.cpu_count() - 1)
+                for process_i in pool.imap_unordered(ProcessImage, list_args):
+                    pass
 
             # 6. Take a combination of all selected channels and try to remove each color space one by one
             ProcessImage([self, params, 'subtract', 0])
@@ -484,64 +491,70 @@ class OneImageAnalysis:
             # 7. Add PCA:
             ProcessImage([self, params, 'PCA', None])
 
-            # 8. Make logical operations between pairs of segmentation result
-            coverage = np.argsort(self.combination_features['total_area'].iloc[:self.saved_csc_nb])
-
-            # 8.1 Try a logical And between the most covered images
-            most1, most2 = coverage.values[-1], coverage.values[-2]
-            operation = {0: most1, 1: most2, 'logical': 'And'}
-            ProcessImage([self, params, 'logical', operation])
-
-            # 8.2 Try a logical Or between the least covered images
-            least1, least2 = coverage.values[0], coverage.values[1]
-            operation = {0: least1, 1: least2, 'logical': 'Or'}
-            ProcessImage([self, params, 'logical', operation])
-
-
-            # 8.3 Try a logical And between the best bio_mask images
-            if params['bio_mask'] is not None:
-                bio_sort = np.argsort(self.combination_features['bio_sum'].iloc[:self.saved_csc_nb])
-                bio1, bio2 = bio_sort.values[-1], bio_sort.values[-2]
-                operation = {0: bio1, 1: bio2, 'logical': 'And'}
+            if self.saved_csc_nb > 0:
+                # 8. Make logical operations between pairs of segmentation result
+                coverage = np.argsort(self.combination_features['total_area'].iloc[:self.saved_csc_nb])
+                # 8.1 Try a logical And between the most covered images
+                most1, most2 = coverage.values[-1], coverage.values[-2]
+                operation = {0: most1, 1: most2, 'logical': 'And'}
                 ProcessImage([self, params, 'logical', operation])
 
-            # 8.4 Try a logical And between the best back_mask images
-            if params['back_mask'] is not None:
-                back_sort = np.argsort(self.combination_features['back_sum'].iloc[:self.saved_csc_nb])
-                back1, back2 = back_sort.values[-1], back_sort.values[-2]
-                operation = {0: back1, 1: back2, 'logical': 'And'}
+                # 8.2 Try a logical Or between the least covered images
+                least1, least2 = coverage.values[0], coverage.values[1]
+                operation = {0: least1, 1: least2, 'logical': 'Or'}
                 ProcessImage([self, params, 'logical', operation])
 
-            # 8.5 Try a logical Or between the best bio_mask and the best back_mask images
-            if params['bio_mask'] is not None and params['back_mask'] is not None:
-                operation = {0: bio1, 1: back1, 'logical': 'Or'}
-                ProcessImage([self, params, 'logical', operation])
+                # 8.3 Try a logical And between the best bio_mask images
+                if params['bio_mask'] is not None:
+                    bio_sort = np.argsort(self.combination_features['bio_sum'].iloc[:self.saved_csc_nb])
+                    bio1, bio2 = bio_sort.values[-1], bio_sort.values[-2]
+                    operation = {0: bio1, 1: bio2, 'logical': 'And'}
+                    ProcessImage([self, params, 'logical', operation])
 
-            # 9. Order all saved features
-            self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
-            self.score_combination_features()
-            if params['is_first_image'] and params['blob_nb'] is not None:
-                distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
-                cc_efficiency_order = np.argsort(distances)
+                # 8.4 Try a logical And between the best back_mask images
+                if params['back_mask'] is not None:
+                    back_sort = np.argsort(self.combination_features['back_sum'].iloc[:self.saved_csc_nb])
+                    back1, back2 = back_sort.values[-1], back_sort.values[-2]
+                    operation = {0: back1, 1: back2, 'logical': 'And'}
+                    ProcessImage([self, params, 'logical', operation])
+
+                # 8.5 Try a logical Or between the best bio_mask and the best back_mask images
+                if params['bio_mask'] is not None and params['back_mask'] is not None:
+                    operation = {0: bio1, 1: back1, 'logical': 'Or'}
+                    ProcessImage([self, params, 'logical', operation])
+
+                # 9. Order all saved features
+                self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
+                self.score_combination_features()
+                if params['is_first_image'] and params['blob_nb'] is not None:
+                    distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
+                    cc_efficiency_order = np.argsort(distances)
+                else:
+                    cc_efficiency_order = np.argsort(self.combination_features['score'])
+                    cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
             else:
-                cc_efficiency_order = np.argsort(self.combination_features['score'])
-                cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
+                logging.info("No accurate combinations found")
+                cc_efficiency_order = []
 
             # 7. Save and return a dictionary containing the selected color space combinations
             # and their corresponding binary images
             self.im_combinations = []
             for saved_csc in cc_efficiency_order:
                 if len(self.saved_color_space_list[saved_csc]) > 0:
+                    combi_i = len(self.im_combinations)
                     self.im_combinations.append({})
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"] = {}
-                    self.im_combinations[len(self.im_combinations) - 1]["csc"]['logical'] = 'None'
+                    self.im_combinations[combi_i]["csc"] = {}
+                    self.im_combinations[combi_i]["csc"]['logical'] = 'None'
                     for k, v in self.saved_color_space_list[saved_csc].items():
-                        self.im_combinations[len(self.im_combinations) - 1]["csc"][k] = v
-                    self.im_combinations[len(self.im_combinations) - 1]["binary_image"] = self.saved_images_list[saved_csc]
-                    self.im_combinations[len(self.im_combinations) - 1]["converted_image"] = np.round(self.converted_images_list[
+                        if isinstance(v, np.ndarray):
+                            self.im_combinations[combi_i]["csc"][k] = v.tolist()
+                        else:
+                            self.im_combinations[combi_i]["csc"][k] = v
+                    self.im_combinations[combi_i]["binary_image"] = self.saved_images_list[saved_csc]
+                    self.im_combinations[combi_i]["converted_image"] = np.round(self.converted_images_list[
                         saved_csc]).astype(np.uint8)
-                    self.im_combinations[len(self.im_combinations) - 1]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
-                    self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= params['filter_spec']
+                    self.im_combinations[combi_i]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
+                    self.im_combinations[combi_i]['filter_spec']= params['filter_spec']
             self.saved_color_space_list = []
             del self.saved_images_list
             del self.converted_images_list
@@ -611,7 +624,7 @@ class OneImageAnalysis:
             The minimum size for pseudopods to be detected.
         csc_dict : dict, optional
             A dictionary containing color space conversion parameters. If None,
-            defaults to {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+            defaults to {'bgr': [1, 1, 1], 'logical': 'None'}
         lighter_background : bool, optional
             Whether the background is lighter or not
         bio_mask : NDArray, optional
@@ -627,14 +640,10 @@ class OneImageAnalysis:
         logging.info(f"Start automatic detection of network(s) in the last image")
         if len(self.bgr.shape) == 3:
             if csc_dict is None:
-                csc_dict = {'bgr': np.array((1, 1, 1), np.int8), 'logical': 'None'}
+                csc_dict = {'bgr': [1, 1, 1], 'logical': 'None'}
             self._get_all_color_spaces()
-            # csc_dict = translate_dict(csc_dict)
-            # self.image = combine_color_spaces(csc_dict, self.all_c_spaces)
             first_dict, second_dict, c_spaces = split_dict(csc_dict)
             self.image, _, _, first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, all_c_spaces=self.all_c_spaces)
-            # if first_pc_vector is not None:
-            #     csc_dict = {"bgr": first_pc_vector, "logical": 'None'}
         greyscale = self.image
         NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
         NetDet.get_best_network_detection_method()
@@ -655,6 +664,15 @@ class OneImageAnalysis:
             self.im_combinations[len(self.im_combinations) - 1]['filter_spec']= {'filter1_type': res_i['filter'], 'filter1_param': [np.min(res_i['sigmas']), np.max(res_i['sigmas'])], 'filter2_type': "", 'filter2_param': [1., 1.]}
             self.im_combinations[len(self.im_combinations) - 1]['rolling_window']= res_i['rolling_window']
 
+    def get_setup_boundaries(self):
+        """
+        Get the y and x potential boundaries delimiting arenas' rows and columns
+        """
+        logging.info("Project the image on the y axis to detect rows of arenas")
+        self.y_boundaries, self.y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
+        logging.info("Project the image on the x axis to detect columns of arenas")
+        self.x_boundaries, self.x_max_sum = self.projection_to_get_peaks_boundaries(axis=0)
+
     def get_crop_coordinates(self):
         """
         Get the crop coordinates for image processing.
@@ -664,31 +682,29 @@ class OneImageAnalysis:
         and determines if the arenas are zigzagged.-
 
         """
-        logging.info("Project the image on the y axis to detect rows of arenas")
-        self.y_boundaries, y_max_sum = self.projection_to_get_peaks_boundaries(axis=1)
-        logging.info("Project the image on the x axis to detect columns of arenas")
-        self.x_boundaries, x_max_sum = self.projection_to_get_peaks_boundaries(axis=0)
         logging.info("Get crop coordinates using the get_crop_coordinates method of OneImageAnalysis class")
+        if self.y_boundaries is None:
+            self.get_setup_boundaries()
         row_number = len(np.nonzero(self.y_boundaries)[0]) // 2
         col_number = len(np.nonzero(self.x_boundaries)[0]) // 2
         are_zigzag = None
         if col_number > 0 and row_number > 0:
-            if (x_max_sum / col_number) * 2 < (y_max_sum / row_number):
+            if (self.x_max_sum / col_number) * 2 < (self.y_max_sum / row_number):
                 are_zigzag = "columns"
-            elif (x_max_sum / col_number) > (y_max_sum / row_number) * 2:
+            elif (self.x_max_sum / col_number) > (self.y_max_sum / row_number) * 2:
                 are_zigzag = "rows"
         # here automatically determine if are zigzag
         x_boundary_number = (self.x_boundaries == 1).sum()
         if x_boundary_number > 1:
             if x_boundary_number < 4:
-                x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2
+                x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2)
             else:
                 if are_zigzag == "columns":
-                    x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0][::2]))) // 2
+                    x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0][::2]))) // 2)
                 else:
-                    x_interval = np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2
-            cx_min = np.where(self.x_boundaries == - 1)[0][0] - x_interval.astype(int)
-            cx_max = np.where(self.x_boundaries == 1)[0][col_number - 1] + x_interval.astype(int)
+                    x_interval = int(np.absolute(np.max(np.diff(np.where(self.x_boundaries == 1)[0]))) // 2)
+            cx_min = int(np.where(self.x_boundaries == - 1)[0][0]) - x_interval
+            cx_max = int(np.where(self.x_boundaries == 1)[0][col_number - 1]) + x_interval
             if cx_min < 0: cx_min = 0
             if cx_max > len(self.x_boundaries): cx_max = len(self.x_boundaries) - 1
         else:
@@ -698,14 +714,14 @@ class OneImageAnalysis:
         y_boundary_number = (self.y_boundaries == 1).sum()
         if y_boundary_number > 1:
             if y_boundary_number < 4:
-                y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2
+                y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2)
             else:
                 if are_zigzag == "rows":
-                    y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0][::2]))) // 2
+                    y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0][::2]))) // 2)
                 else:
-                    y_interval = np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2
-            cy_min = np.where(self.y_boundaries == - 1)[0][0] - y_interval.astype(int)
-            cy_max = np.where(self.y_boundaries == 1)[0][row_number - 1] + y_interval.astype(int)
+                    y_interval = int(np.absolute(np.max(np.diff(np.where(self.y_boundaries == 1)[0]))) // 2)
+            cy_min = int(np.where(self.y_boundaries == - 1)[0][0]) - y_interval
+            cy_max = int(np.where(self.y_boundaries == 1)[0][row_number - 1]) + y_interval
             if cy_min < 0: cy_min = 0
             if cy_max > len(self.y_boundaries): cy_max = len(self.y_boundaries) - 1
         else:
@@ -761,7 +777,7 @@ class OneImageAnalysis:
             logging.info("Crop using the automatically_crop method of OneImageAnalysis class")
             self.cropped = True
             self.image = self.image[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
-            self.bgr = deepcopy(self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...])
+            self.bgr = self.bgr[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...].copy()
             self._get_all_color_spaces()
             if self.im_combinations is not None:
                 for i in np.arange(len(self.im_combinations)):

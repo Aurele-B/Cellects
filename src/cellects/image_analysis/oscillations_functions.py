@@ -14,13 +14,12 @@ Notes
 Uses cv2.connectedComponentsWithStats and custom distance calculations for boundary analysis
 Maintains cumulative pixel data for active clusters during time-lapse processing
 """
-import cv2
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
 import logging
-from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes, cc, get_contours, CompareNeighborsWithValue
-from cellects.utils.utilitarian import smallest_memory_array, PercentAndTimeTracker
+from cellects.image_analysis.morphological_operations import cc, CompareNeighborsWithValue
+from cellects.utils.load_display_save import write_h5
+from cellects.utils.utilitarian import smallest_memory_array
 from psutil import virtual_memory
 
 
@@ -53,7 +52,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
     lose_accuracy_to_save_memory : bool, optional (default=False)
         If True, uses low-precision calculations to reduce memory usage at the cost of accuracy
     save_coord_thickening_slimming : bool, optional (default=True)
-        If True, saves detected cluster coordinates as .npy files
+        If True, saves detected cluster coordinates as .h5 files
 
     Returns
     -------
@@ -79,7 +78,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
         converted_video = converted_video[:, :, :, 0]
         average_intensities = np.mean(converted_video, (1, 2))
         if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
-            oscillations_video = np.zeros(dims, dtype=np.float16)
+            oscillations_video = np.zeros(dims[:3], dtype=np.float16)
             for cy in np.arange(dims[1]):
                 for cx in np.arange(dims[2]):
                     oscillations_video[:, cy, cx] = np.round(
@@ -91,7 +90,7 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
         oscillations_video[binary == 0] = 0
 
         for t in np.arange(starting_time, dims[0]):
-            oscillations_image = np.zeros(dims[1:], np.uint8)
+            oscillations_image = np.zeros(dims[1:3], np.uint8)
             # Add in or ef if a pixel has at least 4 neighbor in or ef
             neigh_comp = CompareNeighborsWithValue(oscillations_video[t, :, :], connectivity=8, data_type=np.int8)
             neigh_comp.is_inf(0, and_itself=False)
@@ -120,11 +119,9 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
             oscillations_video[t, :, :] = oscillations_image
         oscillations_video[:starting_time, :, :] = 0
         if save_coord_thickening_slimming:
-            np.save(
-                f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
-                smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
-            np.save(
-                f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.npy",
+            write_h5(f"coord_thickening{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5",
+                     smallest_memory_array(np.nonzero(oscillations_video == 1), "uint"))
+            write_h5(f"coord_slimming{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5",
                 smallest_memory_array(np.nonzero(oscillations_video == 2), "uint"))
     return oscillations_video
 
