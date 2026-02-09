@@ -796,7 +796,7 @@ def draw_me_a_sun(main_shape: NDArray, ray_length_coef: int=4) -> Tuple[NDArray,
             r += 1
             fy, fx, sy, sx = first_ring_idx[0][j], first_ring_idx[1][j], second_ring_y[j], second_ring_x[j]
             line = get_line_points((fy, fx), (sy, sx))
-            sun[line[:, 1], line[:, 0]] = r
+            sun[line[:, 0], line[:, 1]] = r
             rays.append(r)
     return np.array(rays), sun
 
