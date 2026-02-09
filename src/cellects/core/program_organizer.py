@@ -1142,9 +1142,9 @@ class ProgramOrganizer:
                 self._standardize_video_sizes()
             if counter == 20:
                 self.top[self.top < 0] = 1
-                self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 2
+                self.bot[self.bot >= self.ordered_first_image.shape[0] - 1] = self.ordered_first_image.shape[0] - 1
                 self.left[self.left < 0] = 1
-                self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 2
+                self.right[self.right >= self.ordered_first_image.shape[1] - 1] = self.ordered_first_image.shape[1] - 1
             del self.ordered_first_image
             del self.unchanged_ordered_fimg
             del self.modif_validated_shapes
