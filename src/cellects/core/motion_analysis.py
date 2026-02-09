@@ -51,7 +51,6 @@ from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
-from memory_profiler import profile
 
 
 class MotionAnalysis:
