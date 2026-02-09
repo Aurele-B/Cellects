@@ -1562,9 +1562,9 @@ class ProgramOrganizer:
         one_video_memory = self.vars['img_number'] * one_image_memory
         necessary_memory = (one_image_memory * image_bit_number + one_video_memory * video_bit_number) * 1.16415e-10
         available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
-        max_repeat_in_memory = (available_memory // necessary_memory).astype(np.uint16)
+        max_repeat_in_memory = int(available_memory // necessary_memory)
         if max_repeat_in_memory > 1:
-            max_repeat_in_memory = max(available_memory // (2 * necessary_memory), 1)
+            max_repeat_in_memory = max(int(available_memory // (2 * necessary_memory)), 1)
 
 
         self.cores = min(self.all['cores'], max_repeat_in_memory)
