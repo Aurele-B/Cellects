@@ -217,7 +217,7 @@ number of available CPU cores minus one.
 ---
 
 <!-- START_Minimal_RAM_let_free -->
-## Minimal RAM let free:
+## Minimal RAM let free (Go):
 Amount of RAM that should be left available for other programs. Setting to `0` gives Cellects all
 memory, but increases crash risk if other apps are open.
 
