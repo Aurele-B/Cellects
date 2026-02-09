@@ -14,14 +14,12 @@ Notes
 Uses cv2.connectedComponentsWithStats and custom distance calculations for boundary analysis
 Maintains cumulative pixel data for active clusters during time-lapse processing
 """
-import cv2
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
 import logging
-from cellects.image_analysis.morphological_operations import cross_33, get_minimal_distance_between_2_shapes, cc, get_contours, CompareNeighborsWithValue
+from cellects.image_analysis.morphological_operations import cc, CompareNeighborsWithValue
 from cellects.utils.load_display_save import write_h5
-from cellects.utils.utilitarian import smallest_memory_array, PercentAndTimeTracker
+from cellects.utils.utilitarian import smallest_memory_array
 from psutil import virtual_memory
 
 
