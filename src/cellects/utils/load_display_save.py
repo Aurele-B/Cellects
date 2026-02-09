@@ -360,7 +360,7 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
 
             for arena_i, arena_name in enumerate(arenas):
                 # arena_i = 0; arena_name = arena[arena_i]
-                sub_img = img[top[arena_name]: (bot[arena_name] + 1), left[arena_name]: (right[arena_name] + 1), ...]
+                sub_img = img[top[arena_name]:bot[arena_name], left[arena_name]:right[arena_name], ...]
                 if use_list_of_vid:
                     video_bunch[arena_i][image_i, ...] = sub_img
                 else:
