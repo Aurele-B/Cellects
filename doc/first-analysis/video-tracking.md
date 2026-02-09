@@ -23,7 +23,7 @@ click *Detection* to load and analyze it, then *Read* results.
 	 - Cellects automatically names the arena by their position (left to right, top to bottom).
 	 - For single arena setups, use 1.
 	 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-	 - Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keepunaltered videos*.
+	 - Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unaltered videos*.
 <!-- END_Arena_to_analyze -->
 
 ---
