@@ -42,7 +42,6 @@ from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, r
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
 from cellects.core.motion_analysis import MotionAnalysis
 
-
 class PrecompileNJITThread(QtCore.QThread):
     """
     Precompile njit functions for speed optimization.
