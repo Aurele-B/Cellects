@@ -1211,6 +1211,8 @@ class OneArenaThread(QtCore.QThread):
                     analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
             else:
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    if self.parent().po.motion.segmented is None:
+                        self.detection()
                     analysis_i.segmented = self.parent().po.motion.segmented
 
             analysis_i.start = time_parameters[0]
