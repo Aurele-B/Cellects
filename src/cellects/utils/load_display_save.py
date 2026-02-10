@@ -1381,8 +1381,8 @@ def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_vi
     look_for_existing_videos = insensitive_glob('ind_' + '*' + '.h5')
     there_already_are_videos = len(look_for_existing_videos) > 0
     if there_already_are_videos:
-        h5_keys = get_h5_keys(look_for_existing_videos[-1])
-        there_already_are_videos = 'video' in h5_keys and there_already_are_videos
+        all_files_contain_video = np.all(['video' in get_h5_keys(vid_name) for vid_name in look_for_existing_videos])
+        there_already_are_videos = all_files_contain_video and there_already_are_videos
         if not there_already_are_videos:
             look_for_existing_videos = []
         there_already_are_videos = len(look_for_existing_videos) == arena_nb and there_already_are_videos
