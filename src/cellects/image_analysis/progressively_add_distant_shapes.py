@@ -32,7 +32,6 @@ from typing import Tuple
 from cellects.image_analysis.morphological_operations import cross_33, rounded_inverted_distance_transform, CompareNeighborsWithValue, get_radius_distance_against_time, cc, rhombus_55, keep_shape_connected_with_ref
 
 
-
 class ProgressivelyAddDistantShapes:
     """
     This class checks new potential shapes sizes and distance to a main shape.
@@ -320,7 +319,6 @@ class ProgressivelyAddDistantShapes:
 
             expanded_main[current_shape != 0] = 1
         return expanded_main, max_field_feelings
-
 
     def connect_shapes(self, only_keep_connected_shapes: bool, rank_connecting_pixels: bool, intensity_valley: NDArray=None):
         """Connects small shapes to a main shape using gravity field expansion and filtering based on distance and intensity conditions.

@@ -1091,7 +1091,7 @@ class MotionAnalysis:
                                     ray_through_back[ray_through_back < np.max(ray_through_shape)] = 0
                                     self.holes[np.nonzero(ray_through_back)] = 1
                             else:
-                                self.rays = np.concatenate((self.rays[:(ray - 2)], self.rays[(ray - 1):]))
+                                self.rays = self.rays[self.rays != ray]
                         del ray_through_shape
                         del ray_through_back
                     del shape
