@@ -18,7 +18,7 @@ from cellects.utils.load_display_save import write_video_sets, readim, display_n
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
-    np.random.seed(1234)
+    np.random.seed(42)
     ellipse = create_ellipse(7, 7).astype(np.uint8)
     binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
     binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
@@ -87,6 +87,8 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     segment: bool = True
     l = [i, i + 1, po.vars, segment, False, show_seg, videos_already_in_ram]
     MA = MotionAnalysis(l)
+    if MA.binary is None:
+        return None
     MA.get_descriptors_from_binary()
     if os.path.isfile('colony_centroids1_20col_t20_y1000_x1000.csv'):
         os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')

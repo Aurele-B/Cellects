@@ -20,7 +20,7 @@ class CellectsUnitTest(unittest.TestCase):
         if not os.path.isdir(cls.path_output):
             os.mkdir(cls.path_output)
 
-np.random.seed(1234)
+np.random.seed(42)
 # AIM: Make one test for each condition:
 # - One large noisy-circle in the middle
 # - One large noisy-circle on a side
