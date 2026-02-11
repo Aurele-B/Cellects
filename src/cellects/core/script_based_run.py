@@ -46,6 +46,10 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
         po.load_data_to_run_cellects_quickly()
         po.get_first_image()
     else:
+        if len(pathway) == 0:
+            os.chdir(os.getcwd() + '/' + "/data/output")
+        else:
+            os.chdir(pathway)
         po.get_first_image(rgb_video[0,...])
         po.analysis_instance = rgb_video
         po.all['im_or_vid'] = 1
@@ -90,16 +94,13 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     if MA.binary is None:
         return None
     MA.get_descriptors_from_binary()
-    if os.path.isfile('colony_centroids1_20col_t20_y1000_x1000.csv'):
-        os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
-        os.remove('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv'):
-        os.remove('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/ind_1.h5'):
-        os.remove('data/single_experiment/ind_1.h5')
-    if os.path.isfile('data/single_experiment/cellects_data.h5'):
-        os.remove('data/single_experiment/cellects_data.h5')
+    files = insensitive_glob("colony_centroids*")
+    for f in files:
+        os.remove(f)
+    if os.path.isfile('ind_1.h5'):
+        os.remove('ind_1.h5')
+    if os.path.isfile('cellects_data.h5'):
+        os.remove('cellects_data.h5')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)
