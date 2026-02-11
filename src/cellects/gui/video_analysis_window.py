@@ -484,6 +484,8 @@ class VideoAnalysisWindow(MainTabsType):
                 self.parent().po.motion = None
                 self.parent().last_tab = "video_analysis"
                 self.parent().change_widget(2)
+                self.parent().imageanalysiswindow.advanced_mode_cb.setVisible(True)
+                self.parent().imageanalysiswindow.advanced_mode_label.setVisible(True)
 
 
     def required_outputs_is_clicked(self):
