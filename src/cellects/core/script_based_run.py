@@ -18,6 +18,7 @@ from cellects.utils.load_display_save import write_video_sets, readim, display_n
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
+    np.random.seed(1234)
     ellipse = create_ellipse(7, 7).astype(np.uint8)
     binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
     binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
