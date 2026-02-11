@@ -26,6 +26,8 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
+import numpy as np
+
 from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
@@ -1600,9 +1602,8 @@ class EdgeIdentification:
         duplicates = find_duplicates_coord(np.vstack((self.edges_labels[:, 1:], self.edges_labels[:, :0:-1])))
         duplicates = np.logical_or(duplicates[:len(duplicates)//2], duplicates[len(duplicates)//2:])
         for v in self.edges_labels[duplicates, 1:]: #v = self.edges_labels[duplicates, 1:][4]
-            edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
-            edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
-            edge_labs = np.unique(np.concatenate((edge_lab1, edge_lab2)))
+            edges_bool = np.logical_or(np.all(self.edges_labels[:, 1:] == v, axis=1), np.all(self.edges_labels[:, 1:] == v[::-1], axis=1))
+            edge_labs = self.edges_labels[edges_bool, 0]
             for edge_i in range(0, len(edge_labs) - 1):  #  edge_i = 0
                 edge_i_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[edge_i], :2]
                 for edge_j in range(edge_i + 1, len(edge_labs)):  #  edge_j = 1
@@ -1764,26 +1765,25 @@ class EdgeIdentification:
             e_BC = nx.edge_betweenness_centrality(G, seed=0)
             self.BC_net = np.zeros_like(self.distances)
             for v, k in e_BC.items(): # v=(81, 80)
-                v1_coord = self.vertex_table[self.vertex_table[:, 2] == v[0], :2]
-                v2_coord = self.vertex_table[self.vertex_table[:, 2] == v[1], :2]
-                full_coord = np.concatenate((v1_coord, v2_coord))
-                edge_lab1 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v[::-1], axis=1), 0]
-                edge_lab2 = self.edges_labels[np.all(self.edges_labels[:, 1:] == v, axis=1), 0]
-                edge_lab = np.unique(np.concatenate((edge_lab1, edge_lab2)))
-                if len(edge_lab) == 1:
-                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab, :2]
+                v_bool = np.logical_or(self.vertex_table[:, 2] == v[0], self.vertex_table[:, 2] == v[1])
+                full_coord = self.vertex_table[v_bool, :2]
+                edges_bool = np.logical_or(np.all(self.edges_labels[:, 1:] == v[::-1], axis=1),
+                                           np.all(self.edges_labels[:, 1:] == v, axis=1))
+                edge_labs = self.edges_labels[edges_bool, 0]
+                if len(edge_labs) == 1:
+                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs, :2]
                     full_coord = np.concatenate((full_coord, edge_coord))
                     self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                    self.edge_table[self.edge_table[:, 0] == edge_lab, 6] = k
-                elif len(edge_lab) > 1:
-                    edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[0], :2]
-                    for edge_i in range(len(edge_lab)): #  edge_i=1
-                        edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_lab[edge_i], :2]
-                        self.edge_table[self.edge_table[:, 0] == edge_lab[edge_i], 6] = k
+                    self.edge_table[self.edge_table[:, 0] == edge_labs, 6] = k
+                elif len(edge_labs) > 1:
+                    edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[0], :2]
+                    for edge_i in range(len(edge_labs)): #  edge_i=1
+                        edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[edge_i], :2]
+                        self.edge_table[self.edge_table[:, 0] == edge_labs[edge_i], 6] = k
                         full_coord = np.concatenate((full_coord, edge_coord))
                         self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
                         if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
-                            logging.error(f"There still is two identical edges: {edge_lab} of len: {len(edge_coord)} linking vertices {v}")
+                            logging.error(f"There still is two identical edges: {edge_labs} of len: {len(edge_coord)} linking vertices {v}")
                             break
 
 
