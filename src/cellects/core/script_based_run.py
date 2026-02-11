@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 import cv2
+from cellects.core.cellects_paths import DATA_DIR
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
@@ -36,7 +37,7 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
     po = ProgramOrganizer()
     if rgb_video is None:
         if len(pathway) == 0:
-            pathway = os.getcwd() + '/' + "/data/single_experiment"
+            pathway = str(DATA_DIR / "single_experiment")
         po.all['global_pathway'] = pathway
         po.all['first_folder_sample_number'] = sample_number
         po.all['radical'] = radical
@@ -47,7 +48,7 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
         po.get_first_image()
     else:
         if len(pathway) == 0:
-            os.chdir(os.getcwd() + '/' + "/data/output")
+            os.chdir(str(DATA_DIR / "output"))
         else:
             os.chdir(pathway)
         po.get_first_image(rgb_video[0,...])
@@ -76,7 +77,7 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         print('Image analysis already done, run video analysis')
     return po
 
-def run_one_video_analysis(po, with_video_in_ram: bool=False):
+def run_one_video_analysis(po, with_video_in_ram: bool=False, remove_files: bool=False):
     i=0
     show_seg= False
     po.vars['frame_by_frame_segmentation'] = True
@@ -94,13 +95,12 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     if MA.binary is None:
         return None
     MA.get_descriptors_from_binary()
-    files = insensitive_glob("colony_centroids*")
-    for f in files:
-        os.remove(f)
-    if os.path.isfile('ind_1.h5'):
-        os.remove('ind_1.h5')
-    if os.path.isfile('cellects_data.h5'):
-        os.remove('cellects_data.h5')
+    if remove_files:
+        files = insensitive_glob("colony_centroids*") + insensitive_glob("ind_*")
+        for f in files:
+            os.remove(f)
+        if os.path.isfile('cellects_data.h5'):
+            os.remove('cellects_data.h5')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)
