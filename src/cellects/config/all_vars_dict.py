@@ -70,77 +70,85 @@ class DefaultDicts:
         }
 
         self.vars = {
-            'video_list': None,
-            'analyzed_individuals': [1],
-            'arena_shape': 'rectangle', # 'circle',
-            'bio_label': 1,
-            'bio_label2': 1,
-            'color_number': 2,
+            # Main image analysis params:
+            'several_blob_per_arena': False,
             'convert_for_motion': {
                 'lab': [0, 0, 1],
                 'logical': 'None'},
             'convert_for_origin': {
                 'lab': [0, 0, 1],
                 'logical': 'None'},
+            'arena_shape': 'rectangle', # 'circle',
+            'subtract_background': False,
+            'filter_spec': {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]},
+
+            # Main video tracking params:
+            'frame_by_frame_segmentation': False,
+            'do_slope_segmentation': False,
+            'do_threshold_segmentation': True,
+            'true_if_use_light_AND_slope_else_OR': False,
+            'maximal_growth_factor': 0.05,
+            'repeat_video_smoothing': 1,
+
+            # Post-processing params
+            'do_fading': False,
+            'fading': 0,
             'detection_range_factor': 2,
-            'first_move_threshold': None,
-            'img_number': 0,
-            'iso_digi_analysis': True,
-            'first_detection_frame': 0,
-            'luminosity_threshold': 127,
             'max_size_for_connection': 300,
             'min_size_for_connection': 20,
-            'origin_state': 'fluctuating',
-            'oscilacyto_analysis': False,
+            'correct_errors_around_initial': False,
+            'prevent_fast_growth_near_periphery': False,
+            'appearance_detection_method': 'largest',
+            'periphery_width': 40,
+            'max_periphery_growth': 20,
 
+            # Segmentation params:
+            'color_number': 2,
             'rolling_window_segmentation': {'do': False, 'side_len': None, 'step': None, 'min_int_var': None},
             'grid_segmentation': False,
             'mesh_side_length': 4,
             'mesh_step_length': 2,
             'mesh_min_int_var': 20,
+            'first_detection_frame': 0,
+            'luminosity_threshold': 127,
 
-            'fractal_analysis': False,
-            'fractal_box_side_threshold': 32,
-            'fractal_zoom_step': 0,
-            'subtract_background': False,
-            'correct_errors_around_initial': False,
-            'prevent_fast_growth_near_periphery': False,
-            'periphery_width': 40,
-            'max_periphery_growth': 20,
-            # According to Smith and Saldana (1992),
-            # P. polycephalum shuttle streaming has a period of 100-200s
-            'already_greyscale': False,
-            'descriptors_in_long_format': True,
-            'do_slope_segmentation': False,
-            'do_threshold_segmentation': True,
-            'drift_already_corrected': False,
-            'appearance_detection_method': 'largest',
-            'frame_by_frame_segmentation': False,
-            'repeat_video_smoothing': 1,
-            'keep_unaltered_videos': False,
-            'maximal_growth_factor': 0.05,
-            'min_ram_free': 1.,
-            'expected_oscillation_period': 2,  # (min)
-            'minimal_oscillating_cluster_size': 50,  # (pixels)
+            # Output params:
             'output_in_mm': True,
-            'save_processed_videos': True,
-            'several_blob_per_arena': False,
-            'time_step': 1,
-            'time_step_is_arbitrary': True,
-            'true_if_use_light_AND_slope_else_OR': False,
-            'do_fading': False,
-            'fading': 0,
-            'video_fps': 60,
-            'videos_extension': '.mp4',
-            'exif': [],
-            'lose_accuracy_to_save_memory': True,
             'save_coord_specimen': False,
             'save_graph': False,
             'save_coord_thickening_slimming': False,
             'save_coord_network': False,
+            'oscilacyto_analysis': False,
+            'fractal_analysis': False,
+            'fractal_box_side_threshold': 32,
+            'fractal_zoom_step': 0,
+            'expected_oscillation_period': 2,  # (min)
+            'minimal_oscillating_cluster_size': 50,  # (pixels)
+            'iso_digi_analysis': True,
             # Data stored during analysis:
             'descriptors': descriptors,
-            'filter_spec': {'filter1_type': "", 'filter1_param': [.5, 1.], 'filter2_type': "", 'filter2_param': [.5, 1.]},
+
+            # Hard params:
+            'keep_unaltered_videos': False,
+            'min_ram_free': 1.,
+            'save_processed_videos': True,
+            'video_fps': 60,
+            'videos_extension': '.mp4',
+            'lose_accuracy_to_save_memory': True,
+
+            # Automatically determined params:
+            'video_list': None,
+            'analyzed_individuals': [1],
+            'bio_label': 1,
+            'bio_label2': 1,
+            'first_move_threshold': None,
+            'img_number': 0,
+            'origin_state': 'fluctuating',
+            'already_greyscale': False,
+            'drift_already_corrected': False,
+            'time_step': 1,
+            'time_step_is_arbitrary': True,
+            'exif': [],
         }
 
     def save_as_json(self, po=None, reset_params: bool=False):
