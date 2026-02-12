@@ -439,10 +439,16 @@ VAW["Specimen_activity"] = {}
 VAW["Specimen_activity"]["label"] = "Specimen activity"
 # START_TIP
 VAW["Specimen_activity"]["tips"] = \
-f"""The behavior of the specimen(s) changes how Cellects post processes the data (after video segmentation):
-- **move** → Specimen(s) can move from one place to another in the arena but are not expected to grow. The status of an area (specimen or background) does not depend on where the specimen(s) were previously.
-- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the specimen(s) is used to detect its current position.
-- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they are left.
+f"""The behavior of the specimen(s) changes how Cellects post processes the data (after video
+segmentation):
+- **move** → Specimen(s) can move from one place to another in the arena but are not expected to
+grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
+previously.
+- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the
+specimen(s) is used to detect its current position.
+- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous
+position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
+are left.
 """
 # END_TIP
 
@@ -635,8 +641,8 @@ AP["Morphological_opening"] = {}
 AP["Morphological_opening"]["label"] = "Morphological opening"
 # START_TIP
 AP["Morphological_opening"]["tips"] = \
-f"""Morphological opening first erodes and then dilates all specimens detected during initial segmentation. If checked, this
-algorithm is applied to every frame after segmentation.
+f"""Morphological opening first erodes and then dilates all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
 NB:
 - Efficient for removing small noise from the background
 """
@@ -646,8 +652,8 @@ AP["Morphological_closing"] = {}
 AP["Morphological_closing"]["label"] = "Morphological closing"
 # START_TIP
 AP["Morphological_closing"]["tips"] = \
-f"""Morphological opening first dilates and then erodes all specimens detected during initial segmentation. If checked, this
-algorithm is applied to every frame after segmentation.
+f"""Morphological opening first dilates and then erodes all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
 NB:
 - Efficient for removing small holes in the detected specimen(s)
 """

@@ -49,7 +49,8 @@ Select to optimize arena detection for specimens moving move in the same directi
 
 <!-- START_Sliding_window_segmentation -->
 ## Sliding window segmentation:
-Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as specimen during one of the two previous frames is added to the current frame.
+Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as
+specimen during one of the two previous frames is added to the current frame.
 
 <!-- END_Sliding_window_segmentation -->
 
@@ -57,8 +58,8 @@ Smooth the result of the segmentation to facilitate detection. If checked, each 
 
 <!-- START_Morphological_opening -->
 ## Morphological opening:
-Morphological opening first erodes and then dilates all shapes in a binary image. If checked, this
-algorithm is applied to every frame after segmentation.
+Morphological opening first erodes and then dilates all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
 !!! note
 
 	 - Efficient for removing small noise from the background
@@ -68,8 +69,8 @@ algorithm is applied to every frame after segmentation.
 
 <!-- START_Morphological_closing -->
 ## Morphological closing:
-Morphological opening first dilates and then erodes all shapes in a binary image. If checked, this
-algorithm is applied to every frame after segmentation.
+Morphological opening first dilates and then erodes all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
 !!! note
 
 	 - Efficient for removing small holes in the detected specimen(s)
