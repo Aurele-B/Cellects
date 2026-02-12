@@ -635,7 +635,7 @@ AP["Morphological_opening"] = {}
 AP["Morphological_opening"]["label"] = "Morphological opening"
 # START_TIP
 AP["Morphological_opening"]["tips"] = \
-f"""Morphological opening first erodes and then dilates all shapes in a binary image. If checked, this
+f"""Morphological opening first erodes and then dilates all specimens detected during initial segmentation. If checked, this
 algorithm is applied to every frame after segmentation.
 NB:
 - Efficient for removing small noise from the background
@@ -646,7 +646,7 @@ AP["Morphological_closing"] = {}
 AP["Morphological_closing"]["label"] = "Morphological closing"
 # START_TIP
 AP["Morphological_closing"]["tips"] = \
-f"""Morphological opening first dilates and then erodes all shapes in a binary image. If checked, this
+f"""Morphological opening first dilates and then erodes all specimens detected during initial segmentation. If checked, this
 algorithm is applied to every frame after segmentation.
 NB:
 - Efficient for removing small holes in the detected specimen(s)
