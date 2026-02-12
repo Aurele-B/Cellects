@@ -257,7 +257,7 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.specimen_activity_widget = QtWidgets.QWidget()
         self.specimen_activity_layout = QtWidgets.QHBoxLayout()
-        self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"],
+        self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"] + ':',
                                        tip=VAW["Specimen_activity"]["tips"],
                                        night_mode=self.parent().po.all['night_mode'])
         self.specimen_activity = Combobox(['move', 'grow', 'move and grow'],
@@ -268,7 +268,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.specimen_activity.setCurrentText(self.parent().po.vars['specimen_activity'])
         self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
         self.fading_label = FixedText(VAW["Fading_detection"]["label"],
-                                       tip=VAW["Fading_detection"]["tips"],
+                                       tip=VAW["Fading_detection"]["tips"] + ':',
                                        night_mode=self.parent().po.all['night_mode'])
         self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
                                night_mode=self.parent().po.all['night_mode'])
