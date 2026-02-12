@@ -661,10 +661,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         if len(image.shape) == 2:
             self.parent().po.current_image = np.stack((image, image, image), axis=2)
-
-            self.generate_analysis_options.setVisible(False)
             self.network_shaped.setVisible(False)
-            self.basic.setVisible(False)
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
             self.visualize.setVisible(True)
@@ -1139,6 +1136,13 @@ class ImageAnalysisWindow(MainTabsType):
                     for option in range(option_number):
                         self.select_option.addItem(f"Option {option + 1}")
                 self.update_csc_editing_display()
+                if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
+                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+                    self.rolling_window_segmentation.setChecked(self.parent().po.vars['rolling_window_segmentation']['do'])
+                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
+                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+                        "filter_spec"]
+                    self.update_filter_display()
             else:
                 self.message.setText("No options could be generated automatically, use the advanced mode")
                 self.is_image_analysis_running = False
@@ -1190,8 +1194,8 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")
 
         if not self.parent().po.visualize:
-            self.select_option.setVisible(color_analysis)
-            self.select_option_label.setVisible(color_analysis)
+            self.select_option.setVisible(True)
+            self.select_option_label.setVisible(True)
         if self.step == 0:
             if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
                 self.message.setText("Make sure that scaling metric and spot size are correct")
@@ -1203,9 +1207,9 @@ class ImageAnalysisWindow(MainTabsType):
             self.n_shapes_detected.setVisible(True)
 
         elif self.step == 2:
-            self.generate_analysis_options.setVisible(color_analysis)
+            self.generate_analysis_options.setVisible(True)
             self.network_shaped.setVisible(True)
-            self.basic.setVisible(color_analysis)
+            self.basic.setVisible(True)
             self.visualize.setVisible(True)
 
             self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
@@ -1290,6 +1294,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
             if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
                 self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
+                self.rolling_window_segmentation.setChecked(self.parent().po.vars['rolling_window_segmentation']['do'])
             if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
                 self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
                     "filter_spec"]

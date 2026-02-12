@@ -26,8 +26,10 @@ from numpy.typing import NDArray
 from typing import Tuple
 import pandas as pd
 from scipy.stats import rankdata
+
+from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image_analysis.morphological_operations import cross_33, create_ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
 from cellects.image_analysis.one_image_analysis_threads import ProcessImage
 from cellects.image_analysis.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
@@ -75,6 +77,50 @@ def make_one_dict_per_channel():
     return one_dict_per_channel
 
 one_dict_per_channel = make_one_dict_per_channel()
+
+def make_one_dict_per_filtering():
+    two_params = [[0.5, 1.5],
+                    [1.0, 3.0],
+                    [1.5, 4.5],
+                    [2.0, 6.0],
+                    [2.5, 7.5],
+                    [3.0, 9.0],
+                    [4.0, 12.0],
+                    [5.0, 15.0]]
+    filter_list = list(filter_dict.keys())
+    one_dict_per_filtering = []
+    default_filter_spec = DefaultDicts().vars['filter_spec']
+    for filter_type in filter_list:
+        if filter_type == 'Gaussian':
+            for sigma in [0.5, 1., 2., 3., 4., 5., 8., 10.]:
+                filter_spec = default_filter_spec.copy()
+                filter_spec['filter1_type'] = filter_type
+                filter_spec['filter1_param'] = [sigma]
+                one_dict_per_filtering.append(filter_spec)
+        elif filter_type == 'Laplace':
+            for ksize in [3, 4, 5, 7, 9, 11, 15, 21]:
+                filter_spec = default_filter_spec.copy()
+                filter_spec['filter1_type'] = filter_type
+                filter_spec['filter1_param'] = [ksize]
+                one_dict_per_filtering.append(filter_spec)
+        elif filter_type == 'Butterworth':
+            for cutoff_frequency_ratio in [0.02, 0.05, 0.10, 0.20, 0.40]:
+                for order in [1, 2, 3, 6, 8, 10]:
+                    filter_spec = default_filter_spec.copy()
+                    filter_spec['filter1_type'] = filter_type
+                    filter_spec['filter1_param'] = [cutoff_frequency_ratio, order]
+                    one_dict_per_filtering.append(filter_spec)
+        elif 'Param2' in filter_dict[filter_type]:
+            for two_param in two_params:
+                filter_spec = default_filter_spec.copy()
+                filter_spec['filter1_type'] = filter_type
+                filter_spec['filter1_param'] = two_param
+                one_dict_per_filtering.append(filter_spec)
+        else:
+            filter_spec = default_filter_spec.copy()
+            filter_spec['filter1_type'] = filter_type
+            one_dict_per_filtering.append(filter_spec)
+    return one_dict_per_filtering
 
 class OneImageAnalysis:
     """
@@ -386,7 +432,96 @@ class OneImageAnalysis:
         self.saved_images_list = List()
         self.converted_images_list = List()
         self.saved_color_space_list = list()
+        self.saved_filter_list = list()
         self.saved_csc_nb = 0
+
+    def find_potential_filters(self, params: dict=None, filter_name: str=None):
+        logging.info(f"Start automatic finding of image filters...")
+        self.init_combinations_lists()
+        if self.image.any():
+            one_dict_per_filtering = make_one_dict_per_filtering()
+            if filter_name is not None:
+                each_param_of_each_filter = []
+                for parametrized_filter in one_dict_per_filtering:
+                    if parametrized_filter['filter1_type'] == filter_name:
+                        each_param_of_each_filter.append(parametrized_filter)
+            else:
+                each_param_of_each_filter = one_dict_per_filtering
+
+            # 1. Set all params
+            if params is None:
+                params = init_params()
+            if params['arenas_mask'] is not None:
+                params['out_of_arenas_mask'] = 1 - params['arenas_mask']
+            if params['ref_image'] is not None:
+                params['ref_image'] = cv2.dilate(params['ref_image'], cross_33)
+            if params['several_blob_per_arena']:
+                params['con_comp_extent'] = [1, self.binary_image.size // 50]
+            else:
+                params['con_comp_extent'] = [params['blob_nb'], np.max((params['blob_nb'], self.binary_image.size // 100))]
+            im_size = self.image.shape[0] * self.image.shape[1]
+
+            if not params['several_blob_per_arena'] and params['blob_nb'] is not None and params['blob_nb'] > 1 and params['are_zigzag'] is not None:
+                if params['are_zigzag'] == "columns":
+                    inter_dist = np.mean(np.diff(np.nonzero(self.y_boundaries)))
+                elif params['are_zigzag'] == "rows":
+                    inter_dist = np.mean(np.diff(np.nonzero(self.x_boundaries)))
+                else:
+                    dist1 = np.mean(np.diff(np.nonzero(self.y_boundaries)))
+                    dist2 = np.mean(np.diff(np.nonzero(self.x_boundaries)))
+                    inter_dist = np.max(dist1, dist2)
+                if params['blob_shape'] == "rectangle":
+                    params['max_blob_size'] = np.square(2 * inter_dist)
+                else:
+                    params['max_blob_size'] = np.pi * np.square(inter_dist)
+                params['total_surface_area'] = params['max_blob_size'] * self.sample_number
+            else:
+                params['max_blob_size'] = .9 * im_size
+                params['total_surface_area'] = .99 * im_size
+
+            # 3. Init combination_features table
+            unaltered_blob_nb_idx, blob_number_idx, blob_shape_idx, blob_size_idx, total_area_idx, width_std_idx, height_std_idx, area_std_idx, out_of_arenas_idx, in_arena_idx, common_with_ref_idx, bio_sum_idx, back_sum_idx, score_idx = np.arange(3, 17)
+            self.factors = ['unaltered_blob_nb', 'blob_nb', 'total_area', 'width_std', 'height_std', 'area_std', 'out_of_arenas', 'in_arenas', 'common_with_ref', 'bio_sum', 'back_sum', 'score']
+            self.combination_features = pd.DataFrame(np.zeros((100, len(self.factors)), dtype=np.float64), columns=self.factors)
+
+            # 4. Test every channel separately
+            process = 'filter'
+            list_args = [[self, params, process, parametrized_filter] for parametrized_filter in each_param_of_each_filter]
+            for list_arg in list_args:
+                ProcessImage(list_arg)
+
+            if self.saved_csc_nb > 0:
+                # 9. Order all saved features
+                self.combination_features = self.combination_features.iloc[:self.saved_csc_nb, :]
+                self.score_combination_features()
+                if params['is_first_image'] and params['blob_nb'] is not None:
+                    distances = np.abs(self.combination_features['blob_nb'] - params['blob_nb'])
+                    cc_efficiency_order = np.argsort(distances)
+                else:
+                    cc_efficiency_order = np.argsort(self.combination_features['score'])
+                    cc_efficiency_order = cc_efficiency_order.max() - cc_efficiency_order
+                if len(cc_efficiency_order) > 20:
+                    cc_efficiency_order = cc_efficiency_order[:20]
+            else:
+                logging.info("No accurate combinations found")
+                cc_efficiency_order = []
+
+            # 7. Save and return a dictionary containing the selected color space combinations
+            # and their corresponding binary images
+            self.im_combinations = []
+            for saved_csc in cc_efficiency_order:
+                if len(self.saved_filter_list[saved_csc]) > 0:
+                    combi_i = len(self.im_combinations)
+                    self.im_combinations.append({})
+                    self.im_combinations[combi_i]["csc"] = {'logical': 'None', 'bgr': [1, 1 ,1]}
+                    self.im_combinations[combi_i]["binary_image"] = self.saved_images_list[saved_csc]
+                    self.im_combinations[combi_i]["converted_image"] = np.round(self.converted_images_list[
+                        saved_csc]).astype(np.uint8)
+                    self.im_combinations[combi_i]["shape_number"] = int(self.combination_features['blob_nb'].iloc[saved_csc])
+                    self.im_combinations[combi_i]['filter_spec']= self.saved_filter_list[saved_csc]
+            self.saved_color_space_list = []
+            del self.saved_images_list
+            del self.converted_images_list
 
     def find_color_space_combinations(self, params: dict=None, color_space: str=None):
         logging.info(f"Start automatic finding of color space combinations...")
@@ -578,9 +713,11 @@ class OneImageAnalysis:
         if process_i.validated_shapes.any():
             saved_csc_nb = self.saved_csc_nb
             self.saved_csc_nb += 1
+            self.saved_filter_list.append(process_i.params['filter_spec'])
             self.saved_images_list.append(process_i.validated_shapes)
             self.converted_images_list.append(bracket_to_uint8_image_contrast(process_i.greyscale))
-            self.saved_color_space_list.append(process_i.csc_dict)
+            if process_i.csc_dict is not None:
+                self.saved_color_space_list.append(process_i.csc_dict)
             self.combination_features.iloc[saved_csc_nb, :] = process_i.fact
 
     def score_combination_features(self):

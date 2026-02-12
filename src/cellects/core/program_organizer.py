@@ -744,7 +744,7 @@ class ProgramOrganizer:
             shape_nb, ordered_image = cv2.connectedComponents((bio_mask > 0).astype(np.uint8))
             shape_nb -= 1
         self.pre_save_user_masks(bio_mask=bio_mask, back_mask=back_mask)
-        if self.visualize or len(self.first_im.shape) == 2:
+        if self.visualize:
             if not first_param_known and self.all['scale_with_image_or_cells'] == 0 and self.all["set_spot_size"]:
                 self.get_average_pixel_size()
             else:
@@ -774,7 +774,10 @@ class ProgramOrganizer:
                 params['blob_shape'] = self.all['starting_blob_shape']
                 params['blob_size'] = self.starting_blob_hsize_in_pixels
 
-            self.first_image.find_color_space_combinations(params)
+            if len(self.first_im.shape) == 2:
+                self.first_image.find_potential_filters(params)
+            else:
+                self.first_image.find_color_space_combinations(params)
 
     def full_last_image_segmentation(self, bio_mask: NDArray[np.uint8] = None, back_mask: NDArray[np.uint8] = None):
         if bio_mask is not None and bio_mask.any():
@@ -789,7 +792,7 @@ class ProgramOrganizer:
             self.get_last_image()
         self.cropping(False)
         self.get_background_to_subtract()
-        if self.visualize or (len(self.first_im.shape) == 2 and not self.network_shaped):
+        if self.visualize:
             self.fast_last_image_segmentation(bio_mask=bio_mask, back_mask=back_mask)
         else:
             arenas_mask = None
@@ -816,7 +819,10 @@ class ProgramOrganizer:
                 params['bio_mask'] = bio_mask
                 params['back_mask'] = back_mask
                 params['filter_spec'] = self.vars["filter_spec"]
-                self.last_image.find_color_space_combinations(params)
+                if len(self.last_image.image.shape) == 2:
+                    self.last_image.find_potential_filters(params)
+                else:
+                    self.last_image.find_color_space_combinations(params)
 
     def cropping(self, is_first_image: bool):
         """
