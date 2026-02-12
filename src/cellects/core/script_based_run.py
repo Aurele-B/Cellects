@@ -47,10 +47,6 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
         po.load_data_to_run_cellects_quickly()
         po.get_first_image()
     else:
-        if len(pathway) == 0:
-            os.chdir(str(DATA_DIR / "output"))
-        else:
-            os.chdir(pathway)
         po.get_first_image(rgb_video[0,...])
         po.analysis_instance = rgb_video
         po.all['im_or_vid'] = 1

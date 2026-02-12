@@ -342,7 +342,7 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
     """
     top, bot, left, right = bounding_boxes
     for bunch in np.arange(bunch_nb):
-        print(f'\nSaving the bunch n: {bunch + 1} / {bunch_nb} of videos:', end=' ')
+        print(f'\nSaving the video bunch n: {bunch + 1} / {bunch_nb}...', end=' ')
         if bunch == (bunch_nb - 1) and remaining > 0:
             arenas = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining, dtype=np.uint32)
         else:
