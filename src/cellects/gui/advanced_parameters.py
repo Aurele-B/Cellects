@@ -111,13 +111,13 @@ class AdvancedParameters(WindowType):
 
         # I/ First box: General parameters
         # I/A/ Title
-        self.general_param_box_label = FixedText('General parameters:', tip="",
+        self.image_param_box_label = FixedText('Image parameters:', tip="",
                                          night_mode=self.parent().po.all['night_mode'])
-        self.left_col_layout.addWidget(self.general_param_box_label)
+        self.left_col_layout.addWidget(self.image_param_box_label)
         # I/B/ Create the box
-        self.general_param_box_layout = QtWidgets.QGridLayout()
-        self.general_param_box_widget = QtWidgets.QWidget()
-        self.general_param_box_widget.setStyleSheet(boxstylesheet)
+        self.image_param_box_layout = QtWidgets.QGridLayout()
+        self.image_param_box_widget = QtWidgets.QWidget()
+        self.image_param_box_widget.setStyleSheet(boxstylesheet)
         # I/C/ Create widgets
         self.automatically_crop = Checkbox(self.parent().po.all['automatically_crop'])
         self.automatically_crop_label = FixedText(AP["Crop_images"]["label"], tip=AP["Crop_images"]["tips"],
@@ -127,9 +127,46 @@ class AdvancedParameters(WindowType):
         self.subtract_background.stateChanged.connect(self.subtract_background_check)
         self.subtract_background_label = FixedText(AP["Subtract_background"]["label"], tip=AP["Subtract_background"]["tips"], night_mode=self.parent().po.all['night_mode'])
 
-        self.keep_cell_and_back_for_all_folders = Checkbox(self.parent().po.all['keep_cell_and_back_for_all_folders'])
-        self.keep_cell_and_back_for_all_folders_label = FixedText(AP["Keep_drawings"]["label"],
-                                               tip=AP["Keep_drawings"]["tips"],
+        self.all_specimens_have_same_direction = Checkbox(self.parent().po.all['all_specimens_have_same_direction'])
+        self.all_specimens_have_same_direction_label = FixedText(AP["Specimens_have_same_direction"]["label"],
+                                                         tip=AP["Specimens_have_same_direction"]["tips"],
+                                                         night_mode=self.parent().po.all['night_mode'])
+
+        # I/D/ Arrange widgets in the box
+        self.image_param_box_layout.addWidget(self.automatically_crop, 0, 0)
+        self.image_param_box_layout.addWidget(self.automatically_crop_label, 0, 1)
+        self.image_param_box_layout.addWidget(self.subtract_background, 1, 0)
+        self.image_param_box_layout.addWidget(self.subtract_background_label, 1, 1)
+        self.image_param_box_layout.addWidget(self.all_specimens_have_same_direction, 2, 0)
+        self.image_param_box_layout.addWidget(self.all_specimens_have_same_direction_label, 2, 1)
+
+        self.image_param_box_widget.setLayout(self.image_param_box_layout)
+        self.left_col_layout.addWidget(self.image_param_box_widget)
+
+        # II/ Second box: One cell/colony per arena
+        # II/A/ Title
+        self.post_processing_label = FixedText('Post processing parameters:', tip="",
+                                            night_mode=self.parent().po.all['night_mode'])
+        self.left_col_layout.addWidget(self.post_processing_label)
+        # II/B/ Create the box
+        self.post_processing_box_layout = QtWidgets.QGridLayout()
+        self.post_processing_box_widget = QtWidgets.QWidget()
+        self.post_processing_box_widget.setStyleSheet(boxstylesheet)
+
+        # II/C/ Create widgets
+        self.sliding_window_segmentation = Checkbox(self.parent().po.vars['sliding_window_segmentation'])
+        self.sliding_window_segmentation_label = FixedText(AP["Sliding_window_segmentation"]["label"],
+                                               tip=AP["Sliding_window_segmentation"]["tips"],
+                                               night_mode=self.parent().po.all['night_mode'])
+
+        self.morphological_opening = Checkbox(self.parent().po.vars['morphological_opening'])
+        self.morphological_opening_label = FixedText(AP["Morphological_opening"]["label"],
+                                               tip=AP["Morphological_opening"]["tips"],
+                                               night_mode=self.parent().po.all['night_mode'])
+
+        self.morphological_closing = Checkbox(self.parent().po.vars['morphological_closing'])
+        self.morphological_closing_label = FixedText(AP["Morphological_closing"]["label"],
+                                               tip=AP["Morphological_closing"]["tips"],
                                                night_mode=self.parent().po.all['night_mode'])
 
         self.correct_errors_around_initial = Checkbox(self.parent().po.vars['correct_errors_around_initial'])
@@ -154,43 +191,6 @@ class AdvancedParameters(WindowType):
                                                tip="The maximum detectable size (in pixels) of a shape in a single frame near the periphery of the arena.\nLarger shapes will be considered as noise.",
                                                night_mode=self.parent().po.all['night_mode'])
         self.prevent_fast_growth_near_periphery_check()
-
-
-        # I/D/ Arrange widgets in the box
-        self.general_param_box_layout.addWidget(self.automatically_crop, 0, 0)
-        self.general_param_box_layout.addWidget(self.automatically_crop_label, 0, 1)
-        self.general_param_box_layout.addWidget(self.subtract_background, 1, 0)
-        self.general_param_box_layout.addWidget(self.subtract_background_label, 1, 1)
-        self.general_param_box_layout.addWidget(self.keep_cell_and_back_for_all_folders, 2, 0)
-        self.general_param_box_layout.addWidget(self.keep_cell_and_back_for_all_folders_label, 2, 1)
-        self.general_param_box_layout.addWidget(self.correct_errors_around_initial, 3, 0)
-        self.general_param_box_layout.addWidget(self.correct_errors_around_initial_label, 3, 1)
-        self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery, 4, 0)
-        self.general_param_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, 4, 1)
-        self.general_param_box_layout.addWidget(self.periphery_width, 5, 0)
-        self.general_param_box_layout.addWidget(self.periphery_width_label, 5, 1)
-        self.general_param_box_layout.addWidget(self.max_periphery_growth, 6, 0)
-        self.general_param_box_layout.addWidget(self.max_periphery_growth_label, 6, 1)
-        self.general_param_box_widget.setLayout(self.general_param_box_layout)
-        self.left_col_layout.addWidget(self.general_param_box_widget)
-
-        # II/ Second box: One cell/colony per arena
-        # II/A/ Title
-        self.one_per_arena_label = FixedText('One cell/colony per arena parameters:', tip="",
-                                            night_mode=self.parent().po.all['night_mode'])
-        self.left_col_layout.addWidget(self.one_per_arena_label)
-        # II/B/ Create the box
-        self.one_per_arena_box_layout = QtWidgets.QGridLayout()
-        self.one_per_arena_box_widget = QtWidgets.QWidget()
-        self.one_per_arena_box_widget.setStyleSheet(boxstylesheet)
-
-        # II/C/ Create widgets
-        self.all_specimens_have_same_direction = Checkbox(self.parent().po.all['all_specimens_have_same_direction'])
-        # self.all_specimens_have_same_direction.stateChanged.connect(self.all_specimens_have_same_direction_changed)
-        self.all_specimens_have_same_direction_label = FixedText(AP["Specimens_have_same_direction"]["label"],
-                                                         tip=AP["Specimens_have_same_direction"]["tips"],
-                                                         night_mode=self.parent().po.all['night_mode'])
-
 
         connect_distant_shape = self.parent().po.all['connect_distant_shape_during_segmentation']
         self.connect_distant_shape_during_segmentation = Checkbox(connect_distant_shape)
@@ -257,30 +257,48 @@ class AdvancedParameters(WindowType):
 
         # II/D/ Arrange widgets in the box
         curr_box_row = 0
-        self.one_per_arena_box_layout.addWidget(self.connect_distant_shape_during_segmentation, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.connect_distant_shape_label, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.sliding_window_segmentation, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.sliding_window_segmentation_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.detection_range_factor, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.detection_range_factor_label, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.morphological_opening, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.morphological_opening_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.use_min_size, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.use_min_size_label, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.morphological_closing, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.morphological_closing_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.min_size_for_connection_label, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.min_size_for_connection, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.correct_errors_around_initial, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.correct_errors_around_initial_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.use_max_size, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.use_max_size_label, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.prevent_fast_growth_near_periphery, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.prevent_fast_growth_near_periphery_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.max_size_for_connection_label, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.max_size_for_connection, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.periphery_width, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.periphery_width_label, curr_box_row, 1)
         curr_box_row += 1
-        self.one_per_arena_box_layout.addWidget(self.all_specimens_have_same_direction, curr_box_row, 0)
-        self.one_per_arena_box_layout.addWidget(self.all_specimens_have_same_direction_label, curr_box_row, 1)
+        self.post_processing_box_layout.addWidget(self.max_periphery_growth, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.max_periphery_growth_label, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.connect_distant_shape_during_segmentation, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.connect_distant_shape_label, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.detection_range_factor, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.detection_range_factor_label, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.use_min_size, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.use_min_size_label, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.min_size_for_connection_label, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.min_size_for_connection, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.use_max_size, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.use_max_size_label, curr_box_row, 1)
+        curr_box_row += 1
+        self.post_processing_box_layout.addWidget(self.max_size_for_connection_label, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.max_size_for_connection, curr_box_row, 1)
         curr_box_row += 1
 
-        self.one_per_arena_box_widget.setLayout(self.one_per_arena_box_layout)
-        self.left_col_layout.addWidget(self.one_per_arena_box_widget)
+        self.post_processing_box_widget.setLayout(self.post_processing_box_layout)
+        self.left_col_layout.addWidget(self.post_processing_box_widget)
 
         # III/ Third box: Appearing cell/colony
         # III/A/ Title
@@ -388,36 +406,6 @@ class AdvancedParameters(WindowType):
         self.rolling_window_s_widget.setLayout(self.rolling_window_s_layout)
         self.left_col_layout.addWidget(self.rolling_window_s_widget)
 
-        # IV/ Fourth box: Oscillation period:
-        # IV/A/ Title
-        self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
-        self.left_col_layout.addWidget(self.oscillation_label)
-
-        self.oscillation_period_layout = QtWidgets.QGridLayout()
-        self.oscillation_period_widget = QtWidgets.QWidget()
-        self.oscillation_period_widget.setStyleSheet(boxstylesheet)
-
-        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
-                                                  tip=AP["Expected_oscillation_period"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
-
-        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
-                                                  tip=AP["Minimal_oscillating_cluster_size"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
-
-        self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
-        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
-        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size, 1, 0)
-        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size_label, 1, 1)
-
-        self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
-        self.left_col_layout.addWidget(self.oscillation_period_widget)
-
         # I/ First box: Scales
         # I/A/ Title
         self.right_scroll_table = QtWidgets.QScrollArea()   # Scroll Area which contains the widgets, set as the centralWidget
@@ -464,6 +452,29 @@ class AdvancedParameters(WindowType):
         self.scale_box_layout.addWidget(self.pixels_to_mm_label, 2, 1)
         self.scale_box_widget.setLayout(self.scale_box_layout)
         self.right_col_layout.addWidget(self.scale_box_widget)
+
+        # IV/ Fourth box: Batch processing
+        # IV/A/ Title
+        self.batch_processing_label = FixedText('Batch processing:', tip="",
+                                            night_mode=self.parent().po.all['night_mode'])
+        self.right_col_layout.addWidget(self.batch_processing_label)
+        # IV/B/ Create the box
+        self.batch_processing_layout = QtWidgets.QGridLayout()
+        self.batch_processing_widget = QtWidgets.QWidget()
+        self.batch_processing_widget.setStyleSheet(boxstylesheet)
+
+        # IV/C/ Create widgets
+        self.keep_cell_and_back_for_all_folders = Checkbox(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.keep_cell_and_back_for_all_folders_label = FixedText(AP["Keep_drawings"]["label"],
+                                               tip=AP["Keep_drawings"]["tips"],
+                                               night_mode=self.parent().po.all['night_mode'])
+
+        # IV/D/ Arrange widgets in the box
+        self.batch_processing_layout.addWidget(self.keep_cell_and_back_for_all_folders, 0, 0)
+        self.batch_processing_layout.addWidget(self.keep_cell_and_back_for_all_folders_label, 0, 1)
+        self.batch_processing_widget.setLayout(self.batch_processing_layout)
+        self.right_col_layout.addWidget(self.batch_processing_widget)
+
 
         # IV/ Fourth box: Computer resources
         # IV/A/ Title
@@ -556,6 +567,36 @@ class AdvancedParameters(WindowType):
         self.generate_csc_editing()
         # VII/D/ Arrange widgets in the box
         self.right_col_layout.addWidget(self.edit_widget)
+
+        # IV/ Eighth box: Oscillation period:
+        # IV/A/ Title
+        self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
+                                              night_mode=self.parent().po.all['night_mode'])
+        self.right_col_layout.addWidget(self.oscillation_label)
+
+        self.oscillation_period_layout = QtWidgets.QGridLayout()
+        self.oscillation_period_widget = QtWidgets.QWidget()
+        self.oscillation_period_widget.setStyleSheet(boxstylesheet)
+
+        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
+                                                  tip=AP["Expected_oscillation_period"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
+                                                  tip=AP["Minimal_oscillating_cluster_size"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
+        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size, 1, 0)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size_label, 1, 1)
+
+        self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
+        self.right_col_layout.addWidget(self.oscillation_period_widget)
 
         # VIII/ Finalize layout and add the night mode option and the ok button
         self.left_col_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))

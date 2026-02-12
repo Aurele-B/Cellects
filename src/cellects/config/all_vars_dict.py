@@ -91,7 +91,10 @@ class DefaultDicts:
             'repeat_video_smoothing': 1,
 
             # Post-processing params
-            'do_fading': False,
+            'specimen_activity': 'grow',
+            'sliding_window_segmentation': True,
+            'morphological_opening': True,
+            'morphological_closing': True,
             'fading': 0,
             'detection_range_factor': 2,
             'max_size_for_connection': 300,

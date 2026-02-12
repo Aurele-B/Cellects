@@ -1325,7 +1325,7 @@ class ProgramOrganizer:
                                                                      self.vars['descriptors'],
                                                                      self.vars['output_in_mm'],
                                                                      self.vars['average_pixel_size'],
-                                                                     self.vars['do_fading'],
+                                                                     self.vars['specimen_activity'],
                                                                      self.vars['save_coord_specimen'])
                 coord_network = None
                 coord_pseudopods = None
@@ -1342,7 +1342,7 @@ class ProgramOrganizer:
                                                                       self.vars['descriptors'],
                                                                       self.vars['output_in_mm'],
                                                                       self.vars['average_pixel_size'],
-                                                                      self.vars['do_fading'],
+                                                                      self.vars['specimen_activity'],
                                                                       self.vars['first_move_threshold'],
                                                                       self.vars['save_coord_specimen'])
             if self.vars['fractal_analysis']:
@@ -1500,7 +1500,7 @@ class ProgramOrganizer:
                 if np.isin(descriptor, list(from_shape_descriptors_class.keys())):
                 
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
-        self.vars['descriptors']['newly_explored_area'] = self.vars['do_fading']
+        self.vars['descriptors']['newly_explored_area'] = self.vars['specimen_activity'] == 'move' or self.vars['specimen_activity'] == 'move and grow'
 
     def update_available_core_nb(self, image_bit_number=256, video_bit_number=140):# video_bit_number=176
         """

@@ -1163,7 +1163,7 @@ class OneArenaThread(QtCore.QThread):
             The substantial growth threshold for motion detection.
         self.parent().po.all['arena'] : int
             The arena identifier used in motion analysis.
-        self.parent().po.vars['do_fading'] : bool
+        self.parent().po.vars['specimen_activity'] : str
             Indicates if fading effects should be applied.
         self.parent().po.motion.dims : tuple
             The dimensions of the motion data.
@@ -1191,7 +1191,7 @@ class OneArenaThread(QtCore.QThread):
 
         args = [self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
                 False, False, False, self.videos_in_ram]
-        if self.parent().po.vars['do_fading']:
+        if self.parent().po.vars['specimen_activity'] == 'move and grow':
             self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
@@ -1323,10 +1323,6 @@ class VideoReaderThread(QtCore.QThread):
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     video_mask = self.parent().po.motion.segmented
 
-            if self.parent().po.load_quick_full == 1:
-                video_mask = np.cumsum(video_mask.astype(np.uint32), axis=0)
-                video_mask[video_mask > 0] = 1
-                video_mask = video_mask.astype(np.uint8)
         frame_delay = (8 + np.log10(self.parent().po.motion.dims[0])) / self.parent().po.motion.dims[0]
         for t in np.arange(self.parent().po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
@@ -1402,7 +1398,7 @@ class ChangeOneRepResultThread(QtCore.QThread):
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     self.parent().po.motion.binary = self.parent().po.motion.segmented
 
-        if self.parent().po.vars['do_fading']:
+        if self.parent().po.vars['specimen_activity'] == 'move and grow':
             self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
         self.parent().po.motion.max_distance = 9 * self.parent().po.vars['detection_range_factor']
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)

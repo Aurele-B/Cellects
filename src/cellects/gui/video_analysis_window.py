@@ -255,30 +255,34 @@ class VideoAnalysisWindow(MainTabsType):
         self.second_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.second_step_widget.setVisible(False)
 
-        self.fading_widget = QtWidgets.QWidget()
-        self.fading_layout = QtWidgets.QHBoxLayout()
-        self.do_fading = Checkbox(self.parent().po.vars['do_fading'])
-        self.do_fading.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
-                            "border-radius: 5px;border-style: solid;border-width: 1px;"
-                            "border-color: rgb(100,100,100);}"
-                            "QCheckBox::indicator:checked {background-color: rgb(70,130,180);}"
-                            "QCheckBox:checked, QCheckBox::indicator:checked {border-color: black black white white;}"
-                            "QCheckBox:checked {background-color: transparent;}"
-                            "QCheckBox:margin-left {0%}"
-                            "QCheckBox:margin-right {0%}")
-        self.do_fading.stateChanged.connect(self.do_fading_check)
-        self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
-                               night_mode=self.parent().po.all['night_mode'])
+        self.specimen_activity_widget = QtWidgets.QWidget()
+        self.specimen_activity_layout = QtWidgets.QHBoxLayout()
+        self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"],
+                                       tip=VAW["Specimen_activity"]["tips"],
+                                       night_mode=self.parent().po.all['night_mode'])
+        self.specimen_activity = Combobox(['move', 'grow', 'move and grow'],
+                                       night_mode=self.parent().po.all['night_mode'])
+        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.specimen_activity.setFixedWidth(175)
+        self.specimen_activity.setCurrentText(self.parent().po.vars['specimen_activity'])
+        self.specimen_activity.addItem("move")
+        self.specimen_activity.addItem("grow")
+        self.specimen_activity.addItem("move and grow")
+        self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
         self.fading_label = FixedText(VAW["Fading_detection"]["label"],
                                        tip=VAW["Fading_detection"]["tips"],
                                        night_mode=self.parent().po.all['night_mode'])
+        self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
+                               night_mode=self.parent().po.all['night_mode'])
         self.fading.valueChanged.connect(self.fading_changed)
-        self.fading_layout.addWidget(self.do_fading)
-        self.fading_layout.addWidget(self.fading_label)
-        self.fading_layout.addWidget(self.fading)
-        self.fading_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.fading_widget.setLayout(self.fading_layout)
-        self.second_step_layout.addWidget(self.fading_widget)
+        self.specimen_activity_layout.addWidget(self.specimen_activity_label)
+        self.specimen_activity_layout.addWidget(self.specimen_activity)
+        self.specimen_activity_layout.addWidget(self.fading_label)
+        self.specimen_activity_layout.addWidget(self.fading)
+        self.specimen_activity_layout.setAlignment(QtCore.Qt.AlignHCenter)
+        self.specimen_activity_widget.setLayout(self.specimen_activity_layout)
+        self.second_step_layout.addWidget(self.specimen_activity_widget)
 
         self.post_processing = PButton(VAW["Post_processing"]["label"], tip=VAW["Post_processing"]["tips"],
                                        night_mode=self.parent().po.all['night_mode'])
@@ -359,7 +363,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.select_option_label.setVisible(self.parent().po.vars["color_number"] == 2)
         self.select_option.setVisible(self.parent().po.vars["color_number"] == 2)
-        self.fading.setVisible(self.parent().po.vars['do_fading'])
+        self.fading.setVisible(self.parent().po.vars['specimen_activity'] == 'move and grow')
 
     def step_done_is_clicked(self):
         """
@@ -379,7 +383,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.general_step_label.setText('Step 2: Tune fading and advanced parameters to improve Post processing')
             self.general_step_label.setToolTip('Post processing is slower than Detection.\nIt improves detection with the following optional algorithms:\n - Fading detection\n - Correct errors around initial shape\n - Organism internal oscillation period\n - Connect distant shape\n - Appearing cell selection')
             self.second_step_widget.setVisible(True)
-            self.fading.setVisible(self.parent().po.vars['do_fading'])
+            self.fading.setVisible(self.parent().po.vars['specimen_activity'] == 'move and grow')
             self.save_one_result.setVisible(False)
         elif self.current_step == 2:
             self.general_step_label.setText('Step 3: Run the full analysis or save the result of one arena.')
@@ -545,7 +549,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
         self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
-        self.parent().po.vars['do_fading'] = self.do_fading.isChecked()
+        self.parent().po.vars['specimen_activity'] = self.specimen_activity.currentText()
         self.parent().po.vars['fading'] = self.fading.value()
         self.parent().po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
         self.option_changed()
@@ -558,12 +562,14 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
 
-    def do_fading_check(self):
+    def specimen_activity_changed(self):
         """
         Save the fading checkbox value to allow cases where pixels can be left by the specimen(s).
         """
-        self.parent().po.vars['do_fading'] = self.do_fading.isChecked()
-        self.fading.setVisible(self.parent().po.vars['do_fading'])
+        self.parent().po.vars['specimen_activity'] = self.specimen_activity.currentText()
+        do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+        self.fading_label.setVisible(do_fading)
+        self.fading.setVisible(do_fading)
 
     def fading_changed(self):
         """
