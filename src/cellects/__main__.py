@@ -19,7 +19,7 @@ def get_icon_path():
 
 
 ICONS_DIR = get_icon_path()
-
+# from cellects.core.cellects_paths import ICONS_DIR
 
 if sys.platform.startswith('win'):
     try:
