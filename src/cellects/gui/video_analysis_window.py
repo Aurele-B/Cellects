@@ -360,7 +360,9 @@ class VideoAnalysisWindow(MainTabsType):
         """
         self.select_option_label.setVisible(self.parent().po.vars["color_number"] == 2)
         self.select_option.setVisible(self.parent().po.vars["color_number"] == 2)
-        self.fading.setVisible(self.parent().po.vars['specimen_activity'] == 'move and grow')
+        do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+        self.fading.setVisible(do_fading)
+        self.fading_label.setVisible(do_fading)
 
     def step_done_is_clicked(self):
         """
@@ -380,7 +382,9 @@ class VideoAnalysisWindow(MainTabsType):
             self.general_step_label.setText('Step 2: Tune fading and advanced parameters to improve Post processing')
             self.general_step_label.setToolTip('Post processing is slower than Detection.\nIt improves detection with the following optional algorithms:\n - Fading detection\n - Correct errors around initial shape\n - Organism internal oscillation period\n - Connect distant shape\n - Appearing cell selection')
             self.second_step_widget.setVisible(True)
-            self.fading.setVisible(self.parent().po.vars['specimen_activity'] == 'move and grow')
+            do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+            self.fading.setVisible(do_fading)
+            self.fading_label.setVisible(do_fading)
             self.save_one_result.setVisible(False)
         elif self.current_step == 2:
             self.general_step_label.setText('Step 3: Run the full analysis or save the result of one arena.')
