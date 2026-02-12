@@ -2269,15 +2269,54 @@ depending on dataset characteristics.</p>
 <!-- END_Subtract_background -->
 
 <hr />
-<!-- START_Keep_drawings -->
-<h2 id="keep-cell-and-back-drawings-for-all-folders">Keep Cell and Back drawings for all folders:</h2>
-<p>During initial image analysis, if the user drew cell/back regions to assist detection, this option
-saves and uses these annotations across all folders. In summary:</p>
+<!-- START_Specimens_have_same_direction -->
+<h2 id="all-specimens-have-the-same-direction">All specimens have the same direction:</h2>
+<p>Select to optimize arena detection for specimens moving move in the same direction.</p>
 <ul>
-<li><strong>Checked</strong> → retain annotations for all folders</li>
-<li><strong>Unchecked</strong> → apply only to current folder</li>
+<li><strong>Checked</strong> → Uses motion pattern analysis for arena localization.</li>
+<li><strong>Unchecked</strong> → Employs standard centroid based algorithm.</li>
 </ul>
-<!-- END_Keep_drawings -->
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Both options work equally when growth is roughly isotropic.</li>
+<li>Only works when there is only one specimen per arena</li>
+</ul>
+</div>
+<!-- END_Specimens_have_same_direction -->
+
+<hr />
+<!-- START_Sliding_window_segmentation -->
+<h2 id="sliding-window-segmentation">Sliding window segmentation:</h2>
+<p>Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as
+specimen during one of the two previous frames is added to the current frame.</p>
+<!-- END_Sliding_window_segmentation -->
+
+<hr />
+<!-- START_Morphological_opening -->
+<h2 id="morphological-opening">Morphological opening:</h2>
+<p>Morphological opening first erodes and then dilates all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Efficient for removing small noise from the background</li>
+</ul>
+</div>
+<!-- END_Morphological_opening -->
+
+<hr />
+<!-- START_Morphological_closing -->
+<h2 id="morphological-closing">Morphological closing:</h2>
+<p>Morphological opening first dilates and then erodes all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Efficient for removing small holes in the detected specimen(s)</li>
+</ul>
+</div>
+<!-- END_Morphological_closing -->
 
 <hr />
 <!-- START_Correct_errors_around_initial -->
@@ -2324,25 +2363,10 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <p class="admonition-title">Note</p>
 <ul>
 <li>Increases analysis time substantially.</li>
+<li>Only works when there is only one specimen per arena</li>
 </ul>
 </div>
 <!-- END_Connect_distant_shapes -->
-
-<hr />
-<!-- START_Specimens_have_same_direction -->
-<h2 id="all-specimens-have-the-same-direction">All specimens have the same direction:</h2>
-<p>Select to optimize arena detection for specimens moving move in the same direction.</p>
-<ul>
-<li><strong>Checked</strong> → Uses motion pattern analysis for arena localization.</li>
-<li><strong>Unchecked</strong> → Employs standard centroid based algorithm.</li>
-</ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul>
-<li>Both options work equally when growth is roughly isotropic.</li>
-</ul>
-</div>
-<!-- END_Specimens_have_same_direction -->
 
 <hr />
 <!-- START_Appearance_size_threshold -->
@@ -2409,28 +2433,6 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <!-- END_Mesh_minimal_intensity_variation -->
 
 <hr />
-<figure>
-  <img src="../../static/UserManualFigure9-1.png" alt="Remaining parameters"
-       style="display:block;float:none;margin-left:auto;margin-right:auto;width:50%">
-  <figcaption><strong>Figure 9-1:</strong> Remaining parameters</figcaption>
-</figure>
-
-<hr />
-<!-- START_Expected_oscillation_period -->
-<h2 id="expected-oscillation-period">Expected oscillation period:</h2>
-<p>The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
-based on luminosity variations.</p>
-<!-- END_Expected_oscillation_period -->
-
-<hr />
-<!-- START_Minimal_oscillating_cluster_size -->
-<h2 id="minimal-oscillating-cluster-size">Minimal oscillating cluster size:</h2>
-<p>When looking for oscillatory patterns, Cellects detects connected components that are thickening or
-slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
-groups of connected pixels. This threshold is useful to filter out small noisy oscillations.</p>
-<!-- END_Minimal_oscillating_cluster_size -->
-
-<hr />
 <!-- START_Spatio_temporal_scaling -->
 <h2 id="spatio-temporal-scaling">Spatio-temporal scaling:</h2>
 <p>Defines the spatiotemporal scale of the dataset:</p>
@@ -2439,6 +2441,17 @@ groups of connected pixels. This threshold is useful to filter out small noisy o
 <li>An option to convert areas/distances from pixels to mm/mm².</li>
 </ul>
 <!-- END_Spatio_temporal_scaling -->
+
+<hr />
+<!-- START_Keep_drawings -->
+<h2 id="keep-cell-and-back-drawings-for-all-folders">Keep Cell and Back drawings for all folders:</h2>
+<p>During initial image analysis, if the user drew cell/back regions to assist detection, this option
+saves and uses these annotations across all folders. In summary:</p>
+<ul>
+<li><strong>Checked</strong> → retain annotations for all folders</li>
+<li><strong>Unchecked</strong> → apply only to current folder</li>
+</ul>
+<!-- END_Keep_drawings -->
 
 <hr />
 <!-- START_Parallel_analysis -->
@@ -2509,6 +2522,21 @@ assess analysis accuracy and can be read in standard video players.</p>
 <p>Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
 color spaces without (re)running image analysis.</p>
 <!-- END_Csc_for_video_analysis -->
+
+<hr />
+<!-- START_Expected_oscillation_period -->
+<h2 id="expected-oscillation-period">Expected oscillation period:</h2>
+<p>The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
+based on luminosity variations.</p>
+<!-- END_Expected_oscillation_period -->
+
+<hr />
+<!-- START_Minimal_oscillating_cluster_size -->
+<h2 id="minimal-oscillating-cluster-size">Minimal oscillating cluster size:</h2>
+<p>When looking for oscillatory patterns, Cellects detects connected components that are thickening or
+slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
+groups of connected pixels. This threshold is useful to filter out small noisy oscillations.</p>
+<!-- END_Minimal_oscillating_cluster_size -->
 
 <hr />
 <!-- START_Night_mode -->

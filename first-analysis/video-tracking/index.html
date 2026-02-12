@@ -2260,7 +2260,7 @@ click <em>Detection</em> to load and analyze it, then <em>Read</em> results.</p>
 <li>Cellects automatically names the arena by their position (left to right, top to bottom).</li>
 <li>For single arena setups, use 1.</li>
 <li><em>Post processing</em> triggers <em>Detection</em>, which in turn triggers <em>Load One arena</em>.</li>
-<li>Videos can be saved (as .h5 files) for later analysis using the Advanced parameter <em>Keep unaltered videos</em>.</li>
+<li>Videos can be saved (as .h5 files) for later analysis using the Advanced parameter <em>Keep unalteredvideos</em>.</li>
 </ul>
 </div>
 <!-- END_Arena_to_analyze -->
@@ -2344,6 +2344,23 @@ processing.</p>
        style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
 </figure>
+
+<hr />
+<!-- START_Specimen_activity -->
+<h2 id="specimen-activity">Specimen activity:</h2>
+<p>The behavior of the specimen(s) changes how Cellects post processes the data (after video
+segmentation):</p>
+<ul>
+<li><strong>move</strong> → Specimen(s) can move from one place to another in the arena but are not expected to
+grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
+previously.</li>
+<li><strong>grow</strong> → Specimen(s) only grow, they cannot leave an area. The previous position of the
+specimen(s) is used to detect its current position.</li>
+<li><strong>move and grow</strong> → Specimen(s) are expected to move and grow. This feature use the previous
+position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
+are left.</li>
+</ul>
+<!-- END_Specimen_activity -->
 
 <hr />
 <!-- START_Fading_detection -->
