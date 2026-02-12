@@ -901,7 +901,7 @@ class MotionAnalysis:
 
         """
         ## Initialization
-        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Fading detection: {self.vars['do_fading']}: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
+        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Specimen activity: {self.vars['specimen_activity']}. Fading coef: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
         self.binary = np.zeros(self.dims[:3], dtype=np.uint8)
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .h5 videos and cellects_settings.json and re-run")
@@ -981,15 +981,16 @@ class MotionAnalysis:
         # Get from gradients, a 2D matrix of potentially covered pixels
         # I/ dilate the shape made with covered pixels to assess for covering
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
-        if self.dims[0] < 100:
-            new_potentials = self.segmented[self.t, :, :]
-        else:
-            if self.t > 1:
-                new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
+        if self.vars['sliding_window_segmentation']:
+            if self.dims[0] < 100:
+                new_potentials = self.segmented[self.t, :, :]
             else:
-                new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
-            new_potentials[new_potentials == 1] = 0
-            new_potentials[new_potentials > 1] = 1
+                if self.t > 1:
+                    new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
+                else:
+                    new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
+                new_potentials[new_potentials == 1] = 0
+                new_potentials[new_potentials > 1] = 1
 
         # I/ 2) If an image displays more new potential pixels than 50% of image pixels,
         # one of these images is considered noisy and we try taking only one.
@@ -1013,133 +1014,141 @@ class MotionAnalysis:
                     new_potentials[new_potentials == 6] = 1
 
 
-        new_shape = self.binary[self.t - 1, :, :].copy()
-        new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_CLOSE, cross_33)
-        new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_OPEN, cross_33) * self.borders
-        new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
-        # Add distant shapes within a radius, score every added pixels according to their distance
-        if not self.vars['several_blob_per_arena']:
-            if new_shape.sum() == 0:
-                new_shape = new_potentials.copy()
-            else:
-                pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
-                # If max_distance is non nul look for distant shapes
-                pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
-                                                     self.vars['max_size_for_connection'])
-                pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
+        if self.vars['morphological_opening']:
+            new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_CLOSE, cross_33)
+        if self.vars['morphological_closing']:
+            new_potentials = cv2.morphologyEx(new_potentials, cv2.MORPH_OPEN, cross_33)
+        new_potentials *= self.borders
 
-                new_shape = pads.expanded_shape.copy()
-                new_shape[new_shape > 1] = 1
-                if np.logical_and(self.t > self.step, self.t < self.dims[0]):
-                    if np.any(pads.expanded_shape > 5):
-                        # Add distant shapes back in time at the covering speed of neighbors
-                        self.binary[self.t][np.nonzero(new_shape)] = 1
-                        self.binary[(self.step):(self.t + 1), :, :] = \
-                            pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
-                                                      self.segmented[(self.step):(self.t + 1), :, :])
-                        new_shape = self.binary[self.t, :, :].copy()
-                del pads
+        if self.vars['specimen_activity'] in ['grow', 'move and grow']:
+            new_shape = self.binary[self.t - 1, :, :].copy()
+            new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
+            # Add distant shapes within a radius, score every added pixels according to their distance
+            if not self.vars['several_blob_per_arena']:
+                if new_shape.sum() == 0:
+                    new_shape = new_potentials.copy()
+                else:
+                    pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
+                    # If max_distance is non nul look for distant shapes
+                    pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
+                                                         self.vars['max_size_for_connection'])
+                    pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=True)
 
-            # Fill holes
-            new_shape = cv2.morphologyEx(new_shape, cv2.MORPH_CLOSE, cross_33)
-        del new_potentials
+                    new_shape = pads.expanded_shape.copy()
+                    new_shape[new_shape > 1] = 1
+                    if np.logical_and(self.t > self.step, self.t < self.dims[0]):
+                        if np.any(pads.expanded_shape > 5):
+                            # Add distant shapes back in time at the covering speed of neighbors
+                            self.binary[self.t][np.nonzero(new_shape)] = 1
+                            self.binary[(self.step):(self.t + 1), :, :] = \
+                                pads.modify_past_analysis(self.binary[(self.step):(self.t + 1), :, :],
+                                                          self.segmented[(self.step):(self.t + 1), :, :])
+                            new_shape = self.binary[self.t, :, :].copy()
+                    del pads
 
-        if self.vars['do_fading'] and (self.t > self.step + self.lost_frames):
-            # Shape Erosion
-            # I/ After a substantial growth, erode the shape made with covered pixels to assess for fading
-            # Use the newly covered pixels to calculate their mean covering intensity
-            new_idx = np.nonzero(np.logical_xor(new_shape, self.binary[self.t - 1, :, :]))
-            start_intensity_monitoring = self.t - self.lost_frames - self.step
-            end_intensity_monitoring = self.t - self.lost_frames
-            self.covering_intensity[new_idx[0], new_idx[1]] = np.median(self.converted_video[start_intensity_monitoring:end_intensity_monitoring, new_idx[0], new_idx[1]], axis=0)
-            previous_binary = self.binary[self.t - 1, :, :]
-            greyscale_image = self.converted_video[self.t - self.lost_frames, :, :]
-            protect_from_fading = None
-            if self.vars['origin_state'] == 'constant':
-                protect_from_fading = self.origin
-            new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, protect_from_fading)
-            del new_idx
+                # Fill holes
+                new_shape = cv2.morphologyEx(new_shape, cv2.MORPH_CLOSE, cross_33)
+            del new_potentials
+
+            if self.vars['specimen_activity'] == 'move and grow' and (self.t > self.step + self.lost_frames):
+                # Shape Erosion
+                # I/ After a substantial growth, erode the shape made with covered pixels to assess for fading
+                # Use the newly covered pixels to calculate their mean covering intensity
+                new_idx = np.nonzero(np.logical_xor(new_shape, self.binary[self.t - 1, :, :]))
+                start_intensity_monitoring = self.t - self.lost_frames - self.step
+                end_intensity_monitoring = self.t - self.lost_frames
+                self.covering_intensity[new_idx[0], new_idx[1]] = np.median(self.converted_video[start_intensity_monitoring:end_intensity_monitoring, new_idx[0], new_idx[1]], axis=0)
+                previous_binary = self.binary[self.t - 1, :, :]
+                greyscale_image = self.converted_video[self.t - self.lost_frames, :, :]
+                protect_from_fading = None
+                if self.vars['origin_state'] == 'constant':
+                    protect_from_fading = self.origin
+                new_shape, self.covering_intensity = cell_leaving_detection(new_shape, self.covering_intensity, previous_binary, greyscale_image, self.vars['fading'], self.vars['lighter_background'], self.vars['several_blob_per_arena'], self.erodila_disk, protect_from_fading)
+                del new_idx
+        else:
+            new_shape = new_potentials
 
         self.covering_intensity *= new_shape
         self.binary[self.t, :, :] = new_shape * self.borders
         self.surfarea[self.t] = np.sum(self.binary[self.t, :, :])
 
-        # Calculate the mean distance covered per frame and correct for a ring of not really fading pixels
-        if self.mean_distance_per_frame is None:
-            if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
-                if np.logical_and((self.t % 20) == 0,
-                                  np.logical_and(self.surfarea[self.t] > self.substantial_growth,
-                                                 self.surfarea[self.t] < self.substantial_growth * 2)):
-                    shape = self.binary[self.t, :, :] * self.sun
-                    back = (1 - self.binary[self.t, :, :]) * self.sun
-                    for ray in self.rays:
-                        # For each sun's ray, see how they cross the shape/back and
-                        # store the gravity_field value of these pixels (distance to the original shape).
-                        ray_through_shape = (shape == ray) * self.gravity_field
-                        ray_through_back = (back == ray) * self.gravity_field
-                        if np.any(ray_through_shape):
-                            if np.any(ray_through_back):
-                                # If at least one back pixel is nearer to the original shape than a shape pixel,
-                                # there is a hole to fill.
-                                if np.any(ray_through_back > np.min(ray_through_shape[ray_through_shape > 0])):
-                                    # Check if the nearest pixels are shape, if so, supress them until the nearest pixel
-                                    # becomes back
-                                    while np.max(ray_through_back) <= np.max(ray_through_shape):
-                                        ray_through_shape[ray_through_shape == np.max(ray_through_shape)] = 0
-                                    # Now, all back pixels that are nearer than the closest shape pixel should get filled
-                                    # To do so, replace back pixels further than the nearest shape pixel by 0
-                                    ray_through_back[ray_through_back < np.max(ray_through_shape)] = 0
-                                    self.holes[np.nonzero(ray_through_back)] = 1
-                            else:
-                                self.rays = self.rays[self.rays != ray]
-                        del ray_through_shape
-                        del ray_through_back
-                    del shape
-                    del back
-            if np.any(self.surfarea[:self.t] > self.substantial_growth * 2):
-
+        if self.vars['specimen_activity'] in ['grow', 'move and grow']:
+            # Calculate the mean distance covered per frame and correct for a ring of not really fading pixels
+            if self.mean_distance_per_frame is None:
                 if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
-                    # Apply the hole correction
-                    self.holes = cv2.morphologyEx(self.holes, cv2.MORPH_CLOSE, cross_33, iterations=10)
-                    # If some holes are not covered by now
-                    if np.any(self.holes * (1 - self.binary[self.t, :, :])):
-                        self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
-                            dynamically_expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
-                        if holes_time_end is not None:
-                            self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
-                            self.binary[holes_time_end:(self.t + 1), :, :][
-                                self.binary[holes_time_end:(self.t + 1), :, :] > 1] = 1
-                            self.surfarea[:(self.t + 1)] = np.sum(self.binary[:(self.t + 1), :, :], (1, 2))
+                    if np.logical_and((self.t % 20) == 0,
+                                      np.logical_and(self.surfarea[self.t] > self.substantial_growth,
+                                                     self.surfarea[self.t] < self.substantial_growth * 2)):
+                        shape = self.binary[self.t, :, :] * self.sun
+                        back = (1 - self.binary[self.t, :, :]) * self.sun
+                        for ray in self.rays:
+                            # For each sun's ray, see how they cross the shape/back and
+                            # store the gravity_field value of these pixels (distance to the original shape).
+                            ray_through_shape = (shape == ray) * self.gravity_field
+                            ray_through_back = (back == ray) * self.gravity_field
+                            if np.any(ray_through_shape):
+                                if np.any(ray_through_back):
+                                    # If at least one back pixel is nearer to the original shape than a shape pixel,
+                                    # there is a hole to fill.
+                                    if np.any(ray_through_back > np.min(ray_through_shape[ray_through_shape > 0])):
+                                        # Check if the nearest pixels are shape, if so, supress them until the nearest pixel
+                                        # becomes back
+                                        while np.max(ray_through_back) <= np.max(ray_through_shape):
+                                            ray_through_shape[ray_through_shape == np.max(ray_through_shape)] = 0
+                                        # Now, all back pixels that are nearer than the closest shape pixel should get filled
+                                        # To do so, replace back pixels further than the nearest shape pixel by 0
+                                        ray_through_back[ray_through_back < np.max(ray_through_shape)] = 0
+                                        self.holes[np.nonzero(ray_through_back)] = 1
+                                else:
+                                    self.rays = self.rays[self.rays != ray]
+                            del ray_through_shape
+                            del ray_through_back
+                        del shape
+                        del back
+                if np.any(self.surfarea[:self.t] > self.substantial_growth * 2):
 
+                    if self.vars['correct_errors_around_initial'] and not self.vars['several_blob_per_arena']:
+                        # Apply the hole correction
+                        self.holes = cv2.morphologyEx(self.holes, cv2.MORPH_CLOSE, cross_33, iterations=10)
+                        # If some holes are not covered by now
+                        if np.any(self.holes * (1 - self.binary[self.t, :, :])):
+                            self.binary[:(self.t + 1), :, :], holes_time_end, distance_against_time = \
+                                dynamically_expand_to_fill_holes(self.binary[:(self.t + 1), :, :], self.holes)
+                            if holes_time_end is not None:
+                                self.binary[holes_time_end:(self.t + 1), :, :] += self.binary[holes_time_end, :, :]
+                                self.binary[holes_time_end:(self.t + 1), :, :][
+                                    self.binary[holes_time_end:(self.t + 1), :, :] > 1] = 1
+                                self.surfarea[:(self.t + 1)] = np.sum(self.binary[:(self.t + 1), :, :], (1, 2))
+
+                        else:
+                            distance_against_time = [1, 2]
                     else:
                         distance_against_time = [1, 2]
-                else:
-                    distance_against_time = [1, 2]
-                distance_against_time = np.diff(distance_against_time)
-                if len(distance_against_time) > 0:
-                    self.mean_distance_per_frame = np.mean(- distance_against_time)
-                else:
-                    self.mean_distance_per_frame = 1
+                    distance_against_time = np.diff(distance_against_time)
+                    if len(distance_against_time) > 0:
+                        self.mean_distance_per_frame = np.mean(- distance_against_time)
+                    else:
+                        self.mean_distance_per_frame = 1
 
-        if self.vars['prevent_fast_growth_near_periphery']:
-            # growth_near_periphery = np.diff(self.binary[self.t-1:self.t+1, :, :] * self.near_periphery, axis=0)
-            growth_near_periphery = np.diff(self.binary[self.t-1:self.t+1, self.near_periphery[0], self.near_periphery[1]], axis=0)
-            if (growth_near_periphery == 1).sum() > self.vars['max_periphery_growth']:
-                # self.binary[self.t, self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t - 1, self.near_periphery[0], self.near_periphery[1]]
-                periphery_to_remove = np.zeros(self.dims[1:], dtype=np.uint8)
-                periphery_to_remove[self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t, self.near_periphery[0], self.near_periphery[1]]
-                shapes, stats, centers = cc(periphery_to_remove)
-                periphery_to_remove = np.nonzero(np.isin(shapes, np.nonzero(stats[:, 4] > self.vars['max_periphery_growth'])[0][1:]))
-                self.binary[self.t, periphery_to_remove[0], periphery_to_remove[1]] = self.binary[self.t - 1, periphery_to_remove[0], periphery_to_remove[1]]
-                if not self.vars['several_blob_per_arena']:
-                    shapes, stats, centers = cc(self.binary[self.t, ...])
-                    shapes[shapes != 1] = 0
-                    self.binary[self.t, ...] = shapes
-                del periphery_to_remove
-                del shapes
-                del stats
-                del centers
-            del growth_near_periphery
+            if self.vars['prevent_fast_growth_near_periphery']:
+                # growth_near_periphery = np.diff(self.binary[self.t-1:self.t+1, :, :] * self.near_periphery, axis=0)
+                growth_near_periphery = np.diff(self.binary[self.t-1:self.t+1, self.near_periphery[0], self.near_periphery[1]], axis=0)
+                if (growth_near_periphery == 1).sum() > self.vars['max_periphery_growth']:
+                    # self.binary[self.t, self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t - 1, self.near_periphery[0], self.near_periphery[1]]
+                    periphery_to_remove = np.zeros(self.dims[1:], dtype=np.uint8)
+                    periphery_to_remove[self.near_periphery[0], self.near_periphery[1]] = self.binary[self.t, self.near_periphery[0], self.near_periphery[1]]
+                    shapes, stats, centers = cc(periphery_to_remove)
+                    periphery_to_remove = np.nonzero(np.isin(shapes, np.nonzero(stats[:, 4] > self.vars['max_periphery_growth'])[0][1:]))
+                    self.binary[self.t, periphery_to_remove[0], periphery_to_remove[1]] = self.binary[self.t - 1, periphery_to_remove[0], periphery_to_remove[1]]
+                    if not self.vars['several_blob_per_arena']:
+                        shapes, stats, centers = cc(self.binary[self.t, ...])
+                        shapes[shapes != 1] = 0
+                        self.binary[self.t, ...] = shapes
+                    del periphery_to_remove
+                    del shapes
+                    del stats
+                    del centers
+                del growth_near_periphery
 
         # Display
         if show_seg:
@@ -1238,7 +1247,7 @@ class MotionAnalysis:
                                                                       self.vars['descriptors'],
                                                                       self.vars['output_in_mm'],
                                                                       self.vars['average_pixel_size'],
-                                                                      self.vars['do_fading'],
+                                                                      self.vars['specimen_activity'],
                                                                       self.vars['save_coord_specimen'])
         else:
             self.one_row_per_frame = compute_one_descriptor_per_colony(self.binary,
@@ -1246,7 +1255,7 @@ class MotionAnalysis:
                                                                        self.vars['descriptors'],
                                                                        self.vars['output_in_mm'],
                                                                        self.vars['average_pixel_size'],
-                                                                       self.vars['do_fading'],
+                                                                       self.vars['specimen_activity'],
                                                                        self.vars['first_move_threshold'],
                                                                        self.vars['save_coord_specimen'])
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
@@ -1356,12 +1365,12 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             if self.vars['origin_state'] == "constant":
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
                                                            self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, self.origin, True, True,
+                                                           self.visu, self.origin, self.vars['sliding_window_segmentation'], True,
                                                            self.vars['save_coord_network'], show_seg)
             else:
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
                                                            self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, None, True, True,
+                                                           self.visu, None, self.vars['sliding_window_segmentation'], True,
                                                            self.vars['save_coord_network'], show_seg)
 
         if not self.vars['several_blob_per_arena'] and self.vars['save_graph']:

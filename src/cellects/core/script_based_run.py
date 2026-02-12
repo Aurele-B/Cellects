@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 import cv2
+from cellects.core.cellects_paths import DATA_DIR
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.motion_analysis import MotionAnalysis
@@ -18,6 +19,7 @@ from cellects.utils.load_display_save import write_video_sets, readim, display_n
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
+    np.random.seed(42)
     ellipse = create_ellipse(7, 7).astype(np.uint8)
     binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
     binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
@@ -35,7 +37,7 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
     po = ProgramOrganizer()
     if rgb_video is None:
         if len(pathway) == 0:
-            pathway = os.getcwd() + '/' + "/data/single_experiment"
+            pathway = str(DATA_DIR / "single_experiment")
         po.all['global_pathway'] = pathway
         po.all['first_folder_sample_number'] = sample_number
         po.all['radical'] = radical
@@ -45,6 +47,10 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
         po.load_data_to_run_cellects_quickly()
         po.get_first_image()
     else:
+        if len(pathway) == 0:
+            os.chdir(str(DATA_DIR / "output"))
+        else:
+            os.chdir(pathway)
         po.get_first_image(rgb_video[0,...])
         po.analysis_instance = rgb_video
         po.all['im_or_vid'] = 1
@@ -71,7 +77,7 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         print('Image analysis already done, run video analysis')
     return po
 
-def run_one_video_analysis(po, with_video_in_ram: bool=False):
+def run_one_video_analysis(po, with_video_in_ram: bool=False, remove_files: bool=False):
     i=0
     show_seg= False
     po.vars['frame_by_frame_segmentation'] = True
@@ -86,17 +92,15 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False):
     segment: bool = True
     l = [i, i + 1, po.vars, segment, False, show_seg, videos_already_in_ram]
     MA = MotionAnalysis(l)
+    if MA.binary is None:
+        return None
     MA.get_descriptors_from_binary()
-    if os.path.isfile('colony_centroids1_20col_t20_y1000_x1000.csv'):
-        os.remove('colony_centroids1_20col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv'):
-        os.remove('data/single_experiment/colony_centroids1_20col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv'):
-        os.remove('data/single_experiment/colony_centroids1_19col_t20_y1000_x1000.csv')
-    if os.path.isfile('data/single_experiment/ind_1.h5'):
-        os.remove('data/single_experiment/ind_1.h5')
-    if os.path.isfile('data/single_experiment/cellects_data.h5'):
-        os.remove('data/single_experiment/cellects_data.h5')
+    if remove_files:
+        files = insensitive_glob("colony_centroids*") + insensitive_glob("ind_*")
+        for f in files:
+            os.remove(f)
+        if os.path.isfile('cellects_data.h5'):
+            os.remove('cellects_data.h5')
     # MA.detect_growth_transitions()
     # MA.networks_analysis(show_seg)
     # MA.study_cytoscillations(show_seg)

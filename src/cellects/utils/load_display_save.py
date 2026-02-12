@@ -21,6 +21,7 @@ from pathlib import Path
 import exifread
 from exif import Image
 from matplotlib import pyplot as plt
+import tifffile
 from cellects.image_analysis.image_segmentation import generate_color_space_combination
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, sum_of_abs_differences
 from cellects.utils.utilitarian import translate_dict, split_dict, insensitive_glob
@@ -408,9 +409,13 @@ def video2numpy(vid_name: str, conversion_dict=None, background: NDArray=None, b
     This function uses OpenCV to read the contents of a `.mp4` video file.
     """
     h5_loading = vid_name[-3:] == ".h5"
+    tif_loading = vid_name[-3:] == ".tif" or vid_name[-3:] == ".tiff"
     if h5_loading:
         video = read_h5(vid_name, 'video')
         dims = list(video.shape)
+    elif tif_loading:
+        video = read_tif_stack(vid_name)
+        dims = video.shape
     else:
         cap = cv2.VideoCapture(vid_name)
         dims = [int(cap.get(cv2.CAP_PROP_FRAME_COUNT)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))]
@@ -880,6 +885,49 @@ def remove_h5_key(file_name, key: str="data"):
         with h5py.File(file_name, 'a') as h5f:  # Open in append mode to modify the file
             if key in h5f:
                 del h5f[key]
+
+def read_tif_stack(vid_name: str, expected_channels: int=1):
+    """
+        Read video array from a tif file.
+
+        This function reads a specific dataset from a tif file.
+
+        Parameters
+        ----------
+        vid_name : str
+            The path to the tif stack file.
+        expected_channels : int
+            The number of channel.
+
+        Returns
+        -------
+        ndarray
+            The data array from the tif file.
+    """
+    all_frames = None
+    if os.path.isfile(vid_name):
+        with tifffile.TiffFile(vid_name) as tif:
+            # Count the number of pages (frames and channels)
+            num_pages = len(tif.pages)
+
+            # Determine the shape of a single frame
+            example_page = tif.pages[0]
+            height, width = example_page.asarray().shape
+
+            # Calculate the number of frames per channel based on expected_channels parameter
+            frames_per_channel = num_pages // expected_channels
+
+            # Initialize an array to hold all frames for each channel
+            all_frames = np.zeros((frames_per_channel, height, width, expected_channels),
+                                  dtype=example_page.asarray().dtype)
+
+            # Read and store each frame
+            for i in range(frames_per_channel):
+                for channel in range(expected_channels):
+                    page_index = i * expected_channels + channel
+                    frame = tif.pages[page_index].asarray()
+                    all_frames[i, :, :, channel] = frame
+    return all_frames
 
 
 def get_mpl_colormap(cmap_name: str):

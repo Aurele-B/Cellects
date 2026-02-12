@@ -338,7 +338,7 @@ class TestProgramOrganizerCompleteImageAnalysis(CellectsUnitTest):
         cls.po.vars['fractal_analysis'] = True
         cls.po.vars['already_greyscale'] = True
         cls.po.vars['average_pixel_size'] = 1.
-        cls.po.vars['do_fading'] = True
+        cls.po.vars['specimen_activity'] = 'move and grow'
         cls.po.vars['first_move_threshold'] = 1
         cls.po.vars['save_coord_specimen'] = True
 
@@ -605,7 +605,7 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
         self.assertEqual(len(self.po.top), 1)
         self.assertEqual(len(self.po.bot), 1)
         self.po.vars['exif'] = np.arange(len(self.po.data_list))
-        self.po.vars['do_fading'] = True
+        self.po.vars['specimen_activity'] = 'move and grow'
         self.po.complete_image_analysis()
         self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_frame.csv"))
         self.assertTrue(os.path.isfile(self.path_experiment + '/' + f"one_row_per_arena.csv"))

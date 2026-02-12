@@ -115,6 +115,21 @@ class TestOneImageAnalysisConvertAndSegment(CellectsUnitTest):
         self.oia.convert_and_segment(c_space_dict, color_number)
         self.assertTrue(self.oia.binary_image.any())
 
+class TestSegmentFindFilters(CellectsUnitTest):
+    """Test suite for the find_potential_filters method of the OneImageAnalysis class"""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.image = blob_vary_rgb_many_varying_blobs[:, :, 0]
+        cls.oia = OneImageAnalysis(cls.image)
+
+    def test_find_potential_filters(self):
+        """test find_potential_filters basic behavior"""
+        self.oia.find_potential_filters(None, 'Gaussian')
+        self.assertTrue((self.oia.combination_features['blob_nb'] == medium_blob_nb).any())
+
+
 class TestSegmentBlobOneLargeCentralBlob(CellectsUnitTest):
     """First test suite for the find_color_space_combinations method of the OneImageAnalysis class"""
 

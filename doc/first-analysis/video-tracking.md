@@ -23,7 +23,7 @@ click *Detection* to load and analyze it, then *Read* results.
 	 - Cellects automatically names the arena by their position (left to right, top to bottom).
 	 - For single arena setups, use 1.
 	 - *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-	 - Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unaltered videos*.
+	 - Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unalteredvideos*.
 <!-- END_Arena_to_analyze -->
 
 ---
@@ -104,6 +104,24 @@ Clicking *Read* starts the video display corresponding to the current state of t
        style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
   <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
 </figure>
+
+---
+
+<!-- START_Specimen_activity -->
+## Specimen activity:
+The behavior of the specimen(s) changes how Cellects post processes the data (after video
+segmentation):
+
+- **move** → Specimen(s) can move from one place to another in the arena but are not expected to
+grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
+previously.
+- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the
+specimen(s) is used to detect its current position.
+- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous
+position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
+are left.
+
+<!-- END_Specimen_activity -->
 
 ---
 

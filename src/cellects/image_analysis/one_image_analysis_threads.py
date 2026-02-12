@@ -39,6 +39,7 @@ class ProcessImage:
         """
         self.stats = None
         self.greyscale = None
+        self.csc_dict = None
         self.start_processing(l)
 
     def start_processing(self, l: list):
@@ -67,6 +68,11 @@ class ProcessImage:
         if process == 'one':
             self.csc_dict = l[3]
             self.combine_and_segment()
+            self.evaluate_segmentation()
+        if process == 'filter':
+            self.params['filter_spec'] = l[3]
+            self.image = self.parent.image
+            self.apply_filter_and_segment()
             self.evaluate_segmentation()
         elif process == 'PCA':
             self.pca_and_segment()

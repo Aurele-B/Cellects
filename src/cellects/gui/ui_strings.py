@@ -435,6 +435,23 @@ f"""Clicking *Read* starts the video display corresponding to the current state 
 """
 # END_TIP
 
+VAW["Specimen_activity"] = {}
+VAW["Specimen_activity"]["label"] = "Specimen activity"
+# START_TIP
+VAW["Specimen_activity"]["tips"] = \
+f"""The behavior of the specimen(s) changes how Cellects post processes the data (after video
+segmentation):
+- **move** → Specimen(s) can move from one place to another in the arena but are not expected to
+grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
+previously.
+- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the
+specimen(s) is used to detect its current position.
+- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous
+position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
+are left.
+"""
+# END_TIP
+
 VAW["Fading_detection"] = {}
 VAW["Fading_detection"]["label"] = "Fading detection"
 # START_TIP
@@ -598,14 +615,47 @@ depending on dataset characteristics.
 """
 # END_TIP
 
-AP["Keep_drawings"] = {}
-AP["Keep_drawings"]["label"] = "Keep Cell and Back drawings for all folders"
+AP["Specimens_have_same_direction"] = {}
+AP["Specimens_have_same_direction"]["label"] = "All specimens have the same direction"
 # START_TIP
-AP["Keep_drawings"]["tips"] = \
-f"""During initial image analysis, if the user drew cell/back regions to assist detection, this option
-saves and uses these annotations across all folders. In summary:
-- **Checked** → retain annotations for all folders
-- **Unchecked** → apply only to current folder
+AP["Specimens_have_same_direction"]["tips"] = \
+f"""Select to optimize arena detection for specimens moving move in the same direction.
+- **Checked** → Uses motion pattern analysis for arena localization.
+- **Unchecked** → Employs standard centroid based algorithm.
+NB:
+- Both options work equally when growth is roughly isotropic.
+- Only works when there is only one specimen per arena
+"""
+# END_TIP
+
+AP["Sliding_window_segmentation"] = {}
+AP["Sliding_window_segmentation"]["label"] = "Sliding window segmentation"
+# START_TIP
+AP["Sliding_window_segmentation"]["tips"] = \
+f"""Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as
+specimen during one of the two previous frames is added to the current frame.
+"""
+# END_TIP
+
+AP["Morphological_opening"] = {}
+AP["Morphological_opening"]["label"] = "Morphological opening"
+# START_TIP
+AP["Morphological_opening"]["tips"] = \
+f"""Morphological opening first erodes and then dilates all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
+NB:
+- Efficient for removing small noise from the background
+"""
+# END_TIP
+
+AP["Morphological_closing"] = {}
+AP["Morphological_closing"]["label"] = "Morphological closing"
+# START_TIP
+AP["Morphological_closing"]["tips"] = \
+f"""Morphological opening first dilates and then erodes all specimens detected during initial
+segmentation. If checked, this algorithm is applied to every frame after segmentation.
+NB:
+- Efficient for removing small holes in the detected specimen(s)
 """
 # END_TIP
 
@@ -648,18 +698,7 @@ and the detection is smaller than the true specimen. Technical implementation:
 - Recreates connections using spatially consistent growth patterns
 NB:
 - Increases analysis time substantially.
-"""
-# END_TIP
-
-AP["Specimens_have_same_direction"] = {}
-AP["Specimens_have_same_direction"]["label"] = "All specimens have the same direction"
-# START_TIP
-AP["Specimens_have_same_direction"]["tips"] = \
-f"""Select to optimize arena detection for specimens moving move in the same direction.
-- **Checked** → Uses motion pattern analysis for arena localization.
-- **Unchecked** → Employs standard centroid based algorithm.
-NB:
-- Both options work equally when growth is roughly isotropic.
+- Only works when there is only one specimen per arena
 """
 # END_TIP
 
@@ -717,25 +756,6 @@ NB:
 """
 # END_TIP
 
-AP["Expected_oscillation_period"] = {}
-AP["Expected_oscillation_period"]["label"] = "Expected oscillation period"
-# START_TIP
-AP["Expected_oscillation_period"]["tips"] = \
-f"""The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
-based on luminosity variations.
-"""
-# END_TIP
-
-AP["Minimal_oscillating_cluster_size"] = {}
-AP["Minimal_oscillating_cluster_size"]["label"] = "Minimal oscillating cluster size"
-# START_TIP
-AP["Minimal_oscillating_cluster_size"]["tips"] = \
-f"""When looking for oscillatory patterns, Cellects detects connected components that are thickening or
-slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
-groups of connected pixels. This threshold is useful to filter out small noisy oscillations.
-"""
-# END_TIP
-
 AP["Spatio_temporal_scaling"] = {}
 AP["Spatio_temporal_scaling"]["label"] = "Spatio-temporal scaling"
 # START_TIP
@@ -743,6 +763,17 @@ AP["Spatio_temporal_scaling"]["tips"] = \
 f"""Defines the spatiotemporal scale of the dataset:
 - Time between images or frames (minutes).
 - An option to convert areas/distances from pixels to mm/mm².
+"""
+# END_TIP
+
+AP["Keep_drawings"] = {}
+AP["Keep_drawings"]["label"] = "Keep Cell and Back drawings for all folders"
+# START_TIP
+AP["Keep_drawings"]["tips"] = \
+f"""During initial image analysis, if the user drew cell/back regions to assist detection, this option
+saves and uses these annotations across all folders. In summary:
+- **Checked** → retain annotations for all folders
+- **Unchecked** → apply only to current folder
 """
 # END_TIP
 
@@ -819,6 +850,25 @@ AP["Csc_for_video_analysis"]["label"] = 'Color space combination for video analy
 AP["Csc_for_video_analysis"]["tips"] = \
 f"""Advanced option: Changes the way RGB processing directly in video tracking. Useful for testing new
 color spaces without (re)running image analysis.
+"""
+# END_TIP
+
+AP["Expected_oscillation_period"] = {}
+AP["Expected_oscillation_period"]["label"] = "Expected oscillation period"
+# START_TIP
+AP["Expected_oscillation_period"]["tips"] = \
+f"""The period (in minutes) of biological oscillations to detect within the specimen(s). Computation is
+based on luminosity variations.
+"""
+# END_TIP
+
+AP["Minimal_oscillating_cluster_size"] = {}
+AP["Minimal_oscillating_cluster_size"]["label"] = "Minimal oscillating cluster size"
+# START_TIP
+AP["Minimal_oscillating_cluster_size"]["tips"] = \
+f"""When looking for oscillatory patterns, Cellects detects connected components that are thickening or
+slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
+groups of connected pixels. This threshold is useful to filter out small noisy oscillations.
 """
 # END_TIP
 

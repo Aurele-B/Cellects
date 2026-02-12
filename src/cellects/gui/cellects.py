@@ -21,6 +21,7 @@ from PySide6 import QtWidgets, QtGui
 from screeninfo import get_monitors
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.cellects_threads import SaveAllVarsThread, PrecompileNJITThread
+from cellects.gui.custom_widgets import backgroundcolor, night_background_color
 from cellects.gui.advanced_parameters import AdvancedParameters
 from cellects.gui.first_window import FirstWindow
 from cellects.gui.if_several_folders_window import IfSeveralFoldersWindow
@@ -87,8 +88,11 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.image_to_display = np.zeros((self.im_max_height, self.im_max_width, 3), np.uint8)
         self.i = 1
         self.po = ProgramOrganizer()
-
         self.po.load_variable_dict()
+        if self.po.all['night_mode']:
+            self.setStyleSheet(f"background-color:{night_background_color}")
+        else:
+            self.setStyleSheet(f"background-color:{backgroundcolor}")
         self.resize(1380, 750)
 
     def instantiate(self):

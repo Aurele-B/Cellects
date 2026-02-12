@@ -119,7 +119,7 @@ class TestMotionAnalysisWithOneBlob(CellectsUnitTest):
         cls.vars['lighter_background'] = False
         cls.vars['several_blob_per_arena'] = False
         cls.vars['output_in_mm'] = True
-        cls.vars['do_fading'] = True
+        cls.vars['specimen_activity'] = 'move and grow'
         cls.vars['save_coord_network'] = True
         cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True
@@ -223,7 +223,7 @@ class TestMotionAnalysisWith2Conversions(CellectsUnitTest):
         cls.vars['lighter_background'] = False
         cls.vars['several_blob_per_arena'] = False
         cls.vars['output_in_mm'] = True
-        cls.vars['do_fading'] = True
+        cls.vars['specimen_activity'] = 'move and grow'
         cls.vars['save_coord_network'] = True
         cls.vars['save_graph'] = True
         cls.vars['oscilacyto_analysis'] = True
@@ -349,7 +349,7 @@ class TestMotionAnalysisWithSeveralBlob(CellectsUnitTest):
         cls.vars['lighter_background'] = True
         cls.vars['several_blob_per_arena'] = True
         cls.vars['output_in_mm'] = True
-        cls.vars['do_fading'] = True
+        cls.vars['specimen_activity'] = 'move and grow'
         cls.vars['correct_errors_around_initial'] = False
         cls.vars['prevent_fast_growth_near_periphery'] = False
         write_h5(f'ind_{1}.h5', several_arenas_vid[:, :, :, 0], 'background')
