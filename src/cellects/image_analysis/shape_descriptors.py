@@ -28,7 +28,6 @@ import numpy as np
 from typing import Tuple
 from numpy.typing import NDArray
 import pandas as pd
-from tqdm import tqdm
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
 from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
                                      get_newly_explored_area)
@@ -169,10 +168,9 @@ def compute_one_descriptor_per_colony(binary_vid: NDArray[np.uint8], arena_label
     centroids = []
 
     # pat_tracker = PercentAndTimeTracker(dims[0], compute_with_elements_number=True)
-    for t in tqdm(np.arange(dims[0])):
+    for t in np.arange(dims[0]):
         # We rank colonies in increasing order to make sure that the larger colony issued from a colony division
         # keeps the previous colony name.
-        # shapes, stats, centers = cc(binary_vid[t, :, :])
         nb, shapes, stats, centers = cv2.connectedComponentsWithStats(binary_vid[t, :, :])
         true_colonies = np.nonzero(stats[:, 4] >= min_colony_size)[0][1:]
         # Consider that shapes bellow 3 pixels are noise. The loop will stop at nb and not compute them
