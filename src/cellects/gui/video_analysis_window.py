@@ -266,9 +266,6 @@ class VideoAnalysisWindow(MainTabsType):
         self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.specimen_activity.setFixedWidth(175)
         self.specimen_activity.setCurrentText(self.parent().po.vars['specimen_activity'])
-        self.specimen_activity.addItem("move")
-        self.specimen_activity.addItem("grow")
-        self.specimen_activity.addItem("move and grow")
         self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
         self.fading_label = FixedText(VAW["Fading_detection"]["label"],
                                        tip=VAW["Fading_detection"]["tips"],
