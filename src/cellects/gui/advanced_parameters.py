@@ -406,6 +406,36 @@ class AdvancedParameters(WindowType):
         self.rolling_window_s_widget.setLayout(self.rolling_window_s_layout)
         self.left_col_layout.addWidget(self.rolling_window_s_widget)
 
+        # IV/ X box: Oscillation period:
+        # IV/A/ Title
+        self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
+                                              night_mode=self.parent().po.all['night_mode'])
+        self.left_col_layout.addWidget(self.oscillation_label)
+
+        self.oscillation_period_layout = QtWidgets.QGridLayout()
+        self.oscillation_period_widget = QtWidgets.QWidget()
+        self.oscillation_period_widget.setStyleSheet(boxstylesheet)
+
+        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
+                                                  tip=AP["Expected_oscillation_period"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
+                                          night_mode=self.parent().po.all['night_mode'])
+        self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
+                                                  tip=AP["Minimal_oscillating_cluster_size"]["tips"],
+                                                  night_mode=self.parent().po.all['night_mode'])
+
+        self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
+        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size, 1, 0)
+        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size_label, 1, 1)
+
+        self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
+        self.left_col_layout.addWidget(self.oscillation_period_widget)
+
         # I/ First box: Scales
         # I/A/ Title
         self.right_scroll_table = QtWidgets.QScrollArea()   # Scroll Area which contains the widgets, set as the centralWidget
@@ -567,36 +597,6 @@ class AdvancedParameters(WindowType):
         self.generate_csc_editing()
         # VII/D/ Arrange widgets in the box
         self.right_col_layout.addWidget(self.edit_widget)
-
-        # IV/ Eighth box: Oscillation period:
-        # IV/A/ Title
-        self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
-        self.right_col_layout.addWidget(self.oscillation_label)
-
-        self.oscillation_period_layout = QtWidgets.QGridLayout()
-        self.oscillation_period_widget = QtWidgets.QWidget()
-        self.oscillation_period_widget.setStyleSheet(boxstylesheet)
-
-        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
-                                                  tip=AP["Expected_oscillation_period"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
-
-        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
-                                          night_mode=self.parent().po.all['night_mode'])
-        self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
-                                                  tip=AP["Minimal_oscillating_cluster_size"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
-
-        self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
-        self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
-        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size, 1, 0)
-        self.oscillation_period_layout.addWidget(self.minimal_oscillating_cluster_size_label, 1, 1)
-
-        self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
-        self.right_col_layout.addWidget(self.oscillation_period_widget)
 
         # VIII/ Finalize layout and add the night mode option and the ok button
         self.left_col_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
