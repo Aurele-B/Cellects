@@ -47,7 +47,6 @@ class VideoAnalysisWindow(MainTabsType):
         >>> app = QtWidgets.QApplication([])
         >>> parent = CellectsMainWidget()
         >>> session = VideoAnalysisWindow(parent, False)
-        >>> session.true_init()
         >>> parent.insertWidget(0, session)
         >>> parent.show()
         >>> sys.exit(app.exec())
