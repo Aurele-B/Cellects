@@ -19,7 +19,6 @@ Uses Numba's @njit decorator for JIT compilation of performance-critical functio
 """
 import numpy as np
 import cv2
-from tqdm import tqdm
 from numba.typed import Dict, List
 from cellects.utils.decorators import njit
 from numpy.typing import NDArray
@@ -769,7 +768,6 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
 
     network_patches = []
     patch_thresholds = []
-    # for patch in tqdm(patch_slices):
     for patch in patch_slices:
         v = greyscale_image[patch] * possibly_filled_pixels[patch]
         if v.max() > 0 and np.ptp(v) > 0.5:
