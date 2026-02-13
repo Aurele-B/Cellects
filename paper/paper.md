@@ -59,6 +59,7 @@ By combining dynamic segmentation algorithms with a modular pipeline (see Softwa
 
 # State of the field
 Cellects fills three major gaps in existing tools:
+
 | Limitation            | Existing solution                                                                                        | Cellects innovation                                                                                 |
 |:----------------------|:---------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------|
 | Taxon-specific design | Bacteria [@Ernebjerg2012], Yeast [@Falconnet2011]                                                        | Universal pipeline adaptable to fungi, animals, and slime molds via tunable segmentation parameters |
