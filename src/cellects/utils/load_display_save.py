@@ -342,7 +342,7 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
     """
     top, bot, left, right = bounding_boxes
     for bunch in np.arange(bunch_nb):
-        print(f'\nSaving the video bunch n: {bunch + 1} / {bunch_nb}...', end=' ')
+        print(f'\nSaving the video bunch n°{bunch + 1} (tot={bunch_nb})...', end=' ')
         if bunch == (bunch_nb - 1) and remaining > 0:
             arenas = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining, dtype=np.uint32)
         else:
@@ -1425,7 +1425,23 @@ def display_network_methods(network_detection: object, save_path: str=None):
         plt.show()
 
 def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_videos: bool) -> bool:
-    """"""
+    """
+    Determine whether to write videos based on existing files and user preferences.
+
+    Parameters
+    ----------
+    arena_nb : int
+        Number of arenas to analyze.
+    im_or_vid : int
+        Indicates whether the analysis should be performed on images or videos.
+    overwrite_unaltered_videos : bool
+        Flag indicating whether existing unaltered videos should be overwritten.
+
+    Returns
+    -------
+    bool
+        True if videos should be written, False otherwise.
+    """
     look_for_existing_videos = insensitive_glob('ind_' + '*' + '.h5')
     there_already_are_videos = len(look_for_existing_videos) > 0
     if there_already_are_videos:
