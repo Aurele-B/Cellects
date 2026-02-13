@@ -7529,6 +7529,94 @@ Otherwise, returns a tuple containing the original video and converted video.</p
 
     <div class="doc doc-contents ">
 
+        <p>Determine whether to write videos based on existing files and user preferences.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>arena_nb</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Number of arenas to analyze.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>im_or_vid</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Indicates whether the analysis should be performed on images or videos.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>overwrite_unaltered_videos</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Flag indicating whether existing unaltered videos should be overwritten.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True if videos should be written, False otherwise.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/utils/load_display_save.py</code></summary>
@@ -7544,19 +7632,51 @@ Otherwise, returns a tuple containing the original video and converted video.</p
 <span class="normal"><a href="#__codelineno-0-1436">1436</a></span>
 <span class="normal"><a href="#__codelineno-0-1437">1437</a></span>
 <span class="normal"><a href="#__codelineno-0-1438">1438</a></span>
-<span class="normal"><a href="#__codelineno-0-1439">1439</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a><span class="k">def</span><span class="w"> </span><span class="nf">video_writing_decision</span><span class="p">(</span><span class="n">arena_nb</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">im_or_vid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">overwrite_unaltered_videos</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<a id="__codelineno-0-1428" name="__codelineno-0-1428"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;&quot;&quot;&quot;</span>
-<a id="__codelineno-0-1429" name="__codelineno-0-1429"></a>    <span class="n">look_for_existing_videos</span> <span class="o">=</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;ind_&#39;</span> <span class="o">+</span> <span class="s1">&#39;*&#39;</span> <span class="o">+</span> <span class="s1">&#39;.h5&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-1430" name="__codelineno-0-1430"></a>    <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
-<a id="__codelineno-0-1431" name="__codelineno-0-1431"></a>    <span class="k">if</span> <span class="n">there_already_are_videos</span><span class="p">:</span>
-<a id="__codelineno-0-1432" name="__codelineno-0-1432"></a>        <span class="n">all_files_contain_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="s1">&#39;video&#39;</span> <span class="ow">in</span> <span class="n">get_h5_keys</span><span class="p">(</span><span class="n">vid_name</span><span class="p">)</span> <span class="k">for</span> <span class="n">vid_name</span> <span class="ow">in</span> <span class="n">look_for_existing_videos</span><span class="p">])</span>
-<a id="__codelineno-0-1433" name="__codelineno-0-1433"></a>        <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="n">all_files_contain_video</span> <span class="ow">and</span> <span class="n">there_already_are_videos</span>
-<a id="__codelineno-0-1434" name="__codelineno-0-1434"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">there_already_are_videos</span><span class="p">:</span>
-<a id="__codelineno-0-1435" name="__codelineno-0-1435"></a>            <span class="n">look_for_existing_videos</span> <span class="o">=</span> <span class="p">[]</span>
-<a id="__codelineno-0-1436" name="__codelineno-0-1436"></a>        <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span> <span class="o">==</span> <span class="n">arena_nb</span> <span class="ow">and</span> <span class="n">there_already_are_videos</span>
-<a id="__codelineno-0-1437" name="__codelineno-0-1437"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span><span class="si">}</span><span class="s2"> .h5 video files found for </span><span class="si">{</span><span class="n">arena_nb</span><span class="si">}</span><span class="s2"> arenas to analyze&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1438" name="__codelineno-0-1438"></a>    <span class="n">do_write_videos</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">im_or_vid</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">there_already_are_videos</span> <span class="ow">or</span> <span class="p">(</span><span class="n">there_already_are_videos</span> <span class="ow">and</span> <span class="n">overwrite_unaltered_videos</span><span class="p">))</span>
-<a id="__codelineno-0-1439" name="__codelineno-0-1439"></a>    <span class="k">return</span> <span class="n">do_write_videos</span>
+<span class="normal"><a href="#__codelineno-0-1439">1439</a></span>
+<span class="normal"><a href="#__codelineno-0-1440">1440</a></span>
+<span class="normal"><a href="#__codelineno-0-1441">1441</a></span>
+<span class="normal"><a href="#__codelineno-0-1442">1442</a></span>
+<span class="normal"><a href="#__codelineno-0-1443">1443</a></span>
+<span class="normal"><a href="#__codelineno-0-1444">1444</a></span>
+<span class="normal"><a href="#__codelineno-0-1445">1445</a></span>
+<span class="normal"><a href="#__codelineno-0-1446">1446</a></span>
+<span class="normal"><a href="#__codelineno-0-1447">1447</a></span>
+<span class="normal"><a href="#__codelineno-0-1448">1448</a></span>
+<span class="normal"><a href="#__codelineno-0-1449">1449</a></span>
+<span class="normal"><a href="#__codelineno-0-1450">1450</a></span>
+<span class="normal"><a href="#__codelineno-0-1451">1451</a></span>
+<span class="normal"><a href="#__codelineno-0-1452">1452</a></span>
+<span class="normal"><a href="#__codelineno-0-1453">1453</a></span>
+<span class="normal"><a href="#__codelineno-0-1454">1454</a></span>
+<span class="normal"><a href="#__codelineno-0-1455">1455</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a><span class="k">def</span><span class="w"> </span><span class="nf">video_writing_decision</span><span class="p">(</span><span class="n">arena_nb</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">im_or_vid</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">overwrite_unaltered_videos</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<a id="__codelineno-0-1428" name="__codelineno-0-1428"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1429" name="__codelineno-0-1429"></a><span class="sd">    Determine whether to write videos based on existing files and user preferences.</span>
+<a id="__codelineno-0-1430" name="__codelineno-0-1430"></a>
+<a id="__codelineno-0-1431" name="__codelineno-0-1431"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-1432" name="__codelineno-0-1432"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-1433" name="__codelineno-0-1433"></a><span class="sd">    arena_nb : int</span>
+<a id="__codelineno-0-1434" name="__codelineno-0-1434"></a><span class="sd">        Number of arenas to analyze.</span>
+<a id="__codelineno-0-1435" name="__codelineno-0-1435"></a><span class="sd">    im_or_vid : int</span>
+<a id="__codelineno-0-1436" name="__codelineno-0-1436"></a><span class="sd">        Indicates whether the analysis should be performed on images or videos.</span>
+<a id="__codelineno-0-1437" name="__codelineno-0-1437"></a><span class="sd">    overwrite_unaltered_videos : bool</span>
+<a id="__codelineno-0-1438" name="__codelineno-0-1438"></a><span class="sd">        Flag indicating whether existing unaltered videos should be overwritten.</span>
+<a id="__codelineno-0-1439" name="__codelineno-0-1439"></a>
+<a id="__codelineno-0-1440" name="__codelineno-0-1440"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-1441" name="__codelineno-0-1441"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-1442" name="__codelineno-0-1442"></a><span class="sd">    bool</span>
+<a id="__codelineno-0-1443" name="__codelineno-0-1443"></a><span class="sd">        True if videos should be written, False otherwise.</span>
+<a id="__codelineno-0-1444" name="__codelineno-0-1444"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1445" name="__codelineno-0-1445"></a>    <span class="n">look_for_existing_videos</span> <span class="o">=</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;ind_&#39;</span> <span class="o">+</span> <span class="s1">&#39;*&#39;</span> <span class="o">+</span> <span class="s1">&#39;.h5&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-1446" name="__codelineno-0-1446"></a>    <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<a id="__codelineno-0-1447" name="__codelineno-0-1447"></a>    <span class="k">if</span> <span class="n">there_already_are_videos</span><span class="p">:</span>
+<a id="__codelineno-0-1448" name="__codelineno-0-1448"></a>        <span class="n">all_files_contain_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">([</span><span class="s1">&#39;video&#39;</span> <span class="ow">in</span> <span class="n">get_h5_keys</span><span class="p">(</span><span class="n">vid_name</span><span class="p">)</span> <span class="k">for</span> <span class="n">vid_name</span> <span class="ow">in</span> <span class="n">look_for_existing_videos</span><span class="p">])</span>
+<a id="__codelineno-0-1449" name="__codelineno-0-1449"></a>        <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="n">all_files_contain_video</span> <span class="ow">and</span> <span class="n">there_already_are_videos</span>
+<a id="__codelineno-0-1450" name="__codelineno-0-1450"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">there_already_are_videos</span><span class="p">:</span>
+<a id="__codelineno-0-1451" name="__codelineno-0-1451"></a>            <span class="n">look_for_existing_videos</span> <span class="o">=</span> <span class="p">[]</span>
+<a id="__codelineno-0-1452" name="__codelineno-0-1452"></a>        <span class="n">there_already_are_videos</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span> <span class="o">==</span> <span class="n">arena_nb</span> <span class="ow">and</span> <span class="n">there_already_are_videos</span>
+<a id="__codelineno-0-1453" name="__codelineno-0-1453"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">look_for_existing_videos</span><span class="p">)</span><span class="si">}</span><span class="s2"> .h5 video files found for </span><span class="si">{</span><span class="n">arena_nb</span><span class="si">}</span><span class="s2"> arenas to analyze&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1454" name="__codelineno-0-1454"></a>    <span class="n">do_write_videos</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">im_or_vid</span> <span class="ow">and</span> <span class="p">(</span><span class="ow">not</span> <span class="n">there_already_are_videos</span> <span class="ow">or</span> <span class="p">(</span><span class="n">there_already_are_videos</span> <span class="ow">and</span> <span class="n">overwrite_unaltered_videos</span><span class="p">))</span>
+<a id="__codelineno-0-1455" name="__codelineno-0-1455"></a>    <span class="k">return</span> <span class="n">do_write_videos</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -8428,7 +8548,7 @@ file extensions.</p>
 <a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">top</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">bounding_boxes</span>
 <a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="k">for</span> <span class="n">bunch</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">bunch_nb</span><span class="p">):</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Saving the video bunch n: </span><span class="si">{</span><span class="n">bunch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> / </span><span class="si">{</span><span class="n">bunch_nb</span><span class="si">}</span><span class="s1">...&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">Saving the video bunch n°</span><span class="si">{</span><span class="n">bunch</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s1"> (tot=</span><span class="si">{</span><span class="n">bunch_nb</span><span class="si">}</span><span class="s1">)...&#39;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
 <a id="__codelineno-0-346" name="__codelineno-0-346"></a>        <span class="k">if</span> <span class="n">bunch</span> <span class="o">==</span> <span class="p">(</span><span class="n">bunch_nb</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="ow">and</span> <span class="n">remaining</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
 <a id="__codelineno-0-347" name="__codelineno-0-347"></a>            <span class="n">arenas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">bunch</span> <span class="o">*</span> <span class="n">video_nb_per_bunch</span><span class="p">,</span> <span class="n">bunch</span> <span class="o">*</span> <span class="n">video_nb_per_bunch</span> <span class="o">+</span> <span class="n">remaining</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a>        <span class="k">else</span><span class="p">:</span>
