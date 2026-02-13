@@ -17,7 +17,7 @@
 Description
 -----------
 
-Cellects is a tracking software for organisms whose shape and size change over time. 
+Cellects is a user-friendly software for automated computation of biological growth, motion and morphology from 2D images and time-lapse sequences (2D + t). Its graphical interface has a minimalist design which ensures users can perform essential image analysis tasks without prior expertise. 
 Cellects’ main strengths are its broad scope of action, automated computation of a variety of geometrical descriptors, 
 easy installation and user-friendly interface.
 
