@@ -55,7 +55,7 @@ The proliferation of imaging technologies has enabled high-resolution, time-reso
 
 Cellects is suited to biological systems exhibiting continuous growth, deformation, or collective motion, such as fungal colonies ([Figure 1](#fig:cell_dyn_morph)a-d), HeLa cells ([Figure 1](#fig:cell_dyn_morph)e-h), and slime molds ([Figure 1](#fig:cell_dyn_morph)i-n). By contrast, most existing tools target single species (mainly yeast or bacteria) and fail to generalize to heterogeneous morphologies such as branching slime mold networks or collective cellular movement during proliferation.
 
-Open source alternatives often lack graphical user interfaces (GUIs) and robust automation under variable lighting/contrast conditions, while commercial platforms often require preprocessing or post-analysis using additional softwares, compromising reproducibility.
+Open source alternatives often lack graphical user interfaces (GUIs) and robust automation under variable lighting/contrast conditions, while commercial platforms often require preprocessing or post-analysis using additional software, compromising reproducibility.
 
 By combining dynamic segmentation algorithms with a modular pipeline (see Software Design), Cellects supports both single-specimen analysis and high-throughput multi-arena experiments, outputting standardized metrics directly usable in downstream statistical workflows. 
 While enabling reproducible studies across diverse biological models, this automated quantification reduces observer bias. 
