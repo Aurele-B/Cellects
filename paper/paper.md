@@ -17,19 +17,19 @@ authors:
   - name: Manuel Petit
     orcid: 0000-0002-3211-0066
     equal-contrib: false
-    affiliation: 2
+    affiliation: "2"
   - name: Patrick Arrufat
     orcid: 0000-0002-2073-3725
     equal-contrib: false
-    affiliation: 1
+    affiliation: "1"
   - name: Audrey Dussutour
     orcid: 0000-0002-1377-3550
     equal-contrib: false 
-    affiliation: 1
+    affiliation: "1"
   - name: Alfonso Pérez-Escudero
     orcid: 0000-0002-4782-6139
     equal-contrib: false 
-    affiliation: 1
+    affiliation: "1"
     
 affiliations:
  - name: Research Centre on Animal Cognition (CRCA), Centre for Integrative Biology (CBI), Toulouse University, CNRS
@@ -41,13 +41,8 @@ affiliations:
  - name: Jacques Louis Lions Laboratory (LJLL), Sorbonne Université, Paris
    index: 3
    ror: 04xmteb38
-date: 3 January 2026
+date: 13 February 2026
 bibliography: paper.bib
-
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 # Summary
@@ -86,7 +81,7 @@ Cellects has been developed as a practical application of ideas developed in [@B
 ## Validation
 The software's robustness includes specimen and background accuracies ([Figure 2](#fig:validation)) in various contexts. First we manually segmented the examples of [Figure 1](#fig:cell_dyn_morph) to compute ground truth accuracies. [Figure 2](#fig:validation)a-c assesses a canonical case where a single fungus grows on a background whose color changes over time. [Figure 2](#fig:validation)d-f assesses the capacity to track several cells or colonies simultaneously. This example also demonstrates Cellects’ ability to handle microscopy data. [Figure 2](#fig:validation)g-i assesses Cellects’ network extraction feature. 
 Second, we tested Cellects’ ability to detect highly heterogeneous cells. In these cases, intracellular heterogeneity is strong enough to prevent naked-eye distinction of the cells with their background, leading us to apply a nonstandard estimation of the accuracy.  Basically, we estimated accuracy using annotations of the errors made by comparing the original images with Cellects’ results ([Figure 2](#fig:validation)j). [Figure 2](#fig:validation)k shows this accuracy across five experimental conditions (high contrast + optimal setup, heterogeneous colors, low contrast + desiccation, low contrast + optimal, very low resolution), achieving  >97% accuracy, even in challenging scenarios. We have reached this value by analyzing some arenas a second time with slightly different parameters, a feature available in Cellects’ GUI. 
-Cellects advance high-throughput studies by reducing observer bias while enabling reproducible quantification across diverse biological models. The software's capabilities are demonstrated through diverse applications including fungal growth tracking ([Figure 1](#fig:cell_dyn_morph)a-d, [@Penil2018]), HeLa cells ([Figure 1](#fig:cell_dyn_morph)e-h, [@Guiet2022]), and morphological analysis of a giant unicellular organism ([Figure 1](#fig:cell_dyn_morph)i-n, *Physarum polycephalum*).
+Cellects advance high-throughput studies by reducing observer bias while enabling reproducible quantification across diverse biological models. The software's capabilities are demonstrated through diverse applications including fungal growth tracking ([Figure 1](#fig:cell_dyn_morph)a-d, @Penil2018), HeLa cells ([Figure 1](#fig:cell_dyn_morph)e-h, @Guiet2022), and morphological analysis of a giant unicellular organism ([Figure 1](#fig:cell_dyn_morph)i-n, *Physarum polycephalum*).
 
 ![Validation of Cellects across five experimental conditions. **a,b,c)** Segmentation accuracy of the fungi [@Penil2018] against ground truth: original image (a) was used to create a mask manually (b) and using Cellects (c). The valid cell detection is the percentage of pixels accurately labelled as cells by Cellects. The valid background is the percentage of pixels accurately labelled as background by Cellects. **d,e,f)** Segmentation accuracy of the Hela “Kyoto” cells [@Guiet2022] against ground truth. **g,h,i)** Segmentation accuracy of the *P. polycephalum* network against ground truth (this study). **j)** Image of a *P. polycephalum* plasmodia, showing the two types of errors detected during validation: background pixels classified as cell (orange), cell pixels classified as background (green). **k)** Segmentation accuracy in 5 experimental conditions (shown below the bars): high contrast with optimal setup, high contrast with heterogeneous colors, low contrast with a setup prone to desiccation, low contrast with optimal setup, low resolution. Orange: Proportion of cell pixels correctly identified as cell. Green: Proportion of background pixels correctly identified as background. Error bars show the 95% confidence interval. Percentages on top show the average of both bars. A posteriori accuracy (k): when visual ground truth is not accessible due to cellular heterogeneity, pixels are classified post-segmentation as background or cell errors.\label{fig:validation}](figures/CellectsFigure2.jpg)
 
