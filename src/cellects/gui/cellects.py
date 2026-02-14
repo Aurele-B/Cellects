@@ -89,10 +89,6 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.i = 1
         self.po = ProgramOrganizer()
         self.po.load_variable_dict()
-        if self.po.all['night_mode']:
-            self.setStyleSheet(f"background-color:{night_background_color}")
-        else:
-            self.setStyleSheet(f"background-color:{backgroundcolor}")
         self.resize(1380, 750)
 
     def instantiate(self):
@@ -198,14 +194,15 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             QtWidgets.QMessageBox.No)
 
         if reply == QtWidgets.QMessageBox.Yes:
-            for _, thread in self.imageanalysiswindow.thread_dict.items():
-                thread.wait()
-            for _, thread  in self.ifseveralfolderswindow.thread_dict.items():
-                thread.wait()
-            for _, thread  in self.videoanalysiswindow.thread_dict.items():
-                thread.wait()
-            for _, thread  in self.firstwindow.thread_dict.items():
-                thread.wait()
+            if self.count() == 6:
+                for _, thread in self.imageanalysiswindow.thread_dict.items():
+                    thread.wait()
+                for _, thread  in self.ifseveralfolderswindow.thread_dict.items():
+                    thread.wait()
+                for _, thread  in self.videoanalysiswindow.thread_dict.items():
+                    thread.wait()
+                for _, thread  in self.firstwindow.thread_dict.items():
+                    thread.wait()
             logging.info("Closing main window.")
             event.accept()
         else:

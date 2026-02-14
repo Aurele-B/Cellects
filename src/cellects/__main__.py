@@ -82,14 +82,18 @@ def run_cellects():
 
         # Initialize application
         app = QtWidgets.QApplication([])
-
-        # Set custom window icon for taskbar (platform-specific handling)
         app.setWindowIcon(QtGui.QIcon(str(icon_path)))
 
         # Create and display main window
         session = CellectsMainWidget()
         session.instantiate()
         session.show()
+
+        # Set custom window icon for taskbar
+        session.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        app.setWindowIcon(QtGui.QIcon(str(icon_path)))
+
+        # Set exit
         sys.exit(app.exec())
     except Exception as e:
         logging.getLogger(__name__).critical("Cellects failed to start", exc_info=True)
