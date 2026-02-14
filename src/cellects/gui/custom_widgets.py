@@ -64,6 +64,7 @@ class WindowType(QtWidgets.QWidget):
         self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().screen_width, self.parent().screen_height))
         self.display_image = None
         self.setFont(QFont(textfont, textsize, QFont.Medium))
+        self.night_mode = night_mode
         self.night_mode_switch(night_mode)
 
     def resizeEvent(self, event):
@@ -73,6 +74,7 @@ class WindowType(QtWidgets.QWidget):
         :return:
         '''
         self.resized.emit()
+        self.night_mode_switch(self.night_mode)
         if self.display_image is not None:
             win_width, win_height = self.size().width(), self.size().height()
             self.display_image.max_width = win_width - self.parent().image_window_width_diff
