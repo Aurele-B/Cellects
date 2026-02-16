@@ -84,7 +84,7 @@ Cellects targets diverse biological datasets (e.g., Fungi, HeLa cells, Myxamoeba
 
 To maintain interactivity during heavy computation, Cellects combines Qt-based threading for GUI responsiveness with multiprocessing for video analysis. Memory usage is explicitly managed through sequential image processing and controlled data release, avoiding full in-memory loading of image sequences.
 
-#  Research impact statement
+# Research impact statement
 ## Related work
 Cellects has been developed as a practical application of ideas developed in [@Boussard2021] and recent developments are made in the context of the FRACTALS ANR project.
 
