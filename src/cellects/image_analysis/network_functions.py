@@ -129,7 +129,6 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
         NetDet_fast.greyscale_image = converted_video[t, ...]
         if detect_pseudopods:
             NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
-            NetDet_fast.merge_network_with_pseudopods()
             pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         potential_network[t, ...] = NetDet_fast.complete_network
     del NetDet_fast
@@ -529,19 +528,12 @@ class  NetworkDetection:
             without_pseudopods = complete_network.copy()
             without_pseudopods[true_pseudopods] = 0
             only_connected_network = keep_one_connected_component(without_pseudopods)
-            self.pseudopods = (1 - only_connected_network) * complete_network  * self.possibly_filled_pixels
+            self.pseudopods = (1 - only_connected_network) * complete_network
+            # Merge the connected network with pseudopods to get the complete network
+            self.complete_network = np.logical_or(only_connected_network, self.pseudopods).astype(np.uint8)
         else:
             self.pseudopods = true_pseudopods.astype(np.uint8)
-
-    def merge_network_with_pseudopods(self):
-        """
-        Merge the incomplete network with pseudopods.
-
-        This method combines the incomplete network and pseudopods to form
-        the complete network. The incomplete network is updated by subtracting
-        areas where pseudopods are present.
-        """
-        self.complete_network = np.logical_or(self.incomplete_network, self.pseudopods).astype(np.uint8)
+            self.complete_network = complete_network
         self.incomplete_network *= (1 - self.pseudopods)
 
 

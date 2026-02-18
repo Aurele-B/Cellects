@@ -106,7 +106,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))
 
     def test_detect_pseudopods(self):
-        """Check that change greyscale function works"""
+        """Test detect_pseudopods basic behavior"""
         lighter_background = True
         pseudopod_min_width = 1
         pseudopod_min_size = 3
@@ -114,21 +114,15 @@ class TestNetworkDetection(CellectsUnitTest):
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
 
     def test_detect_pseudopods_dark_back_no_ori(self):
-        """Check that change greyscale function works"""
+        """test_detect_pseudopods_dark_back_no_ori"""
         lighter_background = False
         pseudopod_min_width = 1
         pseudopod_min_size = 3
         self.NetDet.origin_to_add = None
         self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
-
-    def test_merge_network_with_pseudopods(self):
-        """Check that change greyscale function works"""
-        self.NetDet.merge_network_with_pseudopods()
-        expected_complete_network = np.logical_or(self.NetDet.incomplete_network, self.NetDet.pseudopods).astype(np.uint8)
-        expected_incomplete_network = self.NetDet.incomplete_network * (1 - self.NetDet.pseudopods)
-        self.assertTrue(np.array_equal(self.NetDet.complete_network, expected_complete_network))
-        self.assertTrue(np.array_equal(self.NetDet.incomplete_network, expected_incomplete_network))
+        # Check that all network is inside possibly_filled_pixels
+        self.assertFalse((self.NetDet.complete_network * (1 - self.NetDet.possibly_filled_pixels)).any())
 
 
 class TestGetSkeletonAndWidths(CellectsUnitTest):
