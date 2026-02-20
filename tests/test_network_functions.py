@@ -113,6 +113,18 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
 
+    def test_detect_pseudopods_with_no_possibly_filled_pixels(self):
+        """Test detect_pseudopods behavior when no possibly filled pixels are given"""
+        NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=None,
+                                       best_result=self.NetDet.best_result)
+        NetDet_fast.detect_network()
+        lighter_background = True
+        pseudopod_min_width = 1
+        pseudopod_min_size = 3
+        NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
+        self.assertTrue(NetDet_fast.pseudopods.any())
+        self.assertFalse(NetDet_fast.pseudopods.all())
+
     def test_detect_pseudopods_dark_back_no_ori(self):
         """test_detect_pseudopods_dark_back_no_ori"""
         lighter_background = False

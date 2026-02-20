@@ -494,10 +494,12 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
-
-        closed_im = close_holes(self.possibly_filled_pixels)
-        dist_trans = distance_transform_edt(closed_im)
-        dist_trans = dist_trans.max() - dist_trans
+        if self.possibly_filled_pixels.all():
+            dist_trans = self.possibly_filled_pixels
+        else:
+            closed_im = close_holes(self.possibly_filled_pixels)
+            dist_trans = distance_transform_edt(closed_im)
+            dist_trans = dist_trans.max() - dist_trans
         # Add dilatation of bracket of distances from medial_axis to the multiplication
         if lighter_background:
             grey = self.greyscale_image.max() - self.greyscale_image
