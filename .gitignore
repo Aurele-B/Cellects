@@ -12,6 +12,7 @@ data/single_experiment/one_row_per_frame.csv
 data/single_experiment/one_row_per_oscillating_cluster.csv
 src/cellects/config/cellects_settings.json
 src/cellects/config/masks.h5
+src/cellects/analyses/
 src/cellects/paper_illustrations/
 src/cellects/__main__.spec
 setup.py
