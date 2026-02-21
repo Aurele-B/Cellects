@@ -26,8 +26,6 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-import numpy as np
-
 from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
@@ -51,8 +49,8 @@ neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
 def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int=1,
                             starting_time: int=0, visu: NDArray=None, origin: NDArray[np.uint8]=None,
-                            smooth_segmentation_over_time: bool = True, detect_pseudopods: bool = True,
-                            save_coord_network: bool = True, show_seg: bool = False):
+                            smooth_segmentation_over_time: bool = True, edge_max_width:int = 5,
+                            detect_pseudopods: bool = True, save_coord_network: bool = True, show_seg: bool = False):
     """
     Detects and tracks dynamic features (e.g., pseudopods) in a biological network over time from video data.
 
@@ -74,6 +72,8 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
         Binary mask defining a central region of interest to exclude from network detection.
     smooth_segmentation_over_time : bool, optional (default=True)
         Flag indicating whether to apply temporal smoothing using adjacent frame data.
+    edge_max_width : int, optional
+        Maximal width of network edges. Defaults to 5.
     detect_pseudopods : bool, optional (default=True)
         Determines if pseudopod regions should be detected and merged with the network.
     save_coord_network : bool, optional (default=True)
@@ -123,8 +123,8 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
             greyscale = visu[t, ...].mean(axis=-1)
         else:
             greyscale = converted_video[t, ...]
-        NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=binary[t, ...],
-                                       origin_to_add=origin, best_result=NetDet.best_result)
+        NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=binary[t, ...], origin_to_add=origin,
+                                       edge_max_width=edge_max_width, best_result=NetDet.best_result)
         NetDet_fast.detect_network()
         NetDet_fast.greyscale_image = converted_video[t, ...]
         if detect_pseudopods:
@@ -199,7 +199,7 @@ class  NetworkDetection:
     Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
     It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
     """
-    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, best_result: dict=None):
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, edge_max_width: int=5, best_result: dict=None):
         """
         Initialize the object with given parameters.
 
@@ -213,6 +213,8 @@ class  NetworkDetection:
             Flag to add rolling window. Defaults to False.
         origin_to_add : NDArray[np.uint8], optional
             Origin to add. Defaults to None.
+        edge_max_width : int, optional
+            Maximal width of network edges. Defaults to 5.
         best_result : dict, optional
             Best result dictionary. Defaults to None.
         """
@@ -221,6 +223,10 @@ class  NetworkDetection:
             self.possibly_filled_pixels = np.ones(self.greyscale_image.shape, dtype=np.uint8)
         else:
             self.possibly_filled_pixels = possibly_filled_pixels
+        self.edge_max_width = edge_max_width
+        k_size = edge_max_width // 2
+        k_size = k_size - k_size % 2 + 1
+        self.kernel = create_ellipse(k_size, k_size).astype(np.uint8)
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
         self.origin_to_add = origin_to_add
@@ -420,6 +426,7 @@ class  NetworkDetection:
         self.best_idx = np.argmax(self.quality_metrics)
         self.best_result = self.all_results[self.best_idx]
         self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
+        self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
 
 
     def detect_network(self):
@@ -441,6 +448,7 @@ class  NetworkDetection:
             thresh_otsu = threshold_otsu(filtered_result)
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
+        self.incomplete_network = cv2.morphologyEx(self.incomplete_network.astype(np.uint8), cv2.MORPH_CLOSE, kernel=self.kernel)
 
     def change_greyscale(self, img: NDArray[np.uint8], first_dict: dict):
         """
@@ -457,7 +465,7 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_width: int=5, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
+    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
         Detect pseudopods in a binary image.
 
@@ -469,8 +477,6 @@ class  NetworkDetection:
         ----------
         lighter_background : bool
             Boolean flag to indicate if the background should be considered lighter.
-        pseudopod_min_width : int, optional
-            Minimum width for pseudopods to be considered valid. Default is 5.
         pseudopod_min_size : int, optional
             Minimum size for pseudopods to be considered valid. Default is 50.
         only_one_connected_component : bool, optional
@@ -516,7 +522,7 @@ class  NetworkDetection:
         high_int_in_periphery = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
 
         _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
-        bin_im = pseudopod_widths >= pseudopod_min_width
+        bin_im = pseudopod_widths >= self.edge_max_width
         dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
         bin_im = high_int_in_periphery * dil_bin_im
         nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
@@ -525,10 +531,12 @@ class  NetworkDetection:
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
         complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
+        complete_network = cv2.morphologyEx(complete_network.astype(np.uint8), cv2.MORPH_CLOSE, kernel=self.kernel)
         if only_one_connected_component:
             complete_network = keep_one_connected_component(complete_network)
             without_pseudopods = complete_network.copy()
-            without_pseudopods[true_pseudopods] = 0
+            true_pseudopods = cv2.dilate(true_pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
+            without_pseudopods[true_pseudopods > 0] = 0
             only_connected_network = keep_one_connected_component(without_pseudopods)
             self.pseudopods = (1 - only_connected_network) * complete_network
             # Merge the connected network with pseudopods to get the complete network
