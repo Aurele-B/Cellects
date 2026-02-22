@@ -14,6 +14,7 @@ src/cellects/config/cellects_settings.json
 src/cellects/config/masks.h5
 src/cellects/analyses/
 src/cellects/paper_illustrations/
+src/cellects/analyses/
 src/cellects/__main__.spec
 setup.py
 requirements.txt
