@@ -86,7 +86,7 @@ To maintain interactivity during heavy computation, Cellects combines Qt-based t
 
 # Research impact statement
 ## Related work
-Cellects' lineage traces directly to [Vogel2015]'s MATLAB implementation, with an early iteration already employed by [Boussard2019]. While the final version has not yet enabled new studies, it has been developed to address specific research questions from [@Boussard2021] and from an ongoing ANR project (ANR-24-CE45-3362, PI Claire David).
+Cellects' lineage traces directly to [@Vogel2015]'s MATLAB implementation, with an early iteration already employed by [@Boussard2019]. While the final version has not yet enabled new studies, it has been developed to address specific research questions from [@Boussard2021] and from an ongoing ANR project (ANR-24-CE45-3362, PI Claire David).
 
 ## Validation
 The software's robustness is demonstrated through specimen and background accuracies ([Figure 2](#fig:validation)) in diverse contexts. First, manual segmentation of [Figure 1](#fig:cell_dyn_morph) examples provided ground truth for canonical cases: single fungus on color-varying background [Figure 2](#fig:validation)a-c, multi-specimen tracking [Figure 2](#fig:validation)d-f with microscopy data, and network extraction [Figure 2](#fig:validation)g-i. Second, Cellects was tested on highly heterogeneous cells where manual distinction is infeasible. Accuracy was estimated via error annotations ([Figure 2](#fig:validation)j) comparing original images to results, achieving >97% accuracy across five challenging conditions ([Figure 2](#fig:validation)k: high contrast + optimal setup, heterogeneous colors, low contrast + desiccation, low contrast + optimal, very low resolution) through iterative parameter refinement in the GUI.
