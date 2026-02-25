@@ -1308,8 +1308,8 @@ class VideoReaderThread(QtCore.QThread):
         video_analysis = self.parent().po.motion.visu.copy()
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation, wait..."})
+        video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
         if self.parent().po.load_quick_full > 0:
-
             if self.parent().po.all['compute_all_options']:
                 if self.parent().po.all['video_option'] == 0:
                     video_mask = self.parent().po.motion.segmented
@@ -1322,10 +1322,8 @@ class VideoReaderThread(QtCore.QThread):
                         mask = self.parent().po.motion.logical_and
                     elif self.parent().po.all['video_option'] == 4:
                         mask = self.parent().po.motion.logical_or
-                    video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                     video_mask[mask[0], mask[1], mask[2]] = 1
             else:
-                video_mask = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     video_mask = self.parent().po.motion.segmented
 
