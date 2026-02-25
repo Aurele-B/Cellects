@@ -1005,6 +1005,8 @@ class OneArenaThread(QtCore.QThread):
         """
         Load a single arena from images or video to perform motion analysis.
         """
+        if self.po.first_im is None:
+            self.pre_processing()
         arena = self.parent().po.all['arena']
         i = np.nonzero(np.array(self.parent().po.vars['analyzed_individuals']) == arena)[0][0]
         true_frame_width = self.parent().po.right[i] - self.parent().po.left[i]
@@ -1100,6 +1102,8 @@ class OneArenaThread(QtCore.QThread):
         parameters accordingly. It handles duplicate video conversion based on certain logical conditions and computes
         video options.
         """
+        if self.parent().po.motion is None:
+            self.load_one_arena()
         self.message_from_thread_starting.emit(f"Quick video segmentation")
         self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
         if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
@@ -1211,6 +1215,8 @@ class OneArenaThread(QtCore.QThread):
                     analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
             else:
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    if self.parent().po.motion is None:
+                        self.load_one_arena()
                     if self.parent().po.motion.segmented is None:
                         self.detection()
                     analysis_i.segmented = self.parent().po.motion.segmented
