@@ -391,13 +391,13 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
 
     def test_non_connectivity_consistency(self):
         skeleton = np.array([
-            [1,0,1,1,1,0,0,1,0,0],
-            [0,0,0,1,0,0,0,1,0,0],
-            [0,1,1,1,1,1,1,1,0,0],
-            [0,0,0,1,0,1,0,1,0,0],
-            [0,0,0,0,1,0,0,1,0,0],
-            [0,0,0,1,0,1,0,1,0,0],
-            [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8)
+            [1,0,1,1,1,0,0,1],
+            [0,0,0,1,0,0,0,1],
+            [0,1,1,1,1,1,1,1],
+            [0,0,0,1,0,1,0,1],
+            [0,0,0,0,1,0,0,1],
+            [0,0,0,1,0,1,0,1],
+            [0,0,1,0,0,0,0,1]], dtype=np.uint8)
         pad_skeleton = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
         pad_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)
