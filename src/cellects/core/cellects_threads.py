@@ -922,7 +922,7 @@ class OneArenaThread(QtCore.QThread):
                 if self.parent().po.load_quick_full > 0:
                     if self.parent().po.motion.start is not None:
                         logging.info("One arena detection has started")
-                        self.detection()
+                        self.one_detection()
                         if self.parent().po.load_quick_full > 1:
                             logging.info("One arena post-processing has started")
                             self.post_processing()
@@ -1005,7 +1005,7 @@ class OneArenaThread(QtCore.QThread):
         """
         Load a single arena from images or video to perform motion analysis.
         """
-        if self.po.first_im is None:
+        if self.parent().po.first_im is None:
             self.pre_processing()
         arena = self.parent().po.all['arena']
         i = np.nonzero(np.array(self.parent().po.vars['analyzed_individuals']) == arena)[0][0]
@@ -1094,7 +1094,7 @@ class OneArenaThread(QtCore.QThread):
                 visu = np.stack((visu, visu, visu), axis=3)
             self.parent().po.motion.visu = visu
 
-    def detection(self):
+    def one_detection(self):
         """
         Perform quick video segmentation and update motion detection parameters.
 
@@ -1218,7 +1218,7 @@ class OneArenaThread(QtCore.QThread):
                     if self.parent().po.motion is None:
                         self.load_one_arena()
                     if self.parent().po.motion.segmented is None:
-                        self.detection()
+                        self.one_detection()
                     analysis_i.segmented = self.parent().po.motion.segmented
 
             analysis_i.start = time_parameters[0]
