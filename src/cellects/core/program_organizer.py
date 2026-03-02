@@ -400,6 +400,7 @@ class ProgramOrganizer:
                         self.all['folder_list'] = folder_list
                         self.all['folder_number'] = folder_number
                         self.all['sample_number_per_folder'] = sample_number_per_folder
+                        self.all['first_folder_sample_number'] = sample_number_per_folder[0]
 
                     if len(self.data_list) == 0:
                         self.look_for_data()
