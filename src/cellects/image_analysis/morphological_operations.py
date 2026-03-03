@@ -1383,7 +1383,8 @@ def close_holes(binary_img: NDArray[np.uint8]) -> NDArray[np.uint8]:
      [0 0 0 0 0 0 0 0 0 0]
      [0 0 0 0 0 0 0 0 0 0]]
     """
-    #### Third version ####
+    if binary_img.dtype != np.uint8:
+        binary_img = binary_img.astype(np.uint8)
     nb, new_order = cv2.connectedComponents(1 - binary_img)
     if nb > 2:
         binary_img[new_order > 1] = 1

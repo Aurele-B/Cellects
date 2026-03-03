@@ -144,10 +144,10 @@ def run_all_arenas(po):
         po.first_image.bgr)
     return po
 
-def detect_network_in_one_image(im_path, save_path=None):
+def detect_network_in_one_image(im_path, edge_max_width, save_path=None):
     im = readim(im_path)
     # im = im[100:870, 200:1000]
     greyscale_image = im.mean(axis=2)
-    net = NetworkDetection(greyscale_image, add_rolling_window=True)
+    net = NetworkDetection(greyscale_image, add_rolling_window=True, edge_max_width=edge_max_width)
     net.get_best_network_detection_method()
     display_network_methods(net, save_path)

@@ -1056,7 +1056,7 @@ class TestCloseHoles(CellectsUnitTest):
     def test_close_holes_with_invalid_input_type(self):
         """Test that close_holes raises error for invalid input type."""
         with self.assertRaises(TypeError):
-            close_holes([1, 2, 3])  # List instead of ndarray
+            close_holes(np.array(1, 2, 3))  # List instead of ndarray
 
 
 class TestDynamicallyExpandToFillHoles(CellectsUnitTest):

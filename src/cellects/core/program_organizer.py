@@ -287,8 +287,11 @@ class ProgramOrganizer:
             lengths = vectorized_len(self.data_list)
             if len(lengths) > 1 and np.max(np.diff(lengths)) > np.log10(len(self.data_list)):
                 logging.error(f"File names present strong variations and cannot be correctly sorted.")
-            wrong_images = np.nonzero(np.char.startswith(self.data_list, "Analysis efficiency, ", ))[0]
-            for w_im in wrong_images[::-1]:
+            if self.all['im_or_vid'] == 1:
+                wrong_files = np.nonzero(np.char.startswith(self.data_list, "ind_", ))[0]
+            else:
+                wrong_files = np.nonzero(np.char.startswith(self.data_list, "Analysis efficiency, ", ))[0]
+            for w_im in wrong_files[::-1]:
                 self.data_list.pop(w_im)
             self.data_list = natsort.natsorted(self.data_list)
         if self.all['im_or_vid'] == 1:
@@ -397,38 +400,40 @@ class ProgramOrganizer:
                         self.all['folder_list'] = folder_list
                         self.all['folder_number'] = folder_number
                         self.all['sample_number_per_folder'] = sample_number_per_folder
+                        self.all['first_folder_sample_number'] = sample_number_per_folder[0]
 
                     if len(self.data_list) == 0:
                         self.look_for_data()
                         if folder_changed and folder_number > 1 and len(self.all['folder_list']) > 0:
                             self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
-                    self.get_first_image()
-                    self.get_last_image()
-                    self.top, self.bot, self.left, self.right = read_h5('cellects_data.h5', 'arenas_coord')
-                    self.vars['arenas_coord'] = [self.top, self.bot, self.left, self.right]
-                    self.vars['exif'] = read_h5('cellects_data.h5', 'exif')
-                    self.vars['crop_coord'] = None
-                    if self.all['automatically_crop'] and 'crop_coord' in cellects_data_keys:
-                        ccy1, ccy2, ccx1, ccx2 = read_h5('cellects_data.h5', 'crop_coord')
-                        self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                        self.vars['crop_coord'] = self.first_image.crop_coord
-                        logging.info("Crop first image")
-                        self.first_image.automatically_crop(self.first_image.crop_coord)
-                        logging.info("Crop last image")
-                        self.last_image.automatically_crop(self.first_image.crop_coord)
-                    shapes_coord = read_h5('cellects_data.h5','validated_shapes')
-                    if shapes_coord is not None:
-                        self.first_image.validated_shapes = np.zeros(self.first_image.image.shape[:2], np.uint8)
-                        self.first_image.validated_shapes[shapes_coord[0], shapes_coord[1]] = 1
-                        self.first_image.im_combinations = []
-                        self.current_combination_id = 0
-                        self.first_image.im_combinations.append({})
-                        self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
-                        self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
-                        self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
-                        background = read_h5(f'ind_{1}.h5', 'background')
-                        if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
-                            self.first_exp_ready_to_run = True
+                    if len(self.data_list) > 0:
+                        self.get_first_image()
+                        self.get_last_image()
+                        self.top, self.bot, self.left, self.right = read_h5('cellects_data.h5', 'arenas_coord')
+                        self.vars['arenas_coord'] = [self.top, self.bot, self.left, self.right]
+                        self.vars['exif'] = read_h5('cellects_data.h5', 'exif')
+                        self.vars['crop_coord'] = None
+                        if self.all['automatically_crop'] and 'crop_coord' in cellects_data_keys:
+                            ccy1, ccy2, ccx1, ccx2 = read_h5('cellects_data.h5', 'crop_coord')
+                            self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
+                            self.vars['crop_coord'] = self.first_image.crop_coord
+                            logging.info("Crop first image")
+                            self.first_image.automatically_crop(self.first_image.crop_coord)
+                            logging.info("Crop last image")
+                            self.last_image.automatically_crop(self.first_image.crop_coord)
+                        shapes_coord = read_h5('cellects_data.h5','validated_shapes')
+                        if shapes_coord is not None:
+                            self.first_image.validated_shapes = np.zeros(self.first_image.image.shape[:2], np.uint8)
+                            self.first_image.validated_shapes[shapes_coord[0], shapes_coord[1]] = 1
+                            self.first_image.im_combinations = []
+                            self.current_combination_id = 0
+                            self.first_image.im_combinations.append({})
+                            self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
+                            self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+                            self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
+                            background = read_h5(f'ind_{1}.h5', 'background')
+                            if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
+                                self.first_exp_ready_to_run = True
         if self.first_exp_ready_to_run:
             logging.info("The current (or the first) folder is ready to run")
         else:

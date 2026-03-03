@@ -27,11 +27,6 @@ if sys.platform.startswith('win'):
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("cellects.app")
     except Exception as e:
         logging.getLogger(__name__).debug(f"Windows taskbar icon setup failed: {e}")
-    icon_path = ICONS_DIR / "cellects_icon.ico"
-elif sys.platform == "darwin":
-    icon_path = ICONS_DIR / "cellects_icon.icns"
-else:
-    icon_path = ICONS_DIR / "cellects_icon.png"
 
 from PySide6 import QtWidgets, QtGui
 
@@ -82,7 +77,13 @@ def run_cellects():
 
         # Initialize application
         app = QtWidgets.QApplication([])
-        app.setWindowIcon(QtGui.QIcon(str(icon_path)))
+        icon = None
+        if sys.platform.startswith('win'):
+            icon = QtGui.QIcon(str(ICONS_DIR / "cellects_icon.ico"))
+        elif sys.platform.startswith("linux"):
+            icon = QtGui.QIcon(str(ICONS_DIR / "cellects_icon.png"))
+        if icon is not None:
+            app.setWindowIcon(icon)
 
         # Create and display main window
         session = CellectsMainWidget()
@@ -90,9 +91,10 @@ def run_cellects():
         session.show()
 
         # Set custom window icon for taskbar
-        session.setWindowIcon(QtGui.QIcon(str(icon_path)))
-        app.setWindowIcon(QtGui.QIcon(str(icon_path)))
 
+        if icon is not None:
+            app.setWindowIcon(icon)
+            session.setWindowIcon(icon)
         # Set exit
         sys.exit(app.exec())
     except Exception as e:

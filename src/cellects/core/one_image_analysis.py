@@ -789,7 +789,6 @@ class OneImageAnalysis:
             if arenas_mask.any() and not arenas_mask.all():
                 lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask == 0].mean()
         NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, only_one_connected_component=False)
-        NetDet.merge_network_with_pseudopods()
         cc_efficiency_order = np.argsort(NetDet.quality_metrics)
         self.im_combinations = []
         for _i in cc_efficiency_order:

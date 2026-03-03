@@ -25,7 +25,7 @@ class TestNetworkDetection(CellectsUnitTest):
         cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum())
         cls.add_rolling_window=True
         cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
-                                      cls.origin_to_add)
+                                      cls.origin_to_add, edge_max_width=1)
         cls.NetDet.get_best_network_detection_method()
 
     def test_get_best_network_detection_method_outputs_proper_method(self):
@@ -63,7 +63,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = False
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -73,7 +73,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = True
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -83,7 +83,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = False
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -93,7 +93,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = True
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -106,29 +106,32 @@ class TestNetworkDetection(CellectsUnitTest):
         self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))
 
     def test_detect_pseudopods(self):
-        """Check that change greyscale function works"""
+        """Test detect_pseudopods basic behavior"""
         lighter_background = True
-        pseudopod_min_width = 1
         pseudopod_min_size = 3
-        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
+        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
+
+    def test_detect_pseudopods_with_no_possibly_filled_pixels(self):
+        """Test detect_pseudopods behavior when no possibly filled pixels are given"""
+        NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=None,
+                                       edge_max_width = 1, best_result=self.NetDet.best_result)
+        NetDet_fast.detect_network()
+        lighter_background = True
+        pseudopod_min_size = 3
+        NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size)
+        self.assertTrue(NetDet_fast.pseudopods.any())
+        self.assertFalse(NetDet_fast.pseudopods.all())
 
     def test_detect_pseudopods_dark_back_no_ori(self):
-        """Check that change greyscale function works"""
+        """test_detect_pseudopods_dark_back_no_ori"""
         lighter_background = False
-        pseudopod_min_width = 1
         pseudopod_min_size = 3
         self.NetDet.origin_to_add = None
-        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_width, pseudopod_min_size)
+        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
-
-    def test_merge_network_with_pseudopods(self):
-        """Check that change greyscale function works"""
-        self.NetDet.merge_network_with_pseudopods()
-        expected_complete_network = np.logical_or(self.NetDet.incomplete_network, self.NetDet.pseudopods).astype(np.uint8)
-        expected_incomplete_network = self.NetDet.incomplete_network * (1 - self.NetDet.pseudopods)
-        self.assertTrue(np.array_equal(self.NetDet.complete_network, expected_complete_network))
-        self.assertTrue(np.array_equal(self.NetDet.incomplete_network, expected_incomplete_network))
+        # Check that all network is inside possibly_filled_pixels
+        self.assertFalse((self.NetDet.complete_network * (1 - self.NetDet.possibly_filled_pixels)).any())
 
 
 class TestGetSkeletonAndWidths(CellectsUnitTest):
@@ -388,13 +391,13 @@ class TestGetTerminationsAndConnectedNodes(unittest.TestCase):
 
     def test_non_connectivity_consistency(self):
         skeleton = np.array([
-            [1,0,1,1,1,0,0,1,0,0],
-            [0,0,0,1,0,0,0,1,0,0],
-            [0,1,1,1,1,1,1,1,0,0],
-            [0,0,0,1,0,1,0,1,0,0],
-            [0,0,0,0,1,0,0,1,0,0],
-            [0,0,0,1,0,1,0,1,0,0],
-            [0,0,1,0,0,0,0,1,0,0]], dtype=np.uint8)
+            [1,0,1,1,1,0,0,1],
+            [0,0,0,1,0,0,0,1],
+            [0,1,1,1,1,1,1,1],
+            [0,0,0,1,0,1,0,1],
+            [0,0,0,0,1,0,0,1],
+            [0,0,0,1,0,1,0,1],
+            [0,0,1,0,0,0,0,1]], dtype=np.uint8)
         pad_skeleton = ad_pad(skeleton)
         cnv4, cnv8 = get_neighbor_comparisons(pad_skeleton)
         pad_tips = get_terminations_and_their_connected_nodes(pad_skeleton, cnv4, cnv8)

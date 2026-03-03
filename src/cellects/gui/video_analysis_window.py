@@ -229,14 +229,14 @@ class VideoAnalysisWindow(MainTabsType):
         self.load_one_arena = PButton(VAW["Load_one_arena"]["label"], tip=VAW["Load_one_arena"]["tips"],
                                       night_mode=self.parent().po.all['night_mode'])
         self.load_one_arena.clicked.connect(self.load_one_arena_is_clicked)
-        self.detection = PButton(VAW["Detection"]["label"], tip=VAW["Detection"]["tips"],
+        self.detection_pbutton = PButton(VAW["Detection"]["label"], tip=VAW["Detection"]["tips"],
                                  night_mode=self.parent().po.all['night_mode'])
-        self.detection.clicked.connect(self.detection_is_clicked)
+        self.detection_pbutton.clicked.connect(self.detection_is_clicked)
         self.read = PButton(VAW["Read"]["label"], tip=VAW["Read"]["tips"], night_mode=self.parent().po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
         self.read.setVisible(False)
         self.right_options_layout.addWidget(self.load_one_arena, alignment=QtCore.Qt.AlignCenter)
-        self.right_options_layout.addWidget(self.detection, alignment=QtCore.Qt.AlignCenter)
+        self.right_options_layout.addWidget(self.detection_pbutton, alignment=QtCore.Qt.AlignCenter)
         self.right_options_layout.addWidget(self.read, alignment=QtCore.Qt.AlignCenter)
 
 
@@ -660,8 +660,7 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
-        if self.thread_dict['OneArena']._isRunning:
-            self.thread_dict['OneArena'].stop()
+        self.thread_dict['OneArena'].requestInterruption()
         self.save_current_settings()
         if self.previous_arena != self.parent().po.all['arena']:
             self.parent().po.motion = None

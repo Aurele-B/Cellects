@@ -194,15 +194,15 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             QtWidgets.QMessageBox.No)
 
         if reply == QtWidgets.QMessageBox.Yes:
-            if self.count() == 6:
-                for _, thread in self.imageanalysiswindow.thread_dict.items():
-                    thread.wait()
-                for _, thread  in self.ifseveralfolderswindow.thread_dict.items():
-                    thread.wait()
-                for _, thread  in self.videoanalysiswindow.thread_dict.items():
-                    thread.wait()
-                for _, thread  in self.firstwindow.thread_dict.items():
-                    thread.wait()
+            logging.info("Interrupting all threads.")
+            if self.count() >= 6:
+                windows = [self.thread_dict.items(), self.imageanalysiswindow.thread_dict.items(),
+                           self.ifseveralfolderswindow.thread_dict.items(),
+                           self.videoanalysiswindow.thread_dict.items(), self.firstwindow.thread_dict.items()]
+                for window in windows:
+                    for thread_name, thread in window:
+                        thread.requestInterruption()
+                        thread.wait(15000)
             logging.info("Closing main window.")
             event.accept()
         else:

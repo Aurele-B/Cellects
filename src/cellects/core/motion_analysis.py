@@ -1365,12 +1365,12 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             if self.vars['origin_state'] == "constant":
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
                                                            self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, self.origin, self.vars['sliding_window_segmentation'], True,
+                                                           self.visu, self.origin, self.vars['sliding_window_segmentation'], 5, True,
                                                            self.vars['save_coord_network'], show_seg)
             else:
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
                                                            self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, None, self.vars['sliding_window_segmentation'], True,
+                                                           self.visu, None, self.vars['sliding_window_segmentation'], 5, True,
                                                            self.vars['save_coord_network'], show_seg)
 
         if not self.vars['several_blob_per_arena'] and self.vars['save_graph']:
