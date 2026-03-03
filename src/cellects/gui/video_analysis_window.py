@@ -660,8 +660,7 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
-        if self.thread_dict['OneArena']._isRunning:
-            self.thread_dict['OneArena'].stop()
+        self.thread_dict['OneArena'].requestInterruption()
         self.save_current_settings()
         if self.previous_arena != self.parent().po.all['arena']:
             self.parent().po.motion = None
