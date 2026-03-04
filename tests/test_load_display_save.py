@@ -457,6 +457,16 @@ class TestReadOneArena(CellectsUnitTest):
         self.assertTrue(visu is None)
 
 
+class TestWriteVideoFromImages(CellectsUnitTest):
+    """Test suite for write_video_from_images function."""
+    def test_write_video_from_images(self):
+        """Test write_video_from_images basic behavior."""
+        write_video_from_images(self.path_experiment)
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_experiment + '/' + f"timelapse.mp4"):
+            os.remove(self.path_experiment + '/' + f"timelapse.mp4")
 
 
 if __name__ == '__main__':

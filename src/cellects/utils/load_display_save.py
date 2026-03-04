@@ -15,7 +15,7 @@ import json
 from timeit import default_timer
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
+from natsort import natsorted
 import cv2
 from pathlib import Path
 import exifread
@@ -671,8 +671,8 @@ def read_and_rotate(image_name, prev_img: NDArray=None, raw_images: bool=False, 
             img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], ...]
     return img
 
-def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_coord: list, cr: list,
-                                      raw_images: bool, is_landscape: bool, reduce_image_dim: bool):
+def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray=None, crop_coord: list=None, cr: list=None,
+                                      raw_images: bool=False, is_landscape: bool=True, reduce_image_dim: bool=False):
     """
     Reads, rotates, crops (if specified), and reduces image dimensionality if required.
 
@@ -714,7 +714,8 @@ def read_rotate_crop_and_reduce_image(image_name: str, prev_img: NDArray, crop_c
     prev_img = img.copy()
     if crop_coord is not None:
         img = img[crop_coord[0]:crop_coord[1], crop_coord[2]:crop_coord[3], :]
-    img = img[cr[0]:cr[1], cr[2]:cr[3], :]
+    if cr is not None:
+        img = img[cr[0]:cr[1], cr[2]:cr[3], :]
     if reduce_image_dim:
         img = img[:, :, 0]
     return img, prev_img
@@ -1453,3 +1454,59 @@ def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_vi
     logging.info(f"{len(look_for_existing_videos)} .h5 video files found for {arena_nb} arenas to analyze")
     do_write_videos = not im_or_vid and (not there_already_are_videos or (there_already_are_videos and overwrite_unaltered_videos))
     return do_write_videos
+
+
+def write_video_from_images(path_to_images: str='', vid_name: str='timelapse.mp4', fps: int=20, img_extension: str='',
+                            img_radical: str='', crop_coord: list=None):
+    """
+    Write a video file from a sequence of images.
+
+     Extended Description
+     --------------------
+     This function creates a video from a list of image files in the specified directory.
+     To prevent the most comon issues:
+     - The image list is sorted
+     - mp4 files are removed
+     - If they do not have the same orientation, rotate the images accordingly
+     - Images are cropped
+     - Color vs greyscale is automatically determined
+
+     After processing, images are compiled into a video file.
+
+     Parameters
+     ----------
+     path_to_images : str
+         The directory where the images are located.
+     vid_name : str, optional
+         The name of the output video file. Default is 'video.mp4'.
+     fps : int, optional
+         The frames per second for the video. Default is 20.
+     img_extension : str, optional
+         The file extension of the images. Default is an empty string.
+     img_radical : str, optional
+         The common prefix of the image filenames. Default is an empty string.
+     crop_coord : list, optional
+         list containing four crop coordinates: [top, bot, left, right]. Default is None and takes the whole image.
+
+     Examples
+     --------
+     >>> write_video_from_images('path/to/images', vid_name='timelapse.mp4')
+     This will create a video file named 'timelapse.mp4' from the images in the specified directory.
+    """
+    os.chdir(path_to_images)
+    imgs = natsorted(insensitive_glob(f'{img_radical}*{img_extension}'))
+    'timelapse.mp4'
+    wrong_files = np.nonzero(np.char.endswith(imgs, "mp4", ))[0]
+    for w_im in wrong_files[::-1]:
+        imgs.pop(w_im)
+    is_raw = is_raw_image(imgs[0])
+    image, prev_img = read_rotate_crop_and_reduce_image(imgs[0], crop_coord=crop_coord, raw_images=is_raw)
+    is_landscape = image.shape[0] < image.shape[1]
+    is_color: bool = True
+    if len(image.shape) == 2:
+        is_color = False
+    video = np.zeros((len(imgs), image.shape[0], image.shape[1], 3), dtype=np.uint8)
+    for i_, img in enumerate(imgs):
+        video[i_], prev_img = read_rotate_crop_and_reduce_image(img, prev_img=prev_img, crop_coord=crop_coord,
+                                                                raw_images=is_raw, is_landscape=is_landscape)
+    write_video(video, vid_name=vid_name, is_color=is_color, fps=fps)
