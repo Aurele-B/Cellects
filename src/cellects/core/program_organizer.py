@@ -172,6 +172,17 @@ class ProgramOrganizer:
         write_json(ALL_VARS_JSON_FILE, all_vars)
 
     def save_first_image(self):
+        """
+        Save the first image's validated shapes to an HDF5 file.
+
+        If the current combination ID is valid and has a non-empty set of
+        image combinations, save the validated shapes to 'cellects_data.h5'.
+
+        Notes
+        -----
+        This function assumes that `self.first_image` and its attributes are already defined.
+        It uses the smallest memory-efficient array from `np.nonzero(validated_shapes)` to save space.
+        """
         if self.first_image is not None and self.first_image.im_combinations is not None and len(self.first_image.im_combinations) > 0:
             validated_shapes = self.first_image.im_combinations[self.current_combination_id]['binary_image']
             write_h5('cellects_data.h5', smallest_memory_array(np.nonzero(validated_shapes)), 'validated_shapes')
