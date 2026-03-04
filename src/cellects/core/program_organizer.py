@@ -176,16 +176,35 @@ class ProgramOrganizer:
             validated_shapes = self.first_image.im_combinations[self.current_combination_id]['binary_image']
             write_h5('cellects_data.h5', smallest_memory_array(np.nonzero(validated_shapes)), 'validated_shapes')
 
-    def save_masks(self):
+    def save_masks(self, remove_unused_masks: bool = True):
+        """
+        Conditionally save or remove masks to disk for batch processing (several folders).
+
+        When analyzing several folders, the same masks are (optionally) saved to ease the first image detection.
+        After user input, unused masks should be removed while at other times,
+        calling this method should not remove that information.
+
+
+        Parameters
+        ----------
+        remove_unused_masks : bool, optional
+            If True and there is no user-made mask, remove saved masks from disk.
+            Default is True.
+
+        Notes
+        -----
+        This function saves the masks to an HDF5 file saved in the config folder (to be accessible anywhere)
+        """
         if self.all['keep_cell_and_back_for_all_folders']:
-            if self.bio_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
-            else:
+            if self.bio_mask is not None:
                 write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask, 'initial_bio_mask')
-            if self.back_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
-            else:
+            if self.back_mask is not None:
                 write_h5(CONFIG_DIR / 'masks.h5', self.back_mask, 'initial_back_mask')
+            if remove_unused_masks:
+                if self.back_mask is None:
+                    remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
+                if self.bio_mask is None:
+                    remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
         else:
             self.all.pop('initial_bio_mask', None)
             self.all.pop('initial_back_mask', None)

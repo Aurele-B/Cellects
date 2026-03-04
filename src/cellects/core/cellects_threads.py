@@ -819,6 +819,7 @@ class SaveAllVarsThread(QtCore.QThread):
             2. Set the current folder.
             3. Save data to run Cellects quickly without creating a new one if it doesn't exist.
         """
+        self.parent().po.save_masks(remove_unused_masks=False)
         self.parent().po.save_variable_dict()
         self._set_current_folder()
         self.parent().po.save_data_to_run_cellects_quickly(new_one_if_does_not_exist=False)
