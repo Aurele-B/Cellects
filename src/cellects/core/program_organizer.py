@@ -1111,7 +1111,7 @@ class ProgramOrganizer:
         if self.first_image.y_boundaries is None:
             self.first_image.get_setup_boundaries()
 
-        logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
+        logging.info("Get the coordinates of all arenas using the get_bounding_boxes method")
         if self.first_image.validated_shapes.any() and self.first_image.shape_number > 0:
             self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                 self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
