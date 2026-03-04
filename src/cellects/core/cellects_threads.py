@@ -1764,11 +1764,7 @@ class RunAllThread(QtCore.QThread):
                                     analysis_status["message"] = f"Was waiting for thread interruption"
                                     analysis_status["continue"] = False
                                 if not analysis_status["continue"]:
-                                    break
-                            if not analysis_status["continue"]:
-                                break
-                        if not analysis_status["continue"]:
-                            break
+                                    return analysis_status
                         if analysis_status["continue"]:
                             for arena_i, arena_name in enumerate(arena):
                                 try:
@@ -1782,11 +1778,14 @@ class RunAllThread(QtCore.QThread):
                                         else:
                                             write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
-                                    self.message_from_thread.emit(message + f"full disk memory, clear space and retry")
+                                    analysis_status["message"] = message + f"full disk memory, clear space and retry"
+                                    analysis_status["continue"] = False
+                                    self.message_from_thread.emit()
                                 if self.isInterruptionRequested():
                                     analysis_status["message"] = f"Was waiting for thread interruption"
                                     analysis_status["continue"] = False
-                                    break
+                                if not analysis_status["continue"]:
+                                    return analysis_status
                         del video_bunch
                         logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
                     logging.info("When they exist, do not overwrite unaltered video")
