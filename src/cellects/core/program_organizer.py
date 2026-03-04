@@ -638,7 +638,7 @@ class ProgramOrganizer:
             if self.all['extract_time_interval']:
                 self.vars['time_step'] = 1
                 try:
-                    timings = extract_time(self.data_list, pathway, self.all['raw_images'])
+                    timings = extract_time(pathway, self.data_list, self.all['raw_images'])
                     timings = timings - timings[0]
                     timings = timings / 60
                     time_step = np.diff(timings)

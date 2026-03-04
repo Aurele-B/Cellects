@@ -1178,7 +1178,52 @@ def display_boxes(binary_image: NDArray, box_diameter: int, show: bool = True):
     return line_nb
 
 
-def extract_time(image_list: list, pathway="", raw_images:bool=False):
+def list_image_dir(path_to_images='', img_extension: str='', img_radical: str='') -> list:
+    """
+    List files in an image directory based on optional naming patterns (extension and/or radical).
+
+    Parameters
+    ----------
+    path_to_images : optional
+        The path to the directory containing images. Default is an empty string.
+    img_extension : str, optional
+        The file extension of the images to be listed. Default is an empty string.
+        When let empty, use the extension corresponding to the most numerous image file in the folder.
+    img_radical : str, optional
+        The radical part of the filenames to be listed. Default is an empty string.
+
+    Returns
+    -------
+    list
+        A list of image filenames that match the specified criteria,
+        sorted in a natural order.
+
+    Notes
+    -----
+    This function uses the `natsorted` and `insensitive_glob` utilities to ensure
+    that filenames are sorted in a human-readable order.
+
+    Examples
+    --------
+    >>> pathway = Path(__name__).resolve().parents[0] / "data" / "single_experiment"
+    >>> image_list = list_image_dir(pathway)
+    >>> print(image_list)
+    """
+    if isinstance(path_to_images, str):
+        path_to_images = Path(path_to_images)
+    os.chdir(path_to_images)
+    if len(img_extension) == 0:
+        imgs = insensitive_glob(f'{img_radical}*')
+        matches = np.zeros(len(opencv_accepted_formats))
+        for e_i, ext in enumerate(opencv_accepted_formats):
+            matches[e_i] = np.char.endswith(imgs, ext).sum()
+        img_extension = opencv_accepted_formats[np.argmax(matches)]
+    imgs = insensitive_glob(f'{img_radical}*{img_extension}')
+    imgs = natsorted(imgs)
+    return imgs
+
+
+def extract_time(pathway="", image_list: list=None, raw_images:bool=False):
     """
     Extract timestamps from a list of images.
 
@@ -1187,10 +1232,10 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
 
     Parameters
     ----------
-    image_list : list of str
-        List of image file names.
     pathway : str, optional
         Path to the directory containing the images. Default is an empty string.
+    image_list : list of str
+        List of image file names.
     raw_images : bool, optional
         If True, use the exifread library. Otherwise, use the exif library.
         Default is False.
@@ -1204,25 +1249,28 @@ def extract_time(image_list: list, pathway="", raw_images:bool=False):
     --------
     >>> pathway = Path(__name__).resolve().parents[0] / "data" / "single_experiment"
     >>> image_list = ['image1.tif', 'image2.tif']
-    >>> time = extract_time(image_list, pathway)
+    >>> time = extract_time(pathway, image_list)
     >>> print(time)
     array([0, 0])
 
     """
     if isinstance(pathway, str):
         pathway = Path(pathway)
+    os.chdir(pathway)
+    if image_list is None:
+        image_list = list_image_dir(pathway)
     nb = len(image_list)
     timings = np.zeros((nb, 6), dtype=np.int64)
     if raw_images:
         for i in np.arange(nb):
-            with open(pathway / image_list, 'rb') as image_file:
+            with open(image_list, 'rb') as image_file:
                 my_image = exifread.process_file(image_file, details=False, stop_tag='DateTimeOriginal')
                 datetime = my_image["EXIF DateTimeOriginal"]
             datetime = datetime.values[:10] + ':' + datetime.values[11:]
             timings[i, :] = datetime.split(':')
     else:
         for i in np.arange(nb):
-            with open(pathway / image_list[i], 'rb') as image_file:
+            with open(image_list[i], 'rb') as image_file:
                 my_image = Image(image_file)
                 if my_image.has_exif:
                     datetime = my_image.datetime
@@ -1456,7 +1504,7 @@ def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_vi
     return do_write_videos
 
 
-def write_video_from_images(path_to_images: str='', vid_name: str='timelapse.mp4', fps: int=20, img_extension: str='',
+def write_video_from_images(path_to_images='', vid_name: str='timelapse.mp4', fps: int=20, img_extension: str='',
                             img_radical: str='', crop_coord: list=None):
     """
     Write a video file from a sequence of images.
@@ -1493,12 +1541,10 @@ def write_video_from_images(path_to_images: str='', vid_name: str='timelapse.mp4
      >>> write_video_from_images('path/to/images', vid_name='timelapse.mp4')
      This will create a video file named 'timelapse.mp4' from the images in the specified directory.
     """
+    if isinstance(path_to_images, str):
+        path_to_images = Path(path_to_images)
     os.chdir(path_to_images)
-    imgs = natsorted(insensitive_glob(f'{img_radical}*{img_extension}'))
-    'timelapse.mp4'
-    wrong_files = np.nonzero(np.char.endswith(imgs, "mp4", ))[0]
-    for w_im in wrong_files[::-1]:
-        imgs.pop(w_im)
+    imgs = list_image_dir(path_to_images, img_extension, img_radical)
     is_raw = is_raw_image(imgs[0])
     image, prev_img = read_rotate_crop_and_reduce_image(imgs[0], crop_coord=crop_coord, raw_images=is_raw)
     is_landscape = image.shape[0] < image.shape[1]
@@ -1510,3 +1556,4 @@ def write_video_from_images(path_to_images: str='', vid_name: str='timelapse.mp4
         video[i_], prev_img = read_rotate_crop_and_reduce_image(img, prev_img=prev_img, crop_coord=crop_coord,
                                                                 raw_images=is_raw, is_landscape=is_landscape)
     write_video(video, vid_name=vid_name, is_color=is_color, fps=fps)
+
