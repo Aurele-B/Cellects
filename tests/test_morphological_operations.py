@@ -917,24 +917,26 @@ class TestExpandUntilNeighborCenterGetsNearerThanOwn(CellectsUnitTest):
 
 class TestImageBorders(CellectsUnitTest):
     """Test image border functionality."""
-    def test_image_borders(self):
+    def test_image_borders_with_different_dimensions(self):
         """Test image borders detection."""
         # Test 1: Verify borders for a 3x3 image
-        dimensions = (3, 3)
+        dimensions = (4, 3)
         borders = image_borders(dimensions)
         expected_result = np.array(
             [[0, 0, 0],
+             [0, 1, 0],
              [0, 1, 0],
              [0, 0, 0]], dtype=np.uint8
         )
         self.assertTrue(np.array_equal(borders, expected_result))
 
-    def test_image_borders_circular(self):
+    def test_image_borders__with_different_dimensions_circular(self):
         """Test image borders circular."""
-        dimensions = (3, 3)
+        dimensions = (4, 3)
         borders = image_borders(dimensions, "circle")
         expected_result = np.array(
             [[0, 0, 0],
+             [0, 1, 0],
              [0, 1, 0],
              [0, 0, 0]], dtype=np.uint8
         )
