@@ -932,7 +932,7 @@ class TestImageBorders(CellectsUnitTest):
     def test_image_borders_circular(self):
         """Test image borders circular."""
         dimensions = (3, 3)
-        borders = image_borders(dimensions, "circular")
+        borders = image_borders(dimensions, "circle")
         expected_result = np.array(
             [[0, 0, 0],
              [0, 1, 0],
