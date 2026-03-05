@@ -485,7 +485,8 @@ class VideoAnalysisWindow(MainTabsType):
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 # Reset OneArena tracking
-                self.parent().po.motion = None
+                if not self.thread_dict['OneArena'].isRunning():
+                    self.parent().po.motion = None
                 self.parent().last_tab = "video_analysis"
                 self.parent().change_widget(2)
                 self.parent().imageanalysiswindow.advanced_mode_cb.setVisible(True)
@@ -504,7 +505,8 @@ class VideoAnalysisWindow(MainTabsType):
         Modifies the interface to display advanced parameters.
         """
         # Reset OneArena tracking
-        self.parent().po.motion = None
+        if not self.thread_dict['OneArena'].isRunning():
+            self.parent().po.motion = None
         self.parent().last_is_first = False
         self.parent().widget(5).update_csc_editing_display()
         self.parent().change_widget(5)  # AdvancedParameters
@@ -661,6 +663,7 @@ class VideoAnalysisWindow(MainTabsType):
         to display messages and images during thread execution.
         """
         self.thread_dict['OneArena'].requestInterruption()
+        self.thread_dict['OneArena'].wait(10000)
         self.save_current_settings()
         if self.previous_arena != self.parent().po.all['arena']:
             self.parent().po.motion = None

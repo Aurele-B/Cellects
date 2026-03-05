@@ -1440,7 +1440,6 @@ class ChangeOneRepResultThread(QtCore.QThread):
                         if not self.isInterruptionRequested():
                             self.parent().po.motion.change_results_of_one_arena()
                             self.parent().po.motion = None
-                            # self.parent().po.motion = None
                             self.message_from_thread.emit(f"Arena n°{self.parent().po.all['arena']}: analysis finished.")
 
 
