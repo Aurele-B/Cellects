@@ -85,5 +85,6 @@ omit = [
     "src/cellects/core/cellects_threads.py",
     "src/cellects/core/script_based_run.py",
     "src/cellects/__main__.py",
+    "src/cellects/analyses/*",
     "src/cellects/paper_illustrations/*",
 ]
