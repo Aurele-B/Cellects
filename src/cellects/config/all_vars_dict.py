@@ -92,7 +92,7 @@ class DefaultDicts:
 
             # Post-processing params
             'specimen_activity': 'grow',
-            'sliding_window_segmentation': True,
+            'sliding_window_segmentation': False,
             'morphological_opening': True,
             'morphological_closing': True,
             'fading': 0,
