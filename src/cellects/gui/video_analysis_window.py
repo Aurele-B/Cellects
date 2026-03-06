@@ -658,8 +658,6 @@ class VideoAnalysisWindow(MainTabsType):
         to display messages and images during thread execution.
         """
         self.message.setText("Load the video and initialize analysis, wait...")
-        self.thread_dict['VideoTracking'].requestInterruption()
-        self.thread_dict['VideoTracking'].wait(1000)
         if self.thread_dict['VideoTracking'].isRunning():
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
@@ -754,13 +752,11 @@ class VideoAnalysisWindow(MainTabsType):
         finalize the analysis and save the result. It ensures that certain
         threads are not running before proceeding.
         """
-        if self.parent().po.motion is None or self.parent().po.load_quick_full < 2:
-            self.message.setText("Run Post processing first")
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
-            self.thread_dict['VideoTracking'].requestInterruption()
-            self.thread_dict['VideoTracking'].wait(1000)
-            if self.thread_dict['VideoTracking'].isRunning():
-                self.message.setText("A video tracking task is already running, wait or restart Cellects")
+            if self.parent().po.motion is None or self.parent().po.load_quick_full < 2:
+                self.message.setText("Run Post processing first")
             else:
                 self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
                 self.video_task = 'change_one_arena_result'
