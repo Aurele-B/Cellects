@@ -4,7 +4,7 @@
 This module implements a video tracking interface for analyzing cell movement through configurable parameters like
  arena selection, segmentation methods, and smoothing thresholds. It provides interactive controls including spinboxes,
   comboboxes, buttons for detection/post-processing, and an image display area with full-screen support. Threaded
-  operations (VideoReaderThread, OneArenaThread) handle background processing to maintain UI responsiveness.
+  operations (VideoReaderThread, VideoTrackingThread) handle background processing to maintain UI responsiveness.
 
 Main Components
 VideoAnalysisWindow : QWidget subclass implementing the video analysis interface with tab navigation, parameter
@@ -17,9 +17,7 @@ import logging
 import numpy as np
 from PySide6 import QtWidgets, QtCore
 
-from cellects.core.cellects_threads import (
-    RunAllThread, OneArenaThread, VideoReaderThread, ChangeOneRepResultThread,
-    WriteVideoThread)
+from cellects.core.cellects_threads import VideoTrackingThread, VideoReaderThread, WriteVideoThread
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
@@ -54,6 +52,9 @@ class VideoAnalysisWindow(MainTabsType):
         super().__init__(parent, night_mode)
         logging.info("Initialize VideoAnalysisWindow")
         self.setParent(parent)
+        self.thread_dict = {}
+        self.video_task: str = 'all'
+        self.previous_arena = 0
         self.true_init()
 
     def true_init(self):
@@ -75,14 +76,9 @@ class VideoAnalysisWindow(MainTabsType):
         self.video_tab.set_in_use()
         self.data_tab.clicked.connect(self.data_tab_is_clicked)
         self.image_tab.clicked.connect(self.image_tab_is_clicked)
-        self.thread_dict = {}
         self.thread_dict['VideoReader'] = VideoReaderThread(self.parent())
-        self.thread_dict['OneArena'] = OneArenaThread(self.parent())
-        self.thread_dict['ChangeOneRepResult'] = ChangeOneRepResultThread(self.parent())
-        self.thread_dict['RunAll'] = RunAllThread(self.parent())
-        self.previous_arena = 0
+        self.thread_dict['VideoTracking'] = VideoTrackingThread(self.parent())
         curr_row_main_layout = 0
-        ncol = 1
         self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
 
@@ -463,7 +459,7 @@ class VideoAnalysisWindow(MainTabsType):
         This function displays an error message when a thread relative to the current window is running.
         This function also save the id of the following window for later use.
         """
-        if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
+        if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['VideoTracking'].isRunning() or self.parent().firstwindow.thread_dict["VideoTracking"].isRunning():
             self.message.setText("Wait for the analysis to end, or restart Cellects")
         else:
             self.parent().last_tab = "data_specifications"
@@ -480,12 +476,11 @@ class VideoAnalysisWindow(MainTabsType):
         This function also save the id of the following window for later use.
         """
         if self.image_tab.state != "not_usable":
-            if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['OneArena'].isRunning() or self.thread_dict[
-                'ChangeOneRepResult'].isRunning() or self.parent().firstwindow.thread_dict["RunAll"].isRunning():
+            if self.thread_dict['VideoReader'].isRunning() or self.thread_dict['VideoTracking'].isRunning() or self.parent().firstwindow.thread_dict["VideoTracking"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
-                # Reset OneArena tracking
-                if not self.thread_dict['OneArena'].isRunning():
+                # Reset the VideoTracking thread for one arena
+                if not self.thread_dict['VideoTracking'].isRunning():
                     self.parent().po.motion = None
                 self.parent().last_tab = "video_analysis"
                 self.parent().change_widget(2)
@@ -504,8 +499,8 @@ class VideoAnalysisWindow(MainTabsType):
         """
         Modifies the interface to display advanced parameters.
         """
-        # Reset OneArena tracking
-        if not self.thread_dict['OneArena'].isRunning():
+        # Reset the VideoTracking thread for one arena
+        if not self.thread_dict['VideoTracking'].isRunning():
             self.parent().po.motion = None
         self.parent().last_is_first = False
         self.parent().widget(5).update_csc_editing_display()
@@ -596,7 +591,7 @@ class VideoAnalysisWindow(MainTabsType):
         arena processing threads. It should be called when all relevant threads are not
         running to ensure the arena's state is properly reset.
         """
-        if not self.thread_dict['VideoReader'].isRunning() and not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['ChangeOneRepResult'].isRunning():
+        if not self.thread_dict['VideoReader'].isRunning() and not self.thread_dict['VideoTracking'].isRunning():
             self.parent().po.motion = None
             self.reset_general_step()
             self.parent().po.computed_video_options = np.zeros(5, bool)
@@ -651,9 +646,9 @@ class VideoAnalysisWindow(MainTabsType):
 
     def run_one_arena_thread(self):
         """
-        Run the OneArena thread for processing.
+        Run the VideoTracking thread for processing one arena.
 
-        Executes the OneArena thread to load video, initialize analysis,
+        Executes the thread to load one video, initialize analysis,
         stop any running instance of the thread, save settings, and connect
         signals for displaying messages, images, and handling completion events.
 
@@ -662,17 +657,21 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
-        self.thread_dict['OneArena'].requestInterruption()
-        self.thread_dict['OneArena'].wait(10000)
-        self.save_current_settings()
-        if self.previous_arena != self.parent().po.all['arena']:
-            self.parent().po.motion = None
         self.message.setText("Load the video and initialize analysis, wait...")
-        self.thread_dict['OneArena'].start()  # OneArenaThreadInThirdWidget
-        self.thread_dict['OneArena'].message_from_thread_starting.connect(self.display_message_from_thread)
-        self.thread_dict['OneArena'].when_loading_finished.connect(self.when_loading_thread_finished)
-        self.thread_dict['OneArena'].when_detection_finished.connect(self.when_detection_finished)
-        self.thread_dict['OneArena'].image_from_thread.connect(self.display_image_during_thread)
+        self.thread_dict['VideoTracking'].requestInterruption()
+        self.thread_dict['VideoTracking'].wait(1000)
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
+        else:
+            self.save_current_settings()
+            if self.previous_arena != self.parent().po.all['arena']:
+                self.parent().po.motion = None
+            self.video_task = 'one_arena'
+            self.thread_dict['VideoTracking'].start()
+            self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
+            self.thread_dict['VideoTracking'].when_detection_finished.connect(self.when_detection_finished)
+            self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
 
     def when_loading_thread_finished(self, save_loaded_video: bool):
         """
@@ -755,19 +754,20 @@ class VideoAnalysisWindow(MainTabsType):
         finalize the analysis and save the result. It ensures that certain
         threads are not running before proceeding.
         """
-        if self.parent().po.motion is not None:
-            if self.parent().po.load_quick_full == 2:
-                if not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['ChangeOneRepResult'].isRunning():
-                    self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
-                    self.thread_dict['ChangeOneRepResult'].start()  # ChangeOneRepResultThreadInThirdWidget
-                    self.thread_dict['ChangeOneRepResult'].message_from_thread.connect(self.display_message_from_thread)
-                    self.message.setText("Complete analysis + change that result")
-                else:
-                    self.message.setText("Wait for the analysis to end")
-            else:
-                self.message.setText("Run Post processing first")
-        else:
+        if self.parent().po.motion is None or self.parent().po.load_quick_full < 2:
             self.message.setText("Run Post processing first")
+        else:
+            self.thread_dict['VideoTracking'].requestInterruption()
+            self.thread_dict['VideoTracking'].wait(1000)
+            if self.thread_dict['VideoTracking'].isRunning():
+                self.message.setText("A video tracking task is already running, wait or restart Cellects")
+            else:
+                self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
+                self.video_task = 'change_one_arena_result'
+                self.compute_all_options_cb.setChecked(False)
+                self.thread_dict['VideoTracking'].start()
+                self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
+                self.message.setText("Complete analysis + change that result")
 
     def read_is_clicked(self):
         """
@@ -776,24 +776,18 @@ class VideoAnalysisWindow(MainTabsType):
         This function checks if the detection has been run and if the video reader or analysis thread is running.
         If both threads are idle, it starts the video reading process. Otherwise, it updates the message accordingly.
         """
-        if self.parent().po.motion is not None:
-            if self.parent().po.motion.segmented is not None:
-                if not self.thread_dict['OneArena'].isRunning() and not self.thread_dict['VideoReader'].isRunning():
-                    self.thread_dict['VideoReader'].start()  # VideoReaderThreadInThirdWidget
-                    self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
-                else:
-                    self.message.setText("Wait for the analysis to end")
-            else:
-                self.message.setText("Run detection first")
-        else:
+        if self.parent().po.motion is None or self.parent().po.motion.segmented is None:
             self.message.setText("Run detection first")
+        else:
+            self.thread_dict['VideoReader'].start()
+            self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
 
     def run_all_is_clicked(self):
         """
         Handle the click event to start the complete analysis.
 
         This function checks if any threads are running and starts the
-        'RunAll' thread if none of them are active. It also updates
+        'VideoTracking' thread for all arenas. It also updates
         various attributes and messages related to the analysis process.
 
         Notes
@@ -801,24 +795,26 @@ class VideoAnalysisWindow(MainTabsType):
         This function will only start the analysis if no other threads
         are running. It updates several attributes of the parent object.
         """
-        if self.thread_dict['OneArena'].isRunning() or self.thread_dict['ChangeOneRepResult'].isRunning():
-            self.message.setText("Wait for the current analysis to end")
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             if self.thread_dict['VideoReader'].isRunning():
+                self.message.setText("Pausing until the reading ends before starting the analysis")
                 self.thread_dict['VideoReader'].wait()
-            if self.parent().firstwindow.thread_dict["RunAll"].isRunning():
+            if self.parent().firstwindow.thread_dict["VideoTracking"].isRunning():
                 self.message.setText('Analysis has already begun in the first window.')
             else:
-                if not self.thread_dict['RunAll'].isRunning():
-                    self.save_current_settings()
-                    self.parent().po.motion = None
-                    self.parent().po.converted_video = None
-                    self.parent().po.converted_video2 = None
-                    self.parent().po.visu = None
-                    self.message.setText("Complete analysis has started, wait...")
-                    self.thread_dict['RunAll'].start()  # RunAllThread
-                    self.thread_dict['RunAll'].message_from_thread.connect(self.display_message_from_thread)
-                    self.thread_dict['RunAll'].image_from_thread.connect(self.display_image_during_thread)
+                self.save_current_settings()
+                self.parent().po.motion = None
+                self.parent().po.converted_video = None
+                self.parent().po.converted_video2 = None
+                self.parent().po.visu = None
+                self.message.setText("Complete analysis has started, wait...")
+                self.video_task = 'all'
+                self.compute_all_options_cb.setChecked(False)
+                self.thread_dict['VideoTracking'].start()
+                self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
+                self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
 
     def display_message_from_thread(self, text_from_thread: str):
         """

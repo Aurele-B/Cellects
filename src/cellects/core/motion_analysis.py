@@ -133,8 +133,6 @@ class MotionAnalysis:
         self.sun = None
         self.holes = None
         self.coord_network = None
-        logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
-
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
@@ -191,7 +189,6 @@ class MotionAnalysis:
         attributes like `self.origin`, `self.background`, and `self.converted_video`.
 
         """
-        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
         if 'crop_coord' in self.vars and self.vars['crop_coord'] is not None:
             crop_top, crop_bot, crop_left, crop_right = self.vars['crop_coord']
         else:

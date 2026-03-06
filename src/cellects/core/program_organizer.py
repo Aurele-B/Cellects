@@ -101,7 +101,7 @@ class ProgramOrganizer:
         self.first_im = None
         self.last_im = None
         self.starting_blob_hsize_in_pixels = None
-        self.vars['first_move_threshold'] = None
+        self.vars['first_move_threshold'] = 10
         self.vars['convert_for_origin'] = None
         self.vars['convert_for_motion'] = None
         self.current_combination_id = 0
@@ -465,9 +465,9 @@ class ProgramOrganizer:
                             if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
                                 self.first_exp_ready_to_run = True
         if self.first_exp_ready_to_run:
-            logging.info("The current (or the first) folder is ready to run")
+            logging.info("The current folder is ready to run")
         else:
-            logging.info("The current (or the first) folder is not ready to run")
+            logging.info("The current folder is not ready to run")
 
     def save_data_to_run_cellects_quickly(self, new_one_if_does_not_exist: bool=True):
         """
@@ -921,9 +921,7 @@ class ProgramOrganizer:
         else:
             self.starting_blob_hsize_in_pixels = None
 
-        if self.all['automatic_size_thresholding']:
-            self.vars['first_move_threshold'] = 10
-        else:
+        if not self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = int(np.round(self.all['first_move_threshold_in_mm²'] /
                                                          self.vars['average_pixel_size']))
         logging.info(f"The average pixel size is: {self.vars['average_pixel_size']} mm²")

@@ -428,7 +428,7 @@ class TestExtractTime(CellectsUnitTest):
         self.assertTrue(np.array_equal(result, expected_time))
 
 
-class TestReadOneArena(CellectsUnitTest):
+class TestReadArena(CellectsUnitTest):
     """Test suite for read_one_arena function."""
     def test_read_one_arena_with_videos_in_ram(self):
         """Test read_one_arena with videos in ram."""

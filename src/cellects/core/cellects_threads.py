@@ -12,8 +12,8 @@ LoadDataToRunCellectsQuicklyThread : Loads necessary data asynchronously for qui
 FirstImageAnalysisThread : Analyzes first image with automatic color space selection and segmentation.
 LastImageAnalysisThread : Processes last frame analysis for optimized color space combinations.
 CropScaleSubtractDelineateThread : Handles cropping, scaling, and arena boundary detection.
-OneArenaThread : Performs complete motion analysis on a single arena with post-processing.
-RunAllThread : Executes full batch analysis across multiple arenas/experiments.
+VideoTrackingThread : Performs complete motion analysis on a single arena or full batch analysis across multiple
+arenas/experiments.
 
 Notes
 Uses QThread for background operations to maintain UI responsiveness. Key workflows include automated color space
@@ -606,7 +606,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         to perform necessary image processing tasks.
         """
         logging.info("Start cropping if required")
-        analysis_status = {"continue": True, "message": ""}
+        self.status = {"continue": True, "message": ""}
         self.parent().po.first_image.get_setup_boundaries()
         self.parent().po.cropping(is_first_image=True)
         self.parent().po.get_average_pixel_size()
@@ -619,24 +619,24 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.parent().po.first_image.validated_shapes)
             y_lim = self.parent().po.first_image.y_boundaries
             if ((nb - 1) != self.parent().po.sample_number or np.any(stats[:, 4] == 1)):
-                analysis_status["message"] = "Image analysis failed to detect the right cell(s) number: restart the analysis."
-                analysis_status['continue'] = False
+                self.status['message'] = "Image analysis failed to detect the right cell(s) number: restart the analysis."
+                self.status['continue'] = False
             elif y_lim is None:
-                analysis_status["message"] = "The shapes detected in the image did not allow automatic arena delineation."
-                analysis_status['continue'] = False
+                self.status['message'] = "The shapes detected in the image did not allow automatic arena delineation."
+                self.status['continue'] = False
             elif (y_lim == - 1).sum() != (y_lim == 1).sum():
-                analysis_status["message"] = "Automatic arena delineation cannot work if one cell touches the image border."
+                self.status['message'] = "Automatic arena delineation cannot work if one cell touches the image border."
                 self.parent().po.first_image.y_boundaries = None
-                analysis_status['continue'] = False
-        if analysis_status['continue']:
+                self.status['continue'] = False
+        if self.status['continue']:
             self.parent().po.save_first_image()
             self.parent().po.save_masks()
             logging.info("Start automatic video delineation")
-            analysis_status = self.parent().po.delineate_each_arena()
+            self.status = self.parent().po.delineate_each_arena()
         else:
             self.parent().po.first_image.validated_shapes = np.zeros(self.parent().po.first_image.image.shape[:2], dtype=np.uint8)
-            logging.info(analysis_status["message"])
-        self.message_when_thread_finished.emit(analysis_status)
+            logging.info(self.status['message'])
+        self.message_when_thread_finished.emit(self.status)
 
 
 class SaveManualDelineationThread(QtCore.QThread):
@@ -841,13 +841,13 @@ class SaveAllVarsThread(QtCore.QThread):
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
 
 
-class OneArenaThread(QtCore.QThread):
+class VideoTrackingThread(QtCore.QThread):
     """
-    Thread for completing the analysis of one particular arena in the current folder.
+    Thread for processing the complete motion analysis.
 
     Signals
     -------
-    message_from_thread_starting : Signal(str)
+    message_from_thread : Signal(str)
         Signal emitted when the thread successfully starts.
     image_from_thread : Signal(dict)
         Signal emitted during the video reading or analysis to display images of the current status to the GUI.
@@ -860,24 +860,129 @@ class OneArenaThread(QtCore.QThread):
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
-    message_from_thread_starting = QtCore.Signal(str)
+    message_from_thread = QtCore.Signal(str)
     image_from_thread = QtCore.Signal(dict)
     when_loading_finished = QtCore.Signal(bool)
     when_detection_finished = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         """
-        Initialize the worker thread for saving the analyzing one arena entirely
+        Initialize the worker thread
 
         Parameters
         ----------
         parent : QObject, optional
             The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
         """
-        super(OneArenaThread, self).__init__(parent)
+        super(VideoTrackingThread, self).__init__(parent)
         self.setParent(parent)
+        self.status = {"continue": True, "folder": "", "message": ""}
 
     def run(self):
+        self.status = {"continue": True, "folder": "", "message": ""}
+        if self.parent().videoanalysiswindow.video_task == 'all':
+            self.run_all()
+        elif self.parent().videoanalysiswindow.video_task == 'one_arena':
+            self.run_one_arena()
+        elif self.parent().videoanalysiswindow.video_task == 'change_one_arena_result':
+            self.change_one_arena_result()
+
+    def run_all(self):
+        """
+        Run the analysis process for video writing and motion analysis.
+
+        This method manages the overall flow of the analysis including setting up
+        folders, loading data, writing videos from images, and performing motion
+        analysis. It handles various conditions like checking if the specimen number
+        matches expectations or if multiple experiments are ready to run.
+
+        Returns
+        -------
+        dict
+            A dictionary containing:
+            - 'continue': bool indicating if the analysis should continue.
+            - 'message': str with a relevant message about the current status.
+        Notes
+        -----
+        This method uses several internal methods like `set_current_folder`,
+        `run_video_writing`, and `run_motion_analysis` to perform the analysis steps.
+        It also checks various conditions based on parent object attributes.
+        """
+        self.parent().po.all['compute_all_options'] = False
+        self.parent().po.load_quick_full = 2
+        self.set_current_folder(0)
+        if self.parent().po.first_exp_ready_to_run:
+            self.message_from_thread.emit(self.status["folder"] + ": Write videos...")
+            if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(
+                    self.parent().po.bot):
+                self.status["continue"] = False
+                self.status["message"] = f"Wrong specimen number: restart the image analysis."
+            else:
+                self.run_video_writing()
+                if self.status['continue']:
+                    self.message_from_thread.emit(self.status["folder"] + ": Analyse all videos...")
+                    self.run_motion_analysis()
+                    if self.isInterruptionRequested():
+                        self.status['message'] = f"Was waiting for thread interruption"
+                        self.status['continue'] = False
+                        return
+                if self.status['continue']:
+                    if self.parent().po.all['folder_number'] > 1:
+                        self.parent().po.all['folder_list'] = self.parent().po.all['folder_list'][1:]
+                        self.parent().po.all['sample_number_per_folder'] = self.parent().po.all[
+                            'sample_number_per_folder'][1:]
+        else:
+            self.parent().po.look_for_data()
+
+        if self.status['continue'] and (
+                not self.parent().po.first_exp_ready_to_run or self.parent().po.all['folder_number'] > 1):
+            folder_number = np.max((len(self.parent().po.all['folder_list']), 1))
+
+            for exp_i in np.arange(folder_number):
+                if len(self.parent().po.all['folder_list']) > 0:
+                    logging.info(self.parent().po.all['folder_list'][exp_i])
+                self.parent().po.first_im = None
+                self.parent().po.first_image = None
+                self.parent().po.last_im = None
+                self.parent().po.last_image = None
+                self.parent().po.top = None
+
+                message = self.set_current_folder(exp_i)
+                self.message_from_thread.emit(f'{message}, pre-processing...')
+                self.parent().po.load_data_to_run_cellects_quickly()
+                if not self.parent().po.first_exp_ready_to_run:
+                    self.pre_processing()
+                if self.status['continue']:
+                    self.message_from_thread.emit(message + ": Write videos from images before analysis...")
+                    if not self.parent().po.vars[
+                        'several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
+                        self.message_from_thread.emit(f"Wrong specimen number: first image analysis is mandatory.")
+                        self.status['continue'] = False
+                        self.status['message'] = f"Wrong specimen number: first image analysis is mandatory."
+                    else:
+                        self.run_video_writing(message)
+                        if self.status['continue']:
+                            self.message_from_thread.emit(message + ": Starting analysis...")
+                            self.run_motion_analysis(message)
+                            if self.isInterruptionRequested():
+                                self.status['message'] = f"Was waiting for thread interruption"
+                                self.status['continue'] = False
+                                return
+
+                if not self.status['continue']:
+                    break
+        if self.status['continue']:
+            if self.parent().po.all['folder_number'] > 1:
+                self.message_from_thread.emit(
+                    f"Exp {self.parent().po.all['folder_list'][0]} to {self.parent().po.all['folder_list'][-1]} analyzed.")
+            else:
+                curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
+                self.message_from_thread.emit(f'Exp {curr_path}, analyzed.')
+        else:
+            logging.error(message + " " + self.status['message'])
+            self.message_from_thread.emit(message + " " + self.status['message'])
+
+    def run_one_arena(self):
         """
 
         Run analysis on one arena.
@@ -904,45 +1009,43 @@ class OneArenaThread(QtCore.QThread):
         self.parent().po.load_quick_full : int
             Number of arenas to load quickly for full detection.
         """
-        analysis_status = {"continue": True, "message": ""}
-        self.message_from_thread_starting.emit("Video loading, wait...")
 
-        self.set_current_folder()
+        self.message_from_thread.emit("Video loading, wait...")
         if not self.parent().po.first_exp_ready_to_run:
             self.parent().po.load_data_to_run_cellects_quickly()
             if not self.parent().po.first_exp_ready_to_run:
                 #Need a look for data when cellects_settings.json and 1 folder selected amon several
-                analysis_status = self.pre_processing()
+                self.pre_processing()
         if self.isInterruptionRequested():
-            analysis_status["message"] = f"Was waiting for thread interruption"
-            analysis_status["continue"] = False
-        if analysis_status['continue']:
+            self.status['message'] = f"Was waiting for thread interruption"
+            self.status['continue'] = False
+        if self.status['continue']:
             memory_diff = self.parent().po.update_available_core_nb()
             if self.parent().po.cores == 0:
-                analysis_status["message"] = f"Analyzing one arena requires {memory_diff}GB of additional RAM to run"
-                analysis_status["continue"] = False
+                self.status['message'] = f"Analyzing one arena requires {memory_diff}GB of additional RAM to run"
+                self.status['continue'] = False
             else:
                 if self.parent().po.motion is None or self.parent().po.load_quick_full == 0:
-                    analysis_status = self.load_one_arena()
-                if analysis_status["continue"] and self.parent().po.load_quick_full > 0:
+                    self.load_one_arena()
+                if self.status['continue'] and self.parent().po.load_quick_full > 0:
                     if self.parent().po.motion.start is not None:
                         logging.info("One arena detection has started")
-                        analysis_status = self.one_detection()
-                        if analysis_status["continue"]:
+                        self.one_detection()
+                        if self.status['continue']:
                             if self.parent().po.load_quick_full > 1:
                                 logging.info("One arena post-processing has started")
-                                analysis_status = self.post_processing()
+                                self.post_processing()
                             else:
                                 self.when_detection_finished.emit("Detection done, read to see the result")
                     else:
-                        analysis_status["message"] = f"The current parameters failed to detect the cell(s) motion"
-                        analysis_status["continue"] = False
+                        self.status['message'] = f"The current parameters failed to detect the cell(s) motion"
+                        self.status['continue'] = False
 
-        if not analysis_status["continue"]:
-            self.message_from_thread_starting.emit(analysis_status["message"])
-            logging.error(analysis_status['message'])
+        if not self.status['continue']:
+            self.message_from_thread.emit(self.status['message'])
+            logging.error(self.status['message'])
 
-    def set_current_folder(self):
+    def set_current_folder(self, exp_i: int=1):
         """
 
         Sets the current folder based on conditions.
@@ -952,22 +1055,22 @@ class OneArenaThread(QtCore.QThread):
         from the list; otherwise, it uses a reduced global pathway as the current.
         """
         if self.parent().po.all['folder_number'] > 1:
-            logging.info(f"Use {self.parent().po.all['folder_list'][0]} folder")
-            self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][0],
-                                              self.parent().po.all['folder_list'][0])
+            logging.info(f"Use {self.parent().po.all['folder_list'][exp_i]} folder")
+            self.status["folder"] = f"{str(self.parent().po.all['global_pathway'])[:6]} ... {self.parent().po.all['folder_list'][exp_i]}"
+            self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][exp_i],
+                                              self.parent().po.all['folder_list'][exp_i])
         else:
-            curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
-            logging.info(f"Use {curr_path} folder")
+            self.status["folder"] = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
+            logging.info(f"Use {self.status["folder"]} folder")
             self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
 
     def pre_processing(self):
         """
-        Pre-processes the data for running Cellects on one arena.
+        Pre-processes the video data for further analysis.
 
-        This function logs various stages of preprocessing, validates specimen numbers,
-        performs necessary segmentations and data saving operations. It handles the
-        initialization, image analysis, and background extraction processes to prepare
-        the folder for further analysis.
+        This method performs several preprocessing steps for the video tracking, including
+        image segmentation, validating specimen numbers, cropping, background subtraction, and origin detection.
+        It also handles errors related to image analysis and manual delineation.
 
         Returns
         -------
@@ -975,40 +1078,373 @@ class OneArenaThread(QtCore.QThread):
             Returns True if pre-processing completed successfully; False otherwise.
         """
         logging.info("Pre-processing has started")
-        analysis_status = {"continue": True, "message": ""}
 
-        self.parent().po.get_first_image()
-        self.parent().po.fast_first_image_segmentation()
-        if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
-            analysis_status["message"] = f"Wrong specimen number: (re)do the complete analysis."
-            analysis_status["continue"] = False
+        if len(self.parent().po.data_list) > 0:
+            self.parent().po.get_first_image()
+            self.parent().po.load_masks()
+            self.parent().po.fast_first_image_segmentation()
+            if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
+                self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
+                self.status['continue'] = False
+            else:
+                self.parent().po.cropping(is_first_image=True)
+                self.parent().po.get_average_pixel_size()
+                status = self.parent().po.delineate_each_arena()
+                self.status['message'] = status['message']
+                self.status['continue'] = status['continue']
+
+                if self.status['continue']:
+                    self.parent().po.save_exif()
+                    self.parent().po.save_data_to_run_cellects_quickly()
+                    self.parent().po.get_background_to_subtract()
+                    if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
+                        self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
+                        self.status['continue'] = False
+                    elif self.parent().po.top is None and self.parent().videoanalysiswindow.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
+                        self.status['message'] = f"Auto video delineation failed, use manual delineation tool"
+                        self.status['continue'] = False
+                    else:
+                        self.parent().po.save_origins_and_backgrounds_lists()
+                        self.parent().po.get_last_image()
+                        self.parent().po.fast_last_image_segmentation()
+                        self.parent().po.find_if_lighter_backgnp.round()
+                        logging.info("The current (or the first) folder is ready to run")
+                        self.parent().po.first_exp_ready_to_run = True
         else:
-            self.parent().po.cropping(is_first_image=True)
-            self.parent().po.get_average_pixel_size()
-            analysis_status = self.parent().po.delineate_each_arena()
-            if analysis_status["continue"]:
-                self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.get_background_to_subtract()
-                if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                    analysis_status["message"] = f"Wrong specimen number: (re)do the complete analysis."
-                    analysis_status["continue"] = False
+            self.status['message'] = f"Wrong folder or parameters"
+            self.status['continue'] = False
+        return
+
+    def run_video_writing(self):
+        """
+        Initiate the process of writing videos from image data.
+
+        Raises
+        ------
+        FileNotFoundError
+            If an image file specified in `data_list` does not exist.
+        OSError
+            If there is an issue writing to disk, such as when the disk is full.
+
+        Notes
+        -----
+        This function manages video writing in batches, checking available memory
+        and handling errors related to file sizes or missing images
+        """
+        do_write_videos = video_writing_decision(len(self.parent().po.vars['analyzed_individuals']),
+                                                 self.parent().po.all['im_or_vid'],
+                                                 self.parent().po.all['overwrite_unaltered_videos'])
+        if do_write_videos:
+            logging.info(f"Starting video writing")
+            in_colors = not self.parent().po.vars['already_greyscale']
+            self.parent().po.first_image.shape_number = self.parent().po.sample_number
+            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = self.parent().po.prepare_video_writing(
+                self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
+            if self.status['continue']:
+                # Check that there is enough available RAM for one video par bunch and ROM for all videos
+                if video_nb_per_bunch > 0 and rom_memory_required is None:
+                    pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
+                    pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
+                    arena_percentage = 0
+                    for bunch in np.arange(bunch_nb):
+                        # Update the labels of arenas and the video_bunch to write
+                        if bunch == (bunch_nb - 1) and remaining > 0:
+                            arena = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
+                        else:
+                            arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
+                        if use_list_of_vid:
+                            video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
+                        else:
+                            video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
+                        prev_img = None
+                        images_done = bunch * self.parent().po.vars['img_number']
+                        for image_i, image_name in enumerate(self.parent().po.data_list):
+                            image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
+                            self.message_from_thread.emit(
+                                self.status['folder'] + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
+                            if not os.path.exists(image_name):
+                                raise FileNotFoundError(image_name)
+                            img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'],
+                                                  is_landscape, self.parent().po.first_image.crop_coord)
+                            prev_img = img.copy()
+                            if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
+                                img = img[:, :, 0]
+
+                            for arena_i, arena_name in enumerate(arena):
+                                try:
+                                    sub_img = img[self.parent().po.top[arena_name]: self.parent().po.bot[arena_name],
+                                    self.parent().po.left[arena_name]: self.parent().po.right[arena_name], ...]
+                                    if use_list_of_vid:
+                                        video_bunch[arena_i][image_i, ...] = sub_img
+                                    else:
+                                        if len(video_bunch.shape) == 5:
+                                            video_bunch[image_i, :, :, :, arena_i] = sub_img
+                                        else:
+                                            video_bunch[image_i, :, :, arena_i] = sub_img
+                                except ValueError:
+                                    analysis_status[
+                                        "message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
+                                    self.status['continue'] = False
+                                    logging.info(f"Reset all settings in advanced parameters")
+                                if self.isInterruptionRequested():
+                                    self.status['message'] = f"Was waiting for thread interruption"
+                                    self.status['continue'] = False
+                                if not self.status['continue']:
+                                    return
+                        if self.status['continue']:
+                            for arena_i, arena_name in enumerate(arena):
+                                try:
+                                    arena_percentage, eta = pat_tracker2.get_progress()
+                                    self.message_from_thread.emit(
+                                        self.status['folder'] + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")  # , ETA {remaining_time}
+                                    if use_list_of_vid:
+                                        write_h5(vid_names[arena_name], video_bunch[arena_i], 'video')
+                                    else:
+                                        if len(video_bunch.shape) == 5:
+                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, :, arena_i], 'video')
+                                        else:
+                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
+                                except OSError:
+                                    self.status['message'] = self.status['folder'] + f"full disk memory, clear space and retry"
+                                    self.status['continue'] = False
+                                    self.message_from_thread.emit()
+                                if self.isInterruptionRequested():
+                                    self.status['message'] = f"Was waiting for thread interruption"
+                                    self.status['continue'] = False
+                                if not self.status['continue']:
+                                    return
+                        del video_bunch
+                        logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
+                    logging.info("When they exist, do not overwrite unaltered video")
+                    self.parent().po.all['overwrite_unaltered_videos'] = False
+                    self.parent().po.save_variable_dict()
+                    self.parent().po.save_data_to_run_cellects_quickly()
+                    if self.status['continue']:
+                        self.status['message'] = f"Video writing complete."
+                    return
                 else:
-                    self.parent().po.save_origins_and_backgrounds_lists()
-                    self.parent().po.get_last_image()
-                    self.parent().po.fast_last_image_segmentation()
-                    self.parent().po.find_if_lighter_backgnp.round()
-                    logging.info("The current (or the first) folder is ready to run")
-                    self.parent().po.first_exp_ready_to_run = True
-        return analysis_status
+                    self.status['continue'] = False
+                    if video_nb_per_bunch == 0:
+                        memory_diff = self.parent().po.update_available_core_nb()
+                        ram_message = f"{memory_diff}GB of additional RAM"
+                    if rom_memory_required is not None:
+                        rom_message = f"at least {rom_memory_required}GB of free ROM"
+
+                    if video_nb_per_bunch == 0 and rom_memory_required is not None:
+                        self.status['message'] = f"Requires {ram_message} and {rom_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} and {rom_message} to run")
+                    elif video_nb_per_bunch == 0:
+                        self.status['message'] = f"Requires {ram_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} to run")
+                    elif rom_memory_required is not None:
+                        self.status['message'] = f"Requires {rom_message} to run"
+                        # self.message_from_thread.emit(f"Analyzing {message} requires {rom_message} to run")
+                    logging.info(f"Cellects is not writing videos: insufficient memory")
+                    return
+            else:
+                return
+
+
+        else:
+            logging.info(f"Cellects is not writing videos: unnecessary")
+            self.status['message'] = f"Cellects is not writing videos: unnecessary"
+            return
+
+    def run_motion_analysis(self):
+        """
+        Run motion analysis on analyzed individuals with optional multiprocessing.
+
+        This method processes video frames to analyze motion attributes of individuals.
+        It can operate in either sequential or parallel mode based on available system
+        resources and configuration settings. Analysis results are saved in multiple
+        output formats.
+
+        Raises
+        ------
+        MemoryError
+            If there is insufficient memory to perform the analysis in parallel.
+
+        Notes
+        -----
+        Sequential mode is used when multiprocessing is disabled or only one core
+        is available. Parallel mode utilizes multiple CPU cores for faster processing.
+        """
+        logging.info(f"Starting motion analysis with the detection method n°{self.parent().po.all['video_option']}")
+        self.parent().po.instantiate_tables()
+        try:
+            memory_diff = self.parent().po.update_available_core_nb()
+            if self.parent().po.cores > 0:  # i.e. enough memory
+                if not self.parent().po.all['do_multiprocessing'] or self.parent().po.cores == 1:
+                    self.status['message'] = f"Step 2/2:  Starting sequential analysis of all arenas"
+                    self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
+                    logging.info(f"{self.status['folder']}, {self.status['message'] }")
+                    tiii = default_timer()
+                    arena_nb = len(self.parent().po.vars['analyzed_individuals'])
+                    pat_tracker = PercentAndTimeTracker(arena_nb)
+                    for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
+                        l = [i, arena, self.parent().po.vars, False, False, False, None]
+                        self.parent().po.motion = MotionAnalysis(l)
+                        if self.isInterruptionRequested():
+                            return
+                        self.parent().po.motion.assess_motion_detection()
+                        if self.isInterruptionRequested():
+                            return
+                        if self.parent().po.motion.start is not None:
+                            self.parent().po.motion.detection()
+                            if self.isInterruptionRequested():
+                                return
+                            self.parent().po.motion.initialize_post_processing()
+                            if self.isInterruptionRequested():
+                                return
+                            self.parent().po.motion.t = self.parent().po.motion.start
+                            current_percentage, eta = pat_tracker.get_progress()
+                            while not self.isInterruptionRequested() and self.parent().po.motion.t < self.parent().po.motion.dims[0]:  #200:
+                                self.parent().po.motion.update_shape(False)
+                                t = self.parent().po.motion.t - 1
+                                contours = np.nonzero(get_contours(self.parent().po.motion.binary[t, ...]))
+                                if self.parent().po.motion.visu is not None:
+                                    im_to_display = self.parent().po.motion.visu[t, ...].copy()
+                                    if self.parent().po.motion.vars['lighter_background']:
+                                        im_to_display[contours[0], contours[1], ...] = 0
+                                    else:
+                                        im_to_display[contours[0], contours[1], ...] = 255
+                                else:
+                                    im_to_display = self.parent().po.motion.binary[t, :, :] * 255
+                                self.image_from_thread.emit({"current_image": im_to_display,
+                                                             "message": f"{self.status['folder']} Step 2/2: arena {arena} / {arena_nb} ({current_percentage}%{eta}): frame {self.parent().po.motion.t}/{self.parent().po.motion.dims[0]}"})
+
+                            do_continue = self.analyze_post_processing_results()
+                            if do_continue:
+                                self.parent().po.motion.save_results()
+                                if not self.parent().po.vars['several_blob_per_arena']:
+                                    # Save basic statistics
+                                    self.parent().po.update_one_row_per_arena(i, self.parent().po.motion.one_descriptor_per_arena)
+
+                                    # Save descriptors in long_format
+                                    self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'],
+                                                                              arena * self.parent().po.vars['img_number'],
+                                                                              self.parent().po.motion.one_row_per_frame)
+
+                                # Save efficiency visualization
+                                self.parent().po.add_analysis_visualization_to_first_and_last_images(i,
+                                                                                                     self.parent().po.motion.efficiency_test_1,
+                                                                                                     self.parent().po.motion.efficiency_test_2)
+                                # Emit message to the interface
+                                if self.isInterruptionRequested():
+                                    return
+                                self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
+                                                             "message": f"{self.status['folder']} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
+                        self.parent().po.motion = None
+
+                    self.status['message'] = f"Sequential analysis lasted {(default_timer() - tiii) / 60} minutes"
+                else:
+                    self.status['message'] = f"Step 2/2:  Analyse all videos using {self.parent().po.cores} cores..."
+                    self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message'] }")
+                    logging.info(f"{self.status['folder']}, {self.status['message'] }")
+
+                    tiii = default_timer()
+                    arena_number = len(self.parent().po.vars['analyzed_individuals'])
+                    self.advance = 0
+                    self.pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']),
+                                                             core_number=self.parent().po.cores)
+
+                    fair_core_workload = arena_number // self.parent().po.cores
+                    cores_with_1_more = arena_number % self.parent().po.cores
+                    EXTENTS_OF_SUBRANGES = []
+                    bound: int = 0
+                    parallel_organization = [fair_core_workload + 1 for _ in range(int(cores_with_1_more))] + [
+                        fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
+                    # Emit message to the interface
+                    self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
+                                                 "message": f"{self.status['folder']} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
+                    for i, extent_size in enumerate(parallel_organization):
+                        EXTENTS_OF_SUBRANGES.append((bound, bound := bound + extent_size))
+
+                    try:
+                        PROCESSES = []
+                        subtotals = Manager().Queue()  # Queue()
+                        started_processes: int = 0
+                        for extent in EXTENTS_OF_SUBRANGES:
+                            if self.isInterruptionRequested():
+                                break
+                            p = Process(target=motion_analysis_process,
+                                        args=(int(extent[0]), int(extent[1]), self.parent().po.vars, subtotals))
+                            p.start()
+                            PROCESSES.append(p)
+                            started_processes += 1
+
+                        finished_processes: int = 0
+                        while finished_processes < started_processes:
+                            if self.isInterruptionRequested():
+                                for p in PROCESSES:
+                                    if p.is_alive():
+                                        p.terminate()
+                                for p in PROCESSES:
+                                    p.join(timeout=1)
+                                self.status['message'] = f"Was waiting for thread interruption"
+                                self.status['continue'] = False
+                                return
+
+                            for p in PROCESSES:
+                                if hasattr(p, "_counted"):
+                                    continue
+                                if not p.is_alive():
+                                    p.join(timeout=0)
+                                    p._counted = True
+                                    finished_processes += 1
+                            self.msleep(50)
+                        self.message_from_thread.emit(f"{self.status['folder']}, Step 2/2:  Saving all results...")
+                        for _ in range(finished_processes):
+                            grouped_results = subtotals.get()
+                            for j, results_i in enumerate(grouped_results):
+                                if not self.parent().po.vars['several_blob_per_arena']:
+                                    # Save basic statistics
+                                    self.parent().po.update_one_row_per_arena(results_i['i'],
+                                                                              results_i['one_row_per_arena'])
+                                    # Save descriptors in long_format
+                                    self.parent().po.update_one_row_per_frame(
+                                        results_i['i'] * self.parent().po.vars['img_number'],
+                                        (results_i['i'] + 1) * self.parent().po.vars['img_number'],
+                                        results_i['one_row_per_frame'])
+
+                                self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'],
+                                                                                                     results_i[
+                                                                                                         'efficiency_test_1'],
+                                                                                                     results_i[
+                                                                                                         'efficiency_test_2'])
+                            del grouped_results
+                        del subtotals
+                        self.image_from_thread.emit(
+                            {"current_image": self.parent().po.last_image.bgr,
+                             "message": f"{self.status['folder']} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
+
+                        logging.info(f"Parallel analysis lasted {(default_timer() - tiii) / 60} minutes")
+                    except MemoryError:
+                        self.status['continue'] = False
+                        self.status['message'] = f"Not enough memory, reduce the core number for parallel analysis"
+                        self.message_from_thread.emit(
+                            f"Analyzing {self.status['folder']} requires to reduce the core number for parallel analysis")
+                        return
+                self.parent().po.save_tables()
+            else:
+                self.status['continue'] = False
+                self.status['message'] = f"Requires an additional {memory_diff}GB of RAM to run"
+                self.message_from_thread.emit(
+                    f"Analyzing {self.status['folder']} requires an additional {memory_diff}GB of RAM to run")
+        except MemoryError:
+            self.status['continue'] = False
+            self.status['message'] = f"Requires additional memory to run"
+            self.message_from_thread.emit(f"Analyzing {self.status['folder']} requires additional memory to run")
 
     def load_one_arena(self):
         """
         Load a single arena from images or video to perform motion analysis.
         """
-        analysis_status = {"continue": True, "message": ""}
         if self.parent().po.first_im is None:
-            analysis_status = self.pre_processing()
-        if analysis_status["continue"]:
+            self.pre_processing()
+        if not 'lighter_background' in self.parent().po.vars.keys():
+            self.parent().po.find_if_lighter_background()
+        if self.status['continue']:
             arena = self.parent().po.all['arena']
             i = np.nonzero(np.array(self.parent().po.vars['analyzed_individuals']) == arena)[0][0]
             true_frame_width = self.parent().po.right[i] - self.parent().po.left[i]
@@ -1053,9 +1489,9 @@ class OneArenaThread(QtCore.QThread):
                     else:
                         self.parent().po.visu[image_i, ...] = img
                     if self.isInterruptionRequested():
-                        analysis_status["message"] = f"Was waiting for thread interruption"
-                        analysis_status["continue"] = False
-                        return analysis_status
+                        self.status['message'] = f"Was waiting for thread interruption"
+                        self.status['continue'] = False
+                        return
                 if not self.parent().po.vars['already_greyscale']:
                     msg = "Video conversion"
                     if background is not None :
@@ -1091,9 +1527,9 @@ class OneArenaThread(QtCore.QThread):
                 if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                     self.parent().po.converted_video2 = self.parent().po.motion.converted_video2.copy()
             if self.isInterruptionRequested():
-                analysis_status["message"] = f"Was waiting for thread interruption"
-                analysis_status["continue"] = False
-                return analysis_status
+                self.status['message'] = f"Was waiting for thread interruption"
+                self.status['continue'] = False
+                return
             self.parent().po.motion.assess_motion_detection()
             self.when_loading_finished.emit(save_loaded_video)
 
@@ -1102,7 +1538,6 @@ class OneArenaThread(QtCore.QThread):
                 if len(visu.shape) == 3:
                     visu = np.stack((visu, visu, visu), axis=3)
                 self.parent().po.motion.visu = visu
-        return analysis_status
 
     def one_detection(self):
         """
@@ -1112,11 +1547,10 @@ class OneArenaThread(QtCore.QThread):
         parameters accordingly. It handles duplicate video conversion based on certain logical conditions and computes
         video options.
         """
-        analysis_status = {"continue": True, "message": ""}
         if self.parent().po.motion is None:
-            analysis_status = self.load_one_arena()
-        if analysis_status["continue"]:
-            self.message_from_thread_starting.emit(f"Quick video segmentation")
+            self.load_one_arena()
+        if self.status['continue']:
+            self.message_from_thread.emit(f"Quick video segmentation")
             self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                 self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
@@ -1126,7 +1560,6 @@ class OneArenaThread(QtCore.QThread):
             else:
                 self.parent().po.computed_video_options = np.zeros(5, bool)
                 self.parent().po.computed_video_options[self.parent().po.all['video_option']] = True
-        return analysis_status
 
     def post_processing(self):
         """
@@ -1148,8 +1581,6 @@ class OneArenaThread(QtCore.QThread):
 
         Attributes
         ----------
-        self.parent().po.motion.smoothed_video : NoneType
-            A placeholder for the smoothed video data.
         self.parent().po.vars['already_greyscale'] : bool
             Indicates if the video is already in greyscale format.
         self.parent().po.vars['convert_for_motion']['logical'] : str
@@ -1168,8 +1599,6 @@ class OneArenaThread(QtCore.QThread):
             Indicates if all options should be computed.
         self.parent().po.all['video_option'] : int
             The current video option to be processed.
-        self.parent().po.newly_explored_area : ndarray
-            The area newly explored during motion detection.
         self.parent().po.motion.start : int
             The start frame for motion analysis.
         self.parent().po.motion.step : int
@@ -1194,8 +1623,6 @@ class OneArenaThread(QtCore.QThread):
             The mask used for different segmentation options.
 
         """
-        analysis_status = {"continue": True, "message": ""}
-        self.parent().po.motion.smoothed_video = None
         if self.parent().po.vars['color_number'] > 2:
             analyses_to_compute = [0]
         else:
@@ -1209,8 +1636,6 @@ class OneArenaThread(QtCore.QThread):
 
         args = [self.parent().po.all['arena'] - 1, self.parent().po.all['arena'], self.parent().po.vars,
                 False, False, False, self.videos_in_ram]
-        if self.parent().po.vars['specimen_activity'] == 'move and grow':
-            self.parent().po.newly_explored_area = np.zeros((self.parent().po.motion.dims[0], 5), np.int64)
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
@@ -1230,13 +1655,13 @@ class OneArenaThread(QtCore.QThread):
             else:
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     if self.parent().po.motion is None:
-                        analysis_status = self.load_one_arena()
-                    if analysis_status['continue']:
+                        self.load_one_arena()
+                    if self.status['continue']:
                         if self.parent().po.motion.segmented is None:
-                            analysis_status = self.one_detection()
-                        if analysis_status['continue']:
+                            self.one_detection()
+                        if self.status['continue']:
                             analysis_i.segmented = self.parent().po.motion.segmented
-            if analysis_status['continue']:
+            if self.status['continue']:
                 analysis_i.start = time_parameters[0]
                 analysis_i.step = time_parameters[1]
                 analysis_i.lost_frames = time_parameters[2]
@@ -1254,17 +1679,17 @@ class OneArenaThread(QtCore.QThread):
                         {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
                          "current_image": current_image})
                 if self.isInterruptionRequested():
-                    analysis_status["message"] = f"Was waiting for thread interruption"
-                    analysis_status["continue"] = False
+                    self.status['message'] = f"Was waiting for thread interruption"
+                    self.status['continue'] = False
                     break
                 if analysis_i.start is None:
                     analysis_i.binary = np.repeat(np.expand_dims(analysis_i.origin, 0),
                                                analysis_i.converted_video.shape[0], axis=0)
                     if self.parent().po.vars['color_number'] > 2:
-                        self.message_from_thread_starting.emit(
+                        self.message_from_thread.emit(
                             f"Failed to detect motion. Redo image analysis (with only 2 colors?)")
                     else:
-                        self.message_from_thread_starting.emit(f"Tracking option n°{seg_i + 1} failed to detect motion")
+                        self.message_from_thread.emit(f"Tracking option n°{seg_i + 1} failed to detect motion")
 
                 if self.parent().po.all['compute_all_options']:
                     if seg_i == 0:
@@ -1280,7 +1705,80 @@ class OneArenaThread(QtCore.QThread):
                 else:
                     self.parent().po.motion.segmented = analysis_i.binary
         self.when_detection_finished.emit("Post processing done, read to see the result")
-        return analysis_status
+
+    def change_one_arena_result(self):
+        """
+        Modify the motion and results of an arena.
+
+        Extended Description
+        --------------------
+        This method performs various operations on the motion data of an arena,
+        including binary mask creation, descriptor computation, and transition
+        detection. It also handles optional computations like fading effects and
+        segmentation based on different video options.
+        """
+        self.message_from_thread.emit(
+            f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
+        if self.parent().po.motion.start is None:
+            self.parent().po.motion.binary = np.repeat(np.expand_dims(self.parent().po.motion.origin, 0),
+                                                     self.parent().po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
+        else:
+            if self.parent().po.all['compute_all_options']:
+                if self.parent().po.all['video_option'] == 0:
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
+                else:
+                    if self.parent().po.all['video_option'] == 1:
+                        mask = self.parent().po.motion.luminosity_segmentation
+                    elif self.parent().po.all['video_option'] == 2:
+                        mask = self.parent().po.motion.gradient_segmentation
+                    elif self.parent().po.all['video_option'] == 3:
+                        mask = self.parent().po.motion.logical_and
+                    elif self.parent().po.all['video_option'] == 4:
+                        mask = self.parent().po.motion.logical_or
+                    self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims, dtype=np.uint8)
+                    self.parent().po.motion.binary[mask[0], mask[1], mask[2]] = 1
+            else:
+                self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
+                if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
+                    self.parent().po.motion.binary = self.parent().po.motion.segmented
+        do_continue = self.analyze_post_processing_results()
+        if do_continue:
+            self.status['message'] = f"Arena n°{self.parent().po.all['arena']}: analysis finished."
+        else:
+            self.status['message'] = "Was waiting for thread interruption"
+        self.parent().po.motion.change_results_of_one_arena()
+        self.parent().po.motion = None
+        self.message_from_thread.emit(self.status['message'])
+
+    def analyze_post_processing_results(self) -> bool:
+        """
+        Analyze post-processing results for motion data by performing a sequence of operations if no interruption is requested.
+
+        Extended Description
+        --------------------
+        This method performs several post-processing steps on motion data, including descriptor extraction,
+        growth transition detection, network analysis, Oscillation study, fractal descriptions, and updating results.
+        Each step is conditional on the absence of an interruption request.
+        """
+        if self.isInterruptionRequested():
+            return False
+        self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
+        if self.isInterruptionRequested():
+            return False
+        self.parent().po.motion.detect_growth_transitions()
+        if self.isInterruptionRequested():
+            return False
+        self.parent().po.motion.networks_analysis(False)
+        if self.isInterruptionRequested():
+            return False
+        self.parent().po.motion.study_cytoscillations(False)
+        if self.isInterruptionRequested():
+            return False
+        self.parent().po.motion.fractal_descriptions()
+        if self.isInterruptionRequested():
+            return False
+        else:
+            return True
 
 
 class VideoReaderThread(QtCore.QThread):
@@ -1362,87 +1860,6 @@ class VideoReaderThread(QtCore.QThread):
         self.message_from_thread.emit({"current_image": current_image, "message": ""})#, "time": timings[t]
 
 
-class ChangeOneRepResultThread(QtCore.QThread):
-    """
-    Thread for modifying the results of one arena.
-
-    Signals
-    --------
-    message_from_thread : Signal(str)
-        Signal emitted when the result is changed.
-
-    Notes
-    -----
-    This class uses `QThread` to manage the process asynchronously.
-    """
-    message_from_thread = QtCore.Signal(str)
-
-    def __init__(self, parent=None):
-        """
-        Initialize the worker thread for changing the saved results in the current folder, for a particular arena
-
-        Parameters
-        ----------
-        parent : QObject, optional
-            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
-        """
-        super(ChangeOneRepResultThread, self).__init__(parent)
-        self.setParent(parent)
-
-    def run(self):
-        """
-        Modify the motion and results of an arena.
-
-        Extended Description
-        --------------------
-        This method performs various operations on the motion data of an arena,
-        including binary mask creation, descriptor computation, and transition
-        detection. It also handles optional computations like fading effects and
-        segmentation based on different video options.
-        """
-        self.message_from_thread.emit(
-            f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
-        if self.parent().po.motion.start is None:
-            self.parent().po.motion.binary = np.repeat(np.expand_dims(self.parent().po.motion.origin, 0),
-                                                     self.parent().po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
-        else:
-            if self.parent().po.all['compute_all_options']:
-                if self.parent().po.all['video_option'] == 0:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmented
-                else:
-                    if self.parent().po.all['video_option'] == 1:
-                        mask = self.parent().po.motion.luminosity_segmentation
-                    elif self.parent().po.all['video_option'] == 2:
-                        mask = self.parent().po.motion.gradient_segmentation
-                    elif self.parent().po.all['video_option'] == 3:
-                        mask = self.parent().po.motion.logical_and
-                    elif self.parent().po.all['video_option'] == 4:
-                        mask = self.parent().po.motion.logical_or
-                    self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims, dtype=np.uint8)
-                    self.parent().po.motion.binary[mask[0], mask[1], mask[2]] = 1
-            else:
-                self.parent().po.motion.binary = np.zeros(self.parent().po.motion.dims[:3], dtype=np.uint8)
-                if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
-                    self.parent().po.motion.binary = self.parent().po.motion.segmented
-
-        if self.parent().po.vars['specimen_activity'] == 'move and grow':
-            self.parent().po.motion.newly_explored_area = self.parent().po.newly_explored_area[:, self.parent().po.all['video_option']]
-        self.parent().po.motion.max_distance = 9 * self.parent().po.vars['detection_range_factor']
-        if not self.isInterruptionRequested():
-            self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
-            self.parent().po.motion.detect_growth_transitions()
-            if not self.isInterruptionRequested():
-                self.parent().po.motion.networks_analysis(False)
-                if not self.isInterruptionRequested():
-                    self.parent().po.motion.study_cytoscillations(False)
-                    if not self.isInterruptionRequested():
-                        self.parent().po.motion.fractal_descriptions()
-                        if not self.isInterruptionRequested():
-                            self.parent().po.motion.change_results_of_one_arena()
-                            self.parent().po.motion = None
-                            self.message_from_thread.emit(f"Arena n°{self.parent().po.all['arena']}: analysis finished.")
-
-
 class WriteVideoThread(QtCore.QThread):
     """
     Thread for writing one video per arena in the current folder.
@@ -1490,498 +1907,6 @@ class WriteVideoThread(QtCore.QThread):
             write_video(self.parent().po.visu, f'ind_{arena}.h5')
         else:
             write_video(self.parent().po.converted_video, f'ind_{arena}.h5', is_color=False)
-
-
-class RunAllThread(QtCore.QThread):
-    """
-    Thread for running the analysis on all arenas of the current folder.
-
-    Signals
-    --------
-    image_from_thread : Signal(str)
-        Signal emitted to send information to the user through the GUI
-    message_from_thread : Signal(str)
-        Signal emitted to send images showing the current status of the analysis to the GUI.
-
-    Notes
-    -----
-    This class uses `QThread` to manage the process asynchronously.
-    """
-    message_from_thread = QtCore.Signal(str)
-    image_from_thread = QtCore.Signal(dict)
-
-    def __init__(self, parent=None):
-        """
-        Initialize the worker thread for running a complete analysis on one folder or a folder containing several
-        folders.
-
-        Parameters
-        ----------
-        parent : QObject, optional
-            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
-        """
-        super(RunAllThread, self).__init__(parent)
-        self.setParent(parent)
-
-    def run(self):
-        """
-        Run the analysis process for video writing and motion analysis.
-
-        This method manages the overall flow of the analysis including setting up
-        folders, loading data, writing videos from images, and performing motion
-        analysis. It handles various conditions like checking if the specimen number
-        matches expectations or if multiple experiments are ready to run.
-
-        Returns
-        -------
-        dict
-            A dictionary containing:
-            - 'continue': bool indicating if the analysis should continue.
-            - 'message': str with a relevant message about the current status.
-        Notes
-        -----
-        This method uses several internal methods like `set_current_folder`,
-        `run_video_writing`, and `run_motion_analysis` to perform the analysis steps.
-        It also checks various conditions based on parent object attributes.
-        """
-        analysis_status = {"continue": True, "message": ""}
-        message = self.set_current_folder(0)
-        if self.parent().po.first_exp_ready_to_run:
-            self.message_from_thread.emit(message + ": Write videos...")
-            if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
-                analysis_status["continue"] = False
-                analysis_status["message"] = f"Wrong specimen number: redo the first image analysis."
-                self.message_from_thread.emit(f"Wrong specimen number: restart Cellects and do another analysis.")
-            else:
-                analysis_status = self.run_video_writing(message)
-                if analysis_status["continue"]:
-                    self.message_from_thread.emit(message + ": Analyse all videos...")
-                    analysis_status = self.run_motion_analysis(message)
-                if analysis_status["continue"]:
-                    if self.parent().po.all['folder_number'] > 1:
-                        self.parent().po.all['folder_list'] = self.parent().po.all['folder_list'][1:]
-                        self.parent().po.all['sample_number_per_folder'] = self.parent().po.all['sample_number_per_folder'][1:]
-        else:
-            self.parent().po.look_for_data()
-
-        if analysis_status["continue"] and (not self.parent().po.first_exp_ready_to_run or self.parent().po.all['folder_number'] > 1):
-            folder_number = np.max((len(self.parent().po.all['folder_list']), 1))
-
-            for exp_i in np.arange(folder_number):
-                if len(self.parent().po.all['folder_list']) > 0:
-                    logging.info(self.parent().po.all['folder_list'][exp_i])
-                self.parent().po.first_im = None
-                self.parent().po.first_image = None
-                self.parent().po.last_im = None
-                self.parent().po.last_image = None
-                self.parent().po.top = None
-
-                message = self.set_current_folder(exp_i)
-                self.message_from_thread.emit(f'{message}, pre-processing...')
-                self.parent().po.load_data_to_run_cellects_quickly()
-                if not self.parent().po.first_exp_ready_to_run:
-                    analysis_status = self.pre_processing()
-                if analysis_status["continue"]:
-                    self.message_from_thread.emit(message + ": Write videos from images before analysis...")
-                    if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
-                        self.message_from_thread.emit(f"Wrong specimen number: first image analysis is mandatory.")
-                        analysis_status["continue"] = False
-                        analysis_status["message"] = f"Wrong specimen number: first image analysis is mandatory."
-                    else:
-                        analysis_status = self.run_video_writing(message)
-                        if analysis_status["continue"]:
-                            self.message_from_thread.emit(message + ": Starting analysis...")
-                            analysis_status = self.run_motion_analysis(message)
-
-                if not analysis_status["continue"]:
-                    break
-        if analysis_status["continue"]:
-            if self.parent().po.all['folder_number'] > 1:
-                self.message_from_thread.emit(f"Exp {self.parent().po.all['folder_list'][0]} to {self.parent().po.all['folder_list'][-1]} analyzed.")
-            else:
-                curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
-                self.message_from_thread.emit(f'Exp {curr_path}, analyzed.')
-        else:
-            logging.error(message + " " + analysis_status["message"])
-            self.message_from_thread.emit(message + " " + analysis_status["message"])
-
-    def set_current_folder(self, exp_i):
-        if self.parent().po.all['folder_number'] > 1:
-            logging.info(f"Use {self.parent().po.all['folder_list'][exp_i]} folder")
-
-            message = f"{str(self.parent().po.all['global_pathway'])[:6]} ... {self.parent().po.all['folder_list'][exp_i]}"
-            self.parent().po.update_folder_id(self.parent().po.all['sample_number_per_folder'][exp_i],
-                                              self.parent().po.all['folder_list'][exp_i])
-        else:
-            message = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
-            logging.info(f"Use {message} folder")
-            self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'])
-        return message
-
-    def pre_processing(self) -> dict:
-        """
-        Pre-processes the video data for further analysis.
-
-        Extended Description
-        ---------------------
-        This method performs several preprocessing steps on the video data, including image segmentation,
-        cropping, background subtraction, and origin detection. It also handles errors related to image analysis
-        and manual delineation.
-
-        Returns
-        -------
-        dict
-            A dictionary containing `continue` (bool) and `message` (str). If analysis can continue, `continue`
-            is True; otherwise, it's False and a descriptive message is provided.
-
-        Raises
-        ------
-        **ValueError**
-            When the correct number of cells cannot be detected in the first image.
-
-        Notes
-        -----
-        * The method logs important preprocessing steps using `logging.info`.
-        * Assumes that parent object (`self.parent().po`) has methods and attributes required for preprocessing.
-        """
-        analysis_status = {"continue": True, "message": ""}
-        logging.info("Pre-processing has started")
-        if len(self.parent().po.data_list) > 0:
-            self.parent().po.get_first_image()
-            self.parent().po.load_masks()
-            self.parent().po.fast_first_image_segmentation()
-            self.parent().po.cropping(is_first_image=True)
-            self.parent().po.get_average_pixel_size()
-            try:
-                analysis_status = self.parent().po.delineate_each_arena()
-            except ValueError:
-                analysis_status[
-                    "message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
-                analysis_status["continue"] = False
-
-            if analysis_status["continue"]:
-                self.parent().po.save_exif()
-                self.parent().po.save_data_to_run_cellects_quickly()
-                self.parent().po.get_background_to_subtract()
-                if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                    analysis_status["message"] = f"Failed to detect the right cell(s) number: the first image analysis is mandatory."
-                    analysis_status["continue"] = False
-                elif self.parent().po.top is None and self.parent().imageanalysiswindow.manual_delineation_flag:
-                    analysis_status["message"] = f"Auto video delineation failed, use manual delineation tool"
-                    analysis_status["continue"] = False
-                else:
-                    self.parent().po.save_origins_and_backgrounds_lists()
-                    self.parent().po.get_last_image()
-                    self.parent().po.fast_last_image_segmentation()
-                    self.parent().po.find_if_lighter_background()
-            return analysis_status
-        else:
-            analysis_status["message"] = f"Wrong folder or parameters"
-            analysis_status["continue"] = False
-            return analysis_status
-
-    def run_video_writing(self, message: str) -> dict:
-        """
-        Initiate the process of writing videos from image data.
-
-        Parameters
-        ----------
-        message : str
-            A string to emit as a status update during video writing.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the analysis status with keys:
-            - "continue": bool indicating whether to continue video writing
-            - "message": str providing a status or error message
-
-        Raises
-        ------
-        FileNotFoundError
-            If an image file specified in `data_list` does not exist.
-        OSError
-            If there is an issue writing to disk, such as when the disk is full.
-
-        Notes
-        -----
-        This function manages video writing in batches, checking available memory
-        and handling errors related to file sizes or missing images
-        """
-        analysis_status = {"continue": True, "message": ""}
-        do_write_videos = video_writing_decision(len(self.parent().po.vars['analyzed_individuals']), self.parent().po.all['im_or_vid'],
-                               self.parent().po.all['overwrite_unaltered_videos'])
-        if do_write_videos:
-            logging.info(f"Starting video writing")
-            in_colors = not self.parent().po.vars['already_greyscale']
-            self.parent().po.first_image.shape_number = self.parent().po.sample_number
-            bunch_nb, video_nb_per_bunch, sizes, video_bunch, vid_names, rom_memory_required, analysis_status, remaining, use_list_of_vid, is_landscape = self.parent().po.prepare_video_writing(
-                self.parent().po.data_list, self.parent().po.vars['min_ram_free'], in_colors)
-            if analysis_status["continue"]:
-                # Check that there is enough available RAM for one video par bunch and ROM for all videos
-                if video_nb_per_bunch > 0 and rom_memory_required is None:
-                    pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
-                    pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-                    arena_percentage = 0
-                    for bunch in np.arange(bunch_nb):
-                        # Update the labels of arenas and the video_bunch to write
-                        if bunch == (bunch_nb - 1) and remaining > 0:
-                            arena = np.arange(bunch * video_nb_per_bunch, bunch * video_nb_per_bunch + remaining)
-                        else:
-                            arena = np.arange(bunch * video_nb_per_bunch, (bunch + 1) * video_nb_per_bunch)
-                        if use_list_of_vid:
-                            video_bunch = [np.zeros(sizes[i, :], dtype=np.uint8) for i in arena]
-                        else:
-                            video_bunch = np.zeros(np.append(sizes[0, :], len(arena)), dtype=np.uint8)
-                        prev_img = None
-                        images_done = bunch * self.parent().po.vars['img_number']
-                        for image_i, image_name in enumerate(self.parent().po.data_list):
-                            image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
-                            self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
-                            if not os.path.exists(image_name):
-                                raise FileNotFoundError(image_name)
-                            img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'], is_landscape, self.parent().po.first_image.crop_coord)
-                            prev_img = img.copy()
-                            if self.parent().po.vars['already_greyscale'] and self.parent().po.reduce_image_dim:
-                                img = img[:, :, 0]
-
-                            for arena_i, arena_name in enumerate(arena):
-                                try:
-                                    sub_img = img[self.parent().po.top[arena_name]: self.parent().po.bot[arena_name],
-                                              self.parent().po.left[arena_name]: self.parent().po.right[arena_name], ...]
-                                    if use_list_of_vid:
-                                        video_bunch[arena_i][image_i, ...] = sub_img
-                                    else:
-                                        if len(video_bunch.shape) == 5:
-                                            video_bunch[image_i, :, :, :, arena_i] = sub_img
-                                        else:
-                                            video_bunch[image_i, :, :, arena_i] = sub_img
-                                except ValueError:
-                                    analysis_status["message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
-                                    analysis_status["continue"] = False
-                                    logging.info(f"Reset all settings in advanced parameters")
-                                if self.isInterruptionRequested():
-                                    analysis_status["message"] = f"Was waiting for thread interruption"
-                                    analysis_status["continue"] = False
-                                if not analysis_status["continue"]:
-                                    return analysis_status
-                        if analysis_status["continue"]:
-                            for arena_i, arena_name in enumerate(arena):
-                                try:
-                                    arena_percentage, eta = pat_tracker2.get_progress()
-                                    self.message_from_thread.emit(message + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")# , ETA {remaining_time}
-                                    if use_list_of_vid:
-                                        write_h5(vid_names[arena_name], video_bunch[arena_i], 'video')
-                                    else:
-                                        if len(video_bunch.shape) == 5:
-                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, :, arena_i], 'video')
-                                        else:
-                                            write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
-                                except OSError:
-                                    analysis_status["message"] = message + f"full disk memory, clear space and retry"
-                                    analysis_status["continue"] = False
-                                    self.message_from_thread.emit()
-                                if self.isInterruptionRequested():
-                                    analysis_status["message"] = f"Was waiting for thread interruption"
-                                    analysis_status["continue"] = False
-                                if not analysis_status["continue"]:
-                                    return analysis_status
-                        del video_bunch
-                        logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
-                    logging.info("When they exist, do not overwrite unaltered video")
-                    self.parent().po.all['overwrite_unaltered_videos'] = False
-                    self.parent().po.save_variable_dict()
-                    self.parent().po.save_data_to_run_cellects_quickly()
-                    if analysis_status["continue"]:
-                        analysis_status["message"] = f"Video writing complete."
-                    return analysis_status
-                else:
-                    analysis_status["continue"] = False
-                    if video_nb_per_bunch == 0:
-                        memory_diff = self.parent().po.update_available_core_nb()
-                        ram_message = f"{memory_diff}GB of additional RAM"
-                    if rom_memory_required is not None:
-                        rom_message = f"at least {rom_memory_required}GB of free ROM"
-
-                    if video_nb_per_bunch == 0 and rom_memory_required is not None:
-                        analysis_status["message"] = f"Requires {ram_message} and {rom_message} to run"
-                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} and {rom_message} to run")
-                    elif video_nb_per_bunch == 0:
-                        analysis_status["message"] = f"Requires {ram_message} to run"
-                        # self.message_from_thread.emit(f"Analyzing {message} requires {ram_message} to run")
-                    elif rom_memory_required is not None:
-                        analysis_status["message"] = f"Requires {rom_message} to run"
-                        # self.message_from_thread.emit(f"Analyzing {message} requires {rom_message} to run")
-                    logging.info(f"Cellects is not writing videos: insufficient memory")
-                    return analysis_status
-            else:
-                return analysis_status
-
-
-        else:
-            logging.info(f"Cellects is not writing videos: unnecessary")
-            analysis_status["message"] = f"Cellects is not writing videos: unnecessary"
-            return analysis_status
-
-    def run_motion_analysis(self, message: str) -> dict:
-        """
-        Run motion analysis on analyzed individuals with optional multiprocessing.
-
-        This method processes video frames to analyze motion attributes of individuals.
-        It can operate in either sequential or parallel mode based on available system
-        resources and configuration settings. Analysis results are saved in multiple
-        output formats.
-
-        Parameters
-        ----------
-        message : str
-            A status message to be displayed during the analysis process.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the status of the motion analysis.
-
-        Raises
-        ------
-        MemoryError
-            If there is insufficient memory to perform the analysis in parallel.
-
-        Notes
-        -----
-        Sequential mode is used when multiprocessing is disabled or only one core
-        is available. Parallel mode utilizes multiple CPU cores for faster processing.
-        """
-        analysis_status = {"continue": True, "message": ""}
-        logging.info(f"Starting motion analysis with the detection method n°{self.parent().po.all['video_option']}")
-        self.parent().po.instantiate_tables()
-        try:
-            memory_diff = self.parent().po.update_available_core_nb()
-            if self.parent().po.cores > 0: # i.e. enough memory
-                if not self.parent().po.all['do_multiprocessing'] or self.parent().po.cores == 1:
-                    self.message_from_thread.emit(f"{message} Step 2/2: Video analysis")
-                    logging.info("fStarting sequential analysis")
-                    tiii = default_timer()
-                    pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-                    for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
-
-                        l = [i, arena, self.parent().po.vars, True, True, False, None]
-                        analysis_i = MotionAnalysis(l)
-                        if not self.parent().po.vars['several_blob_per_arena']:
-                            # Save basic statistics
-                            self.parent().po.update_one_row_per_arena(i, analysis_i.one_descriptor_per_arena)
-
-
-                            # Save descriptors in long_format
-                            self.parent().po.update_one_row_per_frame(i * self.parent().po.vars['img_number'], arena * self.parent().po.vars['img_number'], analysis_i.one_row_per_frame)
-
-                        # Save efficiency visualization
-                        self.parent().po.add_analysis_visualization_to_first_and_last_images(i, analysis_i.efficiency_test_1,
-                                                                                 analysis_i.efficiency_test_2)
-                        # Emit message to the interface
-                        current_percentage, eta = pat_tracker.get_progress()
-                        if self.isInterruptionRequested():
-                            analysis_status["message"] = f"Was waiting for thread interruption"
-                            analysis_status["continue"] = False
-                            break
-                        self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                     "message": f"{message} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
-                        del analysis_i
-                    logging.info(f"Sequential analysis lasted {(default_timer() - tiii)/ 60} minutes")
-                else:
-                    self.message_from_thread.emit(
-                        f"{message}, Step 2/2:  Analyse all videos using {self.parent().po.cores} cores...")
-
-                    logging.info("fStarting analysis in parallel")
-
-                    tiii = default_timer()
-                    arena_number = len(self.parent().po.vars['analyzed_individuals'])
-                    self.advance = 0
-                    self.pat_tracker = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']),
-                                                        core_number=self.parent().po.cores)
-
-                    fair_core_workload = arena_number // self.parent().po.cores
-                    cores_with_1_more = arena_number % self.parent().po.cores
-                    EXTENTS_OF_SUBRANGES = []
-                    bound: int = 0
-                    parallel_organization = [fair_core_workload + 1 for _ in range(int(cores_with_1_more))] + [fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
-                    # Emit message to the interface
-                    self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                 "message": f"{message} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
-                    for i, extent_size in enumerate(parallel_organization):
-                        EXTENTS_OF_SUBRANGES.append((bound, bound := bound + extent_size))
-
-                    try:
-                        PROCESSES = []
-                        subtotals = Manager().Queue()# Queue()
-                        started_processes: int = 0
-                        for extent in EXTENTS_OF_SUBRANGES:
-                            if self.isInterruptionRequested():
-                                break
-                            p = Process(target=motion_analysis_process, args=(int(extent[0]), int(extent[1]), self.parent().po.vars, subtotals))
-                            p.start()
-                            PROCESSES.append(p)
-                            started_processes += 1
-
-                        finished_processes: int = 0
-                        while finished_processes < started_processes:
-                            if self.isInterruptionRequested():
-                                for p in PROCESSES:
-                                    if p.is_alive():
-                                        p.terminate()
-                                for p in PROCESSES:
-                                    p.join(timeout=1)
-                                analysis_status["message"] = f"Was waiting for thread interruption"
-                                analysis_status["continue"] = False
-                                return analysis_status
-
-                            for p in PROCESSES:
-                                if hasattr(p, "_counted"):
-                                    continue
-                                if not p.is_alive():
-                                    p.join(timeout=0)
-                                    p._counted = True
-                                    finished_processes += 1
-                            self.msleep(50)
-                        self.message_from_thread.emit(f"{message}, Step 2/2:  Saving all results...")
-                        for _ in range(finished_processes):
-                            grouped_results = subtotals.get()
-                            for j, results_i in enumerate(grouped_results):
-                                if not self.parent().po.vars['several_blob_per_arena']:
-                                    # Save basic statistics
-                                    self.parent().po.update_one_row_per_arena(results_i['i'], results_i['one_row_per_arena'])
-                                    # Save descriptors in long_format
-                                    self.parent().po.update_one_row_per_frame(results_i['i'] * self.parent().po.vars['img_number'],
-                                                                              (results_i['i'] + 1) * self.parent().po.vars['img_number'],
-                                                                              results_i['one_row_per_frame'])
-
-                                self.parent().po.add_analysis_visualization_to_first_and_last_images(results_i['i'], results_i['efficiency_test_1'],
-                                                                                         results_i['efficiency_test_2'])
-                            del grouped_results
-                        del subtotals
-                        self.image_from_thread.emit(
-                            {"current_image": self.parent().po.last_image.bgr,
-                             "message": f"{message} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
-
-                        logging.info(f"Parallel analysis lasted {(default_timer() - tiii)/ 60} minutes")
-                    except MemoryError:
-                        analysis_status["continue"] = False
-                        analysis_status["message"] = f"Not enough memory, reduce the core number for parallel analysis"
-                        self.message_from_thread.emit(f"Analyzing {message} requires to reduce the core number for parallel analysis")
-                        return analysis_status
-                self.parent().po.save_tables()
-                return analysis_status
-            else:
-                analysis_status["continue"] = False
-                analysis_status["message"] = f"Requires an additional {memory_diff}GB of RAM to run"
-                self.message_from_thread.emit(f"Analyzing {message} requires an additional {memory_diff}GB of RAM to run")
-                return analysis_status
-        except MemoryError:
-            analysis_status["continue"] = False
-            analysis_status["message"] = f"Requires additional memory to run"
-            self.message_from_thread.emit(f"Analyzing {message} requires additional memory to run")
-            return analysis_status
-
 
 def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subtotals: Queue) -> None:
     """

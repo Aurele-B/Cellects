@@ -1499,7 +1499,7 @@ def video_writing_decision(arena_nb: int, im_or_vid: int, overwrite_unaltered_vi
         if not there_already_are_videos:
             look_for_existing_videos = []
         there_already_are_videos = len(look_for_existing_videos) == arena_nb and there_already_are_videos
-    logging.info(f"{len(look_for_existing_videos)} .h5 video files found for {arena_nb} arenas to analyze")
+    logging.info(f"Video files (h5) found: {len(look_for_existing_videos)} for {arena_nb} arenas to analyze")
     do_write_videos = not im_or_vid and (not there_already_are_videos or (there_already_are_videos and overwrite_unaltered_videos))
     return do_write_videos
 

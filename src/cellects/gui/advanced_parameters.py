@@ -686,7 +686,7 @@ class AdvancedParameters(WindowType):
         """
         Handles the logic for using background subtraction or not during image segmentation.
         """
-        if not self.parent().videoanalysiswindow.thread_dict['OneArena'].isRunning():
+        if not self.parent().videoanalysiswindow.thread_dict['VideoTracking'].isRunning():
             self.parent().po.motion = None
         if self.subtract_background.isChecked():
             self.parent().po.first_exp_ready_to_run = False
