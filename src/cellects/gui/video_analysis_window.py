@@ -603,9 +603,12 @@ class VideoAnalysisWindow(MainTabsType):
 
         Resets the general step, sets `load_quick_full` to 0, and runs the arena in a separate thread.
         """
-        self.reset_general_step()
-        self.parent().po.load_quick_full = 0
-        self.run_one_arena_thread()
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
+        else:
+            self.reset_general_step()
+            self.parent().po.load_quick_full = 0
+            self.run_one_arena_thread()
 
     def compute_all_options_check(self):
         """
@@ -627,9 +630,12 @@ class VideoAnalysisWindow(MainTabsType):
         It assumes that the parent object has a `po` attribute with a `load_quick_full`
         flag and a method to run an arena thread.
         """
-        self.reset_general_step()
-        self.parent().po.load_quick_full = 1
-        self.run_one_arena_thread()
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
+        else:
+            self.reset_general_step()
+            self.parent().po.load_quick_full = 1
+            self.run_one_arena_thread()
 
     def post_processing_is_clicked(self):
         """
@@ -640,9 +646,11 @@ class VideoAnalysisWindow(MainTabsType):
         This function updates the parent object's load_quick_full attribute,
         logs a specific variable value, and runs an arena thread.
         """
-        self.parent().po.load_quick_full = 2
-        logging.info(self.parent().po.vars['maximal_growth_factor'])
-        self.run_one_arena_thread()
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
+        else:
+            self.parent().po.load_quick_full = 2
+            self.run_one_arena_thread()
 
     def run_one_arena_thread(self):
         """
@@ -658,18 +666,15 @@ class VideoAnalysisWindow(MainTabsType):
         to display messages and images during thread execution.
         """
         self.message.setText("Load the video and initialize analysis, wait...")
-        if self.thread_dict['VideoTracking'].isRunning():
-            self.message.setText("A video tracking task is already running, wait or restart Cellects")
-        else:
-            self.save_current_settings()
-            if self.previous_arena != self.parent().po.all['arena']:
-                self.parent().po.motion = None
-            self.video_task = 'one_arena'
-            self.thread_dict['VideoTracking'].start()
-            self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
-            self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
-            self.thread_dict['VideoTracking'].when_detection_finished.connect(self.when_detection_finished)
-            self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
+        self.save_current_settings()
+        if self.previous_arena != self.parent().po.all['arena']:
+            self.parent().po.motion = None
+        self.video_task = 'one_arena'
+        self.thread_dict['VideoTracking'].start()
+        self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
+        self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
+        self.thread_dict['VideoTracking'].when_detection_finished.connect(self.when_detection_finished)
+        self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
 
     def when_loading_thread_finished(self, save_loaded_video: bool):
         """
