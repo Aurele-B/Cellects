@@ -977,15 +977,14 @@ class MotionAnalysis:
         # I/ dilate the shape made with covered pixels to assess for covering
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
         if self.vars['sliding_window_segmentation']:
-            if self.dims[0] < 100:
-                new_potentials = self.segmented[self.t, :, :]
+            if self.t > 1:
+                new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
             else:
-                if self.t > 1:
-                    new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
-                else:
-                    new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
-                new_potentials[new_potentials == 1] = 0
-                new_potentials[new_potentials > 1] = 1
+                new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
+            new_potentials[new_potentials == 1] = 0
+            new_potentials[new_potentials > 1] = 1
+        else:
+            new_potentials = self.segmented[self.t, :, :]
 
         # I/ 2) If an image displays more new potential pixels than 50% of image pixels,
         # one of these images is considered noisy and we try taking only one.
