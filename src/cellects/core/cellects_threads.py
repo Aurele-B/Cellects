@@ -979,8 +979,8 @@ class VideoTrackingThread(QtCore.QThread):
                 curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
                 self.message_from_thread.emit(f'Exp {curr_path}, analyzed.')
         else:
-            logging.error(message + " " + self.status['message'])
-            self.message_from_thread.emit(message + " " + self.status['message'])
+            logging.error(self.status['folder'] + " " + self.status['message'])
+            self.message_from_thread.emit(self.status['folder'] + " " + self.status['message'])
 
     def run_one_arena(self):
         """
@@ -1439,8 +1439,6 @@ class VideoTrackingThread(QtCore.QThread):
         """
         if self.parent().po.first_im is None:
             self.pre_processing()
-        if not 'lighter_background' in self.parent().po.vars.keys():
-            self.parent().po.find_if_lighter_background()
         if self.status['continue']:
             arena = self.parent().po.all['arena']
             i = np.nonzero(np.array(self.parent().po.vars['analyzed_individuals']) == arena)[0][0]
