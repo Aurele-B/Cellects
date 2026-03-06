@@ -620,7 +620,6 @@ class MotionAnalysis:
             value_segmentation_thresholds = np.arange(0.8, -0.7, -0.1)
             validated_thresholds = np.zeros(value_segmentation_thresholds.shape, dtype=bool)
             counter = 0
-            while_condition = True
             max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['maximal_growth_factor'] * 2
             if self.vars['lighter_background']:
                 basic_bckgrnd_values = np.quantile(converted_video[:(self.lost_frames + 1), ...], 0.9, axis=(1, 2))
