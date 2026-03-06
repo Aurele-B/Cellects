@@ -1110,6 +1110,7 @@ class VideoTrackingThread(QtCore.QThread):
             self.status['message'] = f"Wrong folder or parameters"
             self.status['continue'] = False
         return
+                            self.parent().po.find_if_lighter_background()
 
     def run_video_writing(self):
         """
