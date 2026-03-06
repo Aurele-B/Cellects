@@ -1659,7 +1659,10 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     stats = pd.read_csv(file, header=0, sep=";")
                 for stat_name, stat_value in self.one_descriptor_per_arena.items():
                     if stat_name in stats.columns:
-                        stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = np.uint32(self.one_descriptor_per_arena[stat_name])
+                        if pd.isna(self.one_descriptor_per_arena[stat_name]):
+                            stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = self.one_descriptor_per_arena[stat_name]
+                        else:
+                            stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = np.uint32(self.one_descriptor_per_arena[stat_name])
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
