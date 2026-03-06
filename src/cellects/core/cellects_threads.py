@@ -947,23 +947,19 @@ class VideoTrackingThread(QtCore.QThread):
                 self.parent().po.last_image = None
                 self.parent().po.top = None
 
-                message = self.set_current_folder(exp_i)
-                self.message_from_thread.emit(f'{message}, pre-processing...')
-                self.parent().po.load_data_to_run_cellects_quickly()
-                if not self.parent().po.first_exp_ready_to_run:
-                    self.pre_processing()
+                self.message_from_thread.emit(f"{self.status['folder']}, pre-processing...")
+                self.pre_processing()
                 if self.status['continue']:
-                    self.message_from_thread.emit(message + ": Write videos from images before analysis...")
+                    self.message_from_thread.emit(self.status['folder'] + ": Write videos from images before analysis...")
                     if not self.parent().po.vars[
                         'several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
-                        self.message_from_thread.emit(f"Wrong specimen number: first image analysis is mandatory.")
                         self.status['continue'] = False
                         self.status['message'] = f"Wrong specimen number: first image analysis is mandatory."
                     else:
-                        self.run_video_writing(message)
+                        self.run_video_writing()
                         if self.status['continue']:
-                            self.message_from_thread.emit(message + ": Starting analysis...")
-                            self.run_motion_analysis(message)
+                            self.message_from_thread.emit(self.status['folder'] + ": Starting analysis...")
+                            self.run_motion_analysis()
                             if self.isInterruptionRequested():
                                 self.status['message'] = f"Was waiting for thread interruption"
                                 self.status['continue'] = False
