@@ -1007,11 +1007,8 @@ class VideoTrackingThread(QtCore.QThread):
         """
 
         self.message_from_thread.emit("Video loading, wait...")
-        if not self.parent().po.first_exp_ready_to_run:
-            self.parent().po.load_data_to_run_cellects_quickly()
-            if not self.parent().po.first_exp_ready_to_run:
-                #Need a look for data when cellects_settings.json and 1 folder selected amon several
-                self.pre_processing()
+        #Need a look for data when cellects_settings.json and 1 folder selected amon several
+        self.pre_processing()
         if self.isInterruptionRequested():
             self.status['message'] = f"Was waiting for thread interruption"
             self.status['continue'] = False
@@ -1073,44 +1070,45 @@ class VideoTrackingThread(QtCore.QThread):
         bool
             Returns True if pre-processing completed successfully; False otherwise.
         """
-        logging.info("Pre-processing has started")
+        if not self.parent().po.first_exp_ready_to_run:
+            logging.info("Pre-processing has started")
+            self.parent().po.load_data_to_run_cellects_quickly()
+            if len(self.parent().po.data_list) > 0:
+                self.parent().po.get_first_image()
+                self.parent().po.load_masks()
+                self.parent().po.fast_first_image_segmentation()
+                if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
+                    self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
+                    self.status['continue'] = False
+                else:
+                    self.parent().po.cropping(is_first_image=True)
+                    self.parent().po.get_average_pixel_size()
+                    status = self.parent().po.delineate_each_arena()
+                    self.status['message'] = status['message']
+                    self.status['continue'] = status['continue']
 
-        if len(self.parent().po.data_list) > 0:
-            self.parent().po.get_first_image()
-            self.parent().po.load_masks()
-            self.parent().po.fast_first_image_segmentation()
-            if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.first_image.shape_number:
-                self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
-                self.status['continue'] = False
-            else:
-                self.parent().po.cropping(is_first_image=True)
-                self.parent().po.get_average_pixel_size()
-                status = self.parent().po.delineate_each_arena()
-                self.status['message'] = status['message']
-                self.status['continue'] = status['continue']
-
-                if self.status['continue']:
-                    self.parent().po.save_exif()
-                    self.parent().po.save_data_to_run_cellects_quickly()
-                    self.parent().po.get_background_to_subtract()
-                    if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
-                        self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
-                        self.status['continue'] = False
-                    elif self.parent().po.top is None and self.parent().videoanalysiswindow.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
-                        self.status['message'] = f"Auto video delineation failed, use manual delineation tool"
-                        self.status['continue'] = False
-                    else:
-                        self.parent().po.save_origins_and_backgrounds_lists()
-                        self.parent().po.get_last_image()
-                        self.parent().po.fast_last_image_segmentation()
-                        self.parent().po.find_if_lighter_backgnp.round()
-                        logging.info("The current (or the first) folder is ready to run")
-                        self.parent().po.first_exp_ready_to_run = True
-        else:
-            self.status['message'] = f"Wrong folder or parameters"
-            self.status['continue'] = False
-        return
+                    if self.status['continue']:
+                        self.parent().po.save_exif()
+                        self.parent().po.save_data_to_run_cellects_quickly()
+                        self.parent().po.get_background_to_subtract()
+                        if len(self.parent().po.vars['analyzed_individuals']) != len(self.parent().po.top):
+                            self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
+                            self.status['continue'] = False
+                        elif self.parent().po.top is None and self.parent().videoanalysiswindow.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
+                            self.status['message'] = f"Auto video delineation failed, use manual delineation tool"
+                            self.status['continue'] = False
+                        else:
+                            self.parent().po.save_origins_and_backgrounds_lists()
+                            self.parent().po.get_last_image()
+                            self.parent().po.fast_last_image_segmentation()
                             self.parent().po.find_if_lighter_background()
+                            logging.info("The current (or the first) folder is ready to run")
+                            self.parent().po.first_exp_ready_to_run = True
+            else:
+                self.status['message'] = f"Wrong folder or parameters"
+                self.status['continue'] = False
+        elif self.parent().po.update_background_luminosity:
+            self.parent().po.find_if_lighter_background()
 
     def run_video_writing(self):
         """
