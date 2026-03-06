@@ -113,6 +113,7 @@ class ProgramOrganizer:
         self.back_mask = None
         self.visualize: bool = True
         self.network_shaped: bool = False
+        self.update_background_luminosity: bool = False
 
     def update_variable_dict(self):
         """
@@ -463,6 +464,8 @@ class ProgramOrganizer:
                             self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
                             if not 'average_pixel_size' in self.vars:
                                 self.get_average_pixel_size()
+                            if not 'lighter_background' in self.vars:
+                                self.find_if_lighter_background()
                             background = read_h5(f'ind_{1}.h5', 'background')
                             if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
                                 self.first_exp_ready_to_run = True

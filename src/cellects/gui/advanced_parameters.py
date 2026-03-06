@@ -1340,7 +1340,7 @@ class AdvancedParameters(WindowType):
                         key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
                         previous_csc[key])
             if not are_dicts_equal:
-                self.parent().po.find_if_lighter_background()
+                self.parent().po.update_background_luminosity = True
 
         if not self.parent().thread_dict['SaveAllVars'].isRunning():
             self.parent().thread_dict['SaveAllVars'].start()
