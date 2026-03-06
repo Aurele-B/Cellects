@@ -461,6 +461,8 @@ class ProgramOrganizer:
                             self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
                             self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
                             self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
+                            if not 'average_pixel_size' in self.vars:
+                                self.get_average_pixel_size()
                             background = read_h5(f'ind_{1}.h5', 'background')
                             if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
                                 self.first_exp_ready_to_run = True
