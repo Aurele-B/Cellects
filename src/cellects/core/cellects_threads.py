@@ -1304,10 +1304,7 @@ class VideoTrackingThread(QtCore.QThread):
                                 contours = np.nonzero(get_contours(self.parent().po.motion.binary[t, ...]))
                                 if self.parent().po.motion.visu is not None:
                                     im_to_display = self.parent().po.motion.visu[t, ...].copy()
-                                    if self.parent().po.motion.vars['lighter_background']:
-                                        im_to_display[contours[0], contours[1], ...] = 0
-                                    else:
-                                        im_to_display[contours[0], contours[1], ...] = 255
+                                    im_to_display[contours[0], contours[1], ...] = self.parent().po.vars['contour_color']
                                 else:
                                     im_to_display = self.parent().po.motion.binary[t, :, :] * 255
                                 self.image_from_thread.emit({"current_image": im_to_display,
