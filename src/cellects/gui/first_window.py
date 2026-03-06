@@ -496,7 +496,6 @@ class FirstWindow(MainTabsType):
             self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(Path(self.global_pathway.text())):
             self.parent().po.all['global_pathway'] = self.global_pathway.text()
-            logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
             os.chdir(Path(self.parent().po.all['global_pathway']))
             # 1) Put invisible widgets
             self.radical.setVisible(False)
@@ -544,8 +543,7 @@ class FirstWindow(MainTabsType):
         self.next.setVisible(True)
 
         if self.parent().po.first_exp_ready_to_run:
-            self.parent().po.all['folder_number'] = 1
-            self.parent().instantiate_widgets(True)
+            self.parent().instantiate_widgets()
             self.arena_number.setValue(self.parent().po.all['first_folder_sample_number'])
             self.im_or_vid.setCurrentIndex(self.parent().po.all['im_or_vid'])
             self.radical.setText(self.parent().po.all['radical'])

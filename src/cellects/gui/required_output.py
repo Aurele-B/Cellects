@@ -178,12 +178,15 @@ class RequiredOutput(WindowType):
         -----
         The layout of checkboxes changes based on the number of descriptors.
         """
-        if not np.array_equal(self.parent().po.all['descriptors'], list(descriptors_categories.keys())):
-            self.parent().po.all['descriptors'] = descriptors_categories
+        saved_names = list(self.parent().po.all['descriptors'].keys())
+        available_names = list(descriptors_categories.keys())
+        if not np.array_equal(saved_names, available_names):
+            new_idx = np.nonzero(np.logical_not(np.isin(available_names, saved_names)))[0]
+            for idx in new_idx:
+                new_name = available_names[idx]
+                self.parent().po.all['descriptors'][new_name] = descriptors_categories[new_name]
 
-        descriptor_names = self.parent().po.all['descriptors']
-
-        for i, name in enumerate(descriptor_names):
+        for i, name in enumerate(self.parent().po.all['descriptors'].keys()):
             label_index = i * 2
             if i > 9:
                 row = i - 10 + 1 + 3

@@ -87,7 +87,7 @@ def run_cellects():
 
         # Create and display main window
         session = CellectsMainWidget()
-        session.instantiate()
+        session.instantiate_cellects()
         session.show()
 
         # Set custom window icon for taskbar

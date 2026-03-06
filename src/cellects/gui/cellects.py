@@ -91,7 +91,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.po.load_variable_dict()
         self.resize(1380, 750)
 
-    def instantiate(self):
+    def instantiate_cellects(self):
         """
         Initiates the Cellects application by setting up the main window and starting various threads.
 
@@ -129,7 +129,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         several_folder_included: bool, optional
             A flag to determine whether the `IfSeveralFoldersWindow` should be instantiated. Default is `True`.
         """
-        logging.info("Widgets are instantiating")
+        logging.info("Other widgets are instantiating")
         if several_folder_included:
             self.ifseveralfolderswindow = IfSeveralFoldersWindow(self, night_mode=self.po.all['night_mode'])
             self.insertWidget(1, self.ifseveralfolderswindow)
