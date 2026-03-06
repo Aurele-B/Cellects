@@ -1694,7 +1694,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.parent().po.motion.logical_or = np.nonzero(analysis_i.binary)
                 else:
                     self.parent().po.motion.segmented = analysis_i.binary
-        self.when_detection_finished.emit("Post processing done, read to see the result")
+        self.when_detection_finished.emit("Post processing done, read to play the segmentation video, save this result, or run all")
 
     def change_one_arena_result(self):
         """
