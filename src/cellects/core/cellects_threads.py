@@ -1304,7 +1304,8 @@ class VideoTrackingThread(QtCore.QThread):
                                     im_to_display = self.parent().po.motion.binary[t, :, :] * 255
                                 self.image_from_thread.emit({"current_image": im_to_display,
                                                              "message": f"{self.status['folder']}, Step 2/2, arena: {arena} / {arena_nb} ({current_percentage}%, {eta}), frame: {self.parent().po.motion.t}/{self.parent().po.motion.dims[0]}"})
-
+                            if self.isInterruptionRequested():
+                                return
                             do_continue = self.analyze_post_processing_results()
                             if do_continue:
                                 self.parent().po.motion.save_results()
