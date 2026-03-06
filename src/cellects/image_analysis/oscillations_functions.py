@@ -74,8 +74,8 @@ def detect_oscillations_dynamics(converted_video: NDArray, binary: NDArray[np.ui
             period_in_frame_nb = 2
         necessary_memory = dims[0] * dims[1] * dims[2] * 64 * 4 * 1.16415e-10
         available_memory = (virtual_memory().available >> 30) - min_ram_free
-    if len(dims) == 4:
-        converted_video = converted_video[:, :, :, 0]
+        if len(dims) == 4:
+            converted_video = converted_video[:, :, :, 0]
         average_intensities = np.mean(converted_video, (1, 2))
         if lose_accuracy_to_save_memory or (necessary_memory > available_memory):
             oscillations_video = np.zeros(dims[:3], dtype=np.float16)
