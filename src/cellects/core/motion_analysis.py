@@ -418,29 +418,28 @@ class MotionAnalysis:
 
     def detection(self, compute_all_possibilities: bool=False):
         """
+        Perform frame-by-frame or luminosity-based segmentation on video data to detect cell motion and growth.
 
-            Perform frame-by-frame or luminosity-based segmentation on video data to detect cell motion and growth.
+        This function processes video frames using either frame-by-frame segmentation or luminosity-based
+        segmentation algorithms to detect cell motion and growth. It handles drift correction, adjusts parameters
+        based on configuration settings, and applies logical operations to combine results from different segmentation
+        methods.
 
-            This function processes video frames using either frame-by-frame segmentation or luminosity-based
-            segmentation algorithms to detect cell motion and growth. It handles drift correction, adjusts parameters
-            based on configuration settings, and applies logical operations to combine results from different segmentation
-            methods.
+        Parameters
+        ----------
+        compute_all_possibilities : bool, optional
+            Flag to determine if all segmentation possibilities should be computed, by default False
 
-            Parameters
-            ----------
-            compute_all_possibilities : bool, optional
-                Flag to determine if all segmentation possibilities should be computed, by default False
+        Returns
+        -------
+        None
 
-            Returns
-            -------
-            None
-
-            Notes
-            -----
-            This function modifies the instance variables `self.segmented`, `self.converted_video`,
-            and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
-            Depending on the configuration settings, it performs various segmentation algorithms and updates
-            the instance variables accordingly.
+        Notes
+        -----
+        This function modifies the instance variables `self.segmented`, `self.converted_video`,
+        and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
+        Depending on the configuration settings, it performs various segmentation algorithms and updates
+        the instance variables accordingly.
 
         """
         if self.start is None:
