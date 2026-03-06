@@ -1070,9 +1070,9 @@ class VideoTrackingThread(QtCore.QThread):
         bool
             Returns True if pre-processing completed successfully; False otherwise.
         """
+        self.parent().po.load_data_to_run_cellects_quickly()
         if not self.parent().po.first_exp_ready_to_run:
             logging.info("Pre-processing has started")
-            self.parent().po.load_data_to_run_cellects_quickly()
             if len(self.parent().po.data_list) > 0:
                 self.parent().po.get_first_image()
                 self.parent().po.load_masks()
@@ -1107,8 +1107,6 @@ class VideoTrackingThread(QtCore.QThread):
             else:
                 self.status['message'] = f"Wrong folder or parameters"
                 self.status['continue'] = False
-        elif self.parent().po.update_background_luminosity:
-            self.parent().po.find_if_lighter_background()
 
     def run_video_writing(self):
         """
