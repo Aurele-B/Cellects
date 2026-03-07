@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../../static/icon-128.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -2544,7 +2544,7 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <a id="__codelineno-0-91" name="__codelineno-0-91"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">po</span><span class="o">.</span><span class="n">load_variable_dict</span><span class="p">()</span>
 <a id="__codelineno-0-92" name="__codelineno-0-92"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">1380</span><span class="p">,</span> <span class="mi">750</span><span class="p">)</span>
 <a id="__codelineno-0-93" name="__codelineno-0-93"></a>
-<a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">instantiate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-94" name="__codelineno-0-94"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">instantiate_cellects</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="sd">        Initiates the Cellects application by setting up the main window and starting various threads.</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a>
@@ -2582,7 +2582,7 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <a id="__codelineno-0-129" name="__codelineno-0-129"></a><span class="sd">        several_folder_included: bool, optional</span>
 <a id="__codelineno-0-130" name="__codelineno-0-130"></a><span class="sd">            A flag to determine whether the `IfSeveralFoldersWindow` should be instantiated. Default is `True`.</span>
 <a id="__codelineno-0-131" name="__codelineno-0-131"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-132" name="__codelineno-0-132"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Widgets are instantiating&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-132" name="__codelineno-0-132"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Other widgets are instantiating&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-133" name="__codelineno-0-133"></a>        <span class="k">if</span> <span class="n">several_folder_included</span><span class="p">:</span>
 <a id="__codelineno-0-134" name="__codelineno-0-134"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span> <span class="o">=</span> <span class="n">IfSeveralFoldersWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">po</span><span class="o">.</span><span class="n">all</span><span class="p">[</span><span class="s1">&#39;night_mode&#39;</span><span class="p">])</span>
 <a id="__codelineno-0-135" name="__codelineno-0-135"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="p">)</span>
@@ -3176,8 +3176,8 @@ handling purposes only.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="cellects.gui.cellects.CellectsMainWidget.instantiate" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">instantiate</span><span class="p">()</span></code>
+<h3 id="cellects.gui.cellects.CellectsMainWidget.instantiate_cellects" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">instantiate_cellects</span><span class="p">()</span></code>
 
 </h3>
 
@@ -3244,7 +3244,7 @@ the code and should not be set directly.</p>
 <span class="normal"><a href="#__codelineno-0-115">115</a></span>
 <span class="normal"><a href="#__codelineno-0-116">116</a></span>
 <span class="normal"><a href="#__codelineno-0-117">117</a></span>
-<span class="normal"><a href="#__codelineno-0-118">118</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-94" name="__codelineno-0-94"></a><span class="k">def</span><span class="w"> </span><span class="nf">instantiate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-118">118</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-94" name="__codelineno-0-94"></a><span class="k">def</span><span class="w"> </span><span class="nf">instantiate_cellects</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="sd">    Initiates the Cellects application by setting up the main window and starting various threads.</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a>
@@ -3362,7 +3362,7 @@ output requirements, and advanced parameters.</p>
 <a id="__codelineno-0-129" name="__codelineno-0-129"></a><span class="sd">    several_folder_included: bool, optional</span>
 <a id="__codelineno-0-130" name="__codelineno-0-130"></a><span class="sd">        A flag to determine whether the `IfSeveralFoldersWindow` should be instantiated. Default is `True`.</span>
 <a id="__codelineno-0-131" name="__codelineno-0-131"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-132" name="__codelineno-0-132"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Widgets are instantiating&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-132" name="__codelineno-0-132"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Other widgets are instantiating&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-133" name="__codelineno-0-133"></a>    <span class="k">if</span> <span class="n">several_folder_included</span><span class="p">:</span>
 <a id="__codelineno-0-134" name="__codelineno-0-134"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span> <span class="o">=</span> <span class="n">IfSeveralFoldersWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">po</span><span class="o">.</span><span class="n">all</span><span class="p">[</span><span class="s1">&#39;night_mode&#39;</span><span class="p">])</span>
 <a id="__codelineno-0-135" name="__codelineno-0-135"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">insertWidget</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="p">)</span>

@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../../static/icon-128.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -2655,8 +2655,8 @@ Maintains cumulative pixel data for active clusters during time-lapse processing
 <a id="__codelineno-0-74" name="__codelineno-0-74"></a>            <span class="n">period_in_frame_nb</span> <span class="o">=</span> <span class="mi">2</span>
 <a id="__codelineno-0-75" name="__codelineno-0-75"></a>        <span class="n">necessary_memory</span> <span class="o">=</span> <span class="n">dims</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">dims</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">dims</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">64</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="mf">1.16415e-10</span>
 <a id="__codelineno-0-76" name="__codelineno-0-76"></a>        <span class="n">available_memory</span> <span class="o">=</span> <span class="p">(</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">available</span> <span class="o">&gt;&gt;</span> <span class="mi">30</span><span class="p">)</span> <span class="o">-</span> <span class="n">min_ram_free</span>
-<a id="__codelineno-0-77" name="__codelineno-0-77"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-<a id="__codelineno-0-78" name="__codelineno-0-78"></a>        <span class="n">converted_video</span> <span class="o">=</span> <span class="n">converted_video</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-77" name="__codelineno-0-77"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+<a id="__codelineno-0-78" name="__codelineno-0-78"></a>            <span class="n">converted_video</span> <span class="o">=</span> <span class="n">converted_video</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-0-79" name="__codelineno-0-79"></a>        <span class="n">average_intensities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">converted_video</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
 <a id="__codelineno-0-80" name="__codelineno-0-80"></a>        <span class="k">if</span> <span class="n">lose_accuracy_to_save_memory</span> <span class="ow">or</span> <span class="p">(</span><span class="n">necessary_memory</span> <span class="o">&gt;</span> <span class="n">available_memory</span><span class="p">):</span>
 <a id="__codelineno-0-81" name="__codelineno-0-81"></a>            <span class="n">oscillations_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">)</span>

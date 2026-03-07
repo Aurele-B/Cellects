@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../../static/icon-128.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
@@ -8701,7 +8701,7 @@ if "rectangular", a rectangular border.</p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">borders</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">&quot;rectangular&quot;</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">borders</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">&quot;rectangle&quot;</span><span class="p">)</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">borders</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="go">[[0 0 0]</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go"> [0 1 0]</span>
@@ -8767,14 +8767,14 @@ if "rectangular", a rectangular border.</p>
 <a id="__codelineno-0-1282" name="__codelineno-0-1282"></a>
 <a id="__codelineno-0-1283" name="__codelineno-0-1283"></a><span class="sd">    Examples</span>
 <a id="__codelineno-0-1284" name="__codelineno-0-1284"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="sd">    &gt;&gt;&gt; borders = image_borders((3, 3), &quot;rectangular&quot;)</span>
+<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="sd">    &gt;&gt;&gt; borders = image_borders((3, 3), &quot;rectangle&quot;)</span>
 <a id="__codelineno-0-1286" name="__codelineno-0-1286"></a><span class="sd">    &gt;&gt;&gt; print(borders)</span>
 <a id="__codelineno-0-1287" name="__codelineno-0-1287"></a><span class="sd">    [[0 0 0]</span>
 <a id="__codelineno-0-1288" name="__codelineno-0-1288"></a><span class="sd">     [0 1 0]</span>
 <a id="__codelineno-0-1289" name="__codelineno-0-1289"></a><span class="sd">     [0 0 0]]</span>
 <a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1291" name="__codelineno-0-1291"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;circular&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-1292" name="__codelineno-0-1292"></a>        <span class="n">borders</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-1291" name="__codelineno-0-1291"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;circle&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-1292" name="__codelineno-0-1292"></a>        <span class="n">borders</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 <a id="__codelineno-0-1293" name="__codelineno-0-1293"></a>        <span class="n">img_contours</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">)</span>
 <a id="__codelineno-0-1294" name="__codelineno-0-1294"></a>        <span class="n">borders</span> <span class="o">=</span> <span class="n">borders</span> <span class="o">*</span> <span class="n">img_contours</span>
 <a id="__codelineno-0-1295" name="__codelineno-0-1295"></a>    <span class="k">else</span><span class="p">:</span>
