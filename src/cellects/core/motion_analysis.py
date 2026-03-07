@@ -1652,16 +1652,19 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             self.save_video()
         # I/ Update/Create one_row_per_arena.csv
         create_new_csv: bool = False
+        new_stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
+                             columns=list(self.one_descriptor_per_arena.keys()))
+        new_stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
         if os.path.isfile("one_row_per_arena.csv"):
             try:
                 with open(f"one_row_per_arena.csv", 'r') as file:
                     stats = pd.read_csv(file, header=0, sep=";")
-                for stat_name, stat_value in self.one_descriptor_per_arena.items():
+                for stat_name, stat_value in new_stats.items():
                     if stat_name in stats.columns:
-                        if pd.isna(self.one_descriptor_per_arena[stat_name]):
-                            stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = self.one_descriptor_per_arena[stat_name]
-                        else:
-                            stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = np.uint32(self.one_descriptor_per_arena[stat_name])
+                        stat_type = stats[stat_name].dtypes
+                        if new_stats[stat_name].dtype != stat_type:
+                            new_stats[stat_name] = new_stats[stat_name].astype(stat_type)
+                        stats.loc[(new_stats['arena'] - 1).astype(int), stat_name] = new_stats[stat_name].values
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
@@ -1675,10 +1678,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             logging.info("Create a new one_row_per_arena.csv file")
             try:
                 with open(f"one_row_per_arena.csv", 'w') as file:
-                    stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
-                               columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
-                    stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+                    new_stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
 
@@ -1690,6 +1690,9 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     descriptors = pd.read_csv(file, header=0, sep=";")
                 for stat_name, stat_value in self.one_row_per_frame.items():
                     if stat_name in descriptors.columns:
+                        stat_type = descriptors[stat_name].dtypes
+                        if self.one_row_per_frame[stat_name].dtypes != stat_type:
+                            self.one_row_per_frame[stat_name] = self.one_row_per_frame[stat_name].astype(stat_type)
                         descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0] - 1), stat_name] = self.one_row_per_frame.loc[:, stat_name].values[:]
                 with open(f"one_row_per_frame.csv", 'w') as file:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')
