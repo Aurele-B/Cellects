@@ -879,7 +879,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.status = {"continue": True, "folder": "", "message": ""}
 
     def run(self):
-        self.status = {"continue": True, "folder": "", "message": ""}
+        self.status = {"continue": True, "folder": reduce_path_len(self.parent().po.all['global_pathway'], 6, 10), "message": ""}
         if self.parent().videoanalysiswindow.video_task == 'all':
             self.run_all()
         elif self.parent().videoanalysiswindow.video_task == 'one_arena':
@@ -912,7 +912,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.parent().po.load_quick_full = 2
         self.set_current_folder(0)
         if self.parent().po.first_exp_ready_to_run:
-            self.message_from_thread.emit(self.status["folder"] + ": Write videos...")
+            self.message_from_thread.emit(f"{self.status['folder']}, Writing videos")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(
                     self.parent().po.bot):
                 self.status["continue"] = False
@@ -920,12 +920,11 @@ class VideoTrackingThread(QtCore.QThread):
             else:
                 self.run_video_writing()
                 if self.status['continue']:
-                    self.message_from_thread.emit(self.status["folder"] + ": Analyse all videos...")
+                    self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                     self.run_motion_analysis()
                     if self.isInterruptionRequested():
                         self.status['message'] = f"Was waiting for thread interruption"
                         self.status['continue'] = False
-                        return
                 if self.status['continue']:
                     if self.parent().po.all['folder_number'] > 1:
                         self.parent().po.all['folder_list'] = self.parent().po.all['folder_list'][1:]
@@ -947,10 +946,10 @@ class VideoTrackingThread(QtCore.QThread):
                 self.parent().po.last_image = None
                 self.parent().po.top = None
 
-                self.message_from_thread.emit(f"{self.status['folder']}, pre-processing...")
+                self.message_from_thread.emit(f"{self.status['folder']}, Pre-processing")
                 self.pre_processing()
                 if self.status['continue']:
-                    self.message_from_thread.emit(self.status['folder'] + ": Write videos from images before analysis...")
+                    self.message_from_thread.emit(f"{self.status['folder']}, Writing videos")
                     if not self.parent().po.vars[
                         'several_blob_per_arena'] and self.parent().po.sample_number != len(self.parent().po.bot):
                         self.status['continue'] = False
@@ -958,25 +957,23 @@ class VideoTrackingThread(QtCore.QThread):
                     else:
                         self.run_video_writing()
                         if self.status['continue']:
-                            self.message_from_thread.emit(self.status['folder'] + ": Starting analysis...")
+                            self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                             self.run_motion_analysis()
                             if self.isInterruptionRequested():
                                 self.status['message'] = f"Was waiting for thread interruption"
                                 self.status['continue'] = False
-                                return
-
                 if not self.status['continue']:
                     break
         if self.status['continue']:
             if self.parent().po.all['folder_number'] > 1:
                 self.message_from_thread.emit(
-                    f"Exp {self.parent().po.all['folder_list'][0]} to {self.parent().po.all['folder_list'][-1]} analyzed.")
+                    f"Exp {self.parent().po.all['folder_list'][0]} to {self.parent().po.all['folder_list'][-1]} analyzed")
             else:
                 curr_path = reduce_path_len(self.parent().po.all['global_pathway'], 6, 10)
-                self.message_from_thread.emit(f'Exp {curr_path}, analyzed.')
+                self.message_from_thread.emit(f'Exp {curr_path} analyzed')
         else:
-            logging.error(self.status['folder'] + " " + self.status['message'])
-            self.message_from_thread.emit(self.status['folder'] + " " + self.status['message'])
+            logging.error(f"{self.status['folder']}, {self.status['message']}")
+            self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
     def run_one_arena(self):
         """
@@ -1006,7 +1003,7 @@ class VideoTrackingThread(QtCore.QThread):
             Number of arenas to load quickly for full detection.
         """
 
-        self.message_from_thread.emit("Video loading, wait...")
+        self.message_from_thread.emit(f"{self.status['folder']}, Video loading, wait...")
         #Need a look for data when cellects_settings.json and 1 folder selected amon several
         self.pre_processing()
         if self.isInterruptionRequested():
@@ -1035,8 +1032,8 @@ class VideoTrackingThread(QtCore.QThread):
                         self.status['continue'] = False
 
         if not self.status['continue']:
-            self.message_from_thread.emit(self.status['message'])
-            logging.error(self.status['message'])
+            self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
+            logging.error(f"{self.status['folder']}, {self.status['message']}")
 
     def set_current_folder(self, exp_i: int=1):
         """
@@ -1127,7 +1124,9 @@ class VideoTrackingThread(QtCore.QThread):
         do_write_videos = video_writing_decision(len(self.parent().po.vars['analyzed_individuals']),
                                                  self.parent().po.all['im_or_vid'],
                                                  self.parent().po.all['overwrite_unaltered_videos'])
-        if do_write_videos:
+        if not do_write_videos:
+            logging.info(f"{self.status['folder']}, Writing videos is not necessary")
+        else:
             logging.info(f"Starting video writing")
             in_colors = not self.parent().po.vars['already_greyscale']
             self.parent().po.first_image.shape_number = self.parent().po.sample_number
@@ -1153,8 +1152,7 @@ class VideoTrackingThread(QtCore.QThread):
                         images_done = bunch * self.parent().po.vars['img_number']
                         for image_i, image_name in enumerate(self.parent().po.data_list):
                             image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
-                            self.message_from_thread.emit(
-                                self.status['folder'] + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
+                            self.message_from_thread.emit(f"{self.status['folder']}, Writing videos ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'],
@@ -1188,8 +1186,7 @@ class VideoTrackingThread(QtCore.QThread):
                             for arena_i, arena_name in enumerate(arena):
                                 try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
-                                    self.message_from_thread.emit(
-                                        self.status['folder'] + f" Step 1/2: Video writing ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")  # , ETA {remaining_time}
+                                    self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: {np.round((image_percentage + arena_percentage) / 2, 2)}%, bunch n°{bunch}/{bunch_nb}")  # , ETA {remaining_time}
                                     if use_list_of_vid:
                                         write_h5(vid_names[arena_name], video_bunch[arena_i], 'video')
                                     else:
@@ -1198,23 +1195,20 @@ class VideoTrackingThread(QtCore.QThread):
                                         else:
                                             write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
-                                    self.status['message'] = self.status['folder'] + f"full disk memory, clear space and retry"
+                                    self.status['message'] = f"Full disk memory: clear space and retry"
                                     self.status['continue'] = False
-                                    self.message_from_thread.emit()
                                 if self.isInterruptionRequested():
                                     self.status['message'] = f"Was waiting for thread interruption"
                                     self.status['continue'] = False
                                 if not self.status['continue']:
                                     return
                         del video_bunch
-                        logging.info(f"Bunch {bunch + 1} over {bunch_nb} saved.")
+                        self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved")
+                        logging.info(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved.")
                     logging.info("When they exist, do not overwrite unaltered video")
                     self.parent().po.all['overwrite_unaltered_videos'] = False
                     self.parent().po.save_variable_dict()
                     self.parent().po.save_data_to_run_cellects_quickly()
-                    if self.status['continue']:
-                        self.status['message'] = f"Video writing complete."
-                    return
                 else:
                     self.status['continue'] = False
                     if video_nb_per_bunch == 0:
@@ -1233,15 +1227,6 @@ class VideoTrackingThread(QtCore.QThread):
                         self.status['message'] = f"Requires {rom_message} to run"
                         # self.message_from_thread.emit(f"Analyzing {message} requires {rom_message} to run")
                     logging.info(f"Cellects is not writing videos: insufficient memory")
-                    return
-            else:
-                return
-
-
-        else:
-            logging.info(f"Cellects is not writing videos: unnecessary")
-            self.status['message'] = f"Cellects is not writing videos: unnecessary"
-            return
 
     def run_motion_analysis(self):
         """
@@ -1268,11 +1253,11 @@ class VideoTrackingThread(QtCore.QThread):
             memory_diff = self.parent().po.update_available_core_nb()
             if self.parent().po.cores > 0:  # i.e. enough memory
                 if not self.parent().po.all['do_multiprocessing'] or self.parent().po.cores == 1:
-                    self.status['message'] = f"Step 2/2:  Starting sequential analysis of all arenas"
+                    arena_nb = len(self.parent().po.vars['analyzed_individuals'])
+                    self.status['message'] = f"Starting sequential analysis of {arena_nb} arena(s)"
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
                     tiii = default_timer()
-                    arena_nb = len(self.parent().po.vars['analyzed_individuals'])
                     pat_tracker = PercentAndTimeTracker(arena_nb)
                     for i, arena in enumerate(self.parent().po.vars['analyzed_individuals']):
                         l = [i, arena, self.parent().po.vars, False, False, False, None]
@@ -1301,11 +1286,12 @@ class VideoTrackingThread(QtCore.QThread):
                                 else:
                                     im_to_display = self.parent().po.motion.binary[t, :, :] * 255
                                 self.image_from_thread.emit({"current_image": im_to_display,
-                                                             "message": f"{self.status['folder']}, Step 2/2, arena: {arena} / {arena_nb} ({current_percentage}%, {eta}), frame: {self.parent().po.motion.t}/{self.parent().po.motion.dims[0]}"})
+                                                             "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.parent().po.motion.t}/{self.parent().po.motion.dims[0]}"})
                             if self.isInterruptionRequested():
                                 return
                             do_continue = self.analyze_post_processing_results()
                             if do_continue:
+                                self.message_from_thread.emit(self.status['folder'] + f", Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
                                 self.parent().po.motion.save_results()
                                 if not self.parent().po.vars['several_blob_per_arena']:
                                     # Save basic statistics
@@ -1324,12 +1310,13 @@ class VideoTrackingThread(QtCore.QThread):
                                 if self.isInterruptionRequested():
                                     return
                                 self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                             "message": f"{self.status['folder']} Step 2/2: analyzed {arena} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
+                                                             "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.parent().po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
                         self.parent().po.motion = None
-
-                    self.status['message'] = f"Sequential analysis lasted {(default_timer() - tiii) / 60} minutes"
+                    duration = np.round((default_timer() - tiii) / 60, 2)
+                    self.status['message'] = f"Sequential analysis lasted {duration} minutes"
+                    logging.info(f"{self.status['folder']}, {self.status['message'] }")
                 else:
-                    self.status['message'] = f"Step 2/2:  Analyse all videos using {self.parent().po.cores} cores..."
+                    self.status['message'] = f"Analyse all videos using {self.parent().po.cores} cores..."
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message'] }")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
 
@@ -1347,7 +1334,7 @@ class VideoTrackingThread(QtCore.QThread):
                         fair_core_workload for _ in range(int(self.parent().po.cores - cores_with_1_more))]
                     # Emit message to the interface
                     self.image_from_thread.emit({"current_image": self.parent().po.last_image.bgr,
-                                                 "message": f"{self.status['folder']} Step 2/2: Analysis running on {self.parent().po.cores} CPU cores"})
+                                                 "message": f"{self.status['folder']}, Analysis running on {self.parent().po.cores} CPU cores"})
                     for i, extent_size in enumerate(parallel_organization):
                         EXTENTS_OF_SUBRANGES.append((bound, bound := bound + extent_size))
 
@@ -1384,7 +1371,7 @@ class VideoTrackingThread(QtCore.QThread):
                                     p._counted = True
                                     finished_processes += 1
                             self.msleep(50)
-                        self.message_from_thread.emit(f"{self.status['folder']}, Step 2/2:  Saving all results...")
+                        self.message_from_thread.emit(f"{self.status['folder']},  Saving all results")
                         for _ in range(finished_processes):
                             grouped_results = subtotals.get()
                             for j, results_i in enumerate(grouped_results):
@@ -1405,27 +1392,22 @@ class VideoTrackingThread(QtCore.QThread):
                                                                                                          'efficiency_test_2'])
                             del grouped_results
                         del subtotals
+                        duration = np.round((default_timer() - tiii) / 60, 2)
                         self.image_from_thread.emit(
                             {"current_image": self.parent().po.last_image.bgr,
-                             "message": f"{self.status['folder']} Step 2/2: analyzed {len(self.parent().po.vars['analyzed_individuals'])} out of {len(self.parent().po.vars['analyzed_individuals'])} arenas ({100}%)"})
-
-                        logging.info(f"Parallel analysis lasted {(default_timer() - tiii) / 60} minutes")
+                             "message": f"{self.status['folder']}, Analyzed {len(self.parent().po.vars['analyzed_individuals'])}/{len(self.parent().po.vars['analyzed_individuals'])} arenas (100%), Parallel analysis took {duration} minutes"})
+                        logging.info(f"Parallel analysis lasted {duration} minutes")
                     except MemoryError:
                         self.status['continue'] = False
                         self.status['message'] = f"Not enough memory, reduce the core number for parallel analysis"
-                        self.message_from_thread.emit(
-                            f"Analyzing {self.status['folder']} requires to reduce the core number for parallel analysis")
                         return
                 self.parent().po.save_tables()
             else:
                 self.status['continue'] = False
                 self.status['message'] = f"Requires an additional {memory_diff}GB of RAM to run"
-                self.message_from_thread.emit(
-                    f"Analyzing {self.status['folder']} requires an additional {memory_diff}GB of RAM to run")
         except MemoryError:
             self.status['continue'] = False
             self.status['message'] = f"Requires additional memory to run"
-            self.message_from_thread.emit(f"Analyzing {self.status['folder']} requires additional memory to run")
 
     def load_one_arena(self):
         """
@@ -1454,13 +1436,13 @@ class VideoTrackingThread(QtCore.QThread):
 
             save_loaded_video: bool = False
             if visu is None or (self.parent().po.vars['already_greyscale'] and converted_video is None):
+                logging.info(f"{self.status['folder']}, Starting to load arena n°{arena} from images")
                 cr = [self.parent().po.top[i], self.parent().po.bot[i],
                       self.parent().po.left[i], self.parent().po.right[i]]
                 vids = create_empty_videos(self.parent().po.data_list, cr,
                     self.parent().po.vars['lose_accuracy_to_save_memory'], self.parent().po.vars['already_greyscale'],
                     self.parent().po.vars['convert_for_motion'])
                 self.parent().po.visu, self.parent().po.converted_video, self.parent().po.converted_video2 = vids
-                logging.info(f"Starting to load arena n°{arena} from images")
 
                 prev_img = None
                 pat_tracker = PercentAndTimeTracker(self.parent().po.vars['img_number'])
@@ -1472,7 +1454,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.parent().po.first_image.crop_coord, cr, self.parent().po.all['raw_images'], is_landscape,
                         reduce_image_dim)
                     self.image_from_thread.emit(
-                        {"message": f"Video loading: {current_percentage}%{eta}", "current_image": img})
+                        {"message": f"{self.status['folder']}, Loading arena n°{arena} ({current_percentage}%{eta})", "current_image": img})
                     if self.parent().po.vars['already_greyscale']:
                         self.parent().po.converted_video[image_i, ...] = img
                     else:
@@ -1482,13 +1464,13 @@ class VideoTrackingThread(QtCore.QThread):
                         self.status['continue'] = False
                         return
                 if not self.parent().po.vars['already_greyscale']:
-                    msg = "Video conversion"
+                    msg = "Starting: video conversion"
                     if background is not None :
                         msg += ", background subtraction"
                     if self.parent().po.vars['filter_spec'] is not None:
                         msg += ", filtering"
-                    msg += ", wait..."
-                    self.image_from_thread.emit({"message": msg, "current_image": img})
+                    msg += "..."
+                    self.image_from_thread.emit({"message": f"{self.status['folder']}, {msg}", "current_image": img})
                     converted_videos = convert_subtract_and_filter_video(self.parent().po.visu,
                                                                             self.parent().po.vars['convert_for_motion'],
                                                                             background, background2,
@@ -1506,7 +1488,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.videos_in_ram = [self.parent().po.visu, self.parent().po.converted_video.copy(),
                                               self.parent().po.converted_video2.copy()]
             else:
-                logging.info(f"Starting to load arena n°{arena} from .h5 saved file")
+                logging.info(f"{self.status['folder']}, Starting to load arena n°{arena} from .h5 saved file")
                 self.videos_in_ram = None
             l = [i, arena, self.parent().po.vars, False, False, False, self.videos_in_ram]
             self.parent().po.motion = MotionAnalysis(l)
@@ -1539,7 +1521,7 @@ class VideoTrackingThread(QtCore.QThread):
         if self.parent().po.motion is None:
             self.load_one_arena()
         if self.status['continue']:
-            self.message_from_thread.emit(f"Quick video segmentation")
+            self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Video segmentation")
             self.parent().po.motion.converted_video = self.parent().po.converted_video.copy()
             if self.parent().po.vars['convert_for_motion']['logical'] != 'None':
                 self.parent().po.motion.converted_video2 = self.parent().po.converted_video2.copy()
@@ -1616,9 +1598,10 @@ class VideoTrackingThread(QtCore.QThread):
             analyses_to_compute = [0]
         else:
             if self.parent().po.all['compute_all_options']:
+                logging.info(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing all options")
                 analyses_to_compute = np.arange(5)
             else:
-                logging.info(f"option: {self.parent().po.all['video_option']}")
+                logging.info(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing option n°{self.parent().po.all['video_option']}")
                 analyses_to_compute = [self.parent().po.all['video_option']]
         time_parameters = [self.parent().po.motion.start, self.parent().po.motion.step,
                            self.parent().po.motion.lost_frames, self.parent().po.motion.substantial_growth]
@@ -1665,7 +1648,7 @@ class VideoTrackingThread(QtCore.QThread):
                     current_image = self.parent().po.motion.visu[analysis_i.t - 1, :, :, :].copy()
                     current_image[contours[0], contours[1], :] = self.parent().po.vars['contour_color']
                     self.image_from_thread.emit(
-                        {"message": f"Tracking option n°{seg_i + 1}. Image number: {analysis_i.t - 1}",
+                        {"message": f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}, Option n°{seg_i + 1}, Frame n°{analysis_i.t}/{analysis_i.binary.shape[0]}",
                          "current_image": current_image})
                 if self.isInterruptionRequested():
                     self.status['message'] = f"Was waiting for thread interruption"
@@ -1676,9 +1659,9 @@ class VideoTrackingThread(QtCore.QThread):
                                                analysis_i.converted_video.shape[0], axis=0)
                     if self.parent().po.vars['color_number'] > 2:
                         self.message_from_thread.emit(
-                            f"Failed to detect motion. Redo image analysis (with only 2 colors?)")
+                            f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}, Failed to detect motion. Redo image analysis (with only 2 colors?)")
                     else:
-                        self.message_from_thread.emit(f"Tracking option n°{seg_i + 1} failed to detect motion")
+                        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}, Option n°{seg_i + 1} failed to detect motion")
 
                 if self.parent().po.all['compute_all_options']:
                     if seg_i == 0:
@@ -1693,7 +1676,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.parent().po.motion.logical_or = np.nonzero(analysis_i.binary)
                 else:
                     self.parent().po.motion.segmented = analysis_i.binary
-        self.when_detection_finished.emit("Post processing done, read to play the segmentation video, save this result, or run all")
+        self.when_detection_finished.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}, Post processing done: read, save or run all arenas")
 
     def change_one_arena_result(self):
         """
@@ -1706,8 +1689,7 @@ class VideoTrackingThread(QtCore.QThread):
         detection. It also handles optional computations like fading effects and
         segmentation based on different video options.
         """
-        self.message_from_thread.emit(
-            f"Arena n°{self.parent().po.all['arena']}: modifying its results...")
+        self.message_from_thread.emit(f"{self.status['folder']}, Starting modifying Arena n°{self.parent().po.all['arena']} results")
         if self.parent().po.motion.start is None:
             self.parent().po.motion.binary = np.repeat(np.expand_dims(self.parent().po.motion.origin, 0),
                                                      self.parent().po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
@@ -1731,13 +1713,14 @@ class VideoTrackingThread(QtCore.QThread):
                 if self.parent().po.computed_video_options[self.parent().po.all['video_option']]:
                     self.parent().po.motion.binary = self.parent().po.motion.segmented
         do_continue = self.analyze_post_processing_results()
-        if do_continue:
-            self.status['message'] = f"Arena n°{self.parent().po.all['arena']}: analysis finished."
-        else:
+        if not do_continue:
             self.status['message'] = "Was waiting for thread interruption"
+            return
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Saving results")
         self.parent().po.motion.change_results_of_one_arena()
         self.parent().po.motion = None
-        self.message_from_thread.emit(self.status['message'])
+        self.status['message'] = f"Arena n°{self.parent().po.all['arena']}: analysis finished"
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
     def analyze_post_processing_results(self) -> bool:
         """
@@ -1751,18 +1734,23 @@ class VideoTrackingThread(QtCore.QThread):
         """
         if self.isInterruptionRequested():
             return False
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing descriptors")
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         if self.isInterruptionRequested():
             return False
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting growth transitions")
         self.parent().po.motion.detect_growth_transitions()
         if self.isInterruptionRequested():
             return False
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting network and graph")
         self.parent().po.motion.networks_analysis(False)
         if self.isInterruptionRequested():
             return False
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting oscillatory patterns")
         self.parent().po.motion.study_cytoscillations(False)
         if self.isInterruptionRequested():
             return False
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing fractal dimension")
         self.parent().po.motion.fractal_descriptions()
         if self.isInterruptionRequested():
             return False
