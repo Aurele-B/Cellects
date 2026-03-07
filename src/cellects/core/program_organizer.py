@@ -101,7 +101,7 @@ class ProgramOrganizer:
         self.first_im = None
         self.last_im = None
         self.starting_blob_hsize_in_pixels = None
-        self.vars['first_move_threshold'] = None
+        self.vars['first_move_threshold'] = 10
         self.vars['convert_for_origin'] = None
         self.vars['convert_for_motion'] = None
         self.current_combination_id = 0
@@ -113,6 +113,7 @@ class ProgramOrganizer:
         self.back_mask = None
         self.visualize: bool = True
         self.network_shaped: bool = False
+        self.update_background_luminosity: bool = False
 
     def update_variable_dict(self):
         """
@@ -172,20 +173,50 @@ class ProgramOrganizer:
         write_json(ALL_VARS_JSON_FILE, all_vars)
 
     def save_first_image(self):
+        """
+        Save the first image's validated shapes to an HDF5 file.
+
+        If the current combination ID is valid and has a non-empty set of
+        image combinations, save the validated shapes to 'cellects_data.h5'.
+
+        Notes
+        -----
+        This function assumes that `self.first_image` and its attributes are already defined.
+        It uses the smallest memory-efficient array from `np.nonzero(validated_shapes)` to save space.
+        """
         if self.first_image is not None and self.first_image.im_combinations is not None and len(self.first_image.im_combinations) > 0:
             validated_shapes = self.first_image.im_combinations[self.current_combination_id]['binary_image']
             write_h5('cellects_data.h5', smallest_memory_array(np.nonzero(validated_shapes)), 'validated_shapes')
 
-    def save_masks(self):
+    def save_masks(self, remove_unused_masks: bool = True):
+        """
+        Conditionally save or remove masks to disk for batch processing (several folders).
+
+        When analyzing several folders, the same masks are (optionally) saved to ease the first image detection.
+        After user input, unused masks should be removed while at other times,
+        calling this method should not remove that information.
+
+
+        Parameters
+        ----------
+        remove_unused_masks : bool, optional
+            If True and there is no user-made mask, remove saved masks from disk.
+            Default is True.
+
+        Notes
+        -----
+        This function saves the masks to an HDF5 file saved in the config folder (to be accessible anywhere)
+        """
         if self.all['keep_cell_and_back_for_all_folders']:
-            if self.bio_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
-            else:
+            if self.bio_mask is not None:
                 write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask, 'initial_bio_mask')
-            if self.back_mask is None:
-                remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
-            else:
+            if self.back_mask is not None:
                 write_h5(CONFIG_DIR / 'masks.h5', self.back_mask, 'initial_back_mask')
+            if remove_unused_masks:
+                if self.back_mask is None:
+                    remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
+                if self.bio_mask is None:
+                    remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
         else:
             self.all.pop('initial_bio_mask', None)
             self.all.pop('initial_back_mask', None)
@@ -431,13 +462,17 @@ class ProgramOrganizer:
                             self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
                             self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
                             self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
+                            if not 'average_pixel_size' in self.vars:
+                                self.get_average_pixel_size()
+                            if not 'lighter_background' in self.vars:
+                                self.find_if_lighter_background()
                             background = read_h5(f'ind_{1}.h5', 'background')
                             if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
                                 self.first_exp_ready_to_run = True
         if self.first_exp_ready_to_run:
-            logging.info("The current (or the first) folder is ready to run")
+            logging.info("The current folder is ready to run")
         else:
-            logging.info("The current (or the first) folder is not ready to run")
+            logging.info("The current folder is not ready to run")
 
     def save_data_to_run_cellects_quickly(self, new_one_if_does_not_exist: bool=True):
         """
@@ -608,7 +643,7 @@ class ProgramOrganizer:
             if self.all['extract_time_interval']:
                 self.vars['time_step'] = 1
                 try:
-                    timings = extract_time(self.data_list, pathway, self.all['raw_images'])
+                    timings = extract_time(pathway, self.data_list, self.all['raw_images'])
                     timings = timings - timings[0]
                     timings = timings / 60
                     time_step = np.diff(timings)
@@ -891,9 +926,7 @@ class ProgramOrganizer:
         else:
             self.starting_blob_hsize_in_pixels = None
 
-        if self.all['automatic_size_thresholding']:
-            self.vars['first_move_threshold'] = 10
-        else:
+        if not self.all['automatic_size_thresholding']:
             self.vars['first_move_threshold'] = int(np.round(self.all['first_move_threshold_in_mm²'] /
                                                          self.vars['average_pixel_size']))
         logging.info(f"The average pixel size is: {self.vars['average_pixel_size']} mm²")
@@ -1111,7 +1144,7 @@ class ProgramOrganizer:
         if self.first_image.y_boundaries is None:
             self.first_image.get_setup_boundaries()
 
-        logging.info("Get the coordinates of all arenas using the get_bounding_boxes method of the VideoMaker class")
+        logging.info("Get the coordinates of all arenas using the get_bounding_boxes method")
         if self.first_image.validated_shapes.any() and self.first_image.shape_number > 0:
             self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                 self.first_image.validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)

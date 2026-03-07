@@ -409,6 +409,13 @@ class TestDisplayBoxes(CellectsUnitTest):
 
 class TestExtractTime(CellectsUnitTest):
     """Test suite for extract_time function."""
+    def test_extract_time_basic_behavior(self):
+        """Test extract_time basic behavior."""
+        # Execute function
+        result = extract_time(self.d + '/multiple_experiments/f1')
+        # Verify result
+        self.assertTrue(isinstance(result, np.ndarray))
+
     def test_extract_time_with_valid_images_same_timestamp(self):
         """Test extract_time with valid images having same timestamp."""
         # Setup test data - would create actual image files in real tests
@@ -416,12 +423,12 @@ class TestExtractTime(CellectsUnitTest):
         expected_time = np.array([0, 0])  # Assuming all timestamps are same
 
         # Execute function
-        result = extract_time(image_list, self.path_experiment)
+        result = extract_time(self.path_experiment, image_list)
         # Verify result
         self.assertTrue(np.array_equal(result, expected_time))
 
 
-class TestReadOneArena(CellectsUnitTest):
+class TestReadArena(CellectsUnitTest):
     """Test suite for read_one_arena function."""
     def test_read_one_arena_with_videos_in_ram(self):
         """Test read_one_arena with videos in ram."""
@@ -457,6 +464,16 @@ class TestReadOneArena(CellectsUnitTest):
         self.assertTrue(visu is None)
 
 
+class TestWriteVideoFromImages(CellectsUnitTest):
+    """Test suite for write_video_from_images function."""
+    def test_write_video_from_images(self):
+        """Test write_video_from_images basic behavior."""
+        write_video_from_images(self.path_experiment)
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile(self.path_experiment + '/' + f"timelapse.mp4"):
+            os.remove(self.path_experiment + '/' + f"timelapse.mp4")
 
 
 if __name__ == '__main__':

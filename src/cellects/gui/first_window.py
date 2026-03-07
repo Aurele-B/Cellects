@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 from PySide6 import QtWidgets, QtCore
 from cellects.core.cellects_threads import (
-    GetFirstImThread, GetExifDataThread, RunAllThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
+    GetFirstImThread, GetExifDataThread, VideoTrackingThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, FixedText, EditText, LineWidget)
@@ -54,7 +54,7 @@ class FirstWindow(MainTabsType):
         super().__init__(parent, night_mode)
         logging.info("Initialize first window")
         self.setParent(parent)
-
+        self.video_task: str = 'all'
         self.true_init()
 
     def true_init(self):
@@ -74,7 +74,7 @@ class FirstWindow(MainTabsType):
         self.video_tab.set_not_usable()
         self.thread_dict = {}
         self.thread_dict["LookForData"] = LookForDataThreadInFirstW(self.parent())
-        self.thread_dict["RunAll"] = RunAllThread(self.parent())
+        self.thread_dict["VideoTracking"] = VideoTrackingThread(self.parent())
         self.thread_dict["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
         self.thread_dict["GetFirstIm"] = GetFirstImThread(self.parent())
         self.thread_dict["GetExifDataThread"] = GetExifDataThread(self.parent())
@@ -337,7 +337,7 @@ class FirstWindow(MainTabsType):
         Checks if certain threads are running, updates parent object's attributes,
         and starts a data-looking thread if conditions are met.
         """
-        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["RunAll"].isRunning():
+        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["VideoTracking"].isRunning():
             self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
             self.parent().po.all['radical'] = self.radical.text()
             self.parent().po.all['extension'] = self.extension.text()
@@ -372,9 +372,9 @@ class FirstWindow(MainTabsType):
         """
         if len(self.parent().po.all['folder_list']) == 0 and len(self.parent().po.data_list) == 0:
             if self.parent().po.all['im_or_vid'] == 1:
-                error_message = f"There is no videos ({self.parent().po.all['extension']}) in the selected folder and its sub-folders"
+                error_message = f"There is no videos ({self.parent().po.all['radical']}...{self.parent().po.all['extension']}) in the selected folder and its sub-folders"
             else:
-                error_message = f"There is no images ({self.parent().po.all['extension']}) in the selected folder and its sub-folders"
+                error_message = f"There is no images ({self.parent().po.all['radical']}...{self.parent().po.all['extension']}) in the selected folder and its sub-folders"
             self.message.setText(error_message)
         else:
             self.message.setText('')
@@ -446,7 +446,7 @@ class FirstWindow(MainTabsType):
         This function also save the id of the following window for later use.
         """
         if self.video_tab.state != "not_usable":
-            if self.thread_dict["LookForData"].isRunning() or self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning() or self.thread_dict["GetFirstIm"].isRunning() or self.thread_dict["RunAll"].isRunning():
+            if self.thread_dict["LookForData"].isRunning() or self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning() or self.thread_dict["GetFirstIm"].isRunning() or self.thread_dict["VideoTracking"].isRunning():
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
                 self.parent().last_tab = "data_specifications"
@@ -456,22 +456,23 @@ class FirstWindow(MainTabsType):
         """
         Run_all_directly_is_clicked
 
-        This method initiates a complete analysis process by starting the `RunAll` thread
-        after ensuring no other relevant threads are currently running.
+        This method initiates a complete analysis process by starting the `VideoTracking` thread
+        for processing all arenas after ensuring no other relevant threads are currently running.
 
         Notes
         -----
-        - This method ensures that the `LookForData` and `RunAll` threads are not running
+        - This method ensures that the `LookForData` and `VideoTracking` threads are not running
           before initiating a new analysis.
         - The method updates the UI to indicate that an analysis has started and displays
           progress messages.
         """
-        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["RunAll"].isRunning():
+        if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["VideoTracking"].isRunning():
             self.parent().po.motion = None
             self.message.setText("Complete analysis has started, wait until this message disappear...")
-            self.thread_dict["RunAll"].start()
-            self.thread_dict["RunAll"].message_from_thread.connect(self.display_message_from_thread)
-            self.thread_dict["RunAll"].image_from_thread.connect(self.display_image_during_thread)
+            self.video_task = 'all'
+            self.thread_dict["VideoTracking"].start()
+            self.thread_dict["VideoTracking"].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict["VideoTracking"].image_from_thread.connect(self.display_image_during_thread)
             self.display_image.setVisible(True)
 
     def pathway_changed(self):
@@ -495,7 +496,6 @@ class FirstWindow(MainTabsType):
             self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(Path(self.global_pathway.text())):
             self.parent().po.all['global_pathway'] = self.global_pathway.text()
-            logging.info(f"Dir: {self.parent().po.all['global_pathway']}")
             os.chdir(Path(self.parent().po.all['global_pathway']))
             # 1) Put invisible widgets
             self.radical.setVisible(False)
@@ -543,8 +543,7 @@ class FirstWindow(MainTabsType):
         self.next.setVisible(True)
 
         if self.parent().po.first_exp_ready_to_run:
-            self.parent().po.all['folder_number'] = 1
-            self.parent().instantiate_widgets(True)
+            self.parent().instantiate_widgets()
             self.arena_number.setValue(self.parent().po.all['first_folder_sample_number'])
             self.im_or_vid.setCurrentIndex(self.parent().po.all['im_or_vid'])
             self.radical.setText(self.parent().po.all['radical'])

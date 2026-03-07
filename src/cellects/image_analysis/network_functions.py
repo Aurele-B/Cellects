@@ -149,7 +149,7 @@ def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8],
                         computed_network = potential_network[-2:, :, :].sum(axis=0)
                     computed_network[computed_network > 0] = 1
             else:
-                computed_network = computed_network[t, :, :].copy()
+                computed_network = potential_network[t, :, :].copy()
 
             if origin is not None:
                 computed_network = computed_network * (1 - origin)

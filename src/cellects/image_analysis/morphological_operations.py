@@ -1282,14 +1282,14 @@ def image_borders(dimensions: tuple, shape: str="rectangular") -> NDArray[np.uin
 
     Examples
     --------
-    >>> borders = image_borders((3, 3), "rectangular")
+    >>> borders = image_borders((3, 3), "rectangle")
     >>> print(borders)
     [[0 0 0]
      [0 1 0]
      [0 0 0]]
     """
-    if shape == "circular":
-        borders = create_ellipse(dimensions[0], dimensions[0])
+    if shape == "circle":
+        borders = create_ellipse(dimensions[0], dimensions[1])
         img_contours = image_borders(dimensions)
         borders = borders * img_contours
     else:

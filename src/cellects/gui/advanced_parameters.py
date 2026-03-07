@@ -686,7 +686,8 @@ class AdvancedParameters(WindowType):
         """
         Handles the logic for using background subtraction or not during image segmentation.
         """
-        self.parent().po.motion = None
+        if not self.parent().videoanalysiswindow.thread_dict['VideoTracking'].isRunning():
+            self.parent().po.motion = None
         if self.subtract_background.isChecked():
             self.parent().po.first_exp_ready_to_run = False
 
@@ -710,12 +711,21 @@ class AdvancedParameters(WindowType):
         self.first_move_threshold_label.setVisible(not self.do_automatic_size_thresholding.isChecked())
 
     def mesh_side_length_cb_changed(self):
+        """
+        Set the mesh side length setting visible when the corresponding checkbox is checked.
+        """
         self.mesh_side_length.setVisible(self.mesh_side_length_cb.isChecked())
 
     def mesh_step_length_cb_changed(self):
+        """
+        Set the mesh step length setting visible when the corresponding checkbox is checked.
+        """
         self.mesh_step_length.setVisible(self.mesh_step_length_cb.isChecked())
 
     def mesh_min_int_var_cb_changed(self):
+        """
+        Set the mesh minimal intensity variation setting visible when the corresponding checkbox is checked.
+        """
         self.mesh_min_int_var.setVisible(self.mesh_min_int_var_cb.isChecked())
 
     def extract_time_is_clicked(self):
@@ -1188,32 +1198,19 @@ class AdvancedParameters(WindowType):
         and descriptors. It also changes the active widget to either the first or third
         widget depending on a condition.
         """
+        # Image parameters:
         self.automatically_crop.setChecked(self.parent().po.all['automatically_crop'])
         self.subtract_background.setChecked(self.parent().po.vars['subtract_background'])
-        self.keep_cell_and_back_for_all_folders.setChecked(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.all_specimens_have_same_direction.setChecked(self.parent().po.all['all_specimens_have_same_direction'])
+
+        # Post-processing parameters:
+        self.sliding_window_segmentation.setChecked(self.parent().po.vars['sliding_window_segmentation'])
+        self.morphological_opening.setChecked(self.parent().po.vars['morphological_opening'])
+        self.morphological_closing.setChecked(self.parent().po.vars['morphological_closing'])
         self.correct_errors_around_initial.setChecked(self.parent().po.vars['correct_errors_around_initial'])
         self.prevent_fast_growth_near_periphery.setChecked(self.parent().po.vars['prevent_fast_growth_near_periphery'])
         self.periphery_width.setValue(self.parent().po.vars['periphery_width'])
         self.max_periphery_growth.setValue(self.parent().po.vars['max_periphery_growth'])
-
-
-        self.first_move_threshold.setValue(self.parent().po.all['first_move_threshold_in_mm²'])
-        self.pixels_to_mm.setChecked(self.parent().po.vars['output_in_mm'])
-        self.do_automatic_size_thresholding.setChecked(self.parent().po.all['automatic_size_thresholding'])
-        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
-        self.oscillation_period.setValue(self.parent().po.vars['expected_oscillation_period'])
-        self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
-
-        self.do_multiprocessing.setChecked(self.parent().po.all['do_multiprocessing'])
-        self.max_core_nb.setValue(self.parent().po.all['cores'])
-        self.min_memory_left.setValue(self.parent().po.vars['min_ram_free'])
-        self.lose_accuracy_to_save_memory.setChecked(self.parent().po.vars['lose_accuracy_to_save_memory'])
-        self.video_fps.setValue(self.parent().po.vars['video_fps'])
-        self.keep_unaltered_videos.setChecked(self.parent().po.vars['keep_unaltered_videos'])
-        self.save_processed_videos.setChecked(self.parent().po.vars['save_processed_videos'])
-        self.time_step.setValue(self.parent().po.vars['time_step'])
-        # self.parent().po.all['overwrite_cellects_data'] = self.overwrite_cellects_data.isChecked()
-
         self.connect_distant_shape_during_segmentation.setChecked(self.parent().po.all['connect_distant_shape_during_segmentation'])
         do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
         do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
@@ -1227,11 +1224,53 @@ class AdvancedParameters(WindowType):
             self.min_size_for_connection.setValue(self.parent().po.vars['min_size_for_connection'])
         else:
             self.min_size_for_connection.setValue(0)
-
         self.detection_range_factor.setValue(self.parent().po.vars['detection_range_factor'])
-        self.all_specimens_have_same_direction.setChecked(self.parent().po.all['all_specimens_have_same_direction'])
+
+        # Appearing cell/colony parameters
+        self.first_move_threshold.setValue(self.parent().po.all['first_move_threshold_in_mm²'])
+        self.do_automatic_size_thresholding.setChecked(self.parent().po.all['automatic_size_thresholding'])
+        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
+
+        # Rolling window segmentation
+        self.mesh_step_length_cb.setChecked(self.parent().po.all['auto_mesh_step_length'])
+        if self.parent().po.vars['rolling_window_segmentation']['step'] is not None:
+            self.mesh_step_length.setValue(self.parent().po.vars['rolling_window_segmentation']['step'])
+
+        self.mesh_side_length_cb.setChecked(self.parent().po.all['auto_mesh_side_length'])
+        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is not None:
+            self.mesh_side_length.setValue(self.parent().po.vars['rolling_window_segmentation']['side_len'])
+
+        self.mesh_min_int_var_cb.setChecked(self.parent().po.all['auto_mesh_min_int_var'])
+        if self.parent().po.vars['rolling_window_segmentation']['min_int_var'] is not None:
+            self.mesh_min_int_var.setValue(self.parent().po.vars['rolling_window_segmentation']['min_int_var'])
+
+        # Oscillatory parameters:
+        self.oscillation_period.setValue(self.parent().po.vars['expected_oscillation_period'])
+        self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
+
+        # Spatio-temporal scaling:
+        self.extract_time.setChecked(self.parent().po.all['extract_time_interval'])
+        self.time_step.setValue(self.parent().po.vars['time_step'])
+        self.pixels_to_mm.setChecked(self.parent().po.vars['output_in_mm'])
+
+        # Batch processing:
+        self.keep_cell_and_back_for_all_folders.setChecked(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+
+        # Computer ressources:
+        self.do_multiprocessing.setChecked(self.parent().po.all['do_multiprocessing'])
+        self.max_core_nb.setValue(self.parent().po.all['cores'])
+        self.min_memory_left.setValue(self.parent().po.vars['min_ram_free'])
+        self.lose_accuracy_to_save_memory.setChecked(self.parent().po.vars['lose_accuracy_to_save_memory'])
+
+        # Video saving:
+        self.video_fps.setValue(self.parent().po.vars['video_fps'])
+        self.keep_unaltered_videos.setChecked(self.parent().po.vars['keep_unaltered_videos'])
+        self.save_processed_videos.setChecked(self.parent().po.vars['save_processed_videos'])
+
+        # Color space combination for video analysis:
         self.update_csc_editing_display()
 
+        # Change widget
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
         else:
@@ -1255,19 +1294,42 @@ class AdvancedParameters(WindowType):
         if self.automatically_crop.isChecked() != self.parent().po.all['automatically_crop']:
             if os.path.isfile('cellects_data.h5'):
                 remove_h5_key('cellects_data.h5', 'crop_coord')
+
+        # Image parameters:
         self.parent().po.all['automatically_crop'] = self.automatically_crop.isChecked()
         self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
-        self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
+        self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
+
+        # Post-processing parameters:
+        self.parent().po.vars['sliding_window_segmentation'] = self.sliding_window_segmentation.isChecked()
+        self.parent().po.vars['morphological_opening'] = self.morphological_opening.isChecked()
+        self.parent().po.vars['morphological_closing'] = self.morphological_closing.isChecked()
         self.parent().po.vars['correct_errors_around_initial'] = self.correct_errors_around_initial.isChecked()
         self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
         self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
         self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
+        do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
+        self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
+        if do_distant_shape_int:
+            self.parent().po.vars['detection_range_factor'] = int(
+                np.round(self.detection_range_factor.value()))
+        else:
+            self.parent().po.vars['detection_range_factor'] = 0
+        if self.use_max_size.isChecked():
+            self.parent().po.vars['max_size_for_connection'] = int(np.round(self.max_size_for_connection.value()))
+        else:
+            self.parent().po.vars['max_size_for_connection'] = None
+        if self.use_min_size.isChecked():
+            self.parent().po.vars['min_size_for_connection'] = int(np.round(self.min_size_for_connection.value()))
+        else:
+            self.parent().po.vars['min_size_for_connection'] = None
 
+        # Appearing cell/colony parameters
         self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
-        self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
         self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
         self.parent().po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
 
+        # Rolling window segmentation
         self.parent().po.all['auto_mesh_step_length'] = self.mesh_step_length_cb.isChecked()
         if self.parent().po.all['auto_mesh_step_length']:
             self.parent().po.vars['rolling_window_segmentation']['step'] = None
@@ -1286,37 +1348,30 @@ class AdvancedParameters(WindowType):
         else:
             self.parent().po.vars['rolling_window_segmentation']['min_int_var'] = int(self.mesh_min_int_var.value())
 
+        # Oscillatory parameters:
         self.parent().po.vars['expected_oscillation_period'] = self.oscillation_period.value()
         self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
 
+        # Spatio-temporal scaling:
+        self.parent().po.all['extract_time_interval'] = self.extract_time.isChecked()
+        self.parent().po.vars['time_step'] = float(self.time_step.value())
+        self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
+
+        # Batch processing:
+        self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
+
+        # Computer ressources:
         self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
         self.parent().po.all['cores'] = int(self.max_core_nb.value())
         self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
         self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
+
+        # Video saving:
         self.parent().po.vars['video_fps'] = float(self.video_fps.value())
         self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
         self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
-        self.parent().po.all['extract_time_interval'] = self.extract_time.isChecked()
-        self.parent().po.vars['time_step'] = float(self.time_step.value())
 
-        do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
-        self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
-        if do_distant_shape_int:
-            self.parent().po.vars['detection_range_factor'] = int(
-                np.round(self.detection_range_factor.value()))
-        else:
-            self.parent().po.vars['detection_range_factor'] = 0
-        if self.use_max_size.isChecked():
-            self.parent().po.vars['max_size_for_connection'] = int(np.round(self.max_size_for_connection.value()))
-        else:
-            self.parent().po.vars['max_size_for_connection'] = None
-        if self.use_min_size.isChecked():
-            self.parent().po.vars['min_size_for_connection'] = int(np.round(self.min_size_for_connection.value()))
-        else:
-            self.parent().po.vars['min_size_for_connection'] = None
-
-        self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
-
+        # Color space combination for video analysis:
         previous_csc = self.parent().po.vars['convert_for_motion'].copy()
         self.save_user_defined_csc()
         if self.parent().po.first_exp_ready_to_run:
@@ -1330,11 +1385,13 @@ class AdvancedParameters(WindowType):
                         key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
                         previous_csc[key])
             if not are_dicts_equal:
-                self.parent().po.find_if_lighter_background()
+                self.parent().po.update_background_luminosity = True
 
+        # Save settings
         if not self.parent().thread_dict['SaveAllVars'].isRunning():
             self.parent().thread_dict['SaveAllVars'].start()
 
+        # Change widget
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
         else:

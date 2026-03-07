@@ -133,8 +133,6 @@ class MotionAnalysis:
         self.sun = None
         self.holes = None
         self.coord_network = None
-        logging.info(f"Start the motion analysis of the arena n°{self.one_descriptor_per_arena['arena']}")
-
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
@@ -191,7 +189,6 @@ class MotionAnalysis:
         attributes like `self.origin`, `self.background`, and `self.converted_video`.
 
         """
-        logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Load images and videos")
         if 'crop_coord' in self.vars and self.vars['crop_coord'] is not None:
             crop_top, crop_bot, crop_left, crop_right = self.vars['crop_coord']
         else:
@@ -421,29 +418,28 @@ class MotionAnalysis:
 
     def detection(self, compute_all_possibilities: bool=False):
         """
+        Perform frame-by-frame or luminosity-based segmentation on video data to detect cell motion and growth.
 
-            Perform frame-by-frame or luminosity-based segmentation on video data to detect cell motion and growth.
+        This function processes video frames using either frame-by-frame segmentation or luminosity-based
+        segmentation algorithms to detect cell motion and growth. It handles drift correction, adjusts parameters
+        based on configuration settings, and applies logical operations to combine results from different segmentation
+        methods.
 
-            This function processes video frames using either frame-by-frame segmentation or luminosity-based
-            segmentation algorithms to detect cell motion and growth. It handles drift correction, adjusts parameters
-            based on configuration settings, and applies logical operations to combine results from different segmentation
-            methods.
+        Parameters
+        ----------
+        compute_all_possibilities : bool, optional
+            Flag to determine if all segmentation possibilities should be computed, by default False
 
-            Parameters
-            ----------
-            compute_all_possibilities : bool, optional
-                Flag to determine if all segmentation possibilities should be computed, by default False
+        Returns
+        -------
+        None
 
-            Returns
-            -------
-            None
-
-            Notes
-            -----
-            This function modifies the instance variables `self.segmented`, `self.converted_video`,
-            and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
-            Depending on the configuration settings, it performs various segmentation algorithms and updates
-            the instance variables accordingly.
+        Notes
+        -----
+        This function modifies the instance variables `self.segmented`, `self.converted_video`,
+        and potentially `self.luminosity_segmentation` and `self.gradient_segmentation`.
+        Depending on the configuration settings, it performs various segmentation algorithms and updates
+        the instance variables accordingly.
 
         """
         if self.start is None:
@@ -624,7 +620,6 @@ class MotionAnalysis:
             value_segmentation_thresholds = np.arange(0.8, -0.7, -0.1)
             validated_thresholds = np.zeros(value_segmentation_thresholds.shape, dtype=bool)
             counter = 0
-            while_condition = True
             max_motion_per_frame = (self.dims[1] * self.dims[2]) * self.vars['maximal_growth_factor'] * 2
             if self.vars['lighter_background']:
                 basic_bckgrnd_values = np.quantile(converted_video[:(self.lost_frames + 1), ...], 0.9, axis=(1, 2))
@@ -982,15 +977,14 @@ class MotionAnalysis:
         # I/ dilate the shape made with covered pixels to assess for covering
         # I/ 1) Only keep pixels that have been detected at least two times in the three previous frames
         if self.vars['sliding_window_segmentation']:
-            if self.dims[0] < 100:
-                new_potentials = self.segmented[self.t, :, :]
+            if self.t > 1:
+                new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
             else:
-                if self.t > 1:
-                    new_potentials = np.sum(self.segmented[(self.t - 2): (self.t + 1), :, :], 0, dtype=np.uint8)
-                else:
-                    new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
-                new_potentials[new_potentials == 1] = 0
-                new_potentials[new_potentials > 1] = 1
+                new_potentials = np.sum(self.segmented[: (self.t + 1), :, :], 0, dtype=np.uint8)
+            new_potentials[new_potentials == 1] = 0
+            new_potentials[new_potentials > 1] = 1
+        else:
+            new_potentials = self.segmented[self.t, :, :]
 
         # I/ 2) If an image displays more new potential pixels than 50% of image pixels,
         # one of these images is considered noisy and we try taking only one.
@@ -1658,13 +1652,19 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             self.save_video()
         # I/ Update/Create one_row_per_arena.csv
         create_new_csv: bool = False
+        new_stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
+                             columns=list(self.one_descriptor_per_arena.keys()))
+        new_stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
         if os.path.isfile("one_row_per_arena.csv"):
             try:
                 with open(f"one_row_per_arena.csv", 'r') as file:
                     stats = pd.read_csv(file, header=0, sep=";")
-                for stat_name, stat_value in self.one_descriptor_per_arena.items():
+                for stat_name, stat_value in new_stats.items():
                     if stat_name in stats.columns:
-                        stats.loc[(self.one_descriptor_per_arena['arena'] - 1), stat_name] = np.uint32(self.one_descriptor_per_arena[stat_name])
+                        stat_type = stats[stat_name].dtypes
+                        if new_stats[stat_name].dtype != stat_type:
+                            new_stats[stat_name] = new_stats[stat_name].astype(stat_type)
+                        stats.loc[(new_stats['arena'] - 1).astype(int), stat_name] = new_stats[stat_name].values
                 with open(f"one_row_per_arena.csv", 'w') as file:
                     stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
@@ -1678,10 +1678,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             logging.info("Create a new one_row_per_arena.csv file")
             try:
                 with open(f"one_row_per_arena.csv", 'w') as file:
-                    stats = pd.DataFrame(np.zeros((len(self.vars['analyzed_individuals']), len(self.one_descriptor_per_arena))),
-                               columns=list(self.one_descriptor_per_arena.keys()))
-                    stats.iloc[(self.one_descriptor_per_arena['arena'] - 1), :] = self.one_descriptor_per_arena.values()
-                    stats.to_csv(file, sep=';', index=False, lineterminator='\n')
+                    new_stats.to_csv(file, sep=';', index=False, lineterminator='\n')
             except PermissionError:
                 logging.error("Never let one_row_per_arena.csv open when Cellects runs")
 
@@ -1693,6 +1690,9 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     descriptors = pd.read_csv(file, header=0, sep=";")
                 for stat_name, stat_value in self.one_row_per_frame.items():
                     if stat_name in descriptors.columns:
+                        stat_type = descriptors[stat_name].dtypes
+                        if self.one_row_per_frame[stat_name].dtypes != stat_type:
+                            self.one_row_per_frame[stat_name] = self.one_row_per_frame[stat_name].astype(stat_type)
                         descriptors.loc[((self.one_descriptor_per_arena['arena'] - 1) * self.dims[0]):((self.one_descriptor_per_arena['arena']) * self.dims[0] - 1), stat_name] = self.one_row_per_frame.loc[:, stat_name].values[:]
                 with open(f"one_row_per_frame.csv", 'w') as file:
                     descriptors.to_csv(file, sep=';', index=False, lineterminator='\n')

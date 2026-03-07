@@ -92,7 +92,7 @@ class DefaultDicts:
 
             # Post-processing params
             'specimen_activity': 'grow',
-            'sliding_window_segmentation': True,
+            'sliding_window_segmentation': False,
             'morphological_opening': True,
             'morphological_closing': True,
             'fading': 0,
@@ -144,7 +144,7 @@ class DefaultDicts:
             'analyzed_individuals': [1],
             'bio_label': 1,
             'bio_label2': 1,
-            'first_move_threshold': None,
+            'first_move_threshold': 10,
             'img_number': 0,
             'origin_state': 'fluctuating',
             'already_greyscale': False,
