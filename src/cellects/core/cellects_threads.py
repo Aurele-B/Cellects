@@ -1136,8 +1136,8 @@ class VideoTrackingThread(QtCore.QThread):
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
                 if video_nb_per_bunch > 0 and rom_memory_required is None:
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.parent().po.vars['img_number'])
-                    pat_tracker2 = PercentAndTimeTracker(len(self.parent().po.vars['analyzed_individuals']))
-                    arena_percentage = 0
+                    image_percentage = 0
+                    im_percent = 0
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
                         if bunch == (bunch_nb - 1) and remaining > 0:
@@ -1152,7 +1152,8 @@ class VideoTrackingThread(QtCore.QThread):
                         images_done = bunch * self.parent().po.vars['img_number']
                         for image_i, image_name in enumerate(self.parent().po.data_list):
                             image_percentage, remaining_time = pat_tracker1.get_progress(image_i + images_done)
-                            self.message_from_thread.emit(f"{self.status['folder']}, Writing videos ({np.round((image_percentage + arena_percentage) / 2, 2)}%)")
+                            im_percent = np.round(image_percentage, 2)
+                            self.message_from_thread.emit(f"{self.status['folder']}, Writing videos ({im_percent}%), bunch n°{bunch + 1}/{bunch_nb}")
                             if not os.path.exists(image_name):
                                 raise FileNotFoundError(image_name)
                             img = read_and_rotate(image_name, prev_img, self.parent().po.all['raw_images'],
@@ -1183,10 +1184,11 @@ class VideoTrackingThread(QtCore.QThread):
                                 if not self.status['continue']:
                                     return
                         if self.status['continue']:
+                            pat_tracker2 = PercentAndTimeTracker(len(arena))
                             for arena_i, arena_name in enumerate(arena):
                                 try:
                                     arena_percentage, eta = pat_tracker2.get_progress()
-                                    self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: {np.round((image_percentage + arena_percentage) / 2, 2)}%, bunch n°{bunch}/{bunch_nb}")  # , ETA {remaining_time}
+                                    self.message_from_thread.emit(f"{self.status['folder']}, Writing videos ({im_percent}%), Saving bunch n°{bunch + 1}/{bunch_nb} ({np.round(arena_percentage, 2)}%)")
                                     if use_list_of_vid:
                                         write_h5(vid_names[arena_name], video_bunch[arena_i], 'video')
                                     else:
