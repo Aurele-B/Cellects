@@ -21,6 +21,7 @@ on:
   push:
     branches:
       - develop
+      # - 'release/**'
     paths:
       - 'src/**'
       - '__main__.py'
@@ -127,20 +128,10 @@ jobs:
             Cellects-${{ steps.version.outputs.name }}-setup.exe
           retention-days: 7
 
-  # macOS build job with architecture matrix
+  # macOS build job
   test-mac-build:
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_mac == 'true' || github.event_name != 'workflow_dispatch' }}
-    strategy:
-      matrix:
-        os: [ macos-12, macos-14 ]
-        include:
-          - os: macos-12
-            arch: intel
-            runner_arch: x86_64
-          - os: macos-14
-            arch: arm64
-            runner_arch: arm64
     steps:
       - name: Determine branch
         id: branch
@@ -183,8 +174,8 @@ jobs:
           BRANCH="${{ steps.branch.outputs.branch }}"
           CLEAN_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          echo "name=${CLEAN_BRANCH}-${TIMESTAMP}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-          echo "Building test version: ${CLEAN_BRANCH}-${TIMESTAMP}-${{ matrix.arch }}"
+          echo "name=${CLEAN_BRANCH}-${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "Building test version: ${CLEAN_BRANCH}-${TIMESTAMP}"
 
       - name: Build with PyInstaller
         env:
@@ -194,23 +185,13 @@ jobs:
 
       - name: Check architecture
         run: |
-          echo "Checking binary architecture..."
           file dist/Cellects.app/Contents/MacOS/Cellects
-          lipo -info dist/Cellects.app/Contents/MacOS/Cellects || echo "Not a fat binary"
-          
-          arch_output=$(file dist/Cellects.app/Contents/MacOS/Cellects)
-          echo "Architecture output: $arch_output"
-          
-          if echo "$arch_output" | grep -q "${{ matrix.runner_arch }}"; then
-            echo "Correct architecture found: ${{ matrix.runner_arch }}"
-          else
-            echo "WARNING: Expected ${{ matrix.runner_arch }} not found in binary"
-          fi
+          lipo -info dist/Cellects.app/Contents/MacOS/Cellects || true
 
       - name: Test app bundle exists
         run: |
           if [ ! -d "dist/Cellects.app" ]; then
-            echo "App bundle not found"
+            echo "App bundle not found!"
             exit 1
           fi
           echo "App bundle built successfully"
