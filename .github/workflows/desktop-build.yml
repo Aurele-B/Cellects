@@ -127,10 +127,20 @@ jobs:
             Cellects-${{ steps.version.outputs.name }}-setup.exe
           retention-days: 7
 
-  # macOS build job
+  # macOS build job with architecture matrix
   test-mac-build:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_mac == 'true' || github.event_name != 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        os: [macos-13, macos-14]
+        include:
+          - os: macos-13
+            arch: intel
+            runner_arch: x86_64
+          - os: macos-14
+            arch: arm64
+            runner_arch: arm64
     steps:
       - name: Determine branch
         id: branch
@@ -147,25 +157,25 @@ jobs:
           else
             echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.branch.outputs.branch }}
           lfs: true
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e .
           pip install pyinstaller
-      
+
       - name: Get version info
         id: version
         shell: bash
@@ -173,9 +183,9 @@ jobs:
           BRANCH="${{ steps.branch.outputs.branch }}"
           CLEAN_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          echo "name=${CLEAN_BRANCH}-${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "Building test version: ${CLEAN_BRANCH}-${TIMESTAMP}"
-      
+          echo "name=${CLEAN_BRANCH}-${TIMESTAMP}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+          echo "Building test version: ${CLEAN_BRANCH}-${TIMESTAMP}-${{ matrix.arch }}"
+
       - name: Build with PyInstaller
         env:
           APP_VERSION: ${{ steps.version.outputs.name }}
@@ -184,13 +194,23 @@ jobs:
 
       - name: Check architecture
         run: |
+          echo "Checking binary architecture..."
           file dist/Cellects.app/Contents/MacOS/Cellects
-          lipo -info dist/Cellects.app/Contents/MacOS/Cellects || true
+          lipo -info dist/Cellects.app/Contents/MacOS/Cellects || echo "Not a fat binary"
+          
+          arch_output=$(file dist/Cellects.app/Contents/MacOS/Cellects)
+          echo "Architecture output: $arch_output"
+          
+          if echo "$arch_output" | grep -q "${{ matrix.runner_arch }}"; then
+            echo "Correct architecture found: ${{ matrix.runner_arch }}"
+          else
+            echo "WARNING: Expected ${{ matrix.runner_arch }} not found in binary"
+          fi
 
       - name: Test app bundle exists
         run: |
           if [ ! -d "dist/Cellects.app" ]; then
-            echo "App bundle not found!"
+            echo "App bundle not found"
             exit 1
           fi
           echo "App bundle built successfully"
