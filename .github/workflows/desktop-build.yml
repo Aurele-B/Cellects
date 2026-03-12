@@ -17,18 +17,18 @@ on:
         type: boolean
         default: true
 
-#  # Automatic triggers on develop and release branches
-#  push:
-#    branches:
-#      - develop
-#      # - 'release/**'
-#    paths:
-#      - 'src/**'
-#      - '__main__.py'
-#      - '__main__.spec'
-#      - 'installer.nsi'
-#      - 'create_dmg.sh'
-#      - '.github/workflows/desktop-build.yml'
+  # Automatic triggers on develop and release branches
+  push:
+    branches:
+      - develop
+      # - 'release/**'
+    paths:
+      - 'src/**'
+      - '__main__.py'
+      - '__main__.spec'
+      - 'installer.nsi'
+      - 'create_dmg.sh'
+      - '.github/workflows/desktop-build.yml'
 
 jobs:
   # Windows build job
@@ -63,12 +63,21 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      
+
+      - name: Verify Python architecture
+        run: |
+          which python
+          python --version
+          file $(which python)
+          python -c "import platform; print(f'Platform: {platform.platform()}')"
+          python -c "import sysconfig; print(f'Python path: {sysconfig.get_path(\"stdlib\")}')"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e . --no-cache-dir -v
           pip install pyinstaller
+          pip list --format=freeze | grep -E "(numpy|scipy|opencv|numba|h5py|scikit)"
       
       - name: Build with PyInstaller
         run: |
