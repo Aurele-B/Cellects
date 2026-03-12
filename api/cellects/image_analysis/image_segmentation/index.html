@@ -9,7 +9,7 @@
       
       
       
-        <link rel="prev" href="../cell_leaving_detection/">
+        <link rel="prev" href="../connected_components_tracking/">
       
       
         <link rel="next" href="../morphological_operations/">
@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../../../static/icon-128.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -1784,6 +1784,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../connected_components_tracking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    connected_components_tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -2766,10 +2794,7 @@ pixels.</p>
 <span class="normal"><a href="#__codelineno-0-817">817</a></span>
 <span class="normal"><a href="#__codelineno-0-818">818</a></span>
 <span class="normal"><a href="#__codelineno-0-819">819</a></span>
-<span class="normal"><a href="#__codelineno-0-820">820</a></span>
-<span class="normal"><a href="#__codelineno-0-821">821</a></span>
-<span class="normal"><a href="#__codelineno-0-822">822</a></span>
-<span class="normal"><a href="#__codelineno-0-823">823</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="k">def</span><span class="w"> </span><span class="nf">binary_quality_index</span><span class="p">(</span><span class="n">binary_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="normal"><a href="#__codelineno-0-820">820</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-797" name="__codelineno-0-797"></a><span class="k">def</span><span class="w"> </span><span class="nf">binary_quality_index</span><span class="p">(</span><span class="n">binary_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <a id="__codelineno-0-798" name="__codelineno-0-798"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-799" name="__codelineno-0-799"></a><span class="sd">    Calculate the binary quality index for a binary image.</span>
 <a id="__codelineno-0-800" name="__codelineno-0-800"></a>
@@ -2788,14 +2813,11 @@ pixels.</p>
 <a id="__codelineno-0-813" name="__codelineno-0-813"></a><span class="sd">        The binary quality index value.</span>
 <a id="__codelineno-0-814" name="__codelineno-0-814"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-815" name="__codelineno-0-815"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">binary_img</span><span class="p">):</span>
-<a id="__codelineno-0-816" name="__codelineno-0-816"></a>        <span class="c1"># SD = ShapeDescriptors(binary_img, [&quot;euler_number&quot;])</span>
-<a id="__codelineno-0-817" name="__codelineno-0-817"></a>        <span class="c1"># index = - SD.descriptors[&#39;euler_number&#39;]</span>
-<a id="__codelineno-0-818" name="__codelineno-0-818"></a>        <span class="n">size</span><span class="p">,</span> <span class="n">largest_cc</span> <span class="o">=</span> <span class="n">get_largest_connected_component</span><span class="p">(</span><span class="n">binary_img</span><span class="p">)</span>
-<a id="__codelineno-0-819" name="__codelineno-0-819"></a>        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">perimeter</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))</span> <span class="o">/</span> <span class="n">binary_img</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-<a id="__codelineno-0-820" name="__codelineno-0-820"></a>        <span class="c1"># index = (largest_cc.sum() * perimeter(largest_cc)) / binary_img.sum()</span>
-<a id="__codelineno-0-821" name="__codelineno-0-821"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-822" name="__codelineno-0-822"></a>        <span class="n">index</span> <span class="o">=</span> <span class="mf">0.</span>
-<a id="__codelineno-0-823" name="__codelineno-0-823"></a>    <span class="k">return</span> <span class="n">index</span>
+<a id="__codelineno-0-816" name="__codelineno-0-816"></a>        <span class="n">size</span><span class="p">,</span> <span class="n">largest_cc</span> <span class="o">=</span> <span class="n">get_largest_connected_component</span><span class="p">(</span><span class="n">binary_img</span><span class="p">)</span>
+<a id="__codelineno-0-817" name="__codelineno-0-817"></a>        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">perimeter</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))</span> <span class="o">/</span> <span class="n">binary_img</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<a id="__codelineno-0-818" name="__codelineno-0-818"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-819" name="__codelineno-0-819"></a>        <span class="n">index</span> <span class="o">=</span> <span class="mf">0.</span>
+<a id="__codelineno-0-820" name="__codelineno-0-820"></a>    <span class="k">return</span> <span class="n">index</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3199,7 +3221,10 @@ converted to uint8. Optionally subtracts background from the resultant image.</p
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/image_analysis/image_segmentation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1001">1001</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-998"> 998</a></span>
+<span class="normal"><a href="#__codelineno-0-999"> 999</a></span>
+<span class="normal"><a href="#__codelineno-0-1000">1000</a></span>
+<span class="normal"><a href="#__codelineno-0-1001">1001</a></span>
 <span class="normal"><a href="#__codelineno-0-1002">1002</a></span>
 <span class="normal"><a href="#__codelineno-0-1003">1003</a></span>
 <span class="normal"><a href="#__codelineno-0-1004">1004</a></span>
@@ -3273,87 +3298,84 @@ converted to uint8. Optionally subtracts background from the resultant image.</p
 <span class="normal"><a href="#__codelineno-0-1072">1072</a></span>
 <span class="normal"><a href="#__codelineno-0-1073">1073</a></span>
 <span class="normal"><a href="#__codelineno-0-1074">1074</a></span>
-<span class="normal"><a href="#__codelineno-0-1075">1075</a></span>
-<span class="normal"><a href="#__codelineno-0-1076">1076</a></span>
-<span class="normal"><a href="#__codelineno-0-1077">1077</a></span>
-<span class="normal"><a href="#__codelineno-0-1078">1078</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="k">def</span><span class="w"> </span><span class="nf">convert_subtract_and_filter_video</span><span class="p">(</span><span class="n">video</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">color_space_combination</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">background</span><span class="p">:</span> <span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-1002" name="__codelineno-0-1002"></a>                                      <span class="n">background2</span><span class="p">:</span> <span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-<a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>                                      <span class="n">filter_spec</span><span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
-<a id="__codelineno-0-1004" name="__codelineno-0-1004"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-1005" name="__codelineno-0-1005"></a><span class="sd">    Convert a video to grayscale, subtract the background, and apply filters.</span>
-<a id="__codelineno-0-1006" name="__codelineno-0-1006"></a>
-<a id="__codelineno-0-1007" name="__codelineno-0-1007"></a><span class="sd">    Parameters</span>
-<a id="__codelineno-0-1008" name="__codelineno-0-1008"></a><span class="sd">    ----------</span>
-<a id="__codelineno-0-1009" name="__codelineno-0-1009"></a><span class="sd">    video : NDArray</span>
-<a id="__codelineno-0-1010" name="__codelineno-0-1010"></a><span class="sd">        The input video as a 4D NumPy array.</span>
-<a id="__codelineno-0-1011" name="__codelineno-0-1011"></a><span class="sd">    color_space_combination : dict</span>
-<a id="__codelineno-0-1012" name="__codelineno-0-1012"></a><span class="sd">        A dictionary containing the combinations of color space transformations.</span>
-<a id="__codelineno-0-1013" name="__codelineno-0-1013"></a><span class="sd">    background : NDArray, optional</span>
-<a id="__codelineno-0-1014" name="__codelineno-0-1014"></a><span class="sd">        The first background image for subtraction. If `None`, no subtraction is performed.</span>
-<a id="__codelineno-0-1015" name="__codelineno-0-1015"></a><span class="sd">    background2 : NDArray, optional</span>
-<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a><span class="sd">        The second background image for subtraction. If `None`, no subtraction is performed.</span>
-<a id="__codelineno-0-1017" name="__codelineno-0-1017"></a><span class="sd">    lose_accuracy_to_save_memory : bool</span>
-<a id="__codelineno-0-1018" name="__codelineno-0-1018"></a><span class="sd">        Flag to reduce accuracy and save memory by using `uint8` instead of `float64`.</span>
-<a id="__codelineno-0-1019" name="__codelineno-0-1019"></a><span class="sd">    filter_spec : dict</span>
-<a id="__codelineno-0-1020" name="__codelineno-0-1020"></a><span class="sd">        A dictionary containing the specifications for filters to apply.</span>
-<a id="__codelineno-0-1021" name="__codelineno-0-1021"></a>
-<a id="__codelineno-0-1022" name="__codelineno-0-1022"></a><span class="sd">    Returns</span>
-<a id="__codelineno-0-1023" name="__codelineno-0-1023"></a><span class="sd">    -------</span>
-<a id="__codelineno-0-1024" name="__codelineno-0-1024"></a><span class="sd">    Tuple[NDArray, NDArray]</span>
-<a id="__codelineno-0-1025" name="__codelineno-0-1025"></a><span class="sd">        A tuple containing:</span>
-<a id="__codelineno-0-1026" name="__codelineno-0-1026"></a><span class="sd">        - `converted_video`: The converted grayscale video.</span>
-<a id="__codelineno-0-1027" name="__codelineno-0-1027"></a><span class="sd">        - `converted_video2`: The second converted grayscale video if logical operation is not &#39;None&#39;.</span>
-<a id="__codelineno-0-1028" name="__codelineno-0-1028"></a>
-<a id="__codelineno-0-1029" name="__codelineno-0-1029"></a><span class="sd">    Notes</span>
-<a id="__codelineno-0-1030" name="__codelineno-0-1030"></a><span class="sd">    -----</span>
-<a id="__codelineno-0-1031" name="__codelineno-0-1031"></a><span class="sd">        - The function reduces accuracy of the converted video when `lose_accuracy_to_save_memory` is set to True.</span>
-<a id="__codelineno-0-1032" name="__codelineno-0-1032"></a><span class="sd">        - If `color_space_combination[&#39;logical&#39;]` is not &#39;None&#39;, a second converted video will be created.</span>
-<a id="__codelineno-0-1033" name="__codelineno-0-1033"></a><span class="sd">        - This function uses the `generate_color_space_combination` and `apply_filter` functions internally.</span>
-<a id="__codelineno-0-1034" name="__codelineno-0-1034"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1035" name="__codelineno-0-1035"></a>
-<a id="__codelineno-0-1036" name="__codelineno-0-1036"></a>    <span class="n">converted_video2</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-0-1037" name="__codelineno-0-1037"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-<a id="__codelineno-0-1038" name="__codelineno-0-1038"></a>        <span class="n">converted_video</span> <span class="o">=</span> <span class="n">video</span>
-<a id="__codelineno-0-1039" name="__codelineno-0-1039"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1040" name="__codelineno-0-1040"></a>        <span class="k">if</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">:</span>
-<a id="__codelineno-0-1041" name="__codelineno-0-1041"></a>            <span class="n">array_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span>
-<a id="__codelineno-0-1042" name="__codelineno-0-1042"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1043" name="__codelineno-0-1043"></a>            <span class="n">array_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
-<a id="__codelineno-0-1044" name="__codelineno-0-1044"></a>        <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">c_spaces</span> <span class="o">=</span> <span class="n">split_dict</span><span class="p">(</span><span class="n">color_space_combination</span><span class="p">)</span>
-<a id="__codelineno-0-1045" name="__codelineno-0-1045"></a>        <span class="k">if</span> <span class="s1">&#39;PCA&#39;</span> <span class="ow">in</span> <span class="n">first_dict</span><span class="p">:</span>
-<a id="__codelineno-0-1046" name="__codelineno-0-1046"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">var_ratio</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">extract_first_pc</span><span class="p">(</span><span class="n">video</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-1047" name="__codelineno-0-1047"></a>            <span class="n">first_dict</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span>
-<a id="__codelineno-0-1048" name="__codelineno-0-1048"></a>            <span class="n">first_dict</span><span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">List</span><span class="p">(</span><span class="n">bracket_to_uint8_image_contrast</span><span class="p">(</span><span class="n">first_pc_vector</span><span class="p">))</span>
-<a id="__codelineno-0-1049" name="__codelineno-0-1049"></a>            <span class="n">c_spaces</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span>
-<a id="__codelineno-0-1050" name="__codelineno-0-1050"></a>        <span class="k">if</span> <span class="s1">&#39;PCA&#39;</span> <span class="ow">in</span> <span class="n">second_dict</span><span class="p">:</span>
-<a id="__codelineno-0-1051" name="__codelineno-0-1051"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">var_ratio</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">extract_first_pc</span><span class="p">(</span><span class="n">video</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-1052" name="__codelineno-0-1052"></a>            <span class="n">second_dict</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span>
-<a id="__codelineno-0-1053" name="__codelineno-0-1053"></a>            <span class="n">second_dict</span><span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">List</span><span class="p">(</span><span class="n">bracket_to_uint8_image_contrast</span><span class="p">(</span><span class="n">first_pc_vector</span><span class="p">))</span>
-<a id="__codelineno-0-1054" name="__codelineno-0-1054"></a>            <span class="n">c_spaces</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span>
-<a id="__codelineno-0-1055" name="__codelineno-0-1055"></a>
-<a id="__codelineno-0-1056" name="__codelineno-0-1056"></a>        <span class="n">converted_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">array_type</span><span class="p">)</span>
-<a id="__codelineno-0-1057" name="__codelineno-0-1057"></a>        <span class="k">if</span> <span class="n">color_space_combination</span><span class="p">[</span><span class="s1">&#39;logical&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-1058" name="__codelineno-0-1058"></a>            <span class="n">converted_video2</span> <span class="o">=</span> <span class="n">converted_video</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-1059" name="__codelineno-0-1059"></a>        <span class="k">for</span> <span class="n">im_i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
-<a id="__codelineno-0-1060" name="__codelineno-0-1060"></a>            <span class="k">if</span> <span class="n">im_i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">background</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-1061" name="__codelineno-0-1061"></a>                <span class="c1"># when doing background subtraction, the first and the second image are equal</span>
-<a id="__codelineno-0-1062" name="__codelineno-0-1062"></a>                <span class="n">image_i</span> <span class="o">=</span> <span class="n">video</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-<a id="__codelineno-0-1063" name="__codelineno-0-1063"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-1064" name="__codelineno-0-1064"></a>                <span class="n">image_i</span> <span class="o">=</span> <span class="n">video</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
-<a id="__codelineno-0-1065" name="__codelineno-0-1065"></a>            <span class="n">results</span> <span class="o">=</span> <span class="n">generate_color_space_combination</span><span class="p">(</span><span class="n">image_i</span><span class="p">,</span> <span class="n">c_spaces</span><span class="p">,</span> <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">background</span><span class="p">,</span>
-<a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>                                                       <span class="n">background2</span><span class="p">,</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
-<a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">greyscale_image2</span><span class="p">,</span> <span class="n">all_c_spaces</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">results</span>
-<a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>            <span class="k">if</span> <span class="n">filter_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>                <span class="n">greyscale_image</span> <span class="o">=</span> <span class="n">apply_filter</span><span class="p">(</span><span class="n">greyscale_image</span><span class="p">,</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_type&#39;</span><span class="p">],</span>
-<a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>                                               <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_param&#39;</span><span class="p">],</span><span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
-<a id="__codelineno-0-1071" name="__codelineno-0-1071"></a>                <span class="k">if</span> <span class="n">greyscale_image2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-1072" name="__codelineno-0-1072"></a>                    <span class="n">greyscale_image2</span> <span class="o">=</span> <span class="n">apply_filter</span><span class="p">(</span><span class="n">greyscale_image2</span><span class="p">,</span>
-<a id="__codelineno-0-1073" name="__codelineno-0-1073"></a>                                                    <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_type&#39;</span><span class="p">],</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_param&#39;</span><span class="p">],</span>
-<a id="__codelineno-0-1074" name="__codelineno-0-1074"></a>                                                    <span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
-<a id="__codelineno-0-1075" name="__codelineno-0-1075"></a>            <span class="n">converted_video</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">greyscale_image</span>
-<a id="__codelineno-0-1076" name="__codelineno-0-1076"></a>            <span class="k">if</span> <span class="n">color_space_combination</span><span class="p">[</span><span class="s1">&#39;logical&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
-<a id="__codelineno-0-1077" name="__codelineno-0-1077"></a>                <span class="n">converted_video2</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">greyscale_image2</span>
-<a id="__codelineno-0-1078" name="__codelineno-0-1078"></a>    <span class="k">return</span> <span class="n">converted_video</span><span class="p">,</span> <span class="n">converted_video2</span>
+<span class="normal"><a href="#__codelineno-0-1075">1075</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-998" name="__codelineno-0-998"></a><span class="k">def</span><span class="w"> </span><span class="nf">convert_subtract_and_filter_video</span><span class="p">(</span><span class="n">video</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">color_space_combination</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">background</span><span class="p">:</span> <span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-999" name="__codelineno-0-999"></a>                                      <span class="n">background2</span><span class="p">:</span> <span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">:</span><span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-0-1000" name="__codelineno-0-1000"></a>                                      <span class="n">filter_spec</span><span class="p">:</span> <span class="nb">dict</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
+<a id="__codelineno-0-1001" name="__codelineno-0-1001"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1002" name="__codelineno-0-1002"></a><span class="sd">    Convert a video to grayscale, subtract the background, and apply filters.</span>
+<a id="__codelineno-0-1003" name="__codelineno-0-1003"></a>
+<a id="__codelineno-0-1004" name="__codelineno-0-1004"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-1005" name="__codelineno-0-1005"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-1006" name="__codelineno-0-1006"></a><span class="sd">    video : NDArray</span>
+<a id="__codelineno-0-1007" name="__codelineno-0-1007"></a><span class="sd">        The input video as a 4D NumPy array.</span>
+<a id="__codelineno-0-1008" name="__codelineno-0-1008"></a><span class="sd">    color_space_combination : dict</span>
+<a id="__codelineno-0-1009" name="__codelineno-0-1009"></a><span class="sd">        A dictionary containing the combinations of color space transformations.</span>
+<a id="__codelineno-0-1010" name="__codelineno-0-1010"></a><span class="sd">    background : NDArray, optional</span>
+<a id="__codelineno-0-1011" name="__codelineno-0-1011"></a><span class="sd">        The first background image for subtraction. If `None`, no subtraction is performed.</span>
+<a id="__codelineno-0-1012" name="__codelineno-0-1012"></a><span class="sd">    background2 : NDArray, optional</span>
+<a id="__codelineno-0-1013" name="__codelineno-0-1013"></a><span class="sd">        The second background image for subtraction. If `None`, no subtraction is performed.</span>
+<a id="__codelineno-0-1014" name="__codelineno-0-1014"></a><span class="sd">    lose_accuracy_to_save_memory : bool</span>
+<a id="__codelineno-0-1015" name="__codelineno-0-1015"></a><span class="sd">        Flag to reduce accuracy and save memory by using `uint8` instead of `float64`.</span>
+<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a><span class="sd">    filter_spec : dict</span>
+<a id="__codelineno-0-1017" name="__codelineno-0-1017"></a><span class="sd">        A dictionary containing the specifications for filters to apply.</span>
+<a id="__codelineno-0-1018" name="__codelineno-0-1018"></a>
+<a id="__codelineno-0-1019" name="__codelineno-0-1019"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-1020" name="__codelineno-0-1020"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-1021" name="__codelineno-0-1021"></a><span class="sd">    Tuple[NDArray, NDArray]</span>
+<a id="__codelineno-0-1022" name="__codelineno-0-1022"></a><span class="sd">        A tuple containing:</span>
+<a id="__codelineno-0-1023" name="__codelineno-0-1023"></a><span class="sd">        - `converted_video`: The converted grayscale video.</span>
+<a id="__codelineno-0-1024" name="__codelineno-0-1024"></a><span class="sd">        - `converted_video2`: The second converted grayscale video if logical operation is not &#39;None&#39;.</span>
+<a id="__codelineno-0-1025" name="__codelineno-0-1025"></a>
+<a id="__codelineno-0-1026" name="__codelineno-0-1026"></a><span class="sd">    Notes</span>
+<a id="__codelineno-0-1027" name="__codelineno-0-1027"></a><span class="sd">    -----</span>
+<a id="__codelineno-0-1028" name="__codelineno-0-1028"></a><span class="sd">        - The function reduces accuracy of the converted video when `lose_accuracy_to_save_memory` is set to True.</span>
+<a id="__codelineno-0-1029" name="__codelineno-0-1029"></a><span class="sd">        - If `color_space_combination[&#39;logical&#39;]` is not &#39;None&#39;, a second converted video will be created.</span>
+<a id="__codelineno-0-1030" name="__codelineno-0-1030"></a><span class="sd">        - This function uses the `generate_color_space_combination` and `apply_filter` functions internally.</span>
+<a id="__codelineno-0-1031" name="__codelineno-0-1031"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1032" name="__codelineno-0-1032"></a>
+<a id="__codelineno-0-1033" name="__codelineno-0-1033"></a>    <span class="n">converted_video2</span> <span class="o">=</span> <span class="kc">None</span>
+<a id="__codelineno-0-1034" name="__codelineno-0-1034"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+<a id="__codelineno-0-1035" name="__codelineno-0-1035"></a>        <span class="n">converted_video</span> <span class="o">=</span> <span class="n">video</span>
+<a id="__codelineno-0-1036" name="__codelineno-0-1036"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1037" name="__codelineno-0-1037"></a>        <span class="k">if</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">:</span>
+<a id="__codelineno-0-1038" name="__codelineno-0-1038"></a>            <span class="n">array_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span>
+<a id="__codelineno-0-1039" name="__codelineno-0-1039"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1040" name="__codelineno-0-1040"></a>            <span class="n">array_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span>
+<a id="__codelineno-0-1041" name="__codelineno-0-1041"></a>        <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">c_spaces</span> <span class="o">=</span> <span class="n">split_dict</span><span class="p">(</span><span class="n">color_space_combination</span><span class="p">)</span>
+<a id="__codelineno-0-1042" name="__codelineno-0-1042"></a>        <span class="k">if</span> <span class="s1">&#39;PCA&#39;</span> <span class="ow">in</span> <span class="n">first_dict</span><span class="p">:</span>
+<a id="__codelineno-0-1043" name="__codelineno-0-1043"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">var_ratio</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">extract_first_pc</span><span class="p">(</span><span class="n">video</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-1044" name="__codelineno-0-1044"></a>            <span class="n">first_dict</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span>
+<a id="__codelineno-0-1045" name="__codelineno-0-1045"></a>            <span class="n">first_dict</span><span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">List</span><span class="p">(</span><span class="n">bracket_to_uint8_image_contrast</span><span class="p">(</span><span class="n">first_pc_vector</span><span class="p">))</span>
+<a id="__codelineno-0-1046" name="__codelineno-0-1046"></a>            <span class="n">c_spaces</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span>
+<a id="__codelineno-0-1047" name="__codelineno-0-1047"></a>        <span class="k">if</span> <span class="s1">&#39;PCA&#39;</span> <span class="ow">in</span> <span class="n">second_dict</span><span class="p">:</span>
+<a id="__codelineno-0-1048" name="__codelineno-0-1048"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">var_ratio</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">extract_first_pc</span><span class="p">(</span><span class="n">video</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-1049" name="__codelineno-0-1049"></a>            <span class="n">second_dict</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">()</span>
+<a id="__codelineno-0-1050" name="__codelineno-0-1050"></a>            <span class="n">second_dict</span><span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">List</span><span class="p">(</span><span class="n">bracket_to_uint8_image_contrast</span><span class="p">(</span><span class="n">first_pc_vector</span><span class="p">))</span>
+<a id="__codelineno-0-1051" name="__codelineno-0-1051"></a>            <span class="n">c_spaces</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;bgr&#39;</span><span class="p">]</span>
+<a id="__codelineno-0-1052" name="__codelineno-0-1052"></a>
+<a id="__codelineno-0-1053" name="__codelineno-0-1053"></a>        <span class="n">converted_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">array_type</span><span class="p">)</span>
+<a id="__codelineno-0-1054" name="__codelineno-0-1054"></a>        <span class="k">if</span> <span class="n">color_space_combination</span><span class="p">[</span><span class="s1">&#39;logical&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-1055" name="__codelineno-0-1055"></a>            <span class="n">converted_video2</span> <span class="o">=</span> <span class="n">converted_video</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-1056" name="__codelineno-0-1056"></a>        <span class="k">for</span> <span class="n">im_i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+<a id="__codelineno-0-1057" name="__codelineno-0-1057"></a>            <span class="k">if</span> <span class="n">im_i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">background</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-1058" name="__codelineno-0-1058"></a>                <span class="c1"># when doing background subtraction, the first and the second image are equal</span>
+<a id="__codelineno-0-1059" name="__codelineno-0-1059"></a>                <span class="n">image_i</span> <span class="o">=</span> <span class="n">video</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<a id="__codelineno-0-1060" name="__codelineno-0-1060"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-1061" name="__codelineno-0-1061"></a>                <span class="n">image_i</span> <span class="o">=</span> <span class="n">video</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+<a id="__codelineno-0-1062" name="__codelineno-0-1062"></a>            <span class="n">results</span> <span class="o">=</span> <span class="n">generate_color_space_combination</span><span class="p">(</span><span class="n">image_i</span><span class="p">,</span> <span class="n">c_spaces</span><span class="p">,</span> <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">background</span><span class="p">,</span>
+<a id="__codelineno-0-1063" name="__codelineno-0-1063"></a>                                                       <span class="n">background2</span><span class="p">,</span> <span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
+<a id="__codelineno-0-1064" name="__codelineno-0-1064"></a>            <span class="n">greyscale_image</span><span class="p">,</span> <span class="n">greyscale_image2</span><span class="p">,</span> <span class="n">all_c_spaces</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">results</span>
+<a id="__codelineno-0-1065" name="__codelineno-0-1065"></a>            <span class="k">if</span> <span class="n">filter_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-1066" name="__codelineno-0-1066"></a>                <span class="n">greyscale_image</span> <span class="o">=</span> <span class="n">apply_filter</span><span class="p">(</span><span class="n">greyscale_image</span><span class="p">,</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_type&#39;</span><span class="p">],</span>
+<a id="__codelineno-0-1067" name="__codelineno-0-1067"></a>                                               <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter1_param&#39;</span><span class="p">],</span><span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
+<a id="__codelineno-0-1068" name="__codelineno-0-1068"></a>                <span class="k">if</span> <span class="n">greyscale_image2</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-1069" name="__codelineno-0-1069"></a>                    <span class="n">greyscale_image2</span> <span class="o">=</span> <span class="n">apply_filter</span><span class="p">(</span><span class="n">greyscale_image2</span><span class="p">,</span>
+<a id="__codelineno-0-1070" name="__codelineno-0-1070"></a>                                                    <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_type&#39;</span><span class="p">],</span> <span class="n">filter_spec</span><span class="p">[</span><span class="s1">&#39;filter2_param&#39;</span><span class="p">],</span>
+<a id="__codelineno-0-1071" name="__codelineno-0-1071"></a>                                                    <span class="n">lose_accuracy_to_save_memory</span><span class="p">)</span>
+<a id="__codelineno-0-1072" name="__codelineno-0-1072"></a>            <span class="n">converted_video</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">greyscale_image</span>
+<a id="__codelineno-0-1073" name="__codelineno-0-1073"></a>            <span class="k">if</span> <span class="n">color_space_combination</span><span class="p">[</span><span class="s1">&#39;logical&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-1074" name="__codelineno-0-1074"></a>                <span class="n">converted_video2</span><span class="p">[</span><span class="n">im_i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">greyscale_image2</span>
+<a id="__codelineno-0-1075" name="__codelineno-0-1075"></a>    <span class="k">return</span> <span class="n">converted_video</span><span class="p">,</span> <span class="n">converted_video2</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3489,7 +3511,10 @@ denominator to 1.0 to avoid division by zero.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/image_analysis/image_segmentation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-927">927</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-924">924</a></span>
+<span class="normal"><a href="#__codelineno-0-925">925</a></span>
+<span class="normal"><a href="#__codelineno-0-926">926</a></span>
+<span class="normal"><a href="#__codelineno-0-927">927</a></span>
 <span class="normal"><a href="#__codelineno-0-928">928</a></span>
 <span class="normal"><a href="#__codelineno-0-929">929</a></span>
 <span class="normal"><a href="#__codelineno-0-930">930</a></span>
@@ -3557,81 +3582,78 @@ denominator to 1.0 to avoid division by zero.</p>
 <span class="normal"><a href="#__codelineno-0-992">992</a></span>
 <span class="normal"><a href="#__codelineno-0-993">993</a></span>
 <span class="normal"><a href="#__codelineno-0-994">994</a></span>
-<span class="normal"><a href="#__codelineno-0-995">995</a></span>
-<span class="normal"><a href="#__codelineno-0-996">996</a></span>
-<span class="normal"><a href="#__codelineno-0-997">997</a></span>
-<span class="normal"><a href="#__codelineno-0-998">998</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-927" name="__codelineno-0-927"></a><span class="k">def</span><span class="w"> </span><span class="nf">extract_first_pc</span><span class="p">(</span><span class="n">bgr_image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">standardize</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<a id="__codelineno-0-928" name="__codelineno-0-928"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-929" name="__codelineno-0-929"></a>
-<a id="__codelineno-0-930" name="__codelineno-0-930"></a><span class="sd">    Extract the first principal component from a BGR image.</span>
-<a id="__codelineno-0-931" name="__codelineno-0-931"></a>
-<a id="__codelineno-0-932" name="__codelineno-0-932"></a><span class="sd">    Parameters</span>
-<a id="__codelineno-0-933" name="__codelineno-0-933"></a><span class="sd">    ----------</span>
-<a id="__codelineno-0-934" name="__codelineno-0-934"></a><span class="sd">    bgr_image : numpy.ndarray</span>
-<a id="__codelineno-0-935" name="__codelineno-0-935"></a><span class="sd">        A 3D or 2D array representing the BGR image. Expected shape is either</span>
-<a id="__codelineno-0-936" name="__codelineno-0-936"></a><span class="sd">        (height, width, 3) or (3, height, width).</span>
-<a id="__codelineno-0-937" name="__codelineno-0-937"></a><span class="sd">    standardize : bool, optional</span>
-<a id="__codelineno-0-938" name="__codelineno-0-938"></a><span class="sd">        If True, standardizes the image pixel values by subtracting the mean and</span>
-<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="sd">        dividing by the standard deviation before computing the principal</span>
-<a id="__codelineno-0-940" name="__codelineno-0-940"></a><span class="sd">        components. Default is True.</span>
-<a id="__codelineno-0-941" name="__codelineno-0-941"></a>
-<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">    Returns</span>
-<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">    -------</span>
-<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">    numpy.ndarray</span>
-<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">        The first principal component image, reshaped to the original image height and width.</span>
-<a id="__codelineno-0-946" name="__codelineno-0-946"></a><span class="sd">    float</span>
-<a id="__codelineno-0-947" name="__codelineno-0-947"></a><span class="sd">        The explained variance ratio of the first principal component.</span>
-<a id="__codelineno-0-948" name="__codelineno-0-948"></a><span class="sd">    numpy.ndarray</span>
-<a id="__codelineno-0-949" name="__codelineno-0-949"></a><span class="sd">        The first principal component vector.</span>
-<a id="__codelineno-0-950" name="__codelineno-0-950"></a>
-<a id="__codelineno-0-951" name="__codelineno-0-951"></a><span class="sd">    Notes</span>
-<a id="__codelineno-0-952" name="__codelineno-0-952"></a><span class="sd">    -----</span>
-<a id="__codelineno-0-953" name="__codelineno-0-953"></a><span class="sd">    The principal component analysis (PCA) is performed using Singular Value Decomposition (SVD).</span>
-<a id="__codelineno-0-954" name="__codelineno-0-954"></a><span class="sd">    Standardization helps in scenarios where the pixel values have different scales.</span>
-<a id="__codelineno-0-955" name="__codelineno-0-955"></a><span class="sd">    Pixels with zero standard deviation are handled by setting their standardization</span>
-<a id="__codelineno-0-956" name="__codelineno-0-956"></a><span class="sd">    denominator to 1.0 to avoid division by zero.</span>
-<a id="__codelineno-0-957" name="__codelineno-0-957"></a>
-<a id="__codelineno-0-958" name="__codelineno-0-958"></a><span class="sd">    Examples</span>
-<a id="__codelineno-0-959" name="__codelineno-0-959"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-960" name="__codelineno-0-960"></a><span class="sd">    &gt;&gt;&gt; bgr_image = np.random.rand(100, 200, 3)  # Example BGR image</span>
-<a id="__codelineno-0-961" name="__codelineno-0-961"></a><span class="sd">    &gt;&gt;&gt; first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)</span>
-<a id="__codelineno-0-962" name="__codelineno-0-962"></a><span class="sd">    &gt;&gt;&gt; print(first_pc_image.shape)</span>
-<a id="__codelineno-0-963" name="__codelineno-0-963"></a><span class="sd">    (100, 200)</span>
-<a id="__codelineno-0-964" name="__codelineno-0-964"></a><span class="sd">    &gt;&gt;&gt; print(explained_variance_ratio)</span>
-<a id="__codelineno-0-965" name="__codelineno-0-965"></a><span class="sd">    0.339</span>
-<a id="__codelineno-0-966" name="__codelineno-0-966"></a><span class="sd">    &gt;&gt;&gt; print(first_pc_vector.shape)</span>
-<a id="__codelineno-0-967" name="__codelineno-0-967"></a><span class="sd">    (3,)</span>
-<a id="__codelineno-0-968" name="__codelineno-0-968"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-969" name="__codelineno-0-969"></a>    <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="n">bgr_image</span><span class="o">.</span><span class="n">shape</span>
-<a id="__codelineno-0-970" name="__codelineno-0-970"></a>    <span class="n">pixels</span> <span class="o">=</span> <span class="n">bgr_image</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>  <span class="c1"># Flatten to Nx3 matrix</span>
-<a id="__codelineno-0-971" name="__codelineno-0-971"></a>
-<a id="__codelineno-0-972" name="__codelineno-0-972"></a>    <span class="k">if</span> <span class="n">standardize</span><span class="p">:</span>
-<a id="__codelineno-0-973" name="__codelineno-0-973"></a>        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pixels</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-974" name="__codelineno-0-974"></a>        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">pixels</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-975" name="__codelineno-0-975"></a>        <span class="n">std</span><span class="p">[</span><span class="n">std</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># Avoid division by zero</span>
-<a id="__codelineno-0-976" name="__codelineno-0-976"></a>        <span class="n">pixels_scaled</span> <span class="o">=</span> <span class="p">(</span><span class="n">pixels</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span>
-<a id="__codelineno-0-977" name="__codelineno-0-977"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-978" name="__codelineno-0-978"></a>        <span class="n">pixels_scaled</span> <span class="o">=</span> <span class="n">pixels</span>
+<span class="normal"><a href="#__codelineno-0-995">995</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-924" name="__codelineno-0-924"></a><span class="k">def</span><span class="w"> </span><span class="nf">extract_first_pc</span><span class="p">(</span><span class="n">bgr_image</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">standardize</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<a id="__codelineno-0-925" name="__codelineno-0-925"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-926" name="__codelineno-0-926"></a>
+<a id="__codelineno-0-927" name="__codelineno-0-927"></a><span class="sd">    Extract the first principal component from a BGR image.</span>
+<a id="__codelineno-0-928" name="__codelineno-0-928"></a>
+<a id="__codelineno-0-929" name="__codelineno-0-929"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-930" name="__codelineno-0-930"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-931" name="__codelineno-0-931"></a><span class="sd">    bgr_image : numpy.ndarray</span>
+<a id="__codelineno-0-932" name="__codelineno-0-932"></a><span class="sd">        A 3D or 2D array representing the BGR image. Expected shape is either</span>
+<a id="__codelineno-0-933" name="__codelineno-0-933"></a><span class="sd">        (height, width, 3) or (3, height, width).</span>
+<a id="__codelineno-0-934" name="__codelineno-0-934"></a><span class="sd">    standardize : bool, optional</span>
+<a id="__codelineno-0-935" name="__codelineno-0-935"></a><span class="sd">        If True, standardizes the image pixel values by subtracting the mean and</span>
+<a id="__codelineno-0-936" name="__codelineno-0-936"></a><span class="sd">        dividing by the standard deviation before computing the principal</span>
+<a id="__codelineno-0-937" name="__codelineno-0-937"></a><span class="sd">        components. Default is True.</span>
+<a id="__codelineno-0-938" name="__codelineno-0-938"></a>
+<a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-940" name="__codelineno-0-940"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-941" name="__codelineno-0-941"></a><span class="sd">    numpy.ndarray</span>
+<a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">        The first principal component image, reshaped to the original image height and width.</span>
+<a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">    float</span>
+<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">        The explained variance ratio of the first principal component.</span>
+<a id="__codelineno-0-945" name="__codelineno-0-945"></a><span class="sd">    numpy.ndarray</span>
+<a id="__codelineno-0-946" name="__codelineno-0-946"></a><span class="sd">        The first principal component vector.</span>
+<a id="__codelineno-0-947" name="__codelineno-0-947"></a>
+<a id="__codelineno-0-948" name="__codelineno-0-948"></a><span class="sd">    Notes</span>
+<a id="__codelineno-0-949" name="__codelineno-0-949"></a><span class="sd">    -----</span>
+<a id="__codelineno-0-950" name="__codelineno-0-950"></a><span class="sd">    The principal component analysis (PCA) is performed using Singular Value Decomposition (SVD).</span>
+<a id="__codelineno-0-951" name="__codelineno-0-951"></a><span class="sd">    Standardization helps in scenarios where the pixel values have different scales.</span>
+<a id="__codelineno-0-952" name="__codelineno-0-952"></a><span class="sd">    Pixels with zero standard deviation are handled by setting their standardization</span>
+<a id="__codelineno-0-953" name="__codelineno-0-953"></a><span class="sd">    denominator to 1.0 to avoid division by zero.</span>
+<a id="__codelineno-0-954" name="__codelineno-0-954"></a>
+<a id="__codelineno-0-955" name="__codelineno-0-955"></a><span class="sd">    Examples</span>
+<a id="__codelineno-0-956" name="__codelineno-0-956"></a><span class="sd">    --------</span>
+<a id="__codelineno-0-957" name="__codelineno-0-957"></a><span class="sd">    &gt;&gt;&gt; bgr_image = np.random.rand(100, 200, 3)  # Example BGR image</span>
+<a id="__codelineno-0-958" name="__codelineno-0-958"></a><span class="sd">    &gt;&gt;&gt; first_pc_image, explained_variance_ratio, first_pc_vector = extract_first_pc(bgr_image)</span>
+<a id="__codelineno-0-959" name="__codelineno-0-959"></a><span class="sd">    &gt;&gt;&gt; print(first_pc_image.shape)</span>
+<a id="__codelineno-0-960" name="__codelineno-0-960"></a><span class="sd">    (100, 200)</span>
+<a id="__codelineno-0-961" name="__codelineno-0-961"></a><span class="sd">    &gt;&gt;&gt; print(explained_variance_ratio)</span>
+<a id="__codelineno-0-962" name="__codelineno-0-962"></a><span class="sd">    0.339</span>
+<a id="__codelineno-0-963" name="__codelineno-0-963"></a><span class="sd">    &gt;&gt;&gt; print(first_pc_vector.shape)</span>
+<a id="__codelineno-0-964" name="__codelineno-0-964"></a><span class="sd">    (3,)</span>
+<a id="__codelineno-0-965" name="__codelineno-0-965"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-966" name="__codelineno-0-966"></a>    <span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="n">bgr_image</span><span class="o">.</span><span class="n">shape</span>
+<a id="__codelineno-0-967" name="__codelineno-0-967"></a>    <span class="n">pixels</span> <span class="o">=</span> <span class="n">bgr_image</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>  <span class="c1"># Flatten to Nx3 matrix</span>
+<a id="__codelineno-0-968" name="__codelineno-0-968"></a>
+<a id="__codelineno-0-969" name="__codelineno-0-969"></a>    <span class="k">if</span> <span class="n">standardize</span><span class="p">:</span>
+<a id="__codelineno-0-970" name="__codelineno-0-970"></a>        <span class="n">mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">pixels</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-971" name="__codelineno-0-971"></a>        <span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">pixels</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-972" name="__codelineno-0-972"></a>        <span class="n">std</span><span class="p">[</span><span class="n">std</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>  <span class="c1"># Avoid division by zero</span>
+<a id="__codelineno-0-973" name="__codelineno-0-973"></a>        <span class="n">pixels_scaled</span> <span class="o">=</span> <span class="p">(</span><span class="n">pixels</span> <span class="o">-</span> <span class="n">mean</span><span class="p">)</span> <span class="o">/</span> <span class="n">std</span>
+<a id="__codelineno-0-974" name="__codelineno-0-974"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-975" name="__codelineno-0-975"></a>        <span class="n">pixels_scaled</span> <span class="o">=</span> <span class="n">pixels</span>
+<a id="__codelineno-0-976" name="__codelineno-0-976"></a>
+<a id="__codelineno-0-977" name="__codelineno-0-977"></a>    <span class="c1"># Perform SVD on standardized data to get principal components</span>
+<a id="__codelineno-0-978" name="__codelineno-0-978"></a>    <span class="n">U</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">Vt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">pixels_scaled</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <a id="__codelineno-0-979" name="__codelineno-0-979"></a>
-<a id="__codelineno-0-980" name="__codelineno-0-980"></a>    <span class="c1"># Perform SVD on standardized data to get principal components</span>
-<a id="__codelineno-0-981" name="__codelineno-0-981"></a>    <span class="n">U</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">Vt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">pixels_scaled</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<a id="__codelineno-0-982" name="__codelineno-0-982"></a>
-<a id="__codelineno-0-983" name="__codelineno-0-983"></a>    <span class="c1"># First PC is the projection of each pixel onto first right singular vector (Vt[0])</span>
-<a id="__codelineno-0-984" name="__codelineno-0-984"></a>    <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">Vt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Shape: (3,)</span>
-<a id="__codelineno-0-985" name="__codelineno-0-985"></a>    <span class="n">eigen</span> <span class="o">=</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">2</span>
-<a id="__codelineno-0-986" name="__codelineno-0-986"></a>    <span class="n">total_variance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">eigen</span><span class="p">)</span>
+<a id="__codelineno-0-980" name="__codelineno-0-980"></a>    <span class="c1"># First PC is the projection of each pixel onto first right singular vector (Vt[0])</span>
+<a id="__codelineno-0-981" name="__codelineno-0-981"></a>    <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">Vt</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>  <span class="c1"># Shape: (3,)</span>
+<a id="__codelineno-0-982" name="__codelineno-0-982"></a>    <span class="n">eigen</span> <span class="o">=</span> <span class="n">d</span> <span class="o">**</span> <span class="mi">2</span>
+<a id="__codelineno-0-983" name="__codelineno-0-983"></a>    <span class="n">total_variance</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">eigen</span><span class="p">)</span>
+<a id="__codelineno-0-984" name="__codelineno-0-984"></a>
+<a id="__codelineno-0-985" name="__codelineno-0-985"></a>    <span class="n">explained_variance_ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">eigen</span><span class="p">)</span>
+<a id="__codelineno-0-986" name="__codelineno-0-986"></a>    <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">eigen</span><span class="p">,</span> <span class="n">total_variance</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">explained_variance_ratio</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">total_variance</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-987" name="__codelineno-0-987"></a>
-<a id="__codelineno-0-988" name="__codelineno-0-988"></a>    <span class="n">explained_variance_ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">eigen</span><span class="p">)</span>
-<a id="__codelineno-0-989" name="__codelineno-0-989"></a>    <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">eigen</span><span class="p">,</span> <span class="n">total_variance</span><span class="p">,</span> <span class="n">out</span><span class="o">=</span><span class="n">explained_variance_ratio</span><span class="p">,</span> <span class="n">where</span><span class="o">=</span><span class="n">total_variance</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-988" name="__codelineno-0-988"></a>    <span class="c1"># Compute first principal component scores</span>
+<a id="__codelineno-0-989" name="__codelineno-0-989"></a>    <span class="n">first_pc_scores</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-0-990" name="__codelineno-0-990"></a>
-<a id="__codelineno-0-991" name="__codelineno-0-991"></a>    <span class="c1"># Compute first principal component scores</span>
-<a id="__codelineno-0-992" name="__codelineno-0-992"></a>    <span class="n">first_pc_scores</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-993" name="__codelineno-0-993"></a>
-<a id="__codelineno-0-994" name="__codelineno-0-994"></a>    <span class="c1"># Reshape to image shape and threshold negative values</span>
-<a id="__codelineno-0-995" name="__codelineno-0-995"></a>    <span class="n">first_pc_image</span> <span class="o">=</span> <span class="n">first_pc_scores</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
-<a id="__codelineno-0-996" name="__codelineno-0-996"></a>    <span class="c1"># first_pc_thresholded = np.maximum(first_pc_image, 0)</span>
-<a id="__codelineno-0-997" name="__codelineno-0-997"></a>
-<a id="__codelineno-0-998" name="__codelineno-0-998"></a>    <span class="k">return</span> <span class="n">first_pc_image</span><span class="p">,</span> <span class="n">explained_variance_ratio</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">first_pc_vector</span>
+<a id="__codelineno-0-991" name="__codelineno-0-991"></a>    <span class="c1"># Reshape to image shape and threshold negative values</span>
+<a id="__codelineno-0-992" name="__codelineno-0-992"></a>    <span class="n">first_pc_image</span> <span class="o">=</span> <span class="n">first_pc_scores</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+<a id="__codelineno-0-993" name="__codelineno-0-993"></a>    <span class="c1"># first_pc_thresholded = np.maximum(first_pc_image, 0)</span>
+<a id="__codelineno-0-994" name="__codelineno-0-994"></a>
+<a id="__codelineno-0-995" name="__codelineno-0-995"></a>    <span class="k">return</span> <span class="n">first_pc_image</span><span class="p">,</span> <span class="n">explained_variance_ratio</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">first_pc_vector</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3751,7 +3773,10 @@ The search is bounded by a minimum threshold value.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/image_analysis/image_segmentation.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-826">826</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-823">823</a></span>
+<span class="normal"><a href="#__codelineno-0-824">824</a></span>
+<span class="normal"><a href="#__codelineno-0-825">825</a></span>
+<span class="normal"><a href="#__codelineno-0-826">826</a></span>
 <span class="normal"><a href="#__codelineno-0-827">827</a></span>
 <span class="normal"><a href="#__codelineno-0-828">828</a></span>
 <span class="normal"><a href="#__codelineno-0-829">829</a></span>
@@ -3802,64 +3827,61 @@ The search is bounded by a minimum threshold value.</p>
 <span class="normal"><a href="#__codelineno-0-874">874</a></span>
 <span class="normal"><a href="#__codelineno-0-875">875</a></span>
 <span class="normal"><a href="#__codelineno-0-876">876</a></span>
-<span class="normal"><a href="#__codelineno-0-877">877</a></span>
-<span class="normal"><a href="#__codelineno-0-878">878</a></span>
-<span class="normal"><a href="#__codelineno-0-879">879</a></span>
-<span class="normal"><a href="#__codelineno-0-880">880</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_threshold_given_mask</span><span class="p">(</span><span class="n">greyscale</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="n">min_threshold</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">    Find the optimal threshold value for a greyscale image given a mask.</span>
-<a id="__codelineno-0-829" name="__codelineno-0-829"></a>
-<a id="__codelineno-0-830" name="__codelineno-0-830"></a><span class="sd">    This function performs a binary search to find the optimal threshold</span>
-<a id="__codelineno-0-831" name="__codelineno-0-831"></a><span class="sd">    that maximizes the separation between two regions defined by the mask.</span>
-<a id="__codelineno-0-832" name="__codelineno-0-832"></a><span class="sd">    The search is bounded by a minimum threshold value.</span>
-<a id="__codelineno-0-833" name="__codelineno-0-833"></a>
-<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">    Parameters</span>
-<a id="__codelineno-0-835" name="__codelineno-0-835"></a><span class="sd">    ----------</span>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">    greyscale : ndarray of uint8</span>
-<a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">        The greyscale image array.</span>
-<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">    mask : ndarray of uint8</span>
-<a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="sd">        The binary mask array where positive values define region A and zero values define region B.</span>
-<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">    min_threshold : uint8, optional</span>
-<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">        The minimum threshold value for the search. Defaults to 0.</span>
-<a id="__codelineno-0-842" name="__codelineno-0-842"></a>
-<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">    Returns</span>
-<a id="__codelineno-0-844" name="__codelineno-0-844"></a><span class="sd">    -------</span>
-<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">    out : uint8</span>
-<a id="__codelineno-0-846" name="__codelineno-0-846"></a><span class="sd">        The optimal threshold value found.</span>
-<a id="__codelineno-0-847" name="__codelineno-0-847"></a>
-<a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="sd">    Examples</span>
-<a id="__codelineno-0-849" name="__codelineno-0-849"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-850" name="__codelineno-0-850"></a><span class="sd">    &gt;&gt;&gt; greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)</span>
-<a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="sd">    &gt;&gt;&gt; mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)</span>
-<a id="__codelineno-0-852" name="__codelineno-0-852"></a><span class="sd">    &gt;&gt;&gt; find_threshold_given_mask(greyscale, mask)</span>
-<a id="__codelineno-0-853" name="__codelineno-0-853"></a><span class="sd">    54</span>
-<a id="__codelineno-0-854" name="__codelineno-0-854"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">region_a</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-856" name="__codelineno-0-856"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">region_a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span>
-<a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="n">region_b</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-859" name="__codelineno-0-859"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">region_b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="k">return</span> <span class="n">min_threshold</span>
-<a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-862" name="__codelineno-0-862"></a>        <span class="n">low</span> <span class="o">=</span> <span class="n">min_threshold</span>
-<a id="__codelineno-0-863" name="__codelineno-0-863"></a>        <span class="n">high</span> <span class="o">=</span> <span class="mi">255</span>
-<a id="__codelineno-0-864" name="__codelineno-0-864"></a>        <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">low</span>
-<a id="__codelineno-0-865" name="__codelineno-0-865"></a>
-<a id="__codelineno-0-866" name="__codelineno-0-866"></a>        <span class="k">while</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">low</span> <span class="o">&lt;=</span> <span class="n">high</span><span class="p">:</span>
-<a id="__codelineno-0-867" name="__codelineno-0-867"></a>            <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">low</span> <span class="o">+</span> <span class="n">high</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
-<a id="__codelineno-0-868" name="__codelineno-0-868"></a>            <span class="n">count_a</span><span class="p">,</span> <span class="n">count_b</span> <span class="o">=</span> <span class="n">_get_counts_jit</span><span class="p">(</span><span class="n">mid</span><span class="p">,</span> <span class="n">region_a</span><span class="p">,</span> <span class="n">region_b</span><span class="p">)</span>
-<a id="__codelineno-0-869" name="__codelineno-0-869"></a>
-<a id="__codelineno-0-870" name="__codelineno-0-870"></a>            <span class="k">if</span> <span class="n">count_a</span> <span class="o">&gt;</span> <span class="n">count_b</span><span class="p">:</span>
-<a id="__codelineno-0-871" name="__codelineno-0-871"></a>                <span class="c1"># Try to find a lower threshold that still satisfies the condition</span>
-<a id="__codelineno-0-872" name="__codelineno-0-872"></a>                <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">mid</span>
-<a id="__codelineno-0-873" name="__codelineno-0-873"></a>                <span class="n">high</span> <span class="o">=</span> <span class="n">mid</span> <span class="o">-</span> <span class="mi">1</span>
-<a id="__codelineno-0-874" name="__codelineno-0-874"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-875" name="__codelineno-0-875"></a>                <span class="k">if</span> <span class="n">count_a</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">count_b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-876" name="__codelineno-0-876"></a>                    <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">greyscale</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
-<a id="__codelineno-0-877" name="__codelineno-0-877"></a>                    <span class="k">break</span>
-<a id="__codelineno-0-878" name="__codelineno-0-878"></a>                <span class="c1"># Need higher threshold</span>
-<a id="__codelineno-0-879" name="__codelineno-0-879"></a>                <span class="n">low</span> <span class="o">=</span> <span class="n">mid</span> <span class="o">+</span> <span class="mi">1</span>
-<a id="__codelineno-0-880" name="__codelineno-0-880"></a>    <span class="k">return</span> <span class="n">best_thresh</span>
+<span class="normal"><a href="#__codelineno-0-877">877</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-823" name="__codelineno-0-823"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_threshold_given_mask</span><span class="p">(</span><span class="n">greyscale</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">mask</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">,</span> <span class="n">min_threshold</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
+<a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">    Find the optimal threshold value for a greyscale image given a mask.</span>
+<a id="__codelineno-0-826" name="__codelineno-0-826"></a>
+<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">    This function performs a binary search to find the optimal threshold</span>
+<a id="__codelineno-0-828" name="__codelineno-0-828"></a><span class="sd">    that maximizes the separation between two regions defined by the mask.</span>
+<a id="__codelineno-0-829" name="__codelineno-0-829"></a><span class="sd">    The search is bounded by a minimum threshold value.</span>
+<a id="__codelineno-0-830" name="__codelineno-0-830"></a>
+<a id="__codelineno-0-831" name="__codelineno-0-831"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-832" name="__codelineno-0-832"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-833" name="__codelineno-0-833"></a><span class="sd">    greyscale : ndarray of uint8</span>
+<a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="sd">        The greyscale image array.</span>
+<a id="__codelineno-0-835" name="__codelineno-0-835"></a><span class="sd">    mask : ndarray of uint8</span>
+<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="sd">        The binary mask array where positive values define region A and zero values define region B.</span>
+<a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">    min_threshold : uint8, optional</span>
+<a id="__codelineno-0-838" name="__codelineno-0-838"></a><span class="sd">        The minimum threshold value for the search. Defaults to 0.</span>
+<a id="__codelineno-0-839" name="__codelineno-0-839"></a>
+<a id="__codelineno-0-840" name="__codelineno-0-840"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-841" name="__codelineno-0-841"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-842" name="__codelineno-0-842"></a><span class="sd">    out : uint8</span>
+<a id="__codelineno-0-843" name="__codelineno-0-843"></a><span class="sd">        The optimal threshold value found.</span>
+<a id="__codelineno-0-844" name="__codelineno-0-844"></a>
+<a id="__codelineno-0-845" name="__codelineno-0-845"></a><span class="sd">    Examples</span>
+<a id="__codelineno-0-846" name="__codelineno-0-846"></a><span class="sd">    --------</span>
+<a id="__codelineno-0-847" name="__codelineno-0-847"></a><span class="sd">    &gt;&gt;&gt; greyscale = np.array([[255, 128, 54], [0, 64, 20]], dtype=np.uint8)</span>
+<a id="__codelineno-0-848" name="__codelineno-0-848"></a><span class="sd">    &gt;&gt;&gt; mask = np.array([[1, 1, 0], [0, 0, 0]], dtype=np.uint8)</span>
+<a id="__codelineno-0-849" name="__codelineno-0-849"></a><span class="sd">    &gt;&gt;&gt; find_threshold_given_mask(greyscale, mask)</span>
+<a id="__codelineno-0-850" name="__codelineno-0-850"></a><span class="sd">    54</span>
+<a id="__codelineno-0-851" name="__codelineno-0-851"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-852" name="__codelineno-0-852"></a>    <span class="n">region_a</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-853" name="__codelineno-0-853"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">region_a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-854" name="__codelineno-0-854"></a>        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span>
+<a id="__codelineno-0-855" name="__codelineno-0-855"></a>    <span class="n">region_b</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-856" name="__codelineno-0-856"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">region_b</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-857" name="__codelineno-0-857"></a>        <span class="k">return</span> <span class="n">min_threshold</span>
+<a id="__codelineno-0-858" name="__codelineno-0-858"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-859" name="__codelineno-0-859"></a>        <span class="n">low</span> <span class="o">=</span> <span class="n">min_threshold</span>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a>        <span class="n">high</span> <span class="o">=</span> <span class="mi">255</span>
+<a id="__codelineno-0-861" name="__codelineno-0-861"></a>        <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">low</span>
+<a id="__codelineno-0-862" name="__codelineno-0-862"></a>
+<a id="__codelineno-0-863" name="__codelineno-0-863"></a>        <span class="k">while</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">low</span> <span class="o">&lt;=</span> <span class="n">high</span><span class="p">:</span>
+<a id="__codelineno-0-864" name="__codelineno-0-864"></a>            <span class="n">mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">low</span> <span class="o">+</span> <span class="n">high</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+<a id="__codelineno-0-865" name="__codelineno-0-865"></a>            <span class="n">count_a</span><span class="p">,</span> <span class="n">count_b</span> <span class="o">=</span> <span class="n">_get_counts_jit</span><span class="p">(</span><span class="n">mid</span><span class="p">,</span> <span class="n">region_a</span><span class="p">,</span> <span class="n">region_b</span><span class="p">)</span>
+<a id="__codelineno-0-866" name="__codelineno-0-866"></a>
+<a id="__codelineno-0-867" name="__codelineno-0-867"></a>            <span class="k">if</span> <span class="n">count_a</span> <span class="o">&gt;</span> <span class="n">count_b</span><span class="p">:</span>
+<a id="__codelineno-0-868" name="__codelineno-0-868"></a>                <span class="c1"># Try to find a lower threshold that still satisfies the condition</span>
+<a id="__codelineno-0-869" name="__codelineno-0-869"></a>                <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">mid</span>
+<a id="__codelineno-0-870" name="__codelineno-0-870"></a>                <span class="n">high</span> <span class="o">=</span> <span class="n">mid</span> <span class="o">-</span> <span class="mi">1</span>
+<a id="__codelineno-0-871" name="__codelineno-0-871"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-872" name="__codelineno-0-872"></a>                <span class="k">if</span> <span class="n">count_a</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">count_b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-873" name="__codelineno-0-873"></a>                    <span class="n">best_thresh</span> <span class="o">=</span> <span class="n">greyscale</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<a id="__codelineno-0-874" name="__codelineno-0-874"></a>                    <span class="k">break</span>
+<a id="__codelineno-0-875" name="__codelineno-0-875"></a>                <span class="c1"># Need higher threshold</span>
+<a id="__codelineno-0-876" name="__codelineno-0-876"></a>                <span class="n">low</span> <span class="o">=</span> <span class="n">mid</span> <span class="o">+</span> <span class="mi">1</span>
+<a id="__codelineno-0-877" name="__codelineno-0-877"></a>    <span class="k">return</span> <span class="n">best_thresh</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
