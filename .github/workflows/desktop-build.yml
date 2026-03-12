@@ -17,18 +17,18 @@ on:
         type: boolean
         default: true
 
-  # Automatic triggers on develop and release branches
-  push:
-    branches:
-      - develop
-      # - 'release/**'
-    paths:
-      - 'src/**'
-      - '__main__.py'
-      - '__main__.spec'
-      - 'installer.nsi'
-      - 'create_dmg.sh'
-      - '.github/workflows/desktop-build.yml'
+#  # Automatic triggers on develop and release branches
+#  push:
+#    branches:
+#      - develop
+#      # - 'release/**'
+#    paths:
+#      - 'src/**'
+#      - '__main__.py'
+#      - '__main__.spec'
+#      - 'installer.nsi'
+#      - 'create_dmg.sh'
+#      - '.github/workflows/desktop-build.yml'
 
 jobs:
   # Windows build job
