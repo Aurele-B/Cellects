@@ -64,14 +64,6 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Verify Python architecture
-        run: |
-          which python
-          python --version
-          file $(which python)
-          python -c "import platform; print(f'Platform: {platform.platform()}')"
-          python -c "import sysconfig; print(f'Python path: {sysconfig.get_path(\"stdlib\")}')"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
