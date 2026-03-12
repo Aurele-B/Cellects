@@ -939,7 +939,8 @@ class VideoTrackingThread(QtCore.QThread):
 
             for exp_i in np.arange(folder_number):
                 if len(self.parent().po.all['folder_list']) > 0:
-                    logging.info(self.parent().po.all['folder_list'][exp_i])
+                    self.set_current_folder(exp_i)
+                    logging.info(self.status['folder'])
                 self.parent().po.first_im = None
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None
@@ -1293,7 +1294,8 @@ class VideoTrackingThread(QtCore.QThread):
                                 return
                             do_continue = self.analyze_post_processing_results()
                             if do_continue:
-                                self.message_from_thread.emit(self.status['folder'] + f", Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                self.message_from_thread.emit(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                logging.info(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
                                 self.parent().po.motion.save_results()
                                 if not self.parent().po.vars['several_blob_per_arena']:
                                     # Save basic statistics
@@ -1736,23 +1738,23 @@ class VideoTrackingThread(QtCore.QThread):
         """
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing descriptors")
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.motion.one_descriptor_per_arena['arena']}: Computing descriptors")
         self.parent().po.motion.get_descriptors_from_binary(release_memory=False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting growth transitions")
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.motion.one_descriptor_per_arena['arena']}: Detecting growth transitions")
         self.parent().po.motion.detect_growth_transitions()
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting network and graph")
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.motion.one_descriptor_per_arena['arena']}: Detecting network and graph")
         self.parent().po.motion.networks_analysis(False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Detecting oscillatory patterns")
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.motion.one_descriptor_per_arena['arena']}: Detecting oscillatory patterns")
         self.parent().po.motion.study_cytoscillations(False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.all['arena']}: Computing fractal dimension")
+        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.parent().po.motion.one_descriptor_per_arena['arena']}: Computing fractal dimension")
         self.parent().po.motion.fractal_descriptions()
         if self.isInterruptionRequested():
             return False

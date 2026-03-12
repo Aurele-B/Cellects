@@ -43,13 +43,14 @@ from psutil import virtual_memory
 from cellects.core.one_image_analysis import OneImageAnalysis
 from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
 from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
+from cellects.image_analysis.connected_components_tracking import ConnectedComponentsTracking
 from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
 from cellects.image_analysis.morphological_operations import (find_major_incline, create_ellipse, draw_me_a_sun,
                                                               inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                               box_counting_dimension, prepare_box_counting, cc)
 from cellects.image_analysis.network_functions import *
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, compute_one_descriptor_per_colony, scale_descriptors, ShapeDescriptors
+from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
 
 
@@ -1241,17 +1242,16 @@ class MotionAnalysis:
                                                                       self.vars['descriptors'],
                                                                       self.vars['output_in_mm'],
                                                                       self.vars['average_pixel_size'],
-                                                                      self.vars['specimen_activity'],
+                                                                      self.vars['specimen_activity'] == 'move and grow',
                                                                       self.vars['save_coord_specimen'])
         else:
-            self.one_row_per_frame = compute_one_descriptor_per_colony(self.binary,
-                                                                       self.one_descriptor_per_arena['arena'], timings,
-                                                                       self.vars['descriptors'],
-                                                                       self.vars['output_in_mm'],
-                                                                       self.vars['average_pixel_size'],
-                                                                       self.vars['specimen_activity'],
-                                                                       self.vars['first_move_threshold'],
-                                                                       self.vars['save_coord_specimen'])
+            CCTracking = ConnectedComponentsTracking(self.binary, self.vars['first_move_threshold'])
+            self.one_row_per_frame = CCTracking.compute_one_descriptor_per_cc(self.one_descriptor_per_arena['arena'],
+                                                                              timings, self.vars['descriptors'],
+                                                                              self.vars['output_in_mm'],
+                                                                              self.vars['average_pixel_size'],
+                                                                              self.vars['specimen_activity'] == 'move and grow',
+                                                                              self.vars['save_coord_specimen'])
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
         if self.vars['output_in_mm']:
             self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
@@ -1358,14 +1358,16 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
 
             if self.vars['origin_state'] == "constant":
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
-                                                           self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, self.origin, self.vars['sliding_window_segmentation'], 5, True,
-                                                           self.vars['save_coord_network'], show_seg)
+                                                       self.one_descriptor_per_arena['arena'], 0,
+                                                       self.visu, self.origin, self.vars['sliding_window_segmentation'],
+                                                       self.vars['morphological_closing'], 5, True,
+                                                       self.vars['save_coord_network'], show_seg)
             else:
                 self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
-                                                           self.one_descriptor_per_arena['arena'], 0,
-                                                           self.visu, None, self.vars['sliding_window_segmentation'], 5, True,
-                                                           self.vars['save_coord_network'], show_seg)
+                                                       self.one_descriptor_per_arena['arena'], 0,
+                                                       self.visu, None, self.vars['sliding_window_segmentation'],
+                                                       self.vars['morphological_closing'], 5, True,
+                                                       self.vars['save_coord_network'], show_seg)
 
         if not self.vars['several_blob_per_arena'] and self.vars['save_graph']:
             if self.coord_network is None:
@@ -1563,7 +1565,53 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     self.visu = self.converted_video
                 if len(self.visu.shape) == 3:
                     self.visu = np.stack((self.visu, self.visu, self.visu), axis=3)
+
+            if self.vars['save_coord_thickening_slimming']:
+                dotted_image = np.ones(self.dims[1:3], np.uint8)
+                for cy in np.arange(dotted_image.shape[0]):
+                    if cy % 2 != 0:
+                        dotted_image[cy, :] = 0
+                for cx in np.arange(dotted_image.shape[1]):
+                    if cx % 2 != 0:
+                        dotted_image[:, cx] = 0
+                thickening = read_h5(
+                    f"coord_thickening{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                slimming = read_h5(
+                    f"coord_slimming{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                for t in range(self.dims[0]):
+                    thick_coord = thickening[1:, thickening[0, :] == t]
+                    slim_coord = slimming[1:, slimming[0, :] == t]
+                    thick = np.zeros((self.dims[1], self.dims[2]), np.uint8)
+                    slim = np.zeros((self.dims[1], self.dims[2]), np.uint8)
+                    thick[thick_coord[0], thick_coord[1]] = 1
+                    slim[slim_coord[0], slim_coord[1]] = 1
+                    thick = np.nonzero(thick * dotted_image)
+                    slim = np.nonzero(slim * dotted_image)
+                    self.converted_video[t, thick[0], thick[1], :] = 153, 153, 0
+                    self.converted_video[t, slim[0], slim[1], :] = 204, 0, 0
+                del thickening
+                del slimming
             self.converted_video = np.concatenate((self.visu, self.converted_video), axis=2)
+            if self.vars['save_coord_network']:
+                network = read_h5(
+                    f"coord_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                for t in range(self.dims[0]):
+                    network_t = network[1:, network[0, :] == t]
+                    binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
+                    binary[network_t[0, :], network_t[1, :]] = 1
+                    bin_coord = np.nonzero(get_contours(binary))
+                    self.converted_video[t, bin_coord[0], bin_coord[1], :] = 0, 0, 240
+                del network
+                if os.path.isfile(f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5"):
+                    pseudopods = read_h5(
+                        f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                    for t in range(self.dims[0]):
+                        pseudopods_t = pseudopods[1:, pseudopods[0, :] == t]
+                        binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
+                        binary[pseudopods_t[0, :], pseudopods_t[1, :]] = 1
+                        bin_coord = np.nonzero(get_contours(binary))
+                        self.converted_video[t, bin_coord[0], bin_coord[1], :] = 200, 0, 200
+                    del pseudopods
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)

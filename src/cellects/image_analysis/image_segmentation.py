@@ -813,11 +813,8 @@ def binary_quality_index(binary_img: NDArray[np.uint8]) -> float:
         The binary quality index value.
     """
     if np.any(binary_img):
-        # SD = ShapeDescriptors(binary_img, ["euler_number"])
-        # index = - SD.descriptors['euler_number']
         size, largest_cc = get_largest_connected_component(binary_img)
         index = np.square(perimeter(largest_cc)) / binary_img.sum()
-        # index = (largest_cc.sum() * perimeter(largest_cc)) / binary_img.sum()
     else:
         index = 0.
     return index
