@@ -939,7 +939,8 @@ class VideoTrackingThread(QtCore.QThread):
 
             for exp_i in np.arange(folder_number):
                 if len(self.parent().po.all['folder_list']) > 0:
-                    logging.info(self.parent().po.all['folder_list'][exp_i])
+                    self.set_current_folder(exp_i)
+                    logging.info(self.status['folder'])
                 self.parent().po.first_im = None
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None
