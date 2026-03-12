@@ -27,7 +27,8 @@ from cellects.utils.load_display_save import PickleRick, readim, is_raw_image, r
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len, smallest_memory_array
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame, compute_one_descriptor_per_colony
+from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame
+from cellects.image_analysis.connected_components_tracking import ConnectedComponentsTracking
 from cellects.image_analysis.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
 from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
@@ -1369,7 +1370,7 @@ class ProgramOrganizer:
                                                                      self.vars['descriptors'],
                                                                      self.vars['output_in_mm'],
                                                                      self.vars['average_pixel_size'],
-                                                                     self.vars['specimen_activity'],
+                                                                     self.vars['specimen_activity'] == 'move and grow',
                                                                      self.vars['save_coord_specimen'])
                 coord_network = None
                 coord_pseudopods = None
@@ -1380,15 +1381,13 @@ class ProgramOrganizer:
                                            0, None, coord_pseudopods)
 
             else:
-                one_row_per_frame = compute_one_descriptor_per_colony(binary[None, :, :],
-                                                                      arena,
-                                                                      self.vars['exif'],
-                                                                      self.vars['descriptors'],
-                                                                      self.vars['output_in_mm'],
-                                                                      self.vars['average_pixel_size'],
-                                                                      self.vars['specimen_activity'],
-                                                                      self.vars['first_move_threshold'],
-                                                                      self.vars['save_coord_specimen'])
+                CCTracking = ConnectedComponentsTracking(binary[None, :, :], self.vars['first_move_threshold'])
+                one_row_per_frame = CCTracking.compute_one_descriptor_per_cc(arena, self.vars['exif'],
+                                                                                  self.vars['descriptors'],
+                                                                                  self.vars['output_in_mm'],
+                                                                                  self.vars['average_pixel_size'],
+                                                                                  self.vars['specimen_activity'] == 'move and grow',
+                                                                                  self.vars['save_coord_specimen'])
             if self.vars['fractal_analysis']:
                 zoomed_binary, side_lengths = prepare_box_counting(binary,
                                                                    min_mesh_side=self.vars[
