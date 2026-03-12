@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Module for computing shape descriptors from binary images.
 
 This module provides a framework for calculating various geometric and statistical
@@ -310,7 +311,7 @@ def scale_descriptors(descriptors_dict, pixel_size: float, length_measures: NDAr
 
     Parameters
     ----------
-    descriptors_dict : dict
+    descriptors_dict
         Dictionary containing spatial descriptors.
     pixel_size : float
         Pixel size used for scaling.
