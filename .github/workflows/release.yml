@@ -275,7 +275,7 @@ jobs:
 
       - name: Install create-dmg
         run: |
-          brew install create-dmg
+          npm install -g create-dmg
 
       - name: Create DMG
         run: |
