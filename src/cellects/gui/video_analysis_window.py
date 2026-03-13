@@ -423,6 +423,10 @@ class VideoAnalysisWindow(MainTabsType):
         based on the selected video option. The behavior changes depending on the number of
         colors detected and the specific video option chosen.
         """
+        if self.thread_dict['VideoReader'].isRunning():
+            self.thread_dict['VideoReader'].requestInterruption()
+            self.thread_dict['VideoReader'].wait()
+            self.message.setText("")
         self.parent().po.all['video_option'] = self.select_option.currentIndex()
         self.parent().po.vars['frame_by_frame_segmentation'] = False
         self.parent().po.vars['do_threshold_segmentation'] = False
@@ -591,7 +595,13 @@ class VideoAnalysisWindow(MainTabsType):
         arena processing threads. It should be called when all relevant threads are not
         running to ensure the arena's state is properly reset.
         """
-        if not self.thread_dict['VideoReader'].isRunning() and not self.thread_dict['VideoTracking'].isRunning():
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("Wait for the analysis to end, or restart Cellects")
+        else:
+            if self.thread_dict['VideoReader'].isRunning():
+                self.thread_dict['VideoReader'].requestInterruption()
+                self.thread_dict['VideoReader'].wait()
+                self.message.setText("")
             self.parent().po.motion = None
             self.reset_general_step()
             self.parent().po.computed_video_options = np.zeros(5, bool)
@@ -665,6 +675,9 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
+        if self.thread_dict['VideoReader'].isRunning():
+            self.thread_dict['VideoReader'].requestInterruption()
+            self.thread_dict['VideoReader'].wait()
         self.message.setText("Load the video and initialize analysis, wait...")
         self.save_current_settings()
         if self.previous_arena != self.parent().po.all['arena']:
@@ -763,6 +776,9 @@ class VideoAnalysisWindow(MainTabsType):
             if self.parent().po.motion is None or self.parent().po.load_quick_full < 2:
                 self.message.setText("Run Post processing first")
             else:
+                if self.thread_dict['VideoReader'].isRunning():
+                    self.thread_dict['VideoReader'].requestInterruption()
+                    self.thread_dict['VideoReader'].wait()
                 self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
                 self.video_task = 'change_one_arena_result'
                 self.compute_all_options_cb.setChecked(False)
@@ -780,6 +796,9 @@ class VideoAnalysisWindow(MainTabsType):
         if self.parent().po.motion is None or self.parent().po.motion.segmented is None:
             self.message.setText("Run detection first")
         else:
+            if self.thread_dict['VideoReader'].isRunning():
+                self.thread_dict['VideoReader'].requestInterruption()
+                self.thread_dict['VideoReader'].wait()
             self.thread_dict['VideoReader'].start()
             self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
 
@@ -800,7 +819,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             if self.thread_dict['VideoReader'].isRunning():
-                self.message.setText("Pausing until the reading ends before starting the analysis")
+                self.thread_dict['VideoReader'].requestInterruption()
                 self.thread_dict['VideoReader'].wait()
             if self.parent().firstwindow.thread_dict["VideoTracking"].isRunning():
                 self.message.setText('Analysis has already begun in the first window.')
