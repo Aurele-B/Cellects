@@ -3,35 +3,22 @@ set -e
 
 echo "Creating Mac DMG installer..."
 
-# Always run relative to the repository root
-ROOT_DIR="$GITHUB_WORKSPACE"
-cd "$ROOT_DIR"
+# Remove old DMG files
+rm -f *.dmg
 
-echo "Working directory: $(pwd)"
+# Create DMG directly from app bundle
+echo "Building DMG from Cellects.app..."
+create-dmg dist/Cellects.app . || true
 
-echo "Preparing temporary directory..."
-mkdir -p dist/dmg
-rm -rf dist/dmg/*
+# Find the generated DMG (create-dmg makes it in current directory)
+DMG_FILE=$(ls Cellects*.dmg 2>/dev/null | head -1)
 
-echo "Copying Cellects.app..."
-cp -R dist/Cellects.app dist/dmg/
-
-echo "Removing old DMG if exists..."
-rm -f dist/Cellects.dmg
-
-# Create DMG
-echo "Building DMG with create-dmg..."
-create-dmg \
-  --volname "Cellects" \
-  --volicon "src/cellects/icons/cellects_icon.icns" \
-  "dist/Cellects.dmg" \
-  "dist/dmg"
-
-# Verify DMG was created
-if [ -f "dist/Cellects.dmg" ]; then
+if [ -n "$DMG_FILE" ]; then
+    mv "$DMG_FILE" dist/Cellects.dmg
     echo "DMG created successfully: dist/Cellects.dmg"
     ls -lh dist/Cellects.dmg
 else
-    echo "Error: DMG was not created"
+    echo "Error: No DMG file was created"
+    ls -la
     exit 1
 fi

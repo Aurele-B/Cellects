@@ -106,20 +106,14 @@ jobs:
         run: |
           choco install nsis -y
 
-      - name: Add NSIS to PATH
-        shell: powershell
-        run: |
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
-      
       - name: Build NSIS installer
         shell: bash
         run: |
-          $env:PATH = "C:\Program Files (x86)\NSIS;" + $env:PATH
-          $env:INSTALLER_VERSION = "${{ steps.version.outputs.name }}"
-          $env:INSTALLER_NAME = "Cellects-${{ steps.version.outputs.name }}-setup.exe"
-          makensis installer.nsi
-          Write-Host "Installer created successfully"
-          Get-ChildItem "Cellects-${{ steps.version.outputs.name }}-setup.exe"
+          export INSTALLER_VERSION="${{ steps.version.outputs.name }}"
+          export INSTALLER_NAME="Cellects-${{ steps.version.outputs.name }}-setup.exe"
+          "/c/Program Files (x86)/NSIS/makensis.exe" installer.nsi
+          echo "Installer created successfully"
+          ls -lh Cellects-${{ steps.version.outputs.name }}-setup.exe
       
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
