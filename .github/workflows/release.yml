@@ -264,11 +264,6 @@ jobs:
         run: |
           pyinstaller __main__.spec
 
-      - name: Check architecture
-        run: |
-          file dist/Cellects.app/Contents/MacOS/Cellects
-          lipo -info dist/Cellects.app/Contents/MacOS/Cellects || true
-
       - name: Verify app bundle
         run: |
           if [ ! -d "dist/Cellects.app" ]; then
@@ -280,7 +275,7 @@ jobs:
 
       - name: Install create-dmg
         run: |
-          brew install create-dmg
+          npm install -g create-dmg
 
       - name: Create DMG
         run: |
