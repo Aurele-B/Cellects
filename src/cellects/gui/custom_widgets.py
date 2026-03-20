@@ -107,6 +107,7 @@ class WindowType(QtWidgets.QWidget):
 class MainTabsType(WindowType):
     def __init__(self, parent, night_mode):
         super().__init__(parent, night_mode)
+        self.thread_dict = {}
         self.Vlayout = QtWidgets.QVBoxLayout()
         self.Vlayout.setContentsMargins(9, 0, 9, 9)
         self.main_tabs_widget = QtWidgets.QWidget()

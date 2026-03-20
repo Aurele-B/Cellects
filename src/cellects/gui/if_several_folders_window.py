@@ -21,12 +21,14 @@ class IfSeveralFoldersWindow(WindowType):
     """
     Second window of the Cellects GUI, only appears when there are multiple folders.
     """
-    def __init__(self, parent, night_mode):
+    def __init__(self, po, parent, night_mode):
         """
         Initialize the IfSeveralFolders window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -48,6 +50,7 @@ class IfSeveralFoldersWindow(WindowType):
         """
         super().__init__(parent, night_mode)
         self.setParent(parent)
+        self.po = po
 
     def true_init(self):
         """
@@ -66,12 +69,11 @@ class IfSeveralFoldersWindow(WindowType):
         This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
         """
         logging.info("Initialize IfSeveralFoldersWindow")
-        self.thread_dict = {}
-        self.thread_dict["LoadFirstFolderIfSeveral"] = LoadFirstFolderIfSeveralThread(self.parent())
+        self.thread_dict["LoadFirstFolderIfSeveral"] = LoadFirstFolderIfSeveralThread(self.po, self.parent())
         self.next_clicked_once:bool = False
         self.layout = QtWidgets.QVBoxLayout()
 
-        self.title_label = FixedText('Select folders to analyze', police=30, night_mode=self.parent().po.all['night_mode'])
+        self.title_label = FixedText('Select folders to analyze', police=30, night_mode=self.po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.layout.addWidget(self.title_label)
         self.layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
@@ -79,7 +81,7 @@ class IfSeveralFoldersWindow(WindowType):
         # 1) add a check box allowing to select every folders
         self.cb_layout = QtWidgets.QHBoxLayout()
         self.cb_widget = QtWidgets.QWidget()
-        self.cb_label = FixedText(MF["Check_to_select_all_folders"]["label"] + ':', tip=MF["Check_to_select_all_folders"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.cb_label = FixedText(MF["Check_to_select_all_folders"]["label"] + ':', tip=MF["Check_to_select_all_folders"]["tips"], night_mode=self.po.all['night_mode'])
         self.cb = QtWidgets.QCheckBox()
         self.cb.setChecked(True)
         self.cb.clicked.connect(self.checked)
@@ -92,13 +94,13 @@ class IfSeveralFoldersWindow(WindowType):
         # 2) Create a folder list and sample number per folder
         self.tableau = QtWidgets.QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.tableau.setColumnCount(2)
-        self.tableau.setRowCount(len(self.parent().po.all['folder_list']))
+        self.tableau.setRowCount(len(self.po.all['folder_list']))
         self.tableau.setHorizontalHeaderLabels(['Folders', 'Sample size'])
-        self.parent().po.all['sample_number_per_folder'] = np.repeat(int(self.parent().po.all['first_folder_sample_number']), self.parent().po.all['folder_number']).tolist()
+        self.po.all['sample_number_per_folder'] = np.repeat(int(self.po.all['first_folder_sample_number']), self.po.all['folder_number']).tolist()
 
-        for i, folder in enumerate(self.parent().po.all['folder_list']):
+        for i, folder in enumerate(self.po.all['folder_list']):
             self.tableau.setItem(i, 0, QtWidgets.QTableWidgetItem(folder))
-            self.tableau.setItem(i, 1, QtWidgets.QTableWidgetItem(str(self.parent().po.all['sample_number_per_folder'][i])))
+            self.tableau.setItem(i, 1, QtWidgets.QTableWidgetItem(str(self.po.all['sample_number_per_folder'][i])))
         self.tableau.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
         self.tableau.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeToContents)
         self.tableau.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
@@ -115,10 +117,10 @@ class IfSeveralFoldersWindow(WindowType):
         # Create the shortcuts row
         self.shortcuts_widget = QtWidgets.QWidget()
         self.shortcuts_layout = QtWidgets.QHBoxLayout()
-        self.Video_analysis_window = PButton("Video tracking window", night_mode=self.parent().po.all['night_mode'])
+        self.Video_analysis_window = PButton("Video tracking window", night_mode=self.po.all['night_mode'])
         self.Video_analysis_window.clicked.connect(self.Video_analysis_window_is_clicked)
         self.Run_all_directly = PButton("Run all directly", tip=VAW["Run_All"]["tips"],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        night_mode=self.po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Video_analysis_window.setVisible(False)
         self.Run_all_directly.setVisible(False)
@@ -131,7 +133,7 @@ class IfSeveralFoldersWindow(WindowType):
         # 3) Previous button
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_widget = QtWidgets.QWidget()
-        self.previous = PButton('Previous', night_mode=self.parent().po.all['night_mode'])
+        self.previous = PButton('Previous', night_mode=self.po.all['night_mode'])
         self.previous.clicked.connect(self.previous_is_clicked)
 
         # 4) Message
@@ -141,7 +143,7 @@ class IfSeveralFoldersWindow(WindowType):
         self.message.setAlignment(QtCore.Qt.AlignRight)
 
         # 5) Next button
-        self.next = PButton('Next', night_mode=self.parent().po.all['night_mode'])
+        self.next = PButton('Next', night_mode=self.po.all['night_mode'])
         self.next.clicked.connect(self.next_is_clicked)
         self.last_row_layout.addWidget(self.previous)
         self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
@@ -168,7 +170,7 @@ class IfSeveralFoldersWindow(WindowType):
         """
         Update the checkbox state based on the number of selected items.
         """
-        if (len(self.tableau.selectedItems()) // 2) == len(self.parent().po.all['folder_list']):
+        if (len(self.tableau.selectedItems()) // 2) == len(self.po.all['folder_list']):
             self.cb.setChecked(True)
         else:
             self.cb.setChecked(False)
@@ -195,7 +197,7 @@ class IfSeveralFoldersWindow(WindowType):
         Notes
         -----
         This function updates the internal state based on user selection and starts a thread
-        for loading data. The `self.parent().po.update_folder_id` method is called to update
+        for loading data. The `self.po.update_folder_id` method is called to update
         folder IDs.
         """
         if self.next_clicked_once:
@@ -213,12 +215,12 @@ class IfSeveralFoldersWindow(WindowType):
                         folder_list.append(self.tableau.selectedItems()[i].text())
                     else:
                         sample_number_per_folder.append(int(self.tableau.selectedItems()[i].text()))
-                self.parent().po.all['first_folder_sample_number'] = int(self.tableau.selectedItems()[1].text())
+                self.po.all['first_folder_sample_number'] = int(self.tableau.selectedItems()[1].text())
 
-                self.parent().po.all['folder_list'] = folder_list
-                self.parent().po.all['sample_number_per_folder'] = sample_number_per_folder
-                self.parent().po.update_folder_id(self.parent().po.all['first_folder_sample_number'],
-                                                  self.parent().po.all['folder_list'][0])
+                self.po.all['folder_list'] = folder_list
+                self.po.all['sample_number_per_folder'] = sample_number_per_folder
+                self.po.update_folder_id(self.po.all['first_folder_sample_number'],
+                                                  self.po.all['folder_list'][0])
                 self.thread_dict["LoadFirstFolderIfSeveral"].start()
                 self.thread_dict["LoadFirstFolderIfSeveral"].message_when_thread_finished.connect(self.first_folder_loaded)
 
@@ -234,9 +236,9 @@ class IfSeveralFoldersWindow(WindowType):
         if first_exp_ready_to_run:
             self.cb_widget.setVisible(False)
             self.tableau.setVisible(False)
-            if len(self.parent().po.vars['analyzed_individuals']) != self.parent().po.all['first_folder_sample_number']:
-                self.parent().po.vars['analyzed_individuals'] = list(range(1, self.parent().po.all['first_folder_sample_number'] + 1))
-                self.parent().po.sample_number = self.parent().po.all['first_folder_sample_number']
+            if len(self.po.vars['analyzed_individuals']) != self.po.all['first_folder_sample_number']:
+                self.po.vars['analyzed_individuals'] = list(range(1, self.po.all['first_folder_sample_number'] + 1))
+                self.po.sample_number = self.po.all['first_folder_sample_number']
             self.message.setText("Data found, shortcuts are available. Click Next again to redo/improve the image analysis")
             self.next_clicked_once = True
             self.Video_analysis_window.setVisible(True)

@@ -35,12 +35,14 @@ from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
 class ImageAnalysisWindow(MainTabsType):
-    def __init__(self, parent: object, night_mode: bool):
+    def __init__(self, po, parent: object, night_mode: bool):
         """
         Initialize the ImageAnalysis window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -67,7 +69,8 @@ class ImageAnalysisWindow(MainTabsType):
         """
         super().__init__(parent, night_mode)
         self.setParent(parent)
-        self.csc_dict = self.parent().po.vars['convert_for_origin'] # To change
+        self.po = po
+        self.csc_dict = self.po.vars['convert_for_origin'] # To change
         self.manual_delineation_flag: bool = False
 
     def true_init(self):
@@ -107,7 +110,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_masks_number = 0
         self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
         self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
-        self.parent().po.current_combination_id = 0
+        self.po.current_combination_id = 0
 
         self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
         self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
@@ -118,44 +121,44 @@ class ImageAnalysisWindow(MainTabsType):
         ## Title
         self.image_number_label = FixedText(IAW["Image_number"]["label"],
                                             tip=IAW["Image_number"]["tips"],
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
         self.image_number_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.image_number = Spinbox(min=0, max=self.parent().po.vars['img_number'] - 1, val=self.parent().po.vars['first_detection_frame'], night_mode=self.parent().po.all['night_mode'])
-        self.read = PButton("Read", night_mode=self.parent().po.all['night_mode'])
+        self.image_number = Spinbox(min=0, max=self.po.vars['img_number'] - 1, val=self.po.vars['first_detection_frame'], night_mode=self.po.all['night_mode'])
+        self.read = PButton("Read", night_mode=self.po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
-        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+        if self.po.all["im_or_vid"] == 0 and len(self.po.data_list) == 1:
             # If there is only one image in the folder
             self.image_number.setVisible(False)
             self.image_number_label.setVisible(False)
             self.read.setVisible(False)
 
-        self.one_blob_per_arena = Checkbox(not self.parent().po.vars['several_blob_per_arena'])
+        self.one_blob_per_arena = Checkbox(not self.po.vars['several_blob_per_arena'])
         self.one_blob_per_arena.stateChanged.connect(self.several_blob_per_arena_check)
         self.one_blob_per_arena_label = FixedText(IAW["several_blob_per_arena"]["label"], valign="c",
                                                   tip=IAW["several_blob_per_arena"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
 
         self.scale_with_label = FixedText(IAW["Scale_with"]["label"] + ':', valign="c",
                                         tip=IAW["Scale_with"]["tips"],
-                                        night_mode=self.parent().po.all['night_mode'])
-        self.scale_with = Combobox(["Image horizontal size", "Cell(s) horizontal size"], night_mode=self.parent().po.all['night_mode'])
+                                        night_mode=self.po.all['night_mode'])
+        self.scale_with = Combobox(["Image horizontal size", "Cell(s) horizontal size"], night_mode=self.po.all['night_mode'])
         self.scale_with.setFixedWidth(280)
-        self.scale_with.setCurrentIndex(self.parent().po.all['scale_with_image_or_cells'])
+        self.scale_with.setCurrentIndex(self.po.all['scale_with_image_or_cells'])
         self.scale_size_label = FixedText(IAW["Scale_size"]["label"] + ':', valign="c",
                                           tip=IAW["Scale_size"]["tips"],
-                                          night_mode=self.parent().po.all['night_mode'])
-        if self.parent().po.all['scale_with_image_or_cells'] == 0:
+                                          night_mode=self.po.all['night_mode'])
+        if self.po.all['scale_with_image_or_cells'] == 0:
             self.horizontal_size = Spinbox(min=0, max=100000,
-                                        val=self.parent().po.all['image_horizontal_size_in_mm'],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        val=self.po.all['image_horizontal_size_in_mm'],
+                                        night_mode=self.po.all['night_mode'])
         else:
             self.horizontal_size = Spinbox(min=0, max=100000,
-                                        val=self.parent().po.all['starting_blob_hsize_in_mm'],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        val=self.po.all['starting_blob_hsize_in_mm'],
+                                        night_mode=self.po.all['night_mode'])
         self.horizontal_size.valueChanged.connect(self.horizontal_size_changed)
         self.scale_with.currentTextChanged.connect(self.scale_with_changed)
-        self.scale_unit_label = FixedText(' mm', night_mode=self.parent().po.all['night_mode'])
+        self.scale_unit_label = FixedText(' mm', night_mode=self.po.all['night_mode'])
 
         # 1) Open the first row layout
         self.row1_widget = QtWidgets.QWidget()
@@ -188,16 +191,16 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_layout = QtWidgets.QVBoxLayout()
         self.user_drawn_lines_label = FixedText(IAW["Select_and_draw"]["label"] + ":",
                                                 tip=IAW["Select_and_draw"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
         self.user_drawn_lines_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.user_drawn_lines_layout.addWidget(self.user_drawn_lines_label)
         self.pbuttons_widget = QtWidgets.QWidget()
         self.pbuttons_layout = QtWidgets.QHBoxLayout()
         self.cell = PButton("Cell", False, tip=IAW["Draw_buttons"]["tips"],
-                            night_mode=self.parent().po.all['night_mode'])
+                            night_mode=self.po.all['night_mode'])
         self.cell.setFixedWidth(150)
         self.background = PButton("Back", False, tip=IAW["Draw_buttons"]["tips"],
-                                  night_mode=self.parent().po.all['night_mode'])
+                                  night_mode=self.po.all['night_mode'])
         self.background.setFixedWidth(150)
         self.cell.clicked.connect(self.cell_is_clicked)
         self.background.clicked.connect(self.background_is_clicked)
@@ -249,7 +252,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.central_row_layout.addWidget(self.display_image, 0, 1)
 
         # Need to create this before self.generate_csc_editing()
-        self.message = FixedText("", halign="r", night_mode=self.parent().po.all['night_mode'])
+        self.message = FixedText("", halign="r", night_mode=self.po.all['night_mode'])
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
         # 2)c) The csc editing
@@ -272,27 +275,27 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row2_layout = QtWidgets.QHBoxLayout()
 
         self.arena_shape_label = FixedText(IAW["Arena_shape"]["label"], tip=IAW["Arena_shape"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
-        self.arena_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
+                                           night_mode=self.po.all['night_mode'])
+        self.arena_shape = Combobox(['circle', 'rectangle'], night_mode=self.po.all['night_mode'])
         self.arena_shape.setFixedWidth(160)
-        self.arena_shape.setCurrentText(self.parent().po.vars['arena_shape'])
+        self.arena_shape.setCurrentText(self.po.vars['arena_shape'])
         self.arena_shape.currentTextChanged.connect(self.arena_shape_changed)
-        self.set_spot_shape = Checkbox(self.parent().po.all['set_spot_shape'])
+        self.set_spot_shape = Checkbox(self.po.all['set_spot_shape'])
         self.set_spot_shape.stateChanged.connect(self.set_spot_shape_check)
-        self.spot_shape_label = FixedText(IAW["Spot_shape"]["label"], tip=IAW["Spot_shape"]["tips"], night_mode=self.parent().po.all['night_mode'])
-        self.spot_shape = Combobox(['circle', 'rectangle'], night_mode=self.parent().po.all['night_mode'])
+        self.spot_shape_label = FixedText(IAW["Spot_shape"]["label"], tip=IAW["Spot_shape"]["tips"], night_mode=self.po.all['night_mode'])
+        self.spot_shape = Combobox(['circle', 'rectangle'], night_mode=self.po.all['night_mode'])
         self.spot_shape.setFixedWidth(160)
-        if self.parent().po.all['starting_blob_shape'] is None:
+        if self.po.all['starting_blob_shape'] is None:
             self.spot_shape.setCurrentIndex(0)
         else:
-            self.spot_shape.setCurrentText(self.parent().po.all['starting_blob_shape'])
+            self.spot_shape.setCurrentText(self.po.all['starting_blob_shape'])
         self.spot_shape.currentTextChanged.connect(self.spot_shape_changed)
-        self.set_spot_size = Checkbox(self.parent().po.all['set_spot_size'])
+        self.set_spot_size = Checkbox(self.po.all['set_spot_size'])
         self.set_spot_size.stateChanged.connect(self.set_spot_size_check)
         self.spot_size_label = FixedText(IAW["Spot_size"]["label"], tip=IAW["Spot_size"]["tips"],
-                                         night_mode=self.parent().po.all['night_mode'])
-        self.spot_size = Spinbox(min=0, max=100000, val=self.parent().po.all['starting_blob_hsize_in_mm'], decimals=2,
-                                 night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
+        self.spot_size = Spinbox(min=0, max=100000, val=self.po.all['starting_blob_hsize_in_mm'], decimals=2,
+                                 night_mode=self.po.all['night_mode'])
         self.spot_size.valueChanged.connect(self.spot_size_changed)
         self.sup_param_row2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.sup_param_row2_layout.addWidget(self.arena_shape_label)
@@ -321,18 +324,18 @@ class ImageAnalysisWindow(MainTabsType):
         # 5) Add the generate option row
         self.generate_analysis_options = FixedText(IAW["Generate_analysis_options"]["label"] + ": ",
                                                    tip=IAW["Generate_analysis_options"]["tips"],
-                                                   night_mode=self.parent().po.all['night_mode'])
-        self.basic = PButton("Basic", night_mode=self.parent().po.all['night_mode'])
+                                                   night_mode=self.po.all['night_mode'])
+        self.basic = PButton("Basic", night_mode=self.po.all['night_mode'])
         self.basic.clicked.connect(self.basic_is_clicked)
-        self.network_shaped = PButton("Network-shaped", night_mode=self.parent().po.all['night_mode'])
+        self.network_shaped = PButton("Network-shaped", night_mode=self.po.all['night_mode'])
         self.network_shaped.clicked.connect(self.network_shaped_is_clicked)
         self.network_shaped.setVisible(False)
-        self.visualize = PButton('Apply current config', night_mode=self.parent().po.all['night_mode'])
+        self.visualize = PButton('Apply current config', night_mode=self.po.all['night_mode'])
         self.visualize.clicked.connect(self.visualize_is_clicked)
-        if self.parent().po.vars['already_greyscale']:
-            self.visualize_label = FixedText("Directly: ", night_mode=self.parent().po.all['night_mode'])
+        if self.po.vars['already_greyscale']:
+            self.visualize_label = FixedText("Directly: ", night_mode=self.po.all['night_mode'])
         else:
-            self.visualize_label = FixedText("Or directly: ", night_mode=self.parent().po.all['night_mode'])
+            self.visualize_label = FixedText("Or directly: ", night_mode=self.po.all['night_mode'])
 
         self.sup_param_row1_layout.addWidget(self.generate_analysis_options)
         self.sup_param_row1_layout.addWidget(self.basic)
@@ -350,14 +353,14 @@ class ImageAnalysisWindow(MainTabsType):
         self.options_row_layout = QtWidgets.QHBoxLayout()
         self.select_option_label = FixedText(IAW["Select_option_to_read"]["label"],
                                              tip=IAW["Select_option_to_read"]["tips"],
-                                             night_mode=self.parent().po.all['night_mode'])
-        self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
-        if self.parent().po.vars['color_number'] == 2:
-            self.select_option.setCurrentIndex(self.parent().po.all['video_option'])
+                                             night_mode=self.po.all['night_mode'])
+        self.select_option = Combobox([], night_mode=self.po.all['night_mode'])
+        if self.po.vars['color_number'] == 2:
+            self.select_option.setCurrentIndex(self.po.all['video_option'])
         self.select_option.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.select_option.setMinimumWidth(145)
         self.select_option.currentTextChanged.connect(self.option_changed)
-        self.n_shapes_detected = FixedText(f'', night_mode=self.parent().po.all['night_mode'])
+        self.n_shapes_detected = FixedText(f'', night_mode=self.po.all['night_mode'])
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
         self.n_shapes_detected.setVisible(False)
@@ -372,10 +375,10 @@ class ImageAnalysisWindow(MainTabsType):
         # 7) Open decision row layout
         self.decision_row_widget = QtWidgets.QWidget()
         self.decision_row_layout = QtWidgets.QHBoxLayout()
-        self.decision_label = FixedText("", night_mode=self.parent().po.all['night_mode'])
-        self.yes = PButton("Yes", night_mode=self.parent().po.all['night_mode'])
+        self.decision_label = FixedText("", night_mode=self.po.all['night_mode'])
+        self.yes = PButton("Yes", night_mode=self.po.all['night_mode'])
         self.yes.clicked.connect(self.when_yes_is_clicked)
-        self.no = PButton("No", night_mode=self.parent().po.all['night_mode'])
+        self.no = PButton("No", night_mode=self.po.all['night_mode'])
         self.no.clicked.connect(self.when_no_is_clicked)
 
         self.decision_label.setVisible(False)
@@ -392,11 +395,11 @@ class ImageAnalysisWindow(MainTabsType):
         # 8) Open the special cases layout
         self.special_cases_widget = QtWidgets.QWidget()
         self.special_cases_layout = QtWidgets.QHBoxLayout()
-        self.starting_differs_from_growing_cb = Checkbox(self.parent().po.vars['origin_state'] == 'constant')
+        self.starting_differs_from_growing_cb = Checkbox(self.po.vars['origin_state'] == 'constant')
         self.starting_differs_from_growing_cb.stateChanged.connect(self.starting_differs_from_growing_check)
         self.starting_differs_from_growing_label = FixedText(IAW["Start_differs_from_arena"]["label"],
                                                              tip=IAW["Start_differs_from_arena"]["tips"],
-                                                             night_mode=self.parent().po.all['night_mode'])
+                                                             night_mode=self.po.all['night_mode'])
         self.starting_differs_from_growing_cb.setVisible(False)
         self.starting_differs_from_growing_label.setVisible(False)
         self.special_cases_layout.addWidget(self.starting_differs_from_growing_cb)
@@ -407,16 +410,16 @@ class ImageAnalysisWindow(MainTabsType):
         # 9) Open the last row layout
         self.last_row_widget = QtWidgets.QWidget()
         self.last_row_layout = QtWidgets.QHBoxLayout()
-        self.previous = PButton('Previous', night_mode=self.parent().po.all['night_mode'])
+        self.previous = PButton('Previous', night_mode=self.po.all['night_mode'])
         self.previous.clicked.connect(self.previous_is_clicked)
         self.data_tab.clicked.connect(self.data_is_clicked)
         self.video_tab.clicked.connect(self.video_is_clicked)
         self.complete_image_analysis = PButton(IAW["Save_image_analysis"]["label"],
                                                tip=IAW["Save_image_analysis"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
         self.complete_image_analysis.setVisible(False)
         self.complete_image_analysis.clicked.connect(self.complete_image_analysis_is_clicked)
-        self.next = PButton("Next", night_mode=self.parent().po.all['night_mode'])
+        self.next = PButton("Next", night_mode=self.po.all['night_mode'])
         self.next.setVisible(False)
         self.next.clicked.connect(self.go_to_next_widget)
         self.last_row_layout.addWidget(self.previous)
@@ -431,20 +434,19 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.advanced_mode_check()
 
-        self.thread_dict = {}
-        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.parent())
-        self.reinitialize_image_and_masks(self.parent().po.first_im)
-        self.thread_dict["GetLastIm"] = GetLastImThread(self.parent())
-        if self.parent().po.all['im_or_vid'] == 0:
+        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.po, self.parent())
+        self.reinitialize_image_and_masks(self.po.first_im)
+        self.thread_dict["GetLastIm"] = GetLastImThread(self.po, self.parent())
+        if self.po.all['im_or_vid'] == 0:
             self.thread_dict["GetLastIm"].start()
-        self.parent().po.first_image = OneImageAnalysis(self.parent().po.first_im)
-        self.thread_dict["FirstImageAnalysis"] = FirstImageAnalysisThread(self.parent())
-        self.thread_dict["LastImageAnalysis"] = LastImageAnalysisThread(self.parent())
-        self.thread_dict['UpdateImage'] = UpdateImageThread(self.parent())
-        self.thread_dict['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.parent())
-        self.thread_dict['SaveManualDelineation'] = SaveManualDelineationThread(self.parent())
-        self.thread_dict['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.parent())
-        self.thread_dict['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.parent())
+        self.po.first_image = OneImageAnalysis(self.po.first_im)
+        self.thread_dict["FirstImageAnalysis"] = FirstImageAnalysisThread(self.po, self.parent())
+        self.thread_dict["LastImageAnalysis"] = LastImageAnalysisThread(self.po, self.parent())
+        self.thread_dict['UpdateImage'] = UpdateImageThread(self.po, self.parent())
+        self.thread_dict['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.po, self.parent())
+        self.thread_dict['SaveManualDelineation'] = SaveManualDelineationThread(self.po, self.parent())
+        self.thread_dict['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.po, self.parent())
+        self.thread_dict['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.po, self.parent())
 
     def previous_is_clicked(self):
         """
@@ -479,7 +481,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.arena_masks_number = 0
             self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
             self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
-            self.parent().po.current_combination_id = 0
+            self.po.current_combination_id = 0
             self.parent().last_tab = "data_specifications"
             self.parent().change_widget(0)  # First
 
@@ -525,8 +527,8 @@ class ImageAnalysisWindow(MainTabsType):
         and resets visual components once processing begins.
         """
         if not self.thread_dict["GetFirstIm"].isRunning():
-            self.parent().po.vars['first_detection_frame'] = int(self.image_number.value())
-            self.message.setText(f"Reading image n°{self.parent().po.vars['first_detection_frame']}")
+            self.po.vars['first_detection_frame'] = int(self.image_number.value())
+            self.message.setText(f"Reading image n°{self.po.vars['first_detection_frame']}")
             self.thread_dict["GetFirstIm"].start()
             self.thread_dict["GetFirstIm"].message_when_thread_finished.connect(self.reinitialize_image_and_masks)
             self.reinitialize_bio_and_back_legend()
@@ -537,7 +539,7 @@ class ImageAnalysisWindow(MainTabsType):
         Checks or unchecks the option for having several blobs per arena.
         """
         is_checked = self.one_blob_per_arena.isChecked()
-        self.parent().po.vars['several_blob_per_arena'] = not is_checked
+        self.po.vars['several_blob_per_arena'] = not is_checked
         self.set_spot_size.setVisible(is_checked)
         self.spot_size_label.setVisible(is_checked)
         self.spot_size.setVisible(is_checked and self.set_spot_size.isChecked())
@@ -549,15 +551,15 @@ class ImageAnalysisWindow(MainTabsType):
         is_checked = self.set_spot_size.isChecked()
         if self.step == 1:
             self.spot_size.setVisible(is_checked)
-        self.parent().po.all['set_spot_size'] = is_checked
+        self.po.all['set_spot_size'] = is_checked
 
     def spot_size_changed(self):
         """
         Update the starting blob size and corresponding horizontal size based on user input.
         """
-        self.parent().po.all['starting_blob_hsize_in_mm'] = self.spot_size.value()
-        if self.parent().po.all['scale_with_image_or_cells'] == 1:
-            self.horizontal_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
+        self.po.all['starting_blob_hsize_in_mm'] = self.spot_size.value()
+        if self.po.all['scale_with_image_or_cells'] == 1:
+            self.horizontal_size.setValue(self.po.all['starting_blob_hsize_in_mm'])
         self.set_spot_size_check()
 
     def set_spot_shape_check(self):
@@ -566,15 +568,15 @@ class ImageAnalysisWindow(MainTabsType):
         """
         is_checked = self.set_spot_shape.isChecked()
         self.spot_shape.setVisible(is_checked)
-        self.parent().po.all['set_spot_shape'] = is_checked
+        self.po.all['set_spot_shape'] = is_checked
         if not is_checked:
-            self.parent().po.all['starting_blob_shape'] = None
+            self.po.all['starting_blob_shape'] = None
 
     def spot_shape_changed(self):
         """
         Save the user selection of shape.
         """
-        self.parent().po.all['starting_blob_shape'] = self.spot_shape.currentText()
+        self.po.all['starting_blob_shape'] = self.spot_shape.currentText()
         self.set_spot_shape_check()
 
     def arena_shape_changed(self):
@@ -592,7 +594,7 @@ class ImageAnalysisWindow(MainTabsType):
         This method handles threading operations to ensure proper synchronization and updates.
         It reinitializes the biological legend, image, and masks when the arena shape is changed.
         """
-        self.parent().po.vars['arena_shape'] = self.arena_shape.currentText()
+        self.po.vars['arena_shape'] = self.arena_shape.currentText()
         if self.asking_delineation_flag:
             if self.thread_dict['CropScaleSubtractDelineate'].isRunning():
                 self.thread_dict['CropScaleSubtractDelineate'].wait()
@@ -603,7 +605,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.yes.setVisible(False)
             self.no.setVisible(False)
             self.reinitialize_bio_and_back_legend()
-            self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+            self.reinitialize_image_and_masks(self.po.first_image.bgr)
             self.delineation_done = True
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
@@ -660,39 +662,39 @@ class ImageAnalysisWindow(MainTabsType):
         the image type and reinitializes masks to prepare for new analysis.
         """
         if len(image.shape) == 2:
-            self.parent().po.current_image = np.stack((image, image, image), axis=2)
+            self.po.current_image = np.stack((image, image, image), axis=2)
             self.network_shaped.setVisible(False)
             self.select_option.setVisible(False)
             self.select_option_label.setVisible(False)
             self.visualize.setVisible(True)
             self.visualize_label.setVisible(True)
         else:
-            self.parent().po.current_image = image.copy()
-        self.drawn_image = self.parent().po.current_image.copy()
-        self.display_image.update_image(self.parent().po.current_image)
+            self.po.current_image = image.copy()
+        self.drawn_image = self.po.current_image.copy()
+        self.display_image.update_image(self.po.current_image)
         self.arena_mask = None
-        self.bio_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
-        self.back_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
+        self.bio_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
+        self.back_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
 
     def scale_with_changed(self):
         """
         Modifies how the image scale is computed: using the image width or the blob unitary size (horizontal diameter).
         """
-        self.parent().po.all['scale_with_image_or_cells'] = self.scale_with.currentIndex()
-        if self.parent().po.all['scale_with_image_or_cells'] == 0:
-            self.horizontal_size.setValue(self.parent().po.all['image_horizontal_size_in_mm'])
+        self.po.all['scale_with_image_or_cells'] = self.scale_with.currentIndex()
+        if self.po.all['scale_with_image_or_cells'] == 0:
+            self.horizontal_size.setValue(self.po.all['image_horizontal_size_in_mm'])
         else:
-            self.horizontal_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
+            self.horizontal_size.setValue(self.po.all['starting_blob_hsize_in_mm'])
 
     def horizontal_size_changed(self):
         """
         Changes the horizontal size value of the image or of the blobs in the image, depending on user's choice.
         """
-        if self.parent().po.all['scale_with_image_or_cells'] == 0:
-            self.parent().po.all['image_horizontal_size_in_mm'] = self.horizontal_size.value()
+        if self.po.all['scale_with_image_or_cells'] == 0:
+            self.po.all['image_horizontal_size_in_mm'] = self.horizontal_size.value()
         else:
-            self.parent().po.all['starting_blob_hsize_in_mm'] = self.horizontal_size.value()
-            self.spot_size.setValue(self.parent().po.all['starting_blob_hsize_in_mm'])
+            self.po.all['starting_blob_hsize_in_mm'] = self.horizontal_size.value()
+            self.spot_size.setValue(self.po.all['starting_blob_hsize_in_mm'])
 
     def advanced_mode_check(self):
         """
@@ -702,8 +704,8 @@ class ImageAnalysisWindow(MainTabsType):
         the state of the advanced mode check box and other conditions.
         """
         is_checked = self.advanced_mode_cb.isChecked()
-        color_analysis = is_checked and not self.parent().po.vars['already_greyscale']
-        self.parent().po.all['expert_mode'] = is_checked
+        color_analysis = is_checked and not self.po.vars['already_greyscale']
+        self.po.all['expert_mode'] = is_checked
 
         if is_checked and (self.asking_first_im_parameters_flag or self.auto_delineation_flag):
             self.arena_shape_label.setVisible(True)
@@ -725,7 +727,7 @@ class ImageAnalysisWindow(MainTabsType):
         at_least_one_line_drawn = self.bio_masks_number > 0
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
-        self.distinct_colors_number.setVisible(is_checked and at_least_one_line_drawn and self.parent().po.all["more_than_two_colors"])
+        self.distinct_colors_number.setVisible(is_checked and at_least_one_line_drawn and self.po.all["more_than_two_colors"])
 
         # Check whether filter 1 and its potential parameters should be visible
         self.filter1.setVisible(is_checked)
@@ -784,11 +786,11 @@ class ImageAnalysisWindow(MainTabsType):
         allowing the user to draw cells on the image.
         """
         if self.back1_bio2 == 2:
-            self.cell.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.back1_bio2 = 0
         else:
             self.cell.color("rgb(230, 145, 18)")
-            self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.back1_bio2 = 2
         self.saved_coord = []
 
@@ -798,11 +800,11 @@ class ImageAnalysisWindow(MainTabsType):
         allowing the user to draw where there is background on the image.
         """
         if self.back1_bio2 == 1:
-            self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.back1_bio2 = 0
         else:
             self.background.color("rgb(81, 160, 224)")
-            self.cell.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.back1_bio2 = 1
         self.saved_coord = []
 
@@ -866,7 +868,7 @@ class ImageAnalysisWindow(MainTabsType):
                 self.thread_dict["UpdateImage"].wait()
             self.temporary_mask_coord = []
             if self.manual_delineation_flag and len(self.parent().imageanalysiswindow.available_arena_names) == 0:
-                self.message.setText(f"The total number of arenas are already drawn ({self.parent().po.sample_number})")
+                self.message.setText(f"The total number of arenas are already drawn ({self.po.sample_number})")
                 self.saved_coord = []
             else:
                 self.saved_coord.append([event.pos().y(), event.pos().x()])
@@ -893,7 +895,7 @@ class ImageAnalysisWindow(MainTabsType):
             pbutton_name = u"\u00D7" + " Back" + str(back_name)
             self.back_lines[back_name][pbutton_name] = self.new_pbutton_on_the_left(pbutton_name)
             self.back_added_lines_layout.addWidget(self.back_lines[back_name][pbutton_name])
-            self.background.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.available_back_names = self.available_back_names[1:]
         elif self.back1_bio2 == 2:
             bio_name = self.parent().imageanalysiswindow.available_bio_names[0]
@@ -901,7 +903,7 @@ class ImageAnalysisWindow(MainTabsType):
             pbutton_name = u"\u00D7" + " Cell" + str(bio_name)
             self.bio_lines[bio_name][pbutton_name] = self.new_pbutton_on_the_left(pbutton_name)
             self.bio_added_lines_layout.addWidget(self.bio_lines[bio_name][pbutton_name])
-            self.cell.night_mode_switch(night_mode=self.parent().po.all['night_mode'])
+            self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
             self.available_bio_names = self.available_bio_names[1:]
             if self.bio_masks_number == 0:
                 self.display_more_than_two_colors_option()
@@ -933,7 +935,7 @@ class ImageAnalysisWindow(MainTabsType):
         `self.back1_bio2`, which affects its color. The button also has a fixed
         size and specific font settings.
         """
-        pbutton = PButton(pbutton_name, False, night_mode=self.parent().po.all['night_mode'])
+        pbutton = PButton(pbutton_name, False, night_mode=self.po.all['night_mode'])
         pbutton.setFixedHeight(20)
         pbutton.setFixedWidth(100)
         pbutton.setFont(QtGui.QFont("Segoe UI Semibold", 8, QtGui.QFont.Thin))
@@ -1000,9 +1002,9 @@ class ImageAnalysisWindow(MainTabsType):
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
-            self.parent().po.visualize = False
-            self.parent().po.basic = False
-            self.parent().po.network_shaped = True
+            self.po.visualize = False
+            self.po.basic = False
+            self.po.network_shaped = True
             self.select_option.clear()
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
@@ -1020,9 +1022,9 @@ class ImageAnalysisWindow(MainTabsType):
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
-            self.parent().po.visualize = False
-            self.parent().po.basic = True
-            self.parent().po.network_shaped = False
+            self.po.visualize = False
+            self.po.basic = True
+            self.po.network_shaped = False
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1038,9 +1040,9 @@ class ImageAnalysisWindow(MainTabsType):
         if not self.is_image_analysis_running:
             self.is_image_analysis_running = True
             self.message.setText('Loading, wait...')
-            self.parent().po.visualize = True
-            self.parent().po.basic = False
-            self.parent().po.network_shaped = False
+            self.po.visualize = True
+            self.po.basic = False
+            self.po.network_shaped = False
             if self.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
@@ -1068,15 +1070,15 @@ class ImageAnalysisWindow(MainTabsType):
             self.spot_shape_changed()
             self.arena_shape_changed()
 
-        if self.parent().po.visualize:
+        if self.po.visualize:
             self.save_user_defined_csc()
-            self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+            self.po.vars["color_number"] = int(self.distinct_colors_number.value())
             if self.csc_dict_is_empty:
                 self.message.setText('Select non null value(s) to combine colors')
                 self.message.setStyleSheet("color: rgb(230, 145, 18)")
                 self.is_image_analysis_running = False
-        if not self.parent().po.visualize or not self.csc_dict_is_empty:
-            self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
+        if not self.po.visualize or not self.csc_dict_is_empty:
+            self.po.vars['convert_for_origin'] = self.csc_dict.copy()
             self.thread_dict["FirstImageAnalysis"].start()
             self.thread_dict["FirstImageAnalysis"].message_from_thread.connect(self.display_message_from_thread)
             self.thread_dict["FirstImageAnalysis"].message_when_thread_finished.connect(self.when_image_analysis_finishes)
@@ -1090,10 +1092,10 @@ class ImageAnalysisWindow(MainTabsType):
         prepares the environment by setting variables and starting threads.
         """
         self.save_user_defined_csc()
-        self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+        self.po.vars["color_number"] = int(self.distinct_colors_number.value())
         if not self.csc_dict_is_empty:
-            self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
-        if self.parent().po.visualize and self.csc_dict_is_empty:
+            self.po.vars['convert_for_motion'] = self.csc_dict.copy()
+        if self.po.visualize and self.csc_dict_is_empty:
             self.message.setText('Select non null value(s) to combine colors')
             self.message.setStyleSheet("color: rgb(230, 145, 18)")
         else:
@@ -1113,21 +1115,21 @@ class ImageAnalysisWindow(MainTabsType):
         """
 
         if self.is_first_image_flag:
-            im_combinations = self.parent().po.first_image.im_combinations
+            im_combinations = self.po.first_image.im_combinations
         else:
-            im_combinations = self.parent().po.last_image.im_combinations
+            im_combinations = self.po.last_image.im_combinations
         self.init_drawn_image(im_combinations)
-        if self.parent().po.visualize:
-            if self.parent().po.current_combination_id != self.select_option.currentIndex():
-                self.select_option.setCurrentIndex(self.parent().po.current_combination_id)
+        if self.po.visualize:
+            if self.po.current_combination_id != self.select_option.currentIndex():
+                self.select_option.setCurrentIndex(self.po.current_combination_id)
         else:
-            self.parent().po.current_combination_id = 0
+            self.po.current_combination_id = 0
             if len(im_combinations) > 0:
-                self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
+                self.csc_dict = im_combinations[self.po.current_combination_id]["csc"]
                 if self.is_first_image_flag:
-                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
+                    self.po.vars['convert_for_origin'] = self.csc_dict.copy()
                 else:
-                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                    self.po.vars['convert_for_motion'] = self.csc_dict.copy()
                 option_number = len(im_combinations)
 
                 if option_number > 1:
@@ -1136,18 +1138,18 @@ class ImageAnalysisWindow(MainTabsType):
                     for option in range(option_number):
                         self.select_option.addItem(f"Option {option + 1}")
                 self.update_csc_editing_display()
-                if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
-                    self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
-                    self.rolling_window_segmentation.setChecked(self.parent().po.vars['rolling_window_segmentation']['do'])
-                if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
-                    self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+                if "rolling_window" in im_combinations[self.po.current_combination_id]:
+                    self.po.vars['rolling_window_segmentation']['do'] = im_combinations[self.po.current_combination_id]["rolling_window"]
+                    self.rolling_window_segmentation.setChecked(self.po.vars['rolling_window_segmentation']['do'])
+                if "filter_spec" in im_combinations[self.po.current_combination_id]:
+                    self.po.vars['filter_spec'] = im_combinations[self.po.current_combination_id][
                         "filter_spec"]
                     self.update_filter_display()
             else:
                 self.message.setText("No options could be generated automatically, use the advanced mode")
                 self.is_image_analysis_running = False
 
-        if self.parent().po.visualize or len(im_combinations) > 0:
+        if self.po.visualize or len(im_combinations) > 0:
             self.is_image_analysis_display_running = True
             # Update image display
             if self.thread_dict["UpdateImage"].isRunning():
@@ -1167,37 +1169,37 @@ class ImageAnalysisWindow(MainTabsType):
         -----
         This method updates the user interface based on the current state of image analysis.
         """
-        color_analysis = not self.parent().po.vars['already_greyscale']
+        color_analysis = not self.po.vars['already_greyscale']
         self.message.setText("")
 
         if self.step < 2:
-            detected_shape_nb = self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id][
+            detected_shape_nb = self.po.first_image.im_combinations[self.po.current_combination_id][
                 'shape_number']
-            if detected_shape_nb == self.parent().po.sample_number or self.parent().po.vars['several_blob_per_arena']:
+            if detected_shape_nb == self.po.sample_number or self.po.vars['several_blob_per_arena']:
                 self.decision_label.setText(
-                    f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
+                    f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Does the color match the cell(s)?")
                 if self.step == 1:
                     self.yes.setVisible(True)
                     self.message.setText("If not, draw more Cell and Back ellipses on the image and retry")
             else:
                 if self.no.isVisible():
                     self.decision_label.setText(
-                        f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied, Click No to fill in more parameters")
+                        f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Click Yes when satisfied, Click No to fill in more parameters")
                     self.yes.setVisible(True)
                     self.no.setVisible(True)
                 else:
                     self.decision_label.setText(
-                        f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Click Yes when satisfied")
+                        f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Click Yes when satisfied")
                     self.yes.setVisible(True)
 
-            if self.parent().po.vars['several_blob_per_arena'] and (detected_shape_nb == self.parent().po.sample_number):
+            if self.po.vars['several_blob_per_arena'] and (detected_shape_nb == self.po.sample_number):
                 self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")
 
-        if not self.parent().po.visualize:
+        if not self.po.visualize:
             self.select_option.setVisible(True)
             self.select_option_label.setVisible(True)
         if self.step == 0:
-            if self.parent().po.first_image.im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
+            if self.po.first_image.im_combinations[self.po.current_combination_id]['shape_number'] == 0:
                 self.message.setText("Make sure that scaling metric and spot size are correct")
             self.decision_label.setVisible(True)
             self.yes.setVisible(True)
@@ -1215,7 +1217,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
             self.yes.setVisible(False)
             self.no.setVisible(False)
-            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+            if self.po.all["im_or_vid"] == 1 or len(self.po.data_list) > 1:
                 self.next.setVisible(True)
                 self.message.setText('When the resulting segmentation of the last image seems good, click next.')
             else:
@@ -1238,13 +1240,13 @@ class ImageAnalysisWindow(MainTabsType):
             'converted_image'. If None, the current state is maintained.
         """
         if im_combinations is not None and len(im_combinations) > 0:
-            if self.parent().po.current_combination_id + 1 > len(im_combinations):
-                self.parent().po.current_combination_id = 0
-            self.csc_dict = im_combinations[self.parent().po.current_combination_id]["csc"]
-            self.parent().po.current_image = np.stack((im_combinations[self.parent().po.current_combination_id]['converted_image'],
-                                                    im_combinations[self.parent().po.current_combination_id]['converted_image'],
-                                                    im_combinations[self.parent().po.current_combination_id]['converted_image']), axis=2)
-            self.drawn_image = self.parent().po.current_image.copy()
+            if self.po.current_combination_id + 1 > len(im_combinations):
+                self.po.current_combination_id = 0
+            self.csc_dict = im_combinations[self.po.current_combination_id]["csc"]
+            self.po.current_image = np.stack((im_combinations[self.po.current_combination_id]['converted_image'],
+                                                    im_combinations[self.po.current_combination_id]['converted_image'],
+                                                    im_combinations[self.po.current_combination_id]['converted_image']), axis=2)
+            self.drawn_image = self.po.current_image.copy()
 
     def option_changed(self):
         """
@@ -1257,11 +1259,11 @@ class ImageAnalysisWindow(MainTabsType):
         image display.
         """
         # Update the current image
-        self.parent().po.current_combination_id = self.select_option.currentIndex()
+        self.po.current_combination_id = self.select_option.currentIndex()
         if self.is_first_image_flag:
-            im_combinations = self.parent().po.first_image.im_combinations
+            im_combinations = self.po.first_image.im_combinations
         else:
-            im_combinations = self.parent().po.last_image.im_combinations
+            im_combinations = self.po.last_image.im_combinations
         self.init_drawn_image(im_combinations)
         if im_combinations is not None and len(im_combinations) > 0:
             # Update image display
@@ -1273,30 +1275,30 @@ class ImageAnalysisWindow(MainTabsType):
 
             # Update the detected shape number
             if self.is_first_image_flag:
-                self.parent().po.vars['convert_for_origin'] = im_combinations[self.parent().po.current_combination_id]["csc"]
-                detected_shape_nb = im_combinations[self.parent().po.current_combination_id]['shape_number']
-                if self.parent().po.vars['several_blob_per_arena']:
-                    if detected_shape_nb == self.parent().po.sample_number:
+                self.po.vars['convert_for_origin'] = im_combinations[self.po.current_combination_id]["csc"]
+                detected_shape_nb = im_combinations[self.po.current_combination_id]['shape_number']
+                if self.po.vars['several_blob_per_arena']:
+                    if detected_shape_nb == self.po.sample_number:
                         self.message.setText("Beware: Contrary to what has been checked, there is one spot per arena")
                 else:
-                    if detected_shape_nb == self.parent().po.sample_number:
+                    if detected_shape_nb == self.po.sample_number:
                         self.decision_label.setText(
-                            f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Does the color match the cell(s)?")
+                            f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Does the color match the cell(s)?")
                         self.yes.setVisible(True)
                     else:
                         self.decision_label.setText(
-                            f"{detected_shape_nb} distinct specimen(s) detected in {self.parent().po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
+                            f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Adjust settings, draw more cells and background, and try again")
                         self.yes.setVisible(False)
-                if im_combinations[self.parent().po.current_combination_id]['shape_number'] == 0:
+                if im_combinations[self.po.current_combination_id]['shape_number'] == 0:
                     self.message.setText("Make sure that scaling metric and spot size are correct")
             else:
-                self.parent().po.vars['convert_for_motion'] = im_combinations[self.parent().po.current_combination_id]["csc"]
+                self.po.vars['convert_for_motion'] = im_combinations[self.po.current_combination_id]["csc"]
                 self.decision_label.setText("Do colored contours correctly match cell(s) contours?")
-            if "rolling_window" in im_combinations[self.parent().po.current_combination_id]:
-                self.parent().po.vars['rolling_window_segmentation']['do'] = im_combinations[self.parent().po.current_combination_id]["rolling_window"]
-                self.rolling_window_segmentation.setChecked(self.parent().po.vars['rolling_window_segmentation']['do'])
-            if "filter_spec" in im_combinations[self.parent().po.current_combination_id]:
-                self.parent().po.vars['filter_spec'] = im_combinations[self.parent().po.current_combination_id][
+            if "rolling_window" in im_combinations[self.po.current_combination_id]:
+                self.po.vars['rolling_window_segmentation']['do'] = im_combinations[self.po.current_combination_id]["rolling_window"]
+                self.rolling_window_segmentation.setChecked(self.po.vars['rolling_window_segmentation']['do'])
+            if "filter_spec" in im_combinations[self.po.current_combination_id]:
+                self.po.vars['filter_spec'] = im_combinations[self.po.current_combination_id][
                     "filter_spec"]
                 self.update_filter_display()
 
@@ -1314,7 +1316,7 @@ class ImageAnalysisWindow(MainTabsType):
         # 1) Advanced mode option
         self.advanced_mode_widget = QtWidgets.QWidget()
         self.advanced_mode_layout = QtWidgets.QHBoxLayout()
-        self.advanced_mode_cb = Checkbox(self.parent().po.all['expert_mode'])
+        self.advanced_mode_cb = Checkbox(self.po.all['expert_mode'])
         self.advanced_mode_cb.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
@@ -1326,7 +1328,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.advanced_mode_cb.stateChanged.connect(self.advanced_mode_check)
         self.advanced_mode_label = FixedText(IAW["Advanced_mode"]["label"], halign='l',
                                              tip=IAW["Advanced_mode"]["tips"],
-                                             night_mode=self.parent().po.all['night_mode'])
+                                             night_mode=self.po.all['night_mode'])
         self.advanced_mode_label.setAlignment(QtCore.Qt.AlignTop)
         self.advanced_mode_layout.addWidget(self.advanced_mode_cb)
         self.advanced_mode_layout.addWidget(self.advanced_mode_label)
@@ -1349,7 +1351,7 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.space_label = FixedText(IAW["Color_combination"]["label"] + ':', halign='l',
                                     tip=IAW["Color_combination"]["tips"],
-                                    night_mode=self.parent().po.all['night_mode'])
+                                    night_mode=self.po.all['night_mode'])
 
         self.edit_labels_layout.addWidget(self.space_label)
         self.edit_labels_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
@@ -1366,12 +1368,12 @@ class ImageAnalysisWindow(MainTabsType):
         self.row2[4].clicked.connect(self.display_row3)
         self.row3 = self.one_csc_editing()# Second CSC
         self.logical_operator_between_combination_result = Combobox(["None", "Or", "And", "Xor"],
-                                                                    night_mode=self.parent().po.all['night_mode'])
-        self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
+                                                                    night_mode=self.po.all['night_mode'])
+        self.logical_operator_between_combination_result.setCurrentText(self.po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
         self.logical_operator_label = FixedText(IAW["Logical_operator"]["label"], tip=IAW["Logical_operator"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
 
         self.row21 = self.one_csc_editing()
         self.row21[4].clicked.connect(self.display_row22)
@@ -1401,31 +1403,31 @@ class ImageAnalysisWindow(MainTabsType):
         # First filters
         self.filter1_label = FixedText(IAW["Filter"]["label"] + ': ', halign='l',
                                     tip=IAW["Filter"]["tips"],
-                                    night_mode=self.parent().po.all['night_mode'])
+                                    night_mode=self.po.all['night_mode'])
         self.csc_table_layout.addWidget(self.filter1_label)
         self.filter1_widget = QtWidgets.QWidget()
         self.filter1_layout = QtWidgets.QHBoxLayout()
-        self.filter1 = Combobox(list(filter_dict.keys()), night_mode=self.parent().po.all['night_mode'])
-        self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
+        self.filter1 = Combobox(list(filter_dict.keys()), night_mode=self.po.all['night_mode'])
+        self.filter1.setCurrentText(self.po.vars['filter_spec']['filter1_type'])
         self.filter1.currentTextChanged.connect(self.filter1_changed)
         self.filter1.setFixedWidth(100)
-        if "Param1" in filter_dict[self.parent().po.vars['filter_spec']['filter1_type']].keys():
-            param1_name = filter_dict[self.parent().po.vars['filter_spec']['filter1_type']]["Param1"]["Name"]
+        if "Param1" in filter_dict[self.po.vars['filter_spec']['filter1_type']].keys():
+            param1_name = filter_dict[self.po.vars['filter_spec']['filter1_type']]["Param1"]["Name"]
         else:
             param1_name = ""
         self.filter1_param1_label = FixedText(param1_name, halign='l', tip="The parameter to adjust the filter effect",
-                                    night_mode=self.parent().po.all['night_mode'])
+                                    night_mode=self.po.all['night_mode'])
         filter_param_spinbox_width = 60
-        self.filter1_param1 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter1_param'][0], decimals=3, night_mode=self.parent().po.all['night_mode'])
+        self.filter1_param1 = Spinbox(min=-1000, max=1000, val=self.po.vars['filter_spec']['filter1_param'][0], decimals=3, night_mode=self.po.all['night_mode'])
         self.filter1_param1.setFixedWidth(filter_param_spinbox_width)
         self.filter1_param1.valueChanged.connect(self.filter1_param1_changed)
-        if "Param2" in filter_dict[self.parent().po.vars['filter_spec']['filter1_type']].keys():
-            param2_name = filter_dict[self.parent().po.vars['filter_spec']['filter1_type']]["Param2"]["Name"]
+        if "Param2" in filter_dict[self.po.vars['filter_spec']['filter1_type']].keys():
+            param2_name = filter_dict[self.po.vars['filter_spec']['filter1_type']]["Param2"]["Name"]
         else:
             param2_name = ""
         self.filter1_param2_label = FixedText(param2_name, halign='l', tip="The parameter to adjust the filter effect",
-            night_mode=self.parent().po.all['night_mode'])
-        self.filter1_param2 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter1_param'][1], decimals=3, night_mode=self.parent().po.all['night_mode'])
+            night_mode=self.po.all['night_mode'])
+        self.filter1_param2 = Spinbox(min=-1000, max=1000, val=self.po.vars['filter_spec']['filter1_param'][1], decimals=3, night_mode=self.po.all['night_mode'])
         self.filter1_param2.setFixedWidth(filter_param_spinbox_width)
         self.filter1_param2.valueChanged.connect(self.filter1_param2_changed)
         self.filter1_layout.addWidget(self.filter1)
@@ -1480,31 +1482,31 @@ class ImageAnalysisWindow(MainTabsType):
         # Second filters
         self.filter2_label = FixedText(IAW["Filter"]["label"] + ': ', halign='l',
                                     tip=IAW["Filter"]["tips"],
-                                    night_mode=self.parent().po.all['night_mode'])
+                                    night_mode=self.po.all['night_mode'])
         self.csc_table_layout.addWidget(self.filter2_label)
         self.filter2_widget = QtWidgets.QWidget()
         self.filter2_layout = QtWidgets.QHBoxLayout()
-        self.filter2 = Combobox(list(filter_dict.keys()), night_mode=self.parent().po.all['night_mode'])
-        self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
+        self.filter2 = Combobox(list(filter_dict.keys()), night_mode=self.po.all['night_mode'])
+        self.filter2.setCurrentText(self.po.vars['filter_spec']['filter2_type'])
         self.filter2.currentTextChanged.connect(self.filter2_changed)
         self.filter2.setFixedWidth(100)
-        if "Param1" in filter_dict[self.parent().po.vars['filter_spec']['filter2_type']].keys():
-            param1_name = filter_dict[self.parent().po.vars['filter_spec']['filter2_type']]["Param1"]["Name"]
+        if "Param1" in filter_dict[self.po.vars['filter_spec']['filter2_type']].keys():
+            param1_name = filter_dict[self.po.vars['filter_spec']['filter2_type']]["Param1"]["Name"]
         else:
             param1_name = ""
         self.filter2_param1_label = FixedText(param1_name, halign='l',
                                     tip="The parameter to adjust the filter effect",
-                                    night_mode=self.parent().po.all['night_mode'])
-        self.filter2_param1 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter2_param'][0], decimals=3, night_mode=self.parent().po.all['night_mode'])
+                                    night_mode=self.po.all['night_mode'])
+        self.filter2_param1 = Spinbox(min=-1000, max=1000, val=self.po.vars['filter_spec']['filter2_param'][0], decimals=3, night_mode=self.po.all['night_mode'])
         self.filter2_param1.setFixedWidth(filter_param_spinbox_width)
         self.filter2_param1.valueChanged.connect(self.filter2_param1_changed)
-        if "Param2" in filter_dict[self.parent().po.vars['filter_spec']['filter2_type']].keys():
-            param2_name = filter_dict[self.parent().po.vars['filter_spec']['filter2_type']]["Param2"]["Name"]
+        if "Param2" in filter_dict[self.po.vars['filter_spec']['filter2_type']].keys():
+            param2_name = filter_dict[self.po.vars['filter_spec']['filter2_type']]["Param2"]["Name"]
         else:
             param2_name = ""
         self.filter2_param2_label = FixedText(param2_name, halign='l', tip="The parameter to adjust the filter effect",
-            night_mode=self.parent().po.all['night_mode'])
-        self.filter2_param2 = Spinbox(min=-1000, max=1000, val=self.parent().po.vars['filter_spec']['filter2_param'][1], decimals=3, night_mode=self.parent().po.all['night_mode'])
+            night_mode=self.po.all['night_mode'])
+        self.filter2_param2 = Spinbox(min=-1000, max=1000, val=self.po.vars['filter_spec']['filter2_param'][1], decimals=3, night_mode=self.po.all['night_mode'])
         self.filter2_param2.setFixedWidth(filter_param_spinbox_width)
 
         self.filter1_param2.valueChanged.connect(self.filter2_param2_changed)
@@ -1524,10 +1526,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.rolling_window_segmentation_widget = QtWidgets.QWidget()
         self.rolling_window_segmentation_layout = QtWidgets.QHBoxLayout()
         try:
-            self.parent().po.vars["rolling_window_segmentation"]
+            self.po.vars["rolling_window_segmentation"]
         except KeyError:
-            self.parent().po.vars["rolling_window_segmentation"] = False
-        self.rolling_window_segmentation = Checkbox(self.parent().po.vars["rolling_window_segmentation"]['do'])
+            self.po.vars["rolling_window_segmentation"] = False
+        self.rolling_window_segmentation = Checkbox(self.po.vars["rolling_window_segmentation"]['do'])
         self.rolling_window_segmentation.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
@@ -1539,7 +1541,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.rolling_window_segmentation.stateChanged.connect(self.rolling_window_segmentation_option)
 
         self.rolling_window_segmentation_label = FixedText(IAW["Rolling_window_segmentation"]["label"],
-                                                    tip=IAW["Rolling_window_segmentation"]["tips"], night_mode=self.parent().po.all['night_mode'])
+                                                    tip=IAW["Rolling_window_segmentation"]["tips"], night_mode=self.po.all['night_mode'])
         self.rolling_window_segmentation_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.rolling_window_segmentation_label.setAlignment(QtCore.Qt.AlignLeft)
 
@@ -1552,7 +1554,7 @@ class ImageAnalysisWindow(MainTabsType):
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
         self.more_than_2_colors_layout = QtWidgets.QHBoxLayout()
-        self.more_than_two_colors = Checkbox(self.parent().po.all["more_than_two_colors"])
+        self.more_than_two_colors = Checkbox(self.po.all["more_than_two_colors"])
         self.more_than_two_colors.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
@@ -1564,10 +1566,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
         self.more_than_two_colors_label = FixedText(IAW["Kmeans"]["label"],
-                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.parent().po.all['night_mode'])
+                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
+        self.distinct_colors_number = Spinbox(min=2, max=5, val=self.po.vars["color_number"], night_mode=self.po.all['night_mode'])
 
         self.distinct_colors_number.valueChanged.connect(self.distinct_colors_number_changed)
         self.display_more_than_two_colors_option()
@@ -1587,15 +1589,15 @@ class ImageAnalysisWindow(MainTabsType):
         self.central_right_widget.setLayout(self.central_right_layout)
 
     def update_filter_display(self):
-        self.filter1.setCurrentText(self.parent().po.vars['filter_spec']['filter1_type'])
-        self.filter1_param1.setValue(self.parent().po.vars['filter_spec']['filter1_param'][0])
-        if len(self.parent().po.vars['filter_spec']['filter1_param']) > 1:
-            self.filter1_param2.setValue(self.parent().po.vars['filter_spec']['filter1_param'][1])
-        if 'filter2_type' in self.parent().po.vars['filter_spec']:
-            self.filter2.setCurrentText(self.parent().po.vars['filter_spec']['filter2_type'])
-            self.filter2_param1.setValue(self.parent().po.vars['filter_spec']['filter2_param'][0])
-            if len(self.parent().po.vars['filter_spec']['filter2_param']) > 1:
-                self.filter2_param2.setValue(self.parent().po.vars['filter_spec']['filter2_param'][1])
+        self.filter1.setCurrentText(self.po.vars['filter_spec']['filter1_type'])
+        self.filter1_param1.setValue(self.po.vars['filter_spec']['filter1_param'][0])
+        if len(self.po.vars['filter_spec']['filter1_param']) > 1:
+            self.filter1_param2.setValue(self.po.vars['filter_spec']['filter1_param'][1])
+        if 'filter2_type' in self.po.vars['filter_spec']:
+            self.filter2.setCurrentText(self.po.vars['filter_spec']['filter2_type'])
+            self.filter2_param1.setValue(self.po.vars['filter_spec']['filter2_param'][0])
+            if len(self.po.vars['filter_spec']['filter2_param']) > 1:
+                self.filter2_param2.setValue(self.po.vars['filter_spec']['filter2_param'][1])
 
     def filter1_changed(self):
         """
@@ -1610,7 +1612,7 @@ class ImageAnalysisWindow(MainTabsType):
             The instance of the class containing this method.
         """
         current_filter = self.filter1.currentText()
-        self.parent().po.vars['filter_spec']['filter1_type'] = current_filter
+        self.po.vars['filter_spec']['filter1_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
         if self.advanced_mode_cb.isChecked():
             self.filter1_param1_label.setVisible(show_param1)
@@ -1638,13 +1640,13 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Save the first parameter (most often the lower bound) of the first filter.
         """
-        self.parent().po.vars['filter_spec']['filter1_param'][0] = float(self.filter1_param1.value())
+        self.po.vars['filter_spec']['filter1_param'][0] = float(self.filter1_param1.value())
 
     def filter1_param2_changed(self):
         """
         Save the second parameter (most often the higher bound) of the first filter.
         """
-        self.parent().po.vars['filter_spec']['filter1_param'][1] = float(self.filter1_param2.value())
+        self.po.vars['filter_spec']['filter1_param'][1] = float(self.filter1_param2.value())
 
     def filter2_changed(self):
         """
@@ -1659,7 +1661,7 @@ class ImageAnalysisWindow(MainTabsType):
             The instance of the class containing this method.
         """
         current_filter = self.filter2.currentText()
-        self.parent().po.vars['filter_spec']['filter2_type'] = current_filter
+        self.po.vars['filter_spec']['filter2_type'] = current_filter
         show_param1 = "Param1" in filter_dict[current_filter].keys()
         if self.advanced_mode_cb.isChecked():
             self.filter2_param1_label.setVisible(show_param1)
@@ -1687,13 +1689,13 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Save the first parameter (most often the lower bound) of the second filter.
         """
-        self.parent().po.vars['filter_spec']['filter2_param'][0] = float(self.filter2_param1.value())
+        self.po.vars['filter_spec']['filter2_param'][0] = float(self.filter2_param1.value())
 
     def filter2_param2_changed(self):
         """
         Save the second parameter (most often the higher bound) of the second filter.
         """
-        self.parent().po.vars['filter_spec']['filter2_param'][1] = float(self.filter2_param2.value())
+        self.po.vars['filter_spec']['filter2_param'][1] = float(self.filter2_param2.value())
 
     def one_csc_editing(self, with_PCA: bool=False):
         """
@@ -1715,17 +1717,17 @@ class ImageAnalysisWindow(MainTabsType):
         widget_list = []
         if with_PCA:
             widget_list.insert(0, Combobox(["PCA", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
-                                           night_mode=self.parent().po.all['night_mode']))
+                                           night_mode=self.po.all['night_mode']))
             widget_list[0].currentTextChanged.connect(self.pca_changed)
         else:
             widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
-                                           night_mode=self.parent().po.all['night_mode']))
+                                           night_mode=self.po.all['night_mode']))
         widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         widget_list[0].setFixedWidth(100)
         for i in [1, 2, 3]:
-            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
+            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.po.all['night_mode']))
             widget_list[i].setFixedWidth(45)
-        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
+        widget_list.insert(i + 1, PButton("+", night_mode=self.po.all['night_mode']))
         return widget_list
 
     def pca_changed(self):
@@ -1777,20 +1779,20 @@ class ImageAnalysisWindow(MainTabsType):
                 self.row23[i1].setValue(0)
             self.row23[i1 + 1].setVisible(False)
         else:
-            self.filter2_label.setVisible(self.parent().po.all['expert_mode'])
-            self.filter2.setVisible(self.parent().po.all['expert_mode'])
+            self.filter2_label.setVisible(self.po.all['expert_mode'])
+            self.filter2.setVisible(self.po.all['expert_mode'])
             self.filter2_changed()
-            self.row21[0].setVisible(self.parent().po.all['expert_mode'])
+            self.row21[0].setVisible(self.po.all['expert_mode'])
             for i1 in [1, 2, 3]:
-                self.row21[i1].setVisible(self.parent().po.all['expert_mode'])
-            self.row21[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
+                self.row21[i1].setVisible(self.po.all['expert_mode'])
+            self.row21[i1 + 1].setVisible(self.po.all['expert_mode'])
 
     def display_logical_operator(self):
         """
         Displays the logical operator UI elements based on expert mode setting.
         """
-        self.logical_operator_between_combination_result.setVisible(self.parent().po.all['expert_mode'])
-        self.logical_operator_label.setVisible(self.parent().po.all['expert_mode'])
+        self.logical_operator_between_combination_result.setVisible(self.po.all['expert_mode'])
+        self.logical_operator_label.setVisible(self.po.all['expert_mode'])
 
     def display_row2(self):
         """
@@ -1798,7 +1800,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.row1[4].setVisible(False)
         for i in range(5):
-            self.row2[i].setVisible(self.parent().po.all['expert_mode'])
+            self.row2[i].setVisible(self.po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row3(self):
@@ -1807,7 +1809,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.row2[4].setVisible(False)
         for i in range(4):
-            self.row3[i].setVisible(self.parent().po.all['expert_mode'])
+            self.row3[i].setVisible(self.po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row22(self):
@@ -1816,7 +1818,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.row21[4].setVisible(False)
         for i in range(5):
-            self.row22[i].setVisible(self.parent().po.all['expert_mode'])
+            self.row22[i].setVisible(self.po.all['expert_mode'])
         self.display_logical_operator()
 
     def display_row23(self):
@@ -1825,7 +1827,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.row22[4].setVisible(False)
         for i in range(4):
-            self.row23[i].setVisible(self.parent().po.all['expert_mode'])
+            self.row23[i].setVisible(self.po.all['expert_mode'])
         self.display_logical_operator()
 
     def update_csc_editing_display(self):
@@ -1873,12 +1875,12 @@ class ImageAnalysisWindow(MainTabsType):
                         k = k[:-1]
                     if current_row_number <= 3:
                         row_to_change[0].setCurrentIndex(np.nonzero(np.isin(c_space_order, k))[0][0])
-                        row_to_change[0].setVisible(self.parent().po.all['expert_mode'])
+                        row_to_change[0].setVisible(self.po.all['expert_mode'])
                         for i1, i2 in zip([1, 2, 3], [0, 1, 2]):
                             row_to_change[i1].setValue(v[i2])
-                            row_to_change[i1].setVisible(self.parent().po.all['expert_mode'])
+                            row_to_change[i1].setVisible(self.po.all['expert_mode'])
                         if current_row_number < 3:
-                            row_to_change[i1 + 1].setVisible(self.parent().po.all['expert_mode'])
+                            row_to_change[i1 + 1].setVisible(self.po.all['expert_mode'])
 
         # If not all color space combinations are filled, put None and 0 in boxes
         if row_number1 < 3:
@@ -1895,10 +1897,10 @@ class ImageAnalysisWindow(MainTabsType):
                     self.row2[i1].setValue(0)
                 self.row2[i1 + 1].setVisible(False)
 
-        self.row1[4].setVisible(self.parent().po.all['expert_mode'] and row_number1 == 1)
-        self.row2[4].setVisible(self.parent().po.all['expert_mode'] and row_number1 == 2)
-        self.row21[4].setVisible(self.parent().po.all['expert_mode'] and row_number2 == 1)
-        self.row22[4].setVisible(self.parent().po.all['expert_mode'] and row_number2 == 2)
+        self.row1[4].setVisible(self.po.all['expert_mode'] and row_number1 == 1)
+        self.row2[4].setVisible(self.po.all['expert_mode'] and row_number1 == 2)
+        self.row21[4].setVisible(self.po.all['expert_mode'] and row_number2 == 1)
+        self.row22[4].setVisible(self.po.all['expert_mode'] and row_number2 == 2)
         if row_number2 > 0:
             self.logical_operator_between_combination_result.setCurrentText(self.csc_dict['logical'])
         if row_number2 == 0:
@@ -1912,8 +1914,8 @@ class ImageAnalysisWindow(MainTabsType):
                 self.row21[i1].setValue(0)
             self.row21[i1 + 1].setVisible(False)
 
-        self.logical_operator_between_combination_result.setVisible((row_number2 > 0) and self.parent().po.all['expert_mode'])
-        self.logical_operator_label.setVisible((row_number2 > 0) and self.parent().po.all['expert_mode'])
+        self.logical_operator_between_combination_result.setVisible((row_number2 > 0) and self.po.all['expert_mode'])
+        self.logical_operator_label.setVisible((row_number2 > 0) and self.po.all['expert_mode'])
 
         if row_number2 < 3:
             self.row23[0].setVisible(False)
@@ -1977,7 +1979,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Set True the grid segmentation option for future image analysis.
         """
-        self.parent().po.vars["rolling_window_segmentation"]['do'] = self.rolling_window_segmentation.isChecked()
+        self.po.vars["rolling_window_segmentation"]['do'] = self.rolling_window_segmentation.isChecked()
 
     def display_more_than_two_colors_option(self):
         """
@@ -1997,14 +1999,14 @@ class ImageAnalysisWindow(MainTabsType):
                 self.more_than_two_colors_label.setText("Heterogeneous background")
                 self.distinct_colors_number.setVisible(False)
                 self.distinct_colors_number.setValue(2)
-            self.parent().po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
+            self.po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
         else:
             self.more_than_two_colors.setChecked(False)
             self.more_than_two_colors.setVisible(False)
             self.more_than_two_colors_label.setVisible(False)
             self.distinct_colors_number.setVisible(False)
             self.distinct_colors_number.setValue(2)
-            # self.parent().po.vars["color_number"] = 2
+            # self.po.vars["color_number"] = 2
 
     def distinct_colors_number_changed(self):
         """
@@ -2014,7 +2016,7 @@ class ImageAnalysisWindow(MainTabsType):
         -----
         This function expects that the parent object has an attribute `po` with a dictionary-like 'vars' that can be updated.
         """
-        self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+        self.po.vars["color_number"] = int(self.distinct_colors_number.value())
 
     def start_crop_scale_subtract_delineate(self):
         """
@@ -2067,7 +2069,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.arena_shape_label.setVisible(False)
             self.arena_shape.setVisible(False)
             self.reinitialize_bio_and_back_legend()
-            self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+            self.reinitialize_image_and_masks(self.po.first_image.bgr)
             self.delineation_done = True
             if self.thread_dict["UpdateImage"].isRunning():
                 self.thread_dict["UpdateImage"].wait()
@@ -2127,13 +2129,13 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Set the `origin_state` variable based on checkbox state and frame detection.
         """
-        if self.parent().po.vars['first_detection_frame'] > 1:
-            self.parent().po.vars['origin_state'] = 'invisible'
+        if self.po.vars['first_detection_frame'] > 1:
+            self.po.vars['origin_state'] = 'invisible'
         else:
             if self.starting_differs_from_growing_cb.isChecked():
-                self.parent().po.vars['origin_state'] = 'constant'
+                self.po.vars['origin_state'] = 'constant'
             else:
-                self.parent().po.vars['origin_state'] = 'fluctuating'
+                self.po.vars['origin_state'] = 'fluctuating'
 
     def when_yes_is_clicked(self):
         """
@@ -2169,7 +2171,7 @@ class ImageAnalysisWindow(MainTabsType):
         image processing workflow. It updates internal state variables and triggers
         appropriate methods based on the user's input.
         """
-        color_analysis = not self.parent().po.vars['already_greyscale']
+        color_analysis = not self.po.vars['already_greyscale']
         if self.is_first_image_flag:
             if self.asking_first_im_parameters_flag:
                 # Ask for the right number of distinct arenas, if not add parameters
@@ -2213,17 +2215,17 @@ class ImageAnalysisWindow(MainTabsType):
 
             elif self.manual_delineation_flag:
                 if is_yes:
-                    if self.parent().po.sample_number == self.arena_masks_number:
+                    if self.po.sample_number == self.arena_masks_number:
                         self.thread_dict['SaveManualDelineation'].start()
                         self.last_image_question()
                         self.manual_delineation_flag = False
                     else:
                         self.message.setText(
-                            f"{self.arena_masks_number} arenas are drawn over the {self.parent().po.sample_number} expected")
+                            f"{self.arena_masks_number} arenas are drawn over the {self.po.sample_number} expected")
 
             elif self.asking_last_image_flag:
                 self.decision_label.setToolTip("")
-                self.parent().po.first_image.im_combinations = None
+                self.po.first_image.im_combinations = None
                 self.select_option.clear()
                 self.arena_shape.setVisible(False)
                 self.arena_shape_label.setVisible(False)
@@ -2231,17 +2233,17 @@ class ImageAnalysisWindow(MainTabsType):
                     self.start_last_image()
                 else:
                     if "PCA" in self.csc_dict:
-                        if self.parent().po.last_image.first_pc_vector is None:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.first_image.first_pc_vector).tolist(), "logical": None}
+                        if self.po.last_image.first_pc_vector is None:
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.first_image.first_pc_vector).tolist(), "logical": None}
                         else:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.parent().po.last_image.first_pc_vector).tolist(), "logical": None}
-                    self.parent().po.vars['convert_for_origin'] = self.csc_dict.copy()
-                    self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.last_image.first_pc_vector).tolist(), "logical": None}
+                    self.po.vars['convert_for_origin'] = self.csc_dict.copy()
+                    self.po.vars['convert_for_motion'] = self.csc_dict.copy()
                     self.go_to_next_widget()
                 self.asking_last_image_flag = False
         else:
             if is_yes:
-                self.parent().po.vars['convert_for_motion'] = self.csc_dict.copy()
+                self.po.vars['convert_for_motion'] = self.csc_dict.copy()
                 self.go_to_next_widget()
 
     def first_im_parameters(self):
@@ -2259,7 +2261,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.no.setVisible(False)
         self.set_spot_shape.setVisible(True)
         self.spot_shape_label.setVisible(True)
-        self.spot_shape.setVisible(self.parent().po.all['set_spot_shape'])
+        self.spot_shape.setVisible(self.po.all['set_spot_shape'])
         self.set_spot_size.setVisible(self.one_blob_per_arena.isChecked())
         self.spot_size_label.setVisible(self.one_blob_per_arena.isChecked())
         self.spot_size.setVisible(
@@ -2281,14 +2283,14 @@ class ImageAnalysisWindow(MainTabsType):
         """
         # Do not proceed automatic delineation if there are more than one arena containing distinct specimen(s)
         # The automatic delineation algorithm cannot handle this situation
-        if self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number > 1:
+        if self.po.vars['several_blob_per_arena'] and self.po.sample_number > 1:
             self.manual_delineation()
         else:
             self.decision_label.setText(f"")
             # Save the current mask, its stats, remove useless memory and start delineation
-            self.parent().po.first_image.update_current_images(self.parent().po.current_combination_id)
-            self.parent().po.get_average_pixel_size()
-            self.parent().po.all['are_gravity_centers_moving'] = 0
+            self.po.first_image.update_current_images(self.po.current_combination_id)
+            self.po.get_average_pixel_size()
+            self.po.all['are_gravity_centers_moving'] = 0
             self.start_crop_scale_subtract_delineate()
             self.visualize_label.setVisible(False)
             self.visualize.setVisible(False)
@@ -2321,8 +2323,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_shape.setVisible(False)
         self.arena_shape_label.setVisible(False)
         # Save the current mask, its stats, remove useless memory and start delineation
-        self.parent().po.first_image.update_current_images(self.parent().po.current_combination_id)
-        self.parent().po.all['are_gravity_centers_moving'] = 1
+        self.po.first_image.update_current_images(self.po.current_combination_id)
+        self.po.all['are_gravity_centers_moving'] = 1
         self.start_crop_scale_subtract_delineate()
 
     def manual_delineation(self):
@@ -2331,13 +2333,13 @@ class ImageAnalysisWindow(MainTabsType):
         preparing the necessary attributes for manual drawing of arenas on the image.
         """
         self.manual_delineation_flag = True
-        self.parent().po.cropping(is_first_image=True)
-        self.parent().po.get_average_pixel_size()
-        self.reinitialize_image_and_masks(self.parent().po.first_image.bgr)
+        self.po.cropping(is_first_image=True)
+        self.po.get_average_pixel_size()
+        self.reinitialize_image_and_masks(self.po.first_image.bgr)
         self.reinitialize_bio_and_back_legend()
-        self.available_arena_names = np.arange(1, self.parent().po.sample_number + 1)
+        self.available_arena_names = np.arange(1, self.po.sample_number + 1)
         self.saved_coord = []
-        self.arena_mask = np.zeros(self.parent().po.current_image.shape[:2], dtype=np.uint16)
+        self.arena_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
         # self.next.setVisible(True)
         self.decision_label.setVisible(True)
         self.yes.setVisible(True)
@@ -2356,7 +2358,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText("Draw each arena")
         self.user_drawn_lines_label.setVisible(True)
         self.decision_label.setText(
-            f"Hold click to draw {self.parent().po.sample_number} arena(s) on the image. Once done, click yes.")
+            f"Hold click to draw {self.po.sample_number} arena(s) on the image. Once done, click yes.")
         self.message.setText('An error? Hit one button on the left to remove any drawn arena.')
 
     def last_image_question(self):
@@ -2371,7 +2373,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.image_number_label.setVisible(False)
         self.read.setVisible(False)
         self.step = 2
-        if self.parent().po.all["im_or_vid"] == 0 and len(self.parent().po.data_list) == 1:
+        if self.po.all["im_or_vid"] == 0 and len(self.po.data_list) == 1:
             self.starting_differs_from_growing_cb.setChecked(False)
             self.start_last_image()
         else:
@@ -2400,13 +2402,13 @@ class ImageAnalysisWindow(MainTabsType):
         self.starting_differs_from_growing_cb.setVisible(False)
         self.starting_differs_from_growing_label.setVisible(False)
         self.message.setText('Gathering data and visualizing last image analysis result')
-        self.parent().po.get_last_image()
+        self.po.get_last_image()
         if self.thread_dict['SaveManualDelineation'].isRunning():
             self.thread_dict['SaveManualDelineation'].wait()
-        self.parent().po.cropping(is_first_image=False)
-        self.reinitialize_image_and_masks(self.parent().po.last_image.bgr)
+        self.po.cropping(is_first_image=False)
+        self.reinitialize_image_and_masks(self.po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
-        self.parent().po.current_combination_id = 0
+        self.po.current_combination_id = 0
         self.visualize_is_clicked()
         self.user_drawn_lines_label.setText('Select and draw')
         self.user_drawn_lines_label.setVisible(True)
@@ -2460,11 +2462,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.message.setText(f"Final checks, wait... ")
             self.parent().last_tab = "image_analysis"
             self.thread_dict['PrepareVideoAnalysis'].start()
-            if self.parent().po.vars["color_number"] > 2:
+            if self.po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
                 self.parent().videoanalysiswindow.select_option.addItem(f"1) Kmeans")
                 self.parent().videoanalysiswindow.select_option.setCurrentIndex(0)
-                self.parent().po.all['video_option'] = 0
+                self.po.all['video_option'] = 0
             time.sleep(1 / 10)
             self.thread_dict['PrepareVideoAnalysis'].wait()
             self.message.setText(f"")
