@@ -1176,11 +1176,11 @@ class AdvancedParameters(WindowType):
         """
         Reset All Settings on Click
 
-        Resets the application settings to their default state by removing specific pickle files and saving new default dictionaries.
+        Resets the application settings to their default state by removing specific .json files and saving new default dictionaries.
 
         Notes
         -----
-        - This function removes specific pickle files to reset settings.
+        - This function removes specific .json files to reset settings.
         - The function changes the current working directory temporarily.
         """
         if os.path.isfile('cellects_settings.json'):

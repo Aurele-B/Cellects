@@ -250,7 +250,7 @@ class ProgramOrganizer:
 
     def load_variable_dict(self):
         """
-        Loads configuration dictionaries from a pickle file if available, otherwise initializes defaults.
+        Loads configuration dictionaries from a .json file if available, otherwise initializes defaults.
 
         Tries to load saved parameters. If the file doesn't exist or loading fails due to corruption,
         default values are used instead (logging relevant warnings).
@@ -397,26 +397,16 @@ class ProgramOrganizer:
 
     def load_data_to_run_cellects_quickly(self):
         """
-        Load data from a pickle file and update the current state of the object.
+        Load data from a json file and update the current state of the object.
 
         Summarizes, loads, and validates data needed to run Cellects,
         updating the object's state accordingly. If the necessary data
         are not present or valid, it ensures the experiment is marked as
         not ready to run.
 
-        Parameters
-        ----------
-        self : CellectsObject
-            The instance of the class (assumed to be a subclass of
-            CellectsObject) that this method belongs to.
-
-        Returns
-        -------
-        None
-
         Notes
         -----
-        This function relies on the presence of a pickle file 'cellects_settings.json'.
+        This function relies on the presence of a file 'cellects_settings.json'.
         It updates the state of various attributes based on the loaded data
         and logs appropriate messages.
         """
@@ -503,7 +493,7 @@ class ProgramOrganizer:
 
     def save_data_to_run_cellects_quickly(self, new_one_if_does_not_exist: bool=True):
         """
-        Save data to a pickled file if it does not exist or update existing data.
+        Save data to a .json file if it does not exist or update existing data.
 
         Parameters
         ----------
@@ -513,7 +503,7 @@ class ProgramOrganizer:
 
         Notes
         -----
-        This method logs various information about its operations and handles the writing of data to a pickled file.
+        This method logs various information about its operations and handles the writing of data to a .json file.
         """
         data_to_run_cellects_quickly = None
         if os.path.isfile('cellects_settings.json'):
