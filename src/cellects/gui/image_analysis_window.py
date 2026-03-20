@@ -71,7 +71,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.setParent(parent)
         self.po = po
         self.csc_dict = self.po.vars['convert_for_origin'] # To change
-        self.manual_delineation_flag: bool = False
 
     def true_init(self):
         """
@@ -90,30 +89,27 @@ class ImageAnalysisWindow(MainTabsType):
         self.image_tab.set_in_use()
         self.video_tab.set_not_usable()
         self.hold_click_flag: bool = False
-        self.is_first_image_flag: bool = True
         self.is_image_analysis_running: bool = False
         self.is_image_analysis_display_running: bool = False
-        self.asking_first_im_parameters_flag: bool = True
+        self.po.asking_first_im_parameters_flag: bool = True
         self.first_im_parameters_answered: bool = False
         self.auto_delineation_flag: bool = False
-        self.delineation_done: bool = False
+        self.po.delineation_done: bool = False
         self.asking_delineation_flag: bool = False
         self.asking_slower_or_manual_delineation_flag: bool = False
         self.slower_delineation_flag: bool = False
         self.asking_last_image_flag: bool = False
         self.step = 0
-        self.temporary_mask_coord = []
-        self.saved_coord = []
-        self.back1_bio2 = 0
-        self.bio_masks_number = 0
-        self.back_masks_number = 0
-        self.arena_masks_number = 0
-        self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
-        self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = []
+        self.po.bio_masks_number = 0
+        self.po.back_masks_number = 0
+        self.po.arena_masks_number = 0
+        self.po.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
+        self.po.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.po.current_combination_id = 0
 
-        self.display_image = np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8)
-        self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
+        self.display_image = InsertImage(np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8), self.parent().im_max_height, self.parent().im_max_width)
         self.display_image.mousePressEvent = self.get_click_coordinates
         self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
         self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
@@ -443,6 +439,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread_dict["FirstImageAnalysis"] = FirstImageAnalysisThread(self.po, self.parent())
         self.thread_dict["LastImageAnalysis"] = LastImageAnalysisThread(self.po, self.parent())
         self.thread_dict['UpdateImage'] = UpdateImageThread(self.po, self.parent())
+        self.thread_dict['UpdateImage'].message_from_thread.connect(self.display_message_from_thread)
+        self.thread_dict['UpdateImage'].image_from_thread.connect(self.display_image_during_thread)
         self.thread_dict['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.po, self.parent())
         self.thread_dict['SaveManualDelineation'] = SaveManualDelineationThread(self.po, self.parent())
         self.thread_dict['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.po, self.parent())
@@ -461,26 +459,26 @@ class ImageAnalysisWindow(MainTabsType):
         else:
             self.parent().firstwindow.instantiate = True
             self.hold_click_flag: bool = False
-            self.is_first_image_flag: bool = True
+            self.po.is_first_image_flag: bool = True
             self.is_image_analysis_running: bool = False
             self.is_image_analysis_display_running: bool = False
-            self.asking_first_im_parameters_flag: bool = True
+            self.po.asking_first_im_parameters_flag: bool = True
             self.first_im_parameters_answered: bool = False
             self.auto_delineation_flag: bool = False
-            self.delineation_done: bool = False
+            self.po.delineation_done: bool = False
             self.asking_delineation_flag: bool = False
             self.asking_slower_or_manual_delineation_flag: bool = False
             self.slower_delineation_flag: bool = False
             self.asking_last_image_flag: bool = False
             self.step = 0
-            self.temporary_mask_coord = []
-            self.saved_coord = []
-            self.back1_bio2 = 0
-            self.bio_masks_number = 0
-            self.back_masks_number = 0
-            self.arena_masks_number = 0
-            self.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
-            self.available_back_names = np.arange(1, 1000, dtype=np.uint16)
+            self.po.temporary_mask_coord = []
+            self.po.user_saved_coord = []
+            self.po.arena0_back1_bio2 = 0
+            self.po.bio_masks_number = 0
+            self.po.back_masks_number = 0
+            self.po.arena_masks_number = 0
+            self.po.available_bio_names = np.arange(1, 1000, dtype=np.uint16)
+            self.po.available_back_names = np.arange(1, 1000, dtype=np.uint16)
             self.po.current_combination_id = 0
             self.parent().last_tab = "data_specifications"
             self.parent().change_widget(0)  # First
@@ -606,11 +604,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.no.setVisible(False)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.po.first_image.bgr)
-            self.delineation_done = True
-            if self.thread_dict["UpdateImage"].isRunning():
-                self.thread_dict["UpdateImage"].wait()
-            self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            self.po.delineation_done = True
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
+            self.thread_dict['UpdateImage'].start()
+            self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
     def reinitialize_bio_and_back_legend(self):
         """
@@ -648,8 +646,8 @@ class ImageAnalysisWindow(MainTabsType):
                 lines_names_to_remove.append(line_number)
             for line_number in lines_names_to_remove:
                 self.arena_lines.pop(line_number)
-        self.bio_masks_number = 0
-        self.back_masks_number = 0
+        self.po.bio_masks_number = 0
+        self.po.back_masks_number = 0
 
     def reinitialize_image_and_masks(self, image: np.ndarray):
         """
@@ -670,11 +668,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.visualize_label.setVisible(True)
         else:
             self.po.current_image = image.copy()
-        self.drawn_image = self.po.current_image.copy()
+        self.po.drawn_image = self.po.current_image.copy()
         self.display_image.update_image(self.po.current_image)
-        self.arena_mask = None
-        self.bio_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
-        self.back_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
+        self.po.arena_mask = None
+        self.po.bio_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
+        self.po.back_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
 
     def scale_with_changed(self):
         """
@@ -707,7 +705,7 @@ class ImageAnalysisWindow(MainTabsType):
         color_analysis = is_checked and not self.po.vars['already_greyscale']
         self.po.all['expert_mode'] = is_checked
 
-        if is_checked and (self.asking_first_im_parameters_flag or self.auto_delineation_flag):
+        if is_checked and (self.po.asking_first_im_parameters_flag or self.auto_delineation_flag):
             self.arena_shape_label.setVisible(True)
             self.arena_shape.setVisible(True)
             self.set_spot_shape.setVisible(True)
@@ -724,7 +722,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.logical_operator_between_combination_result.setVisible(color_analysis and display_logical)
         self.logical_operator_label.setVisible(color_analysis and display_logical)
 
-        at_least_one_line_drawn = self.bio_masks_number > 0
+        at_least_one_line_drawn = self.po.bio_masks_number > 0
         self.more_than_two_colors.setVisible(is_checked and at_least_one_line_drawn)
         self.more_than_two_colors_label.setVisible(is_checked and at_least_one_line_drawn)
         self.distinct_colors_number.setVisible(is_checked and at_least_one_line_drawn and self.po.all["more_than_two_colors"])
@@ -785,28 +783,28 @@ class ImageAnalysisWindow(MainTabsType):
         Handles the logic for when a "cell" button is clicked in the interface,
         allowing the user to draw cells on the image.
         """
-        if self.back1_bio2 == 2:
+        if self.po.arena0_back1_bio2 == 2:
             self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.back1_bio2 = 0
+            self.po.arena0_back1_bio2 = 0
         else:
             self.cell.color("rgb(230, 145, 18)")
             self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.back1_bio2 = 2
-        self.saved_coord = []
+            self.po.arena0_back1_bio2 = 2
+        self.po.user_saved_coord = []
 
     def background_is_clicked(self):
         """
         Handles the logic for when a "back" button is clicked in the interface,
         allowing the user to draw where there is background on the image.
         """
-        if self.back1_bio2 == 1:
+        if self.po.arena0_back1_bio2 == 1:
             self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.back1_bio2 = 0
+            self.po.arena0_back1_bio2 = 0
         else:
             self.background.color("rgb(81, 160, 224)")
             self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.back1_bio2 = 1
-        self.saved_coord = []
+            self.po.arena0_back1_bio2 = 1
+        self.po.user_saved_coord = []
 
     def get_click_coordinates(self, event):
         """
@@ -821,12 +819,12 @@ class ImageAnalysisWindow(MainTabsType):
         event : QMouseEvent
             The mouse event that triggered the function.
         """
-        if self.back1_bio2 > 0 or self.manual_delineation_flag:
-            if not self.is_image_analysis_display_running and not self.thread_dict["UpdateImage"].isRunning():
+        if self.po.arena0_back1_bio2 > 0 or self.po.manual_delineation_flag:
+            if not self.is_image_analysis_display_running and not self.thread_dict['UpdateImage'].isRunning():
                 self.hold_click_flag = True
-                self.saved_coord.append([event.pos().y(), event.pos().x()])
+                self.po.user_saved_coord.append([event.pos().y(), event.pos().x()])
         else:
-            self.popup_img = FullScreenImage(self.drawn_image, self.parent().screen_width, self.parent().screen_height)
+            self.popup_img = FullScreenImage(self.po.drawn_image, self.parent().screen_width, self.parent().screen_height)
             self.popup_img.show()
 
     def get_mouse_move_coordinates(self, event):
@@ -839,10 +837,11 @@ class ImageAnalysisWindow(MainTabsType):
             The mouse event object containing position information.
         """
         if self.hold_click_flag:
-            if not self.thread_dict["UpdateImage"].isRunning():
-                if self.saved_coord[0][0] != event.pos().y() and self.saved_coord[0][1] != event.pos().x():
-                    self.temporary_mask_coord = [self.saved_coord[0], [event.pos().y(), event.pos().x()]]
-                    self.thread_dict["UpdateImage"].start()
+            if not self.thread_dict['UpdateImage'].isRunning():
+                if self.po.user_saved_coord[0][0] != event.pos().y() and self.po.user_saved_coord[0][1] != event.pos().x():
+                    self.po.temporary_mask_coord = [self.po.user_saved_coord[0], [event.pos().y(), event.pos().x()]]
+                    self.po.image_scaling_factors = self.display_image.get_image_scaling_factors()
+                    self.thread_dict['UpdateImage'].start()
 
     def get_mouse_release_coordinates(self, event):
         """
@@ -864,16 +863,17 @@ class ImageAnalysisWindow(MainTabsType):
         state.
         """
         if self.hold_click_flag:
-            if self.thread_dict["UpdateImage"].isRunning():
-                self.thread_dict["UpdateImage"].wait()
-            self.temporary_mask_coord = []
-            if self.manual_delineation_flag and len(self.parent().imageanalysiswindow.available_arena_names) == 0:
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
+            self.po.temporary_mask_coord = []
+            if self.po.manual_delineation_flag and len(self.po.available_arena_names) == 0:
                 self.message.setText(f"The total number of arenas are already drawn ({self.po.sample_number})")
-                self.saved_coord = []
+                self.po.user_saved_coord = []
             else:
-                self.saved_coord.append([event.pos().y(), event.pos().x()])
-                self.thread_dict["UpdateImage"].start()
-                self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.user_defined_shape_displayed)
+                self.po.user_saved_coord.append([event.pos().y(), event.pos().x()])
+                self.po.image_scaling_factors = self.display_image.get_image_scaling_factors()
+                self.thread_dict['UpdateImage'].start()
+                self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
     def user_defined_shape_displayed(self, when_finished: bool):
@@ -889,41 +889,41 @@ class ImageAnalysisWindow(MainTabsType):
         -----
         This method modifies the user interface by adding buttons and updating layouts based on the current state and conditions.
         """
-        if self.back1_bio2 == 1:
-            back_name = self.parent().imageanalysiswindow.available_back_names[0]
+        if self.po.arena0_back1_bio2 == 1:
+            back_name = self.po.available_back_names[0]
             self.back_lines[back_name] = {}
             pbutton_name = u"\u00D7" + " Back" + str(back_name)
             self.back_lines[back_name][pbutton_name] = self.new_pbutton_on_the_left(pbutton_name)
             self.back_added_lines_layout.addWidget(self.back_lines[back_name][pbutton_name])
             self.background.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.available_back_names = self.available_back_names[1:]
-        elif self.back1_bio2 == 2:
-            bio_name = self.parent().imageanalysiswindow.available_bio_names[0]
+            self.po.available_back_names = self.po.available_back_names[1:]
+        elif self.po.arena0_back1_bio2 == 2:
+            bio_name = self.po.available_bio_names[0]
             self.bio_lines[bio_name] = {}
             pbutton_name = u"\u00D7" + " Cell" + str(bio_name)
             self.bio_lines[bio_name][pbutton_name] = self.new_pbutton_on_the_left(pbutton_name)
             self.bio_added_lines_layout.addWidget(self.bio_lines[bio_name][pbutton_name])
             self.cell.night_mode_switch(night_mode=self.po.all['night_mode'])
-            self.available_bio_names = self.available_bio_names[1:]
-            if self.bio_masks_number == 0:
+            self.po.available_bio_names = self.po.available_bio_names[1:]
+            if self.po.bio_masks_number == 0:
                 self.display_more_than_two_colors_option()
 
             self.more_than_two_colors.setVisible(self.advanced_mode_cb.isChecked())
             self.more_than_two_colors_label.setVisible(self.advanced_mode_cb.isChecked())
             self.distinct_colors_number.setVisible(self.advanced_mode_cb.isChecked() and self.more_than_two_colors.isChecked())
-        elif self.manual_delineation_flag:
-            arena_name = self.parent().imageanalysiswindow.available_arena_names[0]
+        elif self.po.manual_delineation_flag:
+            arena_name = self.po.available_arena_names[0]
             self.arena_lines[arena_name] = {}
             pbutton_name = u"\u00D7" + " Arena" + str(arena_name)
             self.arena_lines[arena_name][pbutton_name] = self.new_pbutton_on_the_left(pbutton_name)
-            if self.arena_masks_number % 2 == 1:
+            if self.po.arena_masks_number % 2 == 1:
                 self.bio_added_lines_layout.addWidget(self.arena_lines[arena_name][pbutton_name])
             else:
                 self.back_added_lines_layout.addWidget(self.arena_lines[arena_name][pbutton_name])
-            self.available_arena_names = self.available_arena_names[1:]
-        self.saved_coord = []
-        self.back1_bio2 = 0
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
+            self.po.available_arena_names = self.po.available_arena_names[1:]
+        self.po.user_saved_coord = []
+        self.po.arena0_back1_bio2 = 0
+        self.thread_dict['UpdateImage'].message_when_thread_finished.disconnect()
 
     def new_pbutton_on_the_left(self, pbutton_name: str):
         """
@@ -932,7 +932,7 @@ class ImageAnalysisWindow(MainTabsType):
         Notes
         -----
         The button's appearance is customized based on the value of
-        `self.back1_bio2`, which affects its color. The button also has a fixed
+        `self.po.arena0_back1_bio2`, which affects its color. The button also has a fixed
         size and specific font settings.
         """
         pbutton = PButton(pbutton_name, False, night_mode=self.po.all['night_mode'])
@@ -942,9 +942,9 @@ class ImageAnalysisWindow(MainTabsType):
         pbutton.textcolor("rgb(0, 0, 0)")
         pbutton.border("0px")
         pbutton.angles("10px")
-        if self.back1_bio2 == 1:
+        if self.po.arena0_back1_bio2 == 1:
             pbutton.color("rgb(81, 160, 224)")
-        elif self.back1_bio2 == 2:
+        elif self.po.arena0_back1_bio2 == 2:
             pbutton.color("rgb(230, 145, 18)")
         else:
             pbutton.color("rgb(126, 126, 126)")
@@ -959,28 +959,28 @@ class ImageAnalysisWindow(MainTabsType):
         and updates the layout and available names accordingly. It starts the image update thread
         after removing the line.
         """
-        if not self.is_image_analysis_display_running and not self.thread_dict["UpdateImage"].isRunning() and hasattr(self.sender(), 'text'):
+        if not self.is_image_analysis_display_running and not self.thread_dict['UpdateImage'].isRunning() and hasattr(self.sender(), 'text'):
             pbutton_name = self.sender().text()
             if pbutton_name[2:6] == "Back":
                 line_name = np.uint8(pbutton_name[6:])
-                self.back_mask[self.back_mask == line_name] = 0
+                self.po.back_mask[self.po.back_mask == line_name] = 0
                 self.back_added_lines_layout.removeWidget(self.back_lines[line_name][pbutton_name])
                 self.back_lines[line_name][pbutton_name].deleteLater()
                 self.back_lines.pop(line_name)
-                self.back_masks_number -= 1
-                self.available_back_names = np.sort(np.concatenate(([line_name], self.available_back_names)))
+                self.po.back_masks_number -= 1
+                self.po.available_back_names = np.sort(np.concatenate(([line_name], self.po.available_back_names)))
             elif pbutton_name[2:6] == "Cell":
                 line_name = np.uint8(pbutton_name[6:])
-                self.bio_mask[self.bio_mask == line_name] = 0
+                self.po.bio_mask[self.po.bio_mask == line_name] = 0
                 self.bio_added_lines_layout.removeWidget(self.bio_lines[line_name][pbutton_name])
                 self.bio_lines[line_name][pbutton_name].deleteLater()
                 self.bio_lines.pop(line_name)
-                self.bio_masks_number -= 1
-                self.available_bio_names = np.sort(np.concatenate(([line_name], self.available_bio_names)))
+                self.po.bio_masks_number -= 1
+                self.po.available_bio_names = np.sort(np.concatenate(([line_name], self.po.available_bio_names)))
                 self.display_more_than_two_colors_option()
             else:
                 line_name = np.uint8(pbutton_name[7:])
-                self.arena_mask[self.arena_mask == line_name] = 0
+                self.po.arena_mask[self.po.arena_mask == line_name] = 0
                 if line_name % 2 == 1:
                     self.bio_added_lines_layout.removeWidget(self.arena_lines[line_name][pbutton_name])
                 else:
@@ -988,9 +988,9 @@ class ImageAnalysisWindow(MainTabsType):
                 self.arena_lines[line_name][pbutton_name].deleteLater()
                 self.arena_lines.pop(line_name)
 
-                self.arena_masks_number -= 1
-                self.available_arena_names = np.sort(np.concatenate(([line_name], self.available_arena_names)))
-            self.thread_dict["UpdateImage"].start()
+                self.po.arena_masks_number -= 1
+                self.po.available_arena_names = np.sort(np.concatenate(([line_name], self.po.available_arena_names)))
+            self.thread_dict['UpdateImage'].start()
 
     def network_shaped_is_clicked(self):
         """
@@ -1006,7 +1006,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.basic = False
             self.po.network_shaped = True
             self.select_option.clear()
-            if self.is_first_image_flag:
+            if self.po.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
@@ -1025,7 +1025,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.visualize = False
             self.po.basic = True
             self.po.network_shaped = False
-            if self.is_first_image_flag:
+            if self.po.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
@@ -1043,7 +1043,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.visualize = True
             self.po.basic = False
             self.po.network_shaped = False
-            if self.is_first_image_flag:
+            if self.po.is_first_image_flag:
                 self.run_first_image_analysis()
             else:
                 self.run_last_image_analysis()
@@ -1114,7 +1114,7 @@ class ImageAnalysisWindow(MainTabsType):
         - The `is_first_image_flag` determines which set of image combinations to use.
         """
 
-        if self.is_first_image_flag:
+        if self.po.is_first_image_flag:
             im_combinations = self.po.first_image.im_combinations
         else:
             im_combinations = self.po.last_image.im_combinations
@@ -1126,7 +1126,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.current_combination_id = 0
             if len(im_combinations) > 0:
                 self.csc_dict = im_combinations[self.po.current_combination_id]["csc"]
-                if self.is_first_image_flag:
+                if self.po.is_first_image_flag:
                     self.po.vars['convert_for_origin'] = self.csc_dict.copy()
                 else:
                     self.po.vars['convert_for_motion'] = self.csc_dict.copy()
@@ -1152,10 +1152,10 @@ class ImageAnalysisWindow(MainTabsType):
         if self.po.visualize or len(im_combinations) > 0:
             self.is_image_analysis_display_running = True
             # Update image display
-            if self.thread_dict["UpdateImage"].isRunning():
-                self.thread_dict["UpdateImage"].wait()
-            self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.image_analysis_displayed)
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
+            self.thread_dict['UpdateImage'].start()
+            self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.image_analysis_displayed)
 
     def image_analysis_displayed(self):
         """
@@ -1226,7 +1226,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.complete_image_analysis.setVisible(True)
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
+        self.thread_dict['UpdateImage'].message_when_thread_finished.disconnect()
 
     def init_drawn_image(self, im_combinations: list=None):
         """
@@ -1246,7 +1246,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.current_image = np.stack((im_combinations[self.po.current_combination_id]['converted_image'],
                                                     im_combinations[self.po.current_combination_id]['converted_image'],
                                                     im_combinations[self.po.current_combination_id]['converted_image']), axis=2)
-            self.drawn_image = self.po.current_image.copy()
+            self.po.drawn_image = self.po.current_image.copy()
 
     def option_changed(self):
         """
@@ -1260,21 +1260,21 @@ class ImageAnalysisWindow(MainTabsType):
         """
         # Update the current image
         self.po.current_combination_id = self.select_option.currentIndex()
-        if self.is_first_image_flag:
+        if self.po.is_first_image_flag:
             im_combinations = self.po.first_image.im_combinations
         else:
             im_combinations = self.po.last_image.im_combinations
         self.init_drawn_image(im_combinations)
         if im_combinations is not None and len(im_combinations) > 0:
             # Update image display
-            if self.thread_dict["UpdateImage"].isRunning():
-                self.thread_dict["UpdateImage"].wait()
-            self.thread_dict["UpdateImage"].start()
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
+            self.thread_dict['UpdateImage'].start()
             # Update csc editing
             self.update_csc_editing_display()
 
             # Update the detected shape number
-            if self.is_first_image_flag:
+            if self.po.is_first_image_flag:
                 self.po.vars['convert_for_origin'] = im_combinations[self.po.current_combination_id]["csc"]
                 detected_shape_nb = im_combinations[self.po.current_combination_id]['shape_number']
                 if self.po.vars['several_blob_per_arena']:
@@ -1988,7 +1988,7 @@ class ImageAnalysisWindow(MainTabsType):
         This method manages the visibility and state of UI elements related to selecting
         more than two colors for displaying biological masks in advanced mode.
         """
-        if self.bio_masks_number > 0 and self.advanced_mode_cb.isChecked():
+        if self.po.bio_masks_number > 0 and self.advanced_mode_cb.isChecked():
             self.more_than_two_colors.setVisible(True)
             self.more_than_two_colors_label.setVisible(True)
             if self.more_than_two_colors.isChecked():
@@ -2070,11 +2070,11 @@ class ImageAnalysisWindow(MainTabsType):
             self.arena_shape.setVisible(False)
             self.reinitialize_bio_and_back_legend()
             self.reinitialize_image_and_masks(self.po.first_image.bgr)
-            self.delineation_done = True
-            if self.thread_dict["UpdateImage"].isRunning():
-                self.thread_dict["UpdateImage"].wait()
-            self.thread_dict["UpdateImage"].start()
-            self.thread_dict["UpdateImage"].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+            self.po.delineation_done = True
+            if self.thread_dict['UpdateImage'].isRunning():
+                self.thread_dict['UpdateImage'].wait()
+            self.thread_dict['UpdateImage'].start()
+            self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.automatic_delineation_display_done)
 
             try:
                 self.thread_dict['CropScaleSubtractDelineate'].message_from_thread.disconnect()
@@ -2084,7 +2084,7 @@ class ImageAnalysisWindow(MainTabsType):
             if not self.slower_delineation_flag:
                 self.asking_delineation_flag = True
         else:
-            self.delineation_done = False
+            self.po.delineation_done = False
             self.asking_delineation_flag = False
             self.auto_delineation_flag = False
             self.asking_slower_or_manual_delineation_flag = False
@@ -2099,7 +2099,7 @@ class ImageAnalysisWindow(MainTabsType):
         certain flags to ensure that delineation is not redrawn unnecessarily.
         """
         # Remove this flag to not draw it again next time UpdateImage runs for another reason
-        self.delineation_done = False
+        self.po.delineation_done = False
         self.auto_delineation_flag = False
         self.select_option_label.setVisible(False)
         self.select_option.setVisible(False)
@@ -2112,7 +2112,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.user_drawn_lines_label.setText('Draw each arena on the image')
         self.yes.setVisible(True)
         self.no.setVisible(True)
-        self.thread_dict["UpdateImage"].message_when_thread_finished.disconnect()
+        self.thread_dict['UpdateImage'].message_when_thread_finished.disconnect()
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -2124,6 +2124,18 @@ class ImageAnalysisWindow(MainTabsType):
             The message to display.
         """
         self.message.setText(text_from_thread)
+
+    def display_image_during_thread(self, dictionary: dict):
+        """
+        Display an image during a thread operation.
+
+        Parameters
+        ----------
+        dictionary : dict
+            A dictionary containing the 'current_image'.
+                The current_image is the image data that will be displayed.
+        """
+        self.display_image.update_image(dictionary['current_image'])
 
     def starting_differs_from_growing_check(self):
         """
@@ -2172,14 +2184,14 @@ class ImageAnalysisWindow(MainTabsType):
         appropriate methods based on the user's input.
         """
         color_analysis = not self.po.vars['already_greyscale']
-        if self.is_first_image_flag:
-            if self.asking_first_im_parameters_flag:
+        if self.po.is_first_image_flag:
+            if self.po.asking_first_im_parameters_flag:
                 # Ask for the right number of distinct arenas, if not add parameters
                 if not is_yes:
                     self.first_im_parameters()
                 else:
                     self.auto_delineation()
-                self.asking_first_im_parameters_flag = False
+                self.po.asking_first_im_parameters_flag = False
 
             elif self.auto_delineation_flag:
                 self.auto_delineation()
@@ -2195,7 +2207,7 @@ class ImageAnalysisWindow(MainTabsType):
 
             # Slower or manual delineation?
             elif self.asking_slower_or_manual_delineation_flag:
-                self.back1_bio2 = 0
+                self.po.arena0_back1_bio2 = 0
                 if not is_yes:
                     self.manual_delineation()
                 else:
@@ -2213,15 +2225,15 @@ class ImageAnalysisWindow(MainTabsType):
                     self.last_image_question()
                 self.slower_delineation_flag = False
 
-            elif self.manual_delineation_flag:
+            elif self.po.manual_delineation_flag:
                 if is_yes:
-                    if self.po.sample_number == self.arena_masks_number:
+                    if self.po.sample_number == self.po.arena_masks_number:
                         self.thread_dict['SaveManualDelineation'].start()
                         self.last_image_question()
-                        self.manual_delineation_flag = False
+                        self.po.manual_delineation_flag = False
                     else:
                         self.message.setText(
-                            f"{self.arena_masks_number} arenas are drawn over the {self.po.sample_number} expected")
+                            f"{self.po.arena_masks_number} arenas are drawn over the {self.po.sample_number} expected")
 
             elif self.asking_last_image_flag:
                 self.decision_label.setToolTip("")
@@ -2332,14 +2344,14 @@ class ImageAnalysisWindow(MainTabsType):
         Manually delineates the analysis arena on the image by enabling user interaction and
         preparing the necessary attributes for manual drawing of arenas on the image.
         """
-        self.manual_delineation_flag = True
+        self.po.manual_delineation_flag = True
         self.po.cropping(is_first_image=True)
         self.po.get_average_pixel_size()
         self.reinitialize_image_and_masks(self.po.first_image.bgr)
         self.reinitialize_bio_and_back_legend()
-        self.available_arena_names = np.arange(1, self.po.sample_number + 1)
-        self.saved_coord = []
-        self.arena_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
+        self.po.available_arena_names = np.arange(1, self.po.sample_number + 1)
+        self.po.user_saved_coord = []
+        self.po.arena_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
         # self.next.setVisible(True)
         self.decision_label.setVisible(True)
         self.yes.setVisible(True)
@@ -2394,7 +2406,7 @@ class ImageAnalysisWindow(MainTabsType):
         waits for any running threads to complete, processes the image without
         considering it as the first image, and updates the visualization.
         """
-        self.is_first_image_flag = False
+        self.po.is_first_image_flag = False
         self.decision_label.setText('')
         self.yes.setVisible(False)
         self.no.setVisible(False)

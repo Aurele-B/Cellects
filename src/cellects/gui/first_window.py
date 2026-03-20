@@ -345,7 +345,7 @@ class FirstWindow(MainTabsType):
             self.po.sample_number = int(self.arena_number.value())
             self.po.all['first_folder_sample_number'] = self.po.sample_number
             self.po.all['sample_number_per_folder'] = [self.po.sample_number]
-            if not self.instantiate:  # not self.parent().imageanalysiswindow.initialized:
+            if not self.instantiate:
                 logging.info("No need to look for data, images or videos already found previously.")
                 self.first_im_read(True)
             else:

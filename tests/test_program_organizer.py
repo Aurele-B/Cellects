@@ -40,21 +40,21 @@ class TestProgramOrganizerBasicFunctions(CellectsUnitTest):
 
     def test_save_and_load_masks(self):
         self.po.all['keep_cell_and_back_for_all_folders'] = True
-        self.po.bio_mask = np.array((0, 1))
-        self.po.back_mask = np.array((1, 0))
+        self.po.bio_mask_coord = np.array((0, 1))
+        self.po.back_mask_coord = np.array((1, 0))
         self.po.save_masks()
         self.po.load_masks()
 
     def test_save_none_masks(self):
         self.po.all['keep_cell_and_back_for_all_folders'] = True
-        self.po.bio_mask = None
-        self.po.back_mask = None
+        self.po.bio_mask_coord = None
+        self.po.back_mask_coord = None
         self.po.save_masks()
 
     def test_save_no_masks(self):
         self.po.all['keep_cell_and_back_for_all_folders'] = False
-        self.po.bio_mask = None
-        self.po.back_mask = None
+        self.po.bio_mask_coord = None
+        self.po.back_mask_coord = None
         self.po.save_masks()
 
     def test_set_analyzed_individuals(self):
@@ -159,7 +159,7 @@ class TestProgramOrganizerSegmentation(CellectsUnitTest):
         po.get_first_image()
         back_mask = np.zeros(po.first_im.shape[:2], np.uint8)
         back_mask[-30:, :] = 1
-        po.back_mask = np.nonzero(back_mask)
+        po.back_mask_coord = np.nonzero(back_mask)
         po.vars['convert_for_origin'] = {'PCA': [0, 0, 1], 'logical': 'None'}
         po.vars['convert_for_motion'] = po.vars['convert_for_origin']
         po.all['automatically_crop'] = True

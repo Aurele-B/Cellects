@@ -33,13 +33,13 @@ import numpy as np
 from PySide6 import QtCore
 
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse, create_mask, draw_img_with_mask, get_contours
+from cellects.image_analysis.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours
 from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
 from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
 from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
                                               create_empty_videos, write_video, read_h5, remove_h5_key,
                                               video_writing_decision, write_h5)
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, split_dict
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
 from cellects.core.motion_analysis import MotionAnalysis
 
 class PrecompileNJITThread(QtCore.QThread):
@@ -266,6 +266,10 @@ class UpdateImageThread(QtCore.QThread):
 
     Signals
     -------
+    message_from_thread : Signal(str)
+        Signal emitted when the thread successfully starts.
+    image_from_thread : Signal(dict)
+        Signal emitted during the image update.
     message_when_thread_finished : Signal(bool)
         Emitted when the thread finishes execution, indicating whether image displaying was successful.
 
@@ -273,6 +277,8 @@ class UpdateImageThread(QtCore.QThread):
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
+    message_from_thread = QtCore.Signal(str)
+    image_from_thread = QtCore.Signal(dict)
     message_when_thread_finished = QtCore.Signal(bool)
 
     def __init__(self, po, parent=None):
@@ -297,43 +303,26 @@ class UpdateImageThread(QtCore.QThread):
         This method performs several steps to analyze an image based on user input
         and saved mask coordinates. It updates the drawn image with segmentation masks,
         back masks, bio masks, and video contours.
-
-        Other Parameters
-        ----------------
-        user_input : bool, optional
-            Flag indicating whether user input is available.
-        idx : list or numpy.ndarray, optional
-            Coordinates of the user- defined region of interest.
-        temp_mask_coord : list, optional
-            Temporary mask coordinates.
-        saved_coord : list, optional
-            Saved mask coordinates.
-
-        Notes
-        -----
-        - This function updates several attributes of `self.parent().imageanalysiswindow`.
-        - Performance considerations include handling large images efficiently.
-        - Important behavioral caveats: Ensure coordinates are within image bounds.
         """
         # I/ If this thread runs from user input, get the right coordinates
         # and convert them to fit the displayed image size
-        user_input = len(self.parent().imageanalysiswindow.saved_coord) > 0 or len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0
-        dims = self.parent().imageanalysiswindow.drawn_image.shape
+        user_input = len(self.po.user_saved_coord) > 0 or len(self.po.temporary_mask_coord) > 0
+        image = None
+        dims = self.po.drawn_image.shape
+        minmax = 0, dims[0], 0, dims[1]
         if user_input:
-            if len(self.parent().imageanalysiswindow.temporary_mask_coord) > 0:
-                idx = self.parent().imageanalysiswindow.temporary_mask_coord
+            if len(self.po.temporary_mask_coord) > 0:
+                idx = self.po.temporary_mask_coord
             else:
-                idx = self.parent().imageanalysiswindow.saved_coord
+                idx = self.po.user_saved_coord
             if len(idx) < 2:
                 user_input = False
             else:
                 # Convert coordinates:
-                self.parent().imageanalysiswindow.display_image.update_image_scaling_factors()
-                sf = self.parent().imageanalysiswindow.display_image.scaling_factors
-                idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=sf, dims=dims)
+                idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=self.po.image_scaling_factors, dims=dims)
                 minmax = min_y, max_y, min_x, max_x
 
-        if len(self.parent().imageanalysiswindow.temporary_mask_coord) == 0:
+        if len(self.po.temporary_mask_coord) == 0:
             # not_load
             # II/ If this thread aims at saving the last user input and displaying all user inputs:
             # Update the drawn_image according to every saved masks
@@ -341,10 +330,10 @@ class UpdateImageThread(QtCore.QThread):
             # 2) The back_mask and bio_mask
             # 3) The automatically detected video contours
             # (re-)Initialize drawn image
-            self.parent().imageanalysiswindow.drawn_image = self.po.current_image.copy()
+            self.po.drawn_image = self.po.current_image.copy()
             contour_width = get_contour_width_from_im_shape(dims)
             # 1) Add the segmentation mask to the image
-            if self.parent().imageanalysiswindow.is_first_image_flag:
+            if self.po.is_first_image_flag:
                 im_combinations = self.po.first_image.im_combinations
                 im_mean = self.po.first_image.image.mean()
             else:
@@ -359,16 +348,16 @@ class UpdateImageThread(QtCore.QThread):
                 # Color these coordinates in magenta on bright images, and in pink on dark images
                 if im_mean > 126:
                     # Color the segmentation mask in magenta
-                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((20, 0, 150), dtype=np.uint8)
+                    self.po.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((20, 0, 150), dtype=np.uint8)
                 else:
                     # Color the segmentation mask in pink
-                    self.parent().imageanalysiswindow.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
+                    self.po.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                if self.parent().imageanalysiswindow.back1_bio2 == 0:
+                if self.po.arena0_back1_bio2 == 0:
                     mask_shape = self.po.vars['arena_shape']
-                elif self.parent().imageanalysiswindow.back1_bio2 == 1:
+                elif self.po.arena0_back1_bio2 == 1:
                     mask_shape = "rectangle"
-                elif self.parent().imageanalysiswindow.back1_bio2 == 2:
+                else:
                     mask_shape = self.po.all['starting_blob_shape']
                     if mask_shape is None:
                         mask_shape = 'circle'
@@ -376,32 +365,32 @@ class UpdateImageThread(QtCore.QThread):
                 mask = create_mask(dims, minmax, mask_shape)
                 mask = np.nonzero(mask)
 
-                if self.parent().imageanalysiswindow.back1_bio2 == 1:
-                    self.parent().imageanalysiswindow.back_masks_number += 1
-                    self.parent().imageanalysiswindow.back_mask[mask[0], mask[1]] = self.parent().imageanalysiswindow.available_back_names[0]
-                elif self.parent().imageanalysiswindow.back1_bio2 == 2:
-                    self.parent().imageanalysiswindow.bio_masks_number += 1
-                    self.parent().imageanalysiswindow.bio_mask[mask[0], mask[1]] = self.parent().imageanalysiswindow.available_bio_names[0]
-                elif self.parent().imageanalysiswindow.manual_delineation_flag:
-                    self.parent().imageanalysiswindow.arena_masks_number += 1
-                    self.parent().imageanalysiswindow.arena_mask[mask[0], mask[1]] = self.parent().imageanalysiswindow.available_arena_names[0]
-                # 2)a) Apply all these masks to the drawn image:
+                if self.po.arena0_back1_bio2 == 1:
+                    self.po.back_masks_number += 1
+                    self.po.back_mask[mask[0], mask[1]] = self.po.available_back_names[0]
+                elif self.po.arena0_back1_bio2 == 2:
+                    self.po.bio_masks_number += 1
+                    self.po.bio_mask[mask[0], mask[1]] = self.po.available_bio_names[0]
+                elif self.po.manual_delineation_flag:
+                    self.po.arena_masks_number += 1
+                    self.po.arena_mask[mask[0], mask[1]] = self.po.available_arena_names[0]
+                # Apply all these masks to the drawn image:
 
-            back_coord = np.nonzero(self.parent().imageanalysiswindow.back_mask)
+            back_coord = np.nonzero(self.po.back_mask)
 
-            bio_coord = np.nonzero(self.parent().imageanalysiswindow.bio_mask)
+            bio_coord = np.nonzero(self.po.bio_mask)
 
-            if self.parent().imageanalysiswindow.arena_mask is not None:
-                arena_coord = np.nonzero(self.parent().imageanalysiswindow.arena_mask)
-                self.parent().imageanalysiswindow.drawn_image[arena_coord[0], arena_coord[1], :] = np.repeat(self.po.vars['contour_color'], 3).astype(np.uint8)
+            if self.po.arena_mask is not None:
+                arena_coord = np.nonzero(self.po.arena_mask)
+                self.po.drawn_image[arena_coord[0], arena_coord[1], :] = np.repeat(self.po.vars['contour_color'], 3).astype(np.uint8)
 
-            self.parent().imageanalysiswindow.drawn_image[back_coord[0], back_coord[1], :] = np.array((224, 160, 81), dtype=np.uint8)
+            self.po.drawn_image[back_coord[0], back_coord[1], :] = np.array((224, 160, 81), dtype=np.uint8)
 
-            self.parent().imageanalysiswindow.drawn_image[bio_coord[0], bio_coord[1], :] = np.array((17, 160, 212), dtype=np.uint8)
+            self.po.drawn_image[bio_coord[0], bio_coord[1], :] = np.array((17, 160, 212), dtype=np.uint8)
 
-            image = self.parent().imageanalysiswindow.drawn_image.copy()
+            image = self.po.drawn_image.copy()
             # 3) The automatically detected video contours
-            if self.parent().imageanalysiswindow.delineation_done:  # add a mask of the video contour
+            if self.po.delineation_done:  # add a mask of the video contour
                 if self.po.vars['contour_color'] == 255:
                     arena_contour_col = (240, 232, 202)
                 else:
@@ -411,7 +400,7 @@ class UpdateImageThread(QtCore.QThread):
                     position = (min_cx + 25, min_cy + (max_cy - min_cy) // 2)
                     image = cv2.putText(image, f"{_i + 1}", position, cv2.FONT_HERSHEY_SIMPLEX, 1,  arena_contour_col + (255,),2)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
-                        self.parent().imageanalysiswindow.message.setText("Error: the shape number or the detection is wrong")
+                        self.message_from_thread.emit("Error: the shape number or the detection is wrong")
                     image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
                                                self.po.vars['arena_shape'], arena_contour_col, True, contour_width)
         else: #load
@@ -420,20 +409,20 @@ class UpdateImageThread(QtCore.QThread):
                 # Just add the mask to drawn_image as quick as possible
                 # Add user defined masks
                 # Take the drawn image and add the temporary mask to it
-                image = self.parent().imageanalysiswindow.drawn_image.copy()
-                if self.parent().imageanalysiswindow.back1_bio2 == 2:
+                image = self.po.drawn_image.copy()
+                if self.po.arena0_back1_bio2 == 2:
                     color = (17, 160, 212)
                     mask_shape = self.po.all['starting_blob_shape']
                     if mask_shape is None:
                         mask_shape = 'circle'
-                elif self.parent().imageanalysiswindow.back1_bio2 == 1:
+                elif self.po.arena0_back1_bio2 == 1:
                     color = (224, 160, 81)
                     mask_shape = "rectangle"
                 else:
                     color = (0, 0, 0)
                     mask_shape = self.po.vars['arena_shape']
                 image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
-        self.parent().imageanalysiswindow.display_image.update_image(image)
+        self.image_from_thread.emit({"current_image": image})
         self.message_when_thread_finished.emit(True)
 
 
@@ -502,8 +491,8 @@ class FirstImageAnalysisThread(QtCore.QThread):
             self.message_from_thread.emit("Image segmentation... Do not close until it is finished.")
         else:
             self.message_from_thread.emit("Generating segmentation options... Do not close until it is finished.")
-        self.po.full_first_image_segmentation(not self.parent().imageanalysiswindow.asking_first_im_parameters_flag,
-                                                       self.parent().imageanalysiswindow.bio_mask, self.parent().imageanalysiswindow.back_mask)
+        self.po.full_first_image_segmentation(not self.po.asking_first_im_parameters_flag,
+                                                       self.po.bio_mask, self.po.back_mask)
 
         logging.info(f" image analysis lasted {np.floor((default_timer() - tic) / 60).astype(int)} minutes {np.round((default_timer() - tic) % 60).astype(int)} secondes")
         self.message_when_thread_finished.emit(True)
@@ -563,21 +552,12 @@ class LastImageAnalysisThread(QtCore.QThread):
         This function uses various attributes from the parent class to determine
         how to process and analyze images. The specific behavior is heavily
         dependent on the state of these attributes.
-
-        Attributes:
-        -----------
-        parent() : object
-            The owner of this instance, containing necessary settings and methods.
-        message_from_thread.emit(s : str) : signal
-            Signal to indicate progress messages from the thread.
-        message_when_thread_finished.emit(success : bool) : signal
-            Signal to indicate the completion of the thread.
         """
         if self.po.visualize or (len(self.po.first_im.shape) == 2 and not self.po.network_shaped):
             self.message_from_thread.emit("Image segmentation... Do not close until it is finished.")
         else:
             self.message_from_thread.emit("Generating analysis options... Do not close until it is finished.")
-        self.po.full_last_image_segmentation(self.parent().imageanalysiswindow.bio_mask, self.parent().imageanalysiswindow.back_mask)
+        self.po.full_last_image_segmentation(self.po.bio_mask, self.po.back_mask)
         self.message_when_thread_finished.emit(True)
 
 
@@ -613,6 +593,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         super(CropScaleSubtractDelineateThread, self).__init__(parent)
         self.setParent(parent)
         self.po: ProgramOrganizer = po
+        self.status = {"continue": True, "message": ""}
 
     def run(self):
         """
@@ -644,7 +625,7 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
             logging.info("Check whether the detected shape number is ok")
             nb, shapes, stats, centroids = cv2.connectedComponentsWithStats(self.po.first_image.validated_shapes)
             y_lim = self.po.first_image.y_boundaries
-            if ((nb - 1) != self.po.sample_number or np.any(stats[:, 4] == 1)):
+            if (nb - 1) != self.po.sample_number or np.any(stats[:, 4] == 1):
                 self.status['message'] = "Image analysis failed to detect the right cell(s) number: restart the analysis."
                 self.status['continue'] = False
             elif y_lim is None:
@@ -697,7 +678,7 @@ class SaveManualDelineationThread(QtCore.QThread):
         self.po.top = []
         self.po.bot = []
         for arena_i in np.arange(self.po.sample_number):
-            y, x = np.nonzero(self.parent().imageanalysiswindow.arena_mask == arena_i + 1)
+            y, x = np.nonzero(self.po.arena_mask == arena_i + 1)
             self.po.left.append(int(np.min(x)))
             self.po.right.append(int(np.max(x)))
             self.po.top.append(int(np.min(y)))
@@ -774,12 +755,12 @@ class CompleteImageAnalysisThread(QtCore.QThread):
         self.po.get_background_to_subtract()
         self.po.save_origins_and_backgrounds_lists()
         self.po.save_data_to_run_cellects_quickly()
-        self.po.bio_mask = None
-        self.po.back_mask = None
-        if self.parent().imageanalysiswindow.bio_masks_number != 0:
-            self.po.bio_mask = np.array(np.nonzero(self.parent().imageanalysiswindow.bio_mask))
-        if self.parent().imageanalysiswindow.back_masks_number != 0:
-            self.po.back_mask = np.array(np.nonzero(self.parent().imageanalysiswindow.back_mask))
+        self.po.bio_mask_coord = None
+        self.po.back_mask_coord = None
+        if self.po.bio_masks_number != 0:
+            self.po.bio_mask_coord = np.array(np.nonzero(self.po.bio_mask))
+        if self.po.back_masks_number != 0:
+            self.po.back_mask_coord = np.array(np.nonzero(self.po.back_mask))
         if not self.isInterruptionRequested():
             self.po.complete_image_analysis()
             self.message_when_thread_finished.emit(True)
@@ -921,6 +902,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.setParent(parent)
         self.po: ProgramOrganizer = po
         self.status = {"continue": True, "folder": "", "message": ""}
+        self.videos_in_ram = None
 
     def run(self):
         self.status = {"continue": True, "folder": reduce_path_len(self.po.all['global_pathway'], 6, 10), "message": ""}
@@ -1134,7 +1116,7 @@ class VideoTrackingThread(QtCore.QThread):
                         if len(self.po.vars['analyzed_individuals']) != len(self.po.top):
                             self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
                             self.status['continue'] = False
-                        elif self.po.top is None and self.po.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
+                        elif self.po.top is None and self.po.video_task == 'one_arena' and self.po.manual_delineation_flag:
                             self.status['message'] = f"Auto video delineation failed, use manual delineation tool"
                             self.status['continue'] = False
                         else:
@@ -1179,7 +1161,6 @@ class VideoTrackingThread(QtCore.QThread):
                 # Check that there is enough available RAM for one video par bunch and ROM for all videos
                 if video_nb_per_bunch > 0 and rom_memory_required is None:
                     pat_tracker1 = PercentAndTimeTracker(bunch_nb * self.po.vars['img_number'])
-                    image_percentage = 0
                     im_percent = 0
                     for bunch in np.arange(bunch_nb):
                         # Update the labels of arenas and the video_bunch to write
@@ -1256,6 +1237,8 @@ class VideoTrackingThread(QtCore.QThread):
                     self.po.save_data_to_run_cellects_quickly()
                 else:
                     self.status['continue'] = False
+                    ram_message = ''
+                    rom_message = ''
                     if video_nb_per_bunch == 0:
                         memory_diff = self.po.update_available_core_nb()
                         ram_message = f"{memory_diff}GB of additional RAM"
@@ -1302,7 +1285,7 @@ class VideoTrackingThread(QtCore.QThread):
                     self.status['message'] = f"Starting sequential analysis of {arena_nb} arena(s)"
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
-                    tiii = default_timer()
+                    tii = default_timer()
                     pat_tracker = PercentAndTimeTracker(arena_nb)
                     for i, arena in enumerate(self.po.vars['analyzed_individuals']):
                         l = [i, arena, self.po.vars, False, False, False, None]
@@ -1358,7 +1341,7 @@ class VideoTrackingThread(QtCore.QThread):
                                 self.image_from_thread.emit({"current_image": self.po.last_image.bgr,
                                                              "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
                         self.po.motion = None
-                    duration = np.round((default_timer() - tiii) / 60, 2)
+                    duration = np.round((default_timer() - tii) / 60, 2)
                     self.status['message'] = f"Sequential analysis lasted {duration} minutes"
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
                 else:
@@ -1366,11 +1349,8 @@ class VideoTrackingThread(QtCore.QThread):
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message'] }")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
 
-                    tiii = default_timer()
+                    tii = default_timer()
                     arena_number = len(self.po.vars['analyzed_individuals'])
-                    self.advance = 0
-                    self.pat_tracker = PercentAndTimeTracker(len(self.po.vars['analyzed_individuals']),
-                                                             core_number=self.po.cores)
 
                     fair_core_workload = arena_number // self.po.cores
                     cores_with_1_more = arena_number % self.po.cores
@@ -1438,7 +1418,7 @@ class VideoTrackingThread(QtCore.QThread):
                                                                                                          'efficiency_test_2'])
                             del grouped_results
                         del subtotals
-                        duration = np.round((default_timer() - tiii) / 60, 2)
+                        duration = np.round((default_timer() - tii) / 60, 2)
                         self.image_from_thread.emit(
                             {"current_image": self.po.last_image.bgr,
                              "message": f"{self.status['folder']}, Analyzed {len(self.po.vars['analyzed_individuals'])}/{len(self.po.vars['analyzed_individuals'])} arenas (100%), Parallel analysis took {duration} minutes"})
@@ -1493,6 +1473,7 @@ class VideoTrackingThread(QtCore.QThread):
                 prev_img = None
                 pat_tracker = PercentAndTimeTracker(self.po.vars['img_number'])
                 is_landscape = self.po.first_image.image.shape[0] < self.po.first_image.image.shape[1]
+                img = self.po.first_image.image
                 for image_i, image_name in enumerate(self.po.data_list):
                     current_percentage, eta = pat_tracker.get_progress()
                     reduce_image_dim = self.po.vars['already_greyscale'] and self.po.reduce_image_dim
@@ -1630,15 +1611,6 @@ class VideoTrackingThread(QtCore.QThread):
             Indicates if fading effects should be applied.
         self.po.motion.dims : tuple
             The dimensions of the motion data.
-        analyses_to_compute : list or ndarray
-            List of analysis options to compute based on configuration settings.
-        args : list
-            Arguments used for initializing the MotionAnalysis object.
-        analysis_i : MotionAnalysis
-            An instance of MotionAnalysis for each segment to be processed.
-        mask : tuple or NoneType
-            The mask used for different segmentation options.
-
         """
         if self.po.vars['color_number'] > 2:
             analyses_to_compute = [0]
@@ -1654,6 +1626,7 @@ class VideoTrackingThread(QtCore.QThread):
 
         args = [self.po.all['arena'] - 1, self.po.all['arena'], self.po.vars,
                 False, False, False, self.videos_in_ram]
+        mask = [[], [], []]
         for seg_i in analyses_to_compute:
             analysis_i = MotionAnalysis(args)
             analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
@@ -1741,6 +1714,7 @@ class VideoTrackingThread(QtCore.QThread):
                                                      self.po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
         else:
             if self.po.all['compute_all_options']:
+                mask = [[], [], []]
                 if self.po.all['video_option'] == 0:
                     self.po.motion.binary = self.po.motion.segmented
                 else:
@@ -1854,6 +1828,7 @@ class VideoReaderThread(QtCore.QThread):
         self.message_from_thread.emit(
             {"current_image": video_analysis[0, ...], "message": f"Video preparation... Do not close until it is finished."})
         video_mask = np.zeros(self.po.motion.dims[:3], dtype=np.uint8)
+        mask = [[], [], []]
         if self.po.load_quick_full > 0:
             if self.po.all['compute_all_options']:
                 if self.po.all['video_option'] == 0:
@@ -1873,6 +1848,7 @@ class VideoReaderThread(QtCore.QThread):
                     video_mask = self.po.motion.segmented
 
         frame_delay = (8 + np.log10(self.po.motion.dims[0])) / self.po.motion.dims[0]
+        current_image = video_analysis[0, ...]
         for t in np.arange(self.po.motion.dims[0]):
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
@@ -1918,14 +1894,6 @@ class WriteVideoThread(QtCore.QThread):
         self : object
             The instance of the class containing this method.
 
-        Other Parameters
-        ----------------
-        arena : str
-            Name of the arena.
-
-        already_greyscale : bool
-            Flag indicating if the video is already in greyscale format.
-
         Raises
         ------
         FileNotFoundError
@@ -1937,7 +1905,7 @@ class WriteVideoThread(QtCore.QThread):
         else:
             write_video(self.po.converted_video, f'ind_{arena}.h5', is_color=False)
 
-def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subtotals: Queue) -> None:
+def motion_analysis_process(lower_bound: int, upper_bound: int, vars_dict: dict, subtotals: Queue) -> None:
     """
     Motion Analysis Process for parallel computing
 
@@ -1949,7 +1917,7 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
         The lower bound index for the range of analysis.
     upper_bound : int
         The upper bound index (exclusive) for the range of analysis.
-    vars : dict
+    vars_dict : dict
         Dictionary containing variables and configurations for the motion analysis process.
     subtotals : Queue
         A queue to store intermediate results.
@@ -1960,13 +1928,11 @@ def motion_analysis_process(lower_bound: int, upper_bound: int, vars: dict, subt
     """
     grouped_results = []
     for i in range(lower_bound, upper_bound):
-        analysis_i = MotionAnalysis([i, i + 1, vars, True, True, False, None])
+        analysis_i = MotionAnalysis([i, i + 1, vars_dict, True, True, False, None])
         results_i = dict()
         results_i['arena'] = analysis_i.one_descriptor_per_arena['arena']
         results_i['i'] = analysis_i.one_descriptor_per_arena['arena'] - 1
-        arena = results_i['arena']
-        i = arena - 1
-        if not vars['several_blob_per_arena']:
+        if not vars_dict['several_blob_per_arena']:
             # Save basic statistics
             results_i['one_row_per_arena'] = analysis_i.one_descriptor_per_arena
             # Save descriptors in long_format

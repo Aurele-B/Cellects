@@ -745,14 +745,14 @@ def get_contour_width_from_im_shape(im_shape: Tuple) -> int:
     """
     return np.max((np.round(np.log10(np.max(im_shape)) - 2).astype(int), 2))
 
-def scale_coordinates(coord: NDArray, scale: Tuple, dims: Tuple) -> Tuple[NDArray[np.int64], np.int64, np.int64, np.int64, np.int64]:
+def scale_coordinates(coord: list, scale: Tuple, dims: Tuple) -> Tuple[NDArray[np.int64], np.int64, np.int64, np.int64, np.int64]:
     """
     Scale coordinates based on given scale factors and dimensions.
 
     Parameters
     ----------
-    coord : numpy.ndarray
-        A 2x2 array of coordinates to be scaled.
+    coord : list
+        A 2x2 list of coordinates to be scaled.
     scale : tuple of float
         Scaling factors for the x and y coordinates, respectively.
     dims : tuple of int
@@ -773,10 +773,10 @@ def scale_coordinates(coord: NDArray, scale: Tuple, dims: Tuple) -> Tuple[NDArra
 
     Examples
     --------
-    >>> coord = np.array(((47, 38), (59, 37)))
-    >>> scale = (0.92, 0.87)
-    >>> dims = (245, 300, 3)
-    >>> scaled_coord, min_y, max_y, min_x, max_x = scale_coordinates(coord, scale, dims)
+    >>> coordinates = [[47, 38], [59, 37]]
+    >>> scales = (0.92, 0.87)
+    >>> dimensions = (245, 300, 3)
+    >>> scaled_coord, min_y, max_y, min_x, max_x = scale_coordinates(coordinates, scales, dimensions)
     >>> scaled_coord
     array([[43, 33],
            [54, 32]])

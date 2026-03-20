@@ -110,12 +110,34 @@ class ProgramOrganizer:
         self.one_row_per_arena = None
         self.one_row_per_frame = None
         self.not_analyzed_individuals = None
-        self.bio_mask = None
-        self.back_mask = None
         self.visualize: bool = True
         self.network_shaped: bool = False
         self.update_background_luminosity: bool = False
         self.video_task: str = 'all'
+        self.user_saved_coord: list = []
+        self.temporary_mask_coord: list = []
+        self.current_image = None
+        self.drawn_image = None
+        self.image_scaling_factors: tuple = 1., 1.
+        self.is_first_image_flag: bool = True
+        self.arena0_back1_bio2: int = 0
+        self.bio_masks_number: int = 0
+        self.back_masks_number: int = 0
+        self.arena_masks_number: int = 0
+        self.bio_mask_coord = None
+        self.bio_mask_coord = None
+        self.arena_mask = None
+        self.bio_mask = None
+        self.back_mask = None
+        self.available_bio_names = np.arange(1, 10, dtype=np.uint16)
+        self.available_back_names = np.arange(1, 10, dtype=np.uint16)
+        self.available_arena_names = np.arange(1, 10, dtype=np.uint16)
+        self.manual_delineation_flag: bool = False
+        self.delineation_done: bool = False
+        self.asking_first_im_parameters_flag: bool = True
+        self.load_quick_full: int = 0
+        self.converted_video = None
+        self.converted_video2 = None
 
     def update_variable_dict(self):
         """
@@ -210,14 +232,14 @@ class ProgramOrganizer:
         This function saves the masks to an HDF5 file saved in the config folder (to be accessible anywhere)
         """
         if self.all['keep_cell_and_back_for_all_folders']:
-            if self.bio_mask is not None:
-                write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask, 'initial_bio_mask')
-            if self.back_mask is not None:
-                write_h5(CONFIG_DIR / 'masks.h5', self.back_mask, 'initial_back_mask')
+            if self.bio_mask_coord is not None:
+                write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask_coord, 'initial_bio_mask')
+            if self.bio_mask_coord is not None:
+                write_h5(CONFIG_DIR / 'masks.h5', self.bio_mask_coord, 'initial_back_mask')
             if remove_unused_masks:
-                if self.back_mask is None:
+                if self.bio_mask_coord is None:
                     remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
-                if self.bio_mask is None:
+                if self.bio_mask_coord is None:
                     remove_h5_key(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
         else:
             self.all.pop('initial_bio_mask', None)
@@ -594,8 +616,8 @@ class ProgramOrganizer:
     def load_masks(self):
         """"""
         if self.all['keep_cell_and_back_for_all_folders']:
-            self.bio_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
-            self.back_mask = read_h5(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
+            self.bio_mask_coord = read_h5(CONFIG_DIR / 'masks.h5', 'initial_bio_mask')
+            self.bio_mask_coord = read_h5(CONFIG_DIR / 'masks.h5', 'initial_back_mask')
 
     def get_last_image(self, last_im: NDArray=None):
         """
@@ -1356,10 +1378,10 @@ class ProgramOrganizer:
             self.vars['exif'] = self.vars['exif'][0]
         if len(self.last_image.all_c_spaces) == 0:
             self.last_image.all_c_spaces['bgr'] = self.last_image.bgr.copy()
-        if self.bio_mask is not None:
-            self.last_image.binary_image[self.bio_mask] = 1
-        if self.back_mask is not None:
-            self.last_image.binary_image[self.back_mask] = 0
+        if self.bio_mask_coord is not None:
+            self.last_image.binary_image[self.bio_mask_coord] = 1
+        if self.bio_mask_coord is not None:
+            self.last_image.binary_image[self.bio_mask_coord] = 0
         for i, arena in enumerate(self.vars['analyzed_individuals']):
             binary = self.last_image.binary_image[self.top[i]:self.bot[i], self.left[i]:self.right[i]]
             efficiency_test = self.last_image.all_c_spaces['bgr'][self.top[i]:self.bot[i], self.left[i]:self.right[i], :]

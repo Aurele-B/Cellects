@@ -528,7 +528,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_normal_case(self):
         """Test normal operation with valid inputs."""
-        coord = np.array(((47, 38), (59, 37)))
+        coord = [[47, 38], [59, 37]]
         scale = (0.92, 0.87)
         dims = (245, 300, 3)
 
@@ -548,7 +548,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_zero_scaling(self):
         """Test with zero scaling factors."""
-        coord = np.array(((10, 20), (30, 40)))
+        coord = [[10, 20], [30, 40]]
         scale = (0, 0)  # Both scales are zero
         dims = (100, 100, 3)
 
@@ -568,7 +568,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_at_dimensions_boundary(self):
         """Test coordinates that are exactly at dimension boundaries."""
-        coord = np.array(((100, 50), (200, 150)))
+        coord = [[100, 50], [200, 150]]
         scale = (0.5, 0.5)  # Halve the coordinates
         dims = (200, 300, 3)
 
@@ -588,7 +588,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_exceeding_dimensions(self):
         """Test when scaled coordinates exceed given dimensions."""
-        coord = np.array(((300, 400), (500, 600)))
+        coord = [[300, 400], [500, 600]]
         scale = (0.7, 0.9)  # Scale down
         dims = (250, 350, 3)
 
@@ -608,7 +608,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_negative_input(self):
         """Test if function handles negative input coordinates properly."""
-        coord = np.array(((-10, 20), (30, -40)))
+        coord = [[-10, 20], [30, -40]]
         scale = (1.5, 2)  # Scale up
         dims = (100, 200, 3)
 
@@ -628,7 +628,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_single_point(self):
         """Test with single point coordinate."""
-        coord = np.array(((50, 60), (50, 60)))  # Same point twice
+        coord = [[50, 60], [50, 60]]  # Same point twice
         scale = (0.8, 1.2)
         dims = (200, 300, 3)
 
@@ -648,7 +648,7 @@ class TestScaleCoordinates(CellectsUnitTest):
 
     def test_scale_coordinates_non_integer_dimensions(self):
         """Test with non-integer dimensions tuple (third value is ignored)."""
-        coord = np.array(((10, 20), (30, 40)))
+        coord = [[10, 20], [30, 40]]
         scale = (0.5, 1)
         dims = (100.5, 200.7, "ignore")  # Non-integer values
 

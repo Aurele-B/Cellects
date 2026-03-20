@@ -189,8 +189,8 @@ class InsertImage(QtWidgets.QLabel):
         self.setMaximumWidth(self.scaled_shape[1])
         self.setPixmap(QPixmap(image))
 
-    def update_image_scaling_factors(self):
-        self.scaling_factors = (self.true_shape[0] / self.scaled_shape[0]), (self.true_shape[1] / self.scaled_shape[1])
+    def get_image_scaling_factors(self):
+        return (self.true_shape[0] / self.scaled_shape[0]), (self.true_shape[1] / self.scaled_shape[1])
 
 
 class PButton(QtWidgets.QPushButton):
