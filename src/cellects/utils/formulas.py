@@ -239,7 +239,7 @@ def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[
 
     Notes
     -----
-    Performance considerations: This function uses Numba's `@njit` decorator for performance.
+    Performance considerations: This function uses Numba's n-jit decorator for performance.
     """
     if mo['m00'] == 0:
         vx, vy = 0., 0.
