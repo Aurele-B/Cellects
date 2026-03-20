@@ -910,7 +910,8 @@ class VideoTrackingThread(QtCore.QThread):
         """
         self.parent().po.all['compute_all_options'] = False
         self.parent().po.load_quick_full = 2
-        self.set_current_folder(0)
+        starting_folder_id: int = 0
+        self.set_current_folder(starting_folder_id)
         if self.parent().po.first_exp_ready_to_run:
             self.message_from_thread.emit(f"{self.status['folder']}, Writing videos")
             if not self.parent().po.vars['several_blob_per_arena'] and self.parent().po.sample_number != len(
@@ -927,9 +928,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.status['continue'] = False
                 if self.status['continue']:
                     if self.parent().po.all['folder_number'] > 1:
-                        self.parent().po.all['folder_list'] = self.parent().po.all['folder_list'][1:]
-                        self.parent().po.all['sample_number_per_folder'] = self.parent().po.all[
-                            'sample_number_per_folder'][1:]
+                        starting_folder_id += 1
         else:
             self.parent().po.look_for_data()
 
@@ -937,10 +936,9 @@ class VideoTrackingThread(QtCore.QThread):
                 not self.parent().po.first_exp_ready_to_run or self.parent().po.all['folder_number'] > 1):
             folder_number = np.max((len(self.parent().po.all['folder_list']), 1))
 
-            for exp_i in np.arange(folder_number):
-                if len(self.parent().po.all['folder_list']) > 0:
-                    self.set_current_folder(exp_i)
-                    logging.info(self.status['folder'])
+            for exp_i in range(starting_folder_id, folder_number):
+                self.set_current_folder(exp_i)
+                logging.info(self.status['folder'])
                 self.parent().po.first_im = None
                 self.parent().po.first_image = None
                 self.parent().po.last_im = None
