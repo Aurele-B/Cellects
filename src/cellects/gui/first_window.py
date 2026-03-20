@@ -57,7 +57,6 @@ class FirstWindow(MainTabsType):
         logging.info("Initialize first window")
         self.setParent(parent)
         self.po = po
-        self.video_task: str = 'all'
         self.true_init()
 
     def true_init(self):
@@ -471,7 +470,7 @@ class FirstWindow(MainTabsType):
         if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["VideoTracking"].isRunning():
             self.po.motion = None
             self.message.setText("Complete analysis has started, wait until this message disappear...")
-            self.video_task = 'all'
+            self.po.video_task = 'all'
             self.thread_dict["VideoTracking"].start()
             self.thread_dict["VideoTracking"].message_from_thread.connect(self.display_message_from_thread)
             self.thread_dict["VideoTracking"].image_from_thread.connect(self.display_image_during_thread)

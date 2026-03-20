@@ -55,7 +55,6 @@ class VideoAnalysisWindow(MainTabsType):
         logging.info("Initialize VideoAnalysisWindow")
         self.setParent(parent)
         self.po = po
-        self.video_task: str = 'all'
         self.previous_arena = 0
         self.true_init()
 
@@ -684,7 +683,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.save_current_settings()
         if self.previous_arena != self.po.all['arena']:
             self.po.motion = None
-        self.video_task = 'one_arena'
+        self.po.video_task = 'one_arena'
         self.thread_dict['VideoTracking'].start()
         self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
         self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
@@ -782,7 +781,7 @@ class VideoAnalysisWindow(MainTabsType):
                     self.thread_dict['VideoReader'].requestInterruption()
                     self.thread_dict['VideoReader'].wait()
                 self.message.setText(f"Arena {self.po.all['arena']}: Finalize analysis and save, wait...")
-                self.video_task = 'change_one_arena_result'
+                self.po.video_task = 'change_one_arena_result'
                 self.compute_all_options_cb.setChecked(False)
                 self.thread_dict['VideoTracking'].start()
                 self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
@@ -832,7 +831,7 @@ class VideoAnalysisWindow(MainTabsType):
                 self.po.converted_video2 = None
                 self.po.visu = None
                 self.message.setText("Complete analysis has started, wait...")
-                self.video_task = 'all'
+                self.po.video_task = 'all'
                 self.compute_all_options_cb.setChecked(False)
                 self.thread_dict['VideoTracking'].start()
                 self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)

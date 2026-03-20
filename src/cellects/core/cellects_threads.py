@@ -924,11 +924,11 @@ class VideoTrackingThread(QtCore.QThread):
 
     def run(self):
         self.status = {"continue": True, "folder": reduce_path_len(self.po.all['global_pathway'], 6, 10), "message": ""}
-        if self.parent().videoanalysiswindow.video_task == 'all':
+        if self.po.video_task == 'all':
             self.run_all()
-        elif self.parent().videoanalysiswindow.video_task == 'one_arena':
+        elif self.po.video_task == 'one_arena':
             self.run_one_arena()
-        elif self.parent().videoanalysiswindow.video_task == 'change_one_arena_result':
+        elif self.po.video_task == 'change_one_arena_result':
             self.change_one_arena_result()
 
     def run_all(self):
@@ -1134,7 +1134,7 @@ class VideoTrackingThread(QtCore.QThread):
                         if len(self.po.vars['analyzed_individuals']) != len(self.po.top):
                             self.status['message'] = f"Wrong specimen number: (re)do the complete analysis."
                             self.status['continue'] = False
-                        elif self.po.top is None and self.parent().videoanalysiswindow.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
+                        elif self.po.top is None and self.po.video_task == 'one_arena' and self.parent().imageanalysiswindow.manual_delineation_flag:
                             self.status['message'] = f"Auto video delineation failed, use manual delineation tool"
                             self.status['continue'] = False
                         else:

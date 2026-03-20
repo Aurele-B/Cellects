@@ -115,6 +115,7 @@ class ProgramOrganizer:
         self.visualize: bool = True
         self.network_shaped: bool = False
         self.update_background_luminosity: bool = False
+        self.video_task: str = 'all'
 
     def update_variable_dict(self):
         """
