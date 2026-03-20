@@ -820,7 +820,8 @@ class AdvancedParameters(WindowType):
         self.row3 = self.one_csc_editing()# Second CSC
         self.logical_operator_between_combination_result = Combobox(["None", "Or", "And", "Xor"],
                                                                     night_mode=self.po.all['night_mode'])
-        self.logical_operator_between_combination_result.setCurrentText(self.po.vars['convert_for_motion']['logical'])
+        if self.po.vars['convert_for_motion'] is not None:
+            self.logical_operator_between_combination_result.setCurrentText(self.po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
         self.logical_operator_label = FixedText(IAW["Logical_operator"]["label"], halign='c', tip=IAW["Logical_operator"]["tips"],
