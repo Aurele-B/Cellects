@@ -60,7 +60,7 @@ class TestProgramOrganizerBasicFunctions(CellectsUnitTest):
     def test_set_analyzed_individuals(self):
         self.po.sample_number = 2
         self.po.not_analyzed_individuals = [1]
-        self.po._set_analyzed_individuals()
+        self.po.set_analyzed_individuals()
 
     def test_update_available_core_nb(self):
         self.po.top, self.po.bot, self.po.left, self.po.right = [0], [10], [0], [10]

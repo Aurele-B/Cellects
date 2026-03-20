@@ -174,7 +174,7 @@ class ProgramOrganizer:
             for key, val in dd.vars['descriptors'].items():
                 if not key in self.vars['descriptors']:
                     self.vars['descriptors'][key] = val
-        self._set_analyzed_individuals()
+        self.set_analyzed_individuals()
 
     def save_variable_dict(self):
         """
@@ -384,9 +384,9 @@ class ProgramOrganizer:
             self.vars['img_number'] = len(self.data_list)
             self.sample_number = sample_number
         if not 'analyzed_individuals' in self.vars:
-            self._set_analyzed_individuals()
+            self.set_analyzed_individuals()
 
-    def _set_analyzed_individuals(self):
+    def set_analyzed_individuals(self):
         """
         Set the analyzed individuals variable in the dataset.
         """
@@ -1085,7 +1085,7 @@ class ProgramOrganizer:
         else:
             self._whole_image_bounding_boxes()
             self.sample_number = 1
-        self._set_analyzed_individuals()
+        self.set_analyzed_individuals()
         self.vars['arena_coord'] = []
         self.save_coordinates()
         return analysis_status
