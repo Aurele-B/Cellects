@@ -435,64 +435,67 @@ class ProgramOrganizer:
             data_to_run_cellects_quickly = read_json('cellects_settings.json')
             if data_to_run_cellects_quickly is None:
                 data_to_run_cellects_quickly = {}
-            if (os.path.isfile('ind_1.h5')) and (os.path.isfile('cellects_data.h5')) and ('all' in data_to_run_cellects_quickly):
-                ind1_keys = get_h5_keys('ind_1.h5')
-                cellects_data_keys = get_h5_keys('cellects_data.h5')
-                if 'origin_coord' in ind1_keys and 'arenas_coord' in cellects_data_keys and 'exif' in cellects_data_keys:
-                    logging.info("Success to load cellects_settings.json from the user chosen directory")
-                    self.all = data_to_run_cellects_quickly['all']
-                    # If you want to add a new variable, first run an updated version of all_vars_dict,
-                    # then put a breakpoint here and run the following + self.save_data_to_run_cellects_quickly() :
-                    self.vars = self.all['vars']
-                    self.update_variable_dict()
-                    folder_changed = False
-                    if current_global_pathway != self.all['global_pathway']:
-                        folder_changed = True
-                        logging.info("Although the folder is ready, it is not at the same place as it was during creation, updating")
-                        self.all['global_pathway'] = current_global_pathway
-                    if folder_number > 1:
-                        self.all['global_pathway'] = current_global_pathway
-                        self.all['folder_list'] = folder_list
-                        self.all['folder_number'] = folder_number
-                        self.all['sample_number_per_folder'] = sample_number_per_folder
-                        self.all['first_folder_sample_number'] = sample_number_per_folder[0]
-
-                    if len(self.data_list) == 0:
-                        self.look_for_data()
-                        if folder_changed and folder_number > 1 and len(self.all['folder_list']) > 0:
-                            self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
-                    if len(self.data_list) > 0:
-                        self.get_first_image()
-                        self.get_last_image()
+            if 'all' in data_to_run_cellects_quickly:
+                logging.info("Success to load cellects_settings.json from the user chosen directory")
+                self.all = data_to_run_cellects_quickly['all']
+                # If you want to add a new variable, first run an updated version of all_vars_dict,
+                # then put a breakpoint here and run the following + self.save_data_to_run_cellects_quickly() :
+                self.vars = self.all['vars']
+                self.update_variable_dict()
+                folder_changed = False
+                if current_global_pathway != self.all['global_pathway']:
+                    folder_changed = True
+                    logging.info(
+                        "Although the folder is ready, it is not at the same place as it was during creation, updating")
+                    self.all['global_pathway'] = current_global_pathway
+                if folder_number > 1:
+                    self.all['global_pathway'] = current_global_pathway
+                    self.all['folder_list'] = folder_list
+                    self.all['folder_number'] = folder_number
+                    self.all['sample_number_per_folder'] = sample_number_per_folder
+                    self.all['first_folder_sample_number'] = sample_number_per_folder[0]
+                if len(self.data_list) == 0:
+                    self.look_for_data()
+                    if folder_changed and folder_number > 1 and len(self.all['folder_list']) > 0:
+                        self.update_folder_id(self.all['sample_number_per_folder'][0], self.all['folder_list'][0])
+                if len(self.data_list) > 0:
+                    self.get_first_image()
+                    self.get_last_image()
+                if os.path.isfile('cellects_data.h5'):
+                    cellects_data_keys = get_h5_keys('cellects_data.h5')
+                    if 'arenas_coord' in cellects_data_keys:
                         self.top, self.bot, self.left, self.right = read_h5('cellects_data.h5', 'arenas_coord')
                         self.vars['arenas_coord'] = [self.top, self.bot, self.left, self.right]
-                        self.vars['exif'] = read_h5('cellects_data.h5', 'exif')
-                        self.vars['crop_coord'] = None
-                        if self.all['automatically_crop'] and 'crop_coord' in cellects_data_keys:
-                            ccy1, ccy2, ccx1, ccx2 = read_h5('cellects_data.h5', 'crop_coord')
-                            self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
-                            self.vars['crop_coord'] = self.first_image.crop_coord
-                            logging.info("Crop first image")
-                            self.first_image.automatically_crop(self.first_image.crop_coord)
-                            logging.info("Crop last image")
-                            self.last_image.automatically_crop(self.first_image.crop_coord)
-                        shapes_coord = read_h5('cellects_data.h5','validated_shapes')
-                        if shapes_coord is not None:
-                            self.first_image.validated_shapes = np.zeros(self.first_image.image.shape[:2], np.uint8)
-                            self.first_image.validated_shapes[shapes_coord[0], shapes_coord[1]] = 1
-                            self.first_image.im_combinations = []
-                            self.current_combination_id = 0
-                            self.first_image.im_combinations.append({})
-                            self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
-                            self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
-                            self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
-                            if not 'average_pixel_size' in self.vars:
-                                self.get_average_pixel_size()
-                            if not 'lighter_background' in self.vars:
-                                self.find_if_lighter_background()
-                            background = read_h5(f'ind_{1}.h5', 'background')
-                            if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
-                                self.first_exp_ready_to_run = True
+                        if 'exif' in cellects_data_keys:
+                            self.vars['exif'] = read_h5('cellects_data.h5', 'exif')
+                            self.vars['crop_coord'] = None
+                            if self.all['automatically_crop'] and 'crop_coord' in cellects_data_keys:
+                                ccy1, ccy2, ccx1, ccx2 = read_h5('cellects_data.h5', 'crop_coord')
+                                self.first_image.crop_coord = [ccy1, ccy2, ccx1, ccx2]
+                                self.vars['crop_coord'] = self.first_image.crop_coord
+                                logging.info("Crop first image")
+                                self.first_image.automatically_crop(self.first_image.crop_coord)
+                                logging.info("Crop last image")
+                                self.last_image.automatically_crop(self.first_image.crop_coord)
+                            shapes_coord = read_h5('cellects_data.h5','validated_shapes')
+                            if shapes_coord is not None:
+                                self.first_image.validated_shapes = np.zeros(self.first_image.image.shape[:2], np.uint8)
+                                self.first_image.validated_shapes[shapes_coord[0], shapes_coord[1]] = 1
+                                self.first_image.im_combinations = []
+                                self.current_combination_id = 0
+                                self.first_image.im_combinations.append({})
+                                self.first_image.im_combinations[self.current_combination_id]['csc'] = self.vars['convert_for_origin']
+                                self.first_image.im_combinations[self.current_combination_id]['binary_image'] = self.first_image.validated_shapes
+                                self.first_image.im_combinations[self.current_combination_id]['shape_number'] = data_to_run_cellects_quickly['shape_number']
+                                if not 'average_pixel_size' in self.vars:
+                                    self.get_average_pixel_size()
+                                if not 'lighter_background' in self.vars:
+                                    self.find_if_lighter_background()
+                                background = read_h5(f'ind_{1}.h5', 'background')
+                                if os.path.isfile('ind_1.h5'):
+                                    ind1_keys = get_h5_keys('ind_1.h5')
+                                    if 'origin_coord' in ind1_keys and not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
+                                        self.first_exp_ready_to_run = True
         if self.first_exp_ready_to_run:
             logging.info("The current folder is ready to run")
         else:
