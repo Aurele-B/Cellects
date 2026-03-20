@@ -397,7 +397,7 @@ class ProgramOrganizer:
 
     def load_data_to_run_cellects_quickly(self):
         """
-        Load data from a json file and update the current state of the object.
+        Load data from a .json file and update the current state of the object.
 
         Summarizes, loads, and validates data needed to run Cellects,
         updating the object's state accordingly. If the necessary data
