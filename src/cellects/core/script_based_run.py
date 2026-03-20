@@ -19,6 +19,39 @@ from cellects.utils.load_display_save import write_video_sets, readim, display_n
 from cellects.image_analysis.network_functions import NetworkDetection
 
 def generate_colony_like_video():
+    """
+    Generate a colony-like video by applying dilation operations and random color filling.
+    This function creates a binary video with randomized initial frames, dilates the
+    frames using a circular kernel to simulate colony growth over time, and then converts
+    the binary video into a colored RGB video.
+
+    Parameters
+    ----------
+    None
+
+    Other Parameters
+    ----------------
+    seed : int, optional
+        The seed for the random number generator. Defaults to 42.
+
+    ellipse_shape : tuple of int, optional
+        The shape of the ellipse used for dilation. Defaults to (7, 7).
+
+    binary_video_shape : tuple of int, optional
+        The shape of the binary video. Defaults to (20, 1000, 1000).
+
+    returns
+    -------
+    rgb_video : numpy.ndarray
+        A video with shape `(20, 1000, 1000, 3)` where each frame is represented in RGB format.
+        The video shows the growth and coloration of the colony over time.
+
+    Examples
+    --------
+    >>> rgb_video = generate_colony_like_video()
+    >>> print(rgb_video.shape)
+    (20, 1000, 1000, 3)
+    """
     np.random.seed(42)
     ellipse = create_ellipse(7, 7).astype(np.uint8)
     binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
@@ -34,6 +67,36 @@ def generate_colony_like_video():
     return rgb_video
 
 def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, radical: str='', extension: str='', im_or_vid: int=0):
+    """
+    Load data from a video (a numpy array of at least 3 dimensions) or using saved timelapse in a specified pathway.
+
+    Parameters
+    ----------
+    rgb_video : NDArray, optional
+        Numpy array representing RGB or greyscale video frames. Default is None.
+    pathway : str, optional
+        Path to the data directory. Default is an empty string leading to the data saved in Cellects' repository.
+    sample_number : int, optional
+        The number of arenas to detect in the first folder. Default is None.
+    radical : str, optional
+        The image or video pattern to look for at the beginning of their names. Default is an empty string taking all possibilities.
+    extension : str, optional
+        The image or video extension to look for. Default is an empty string taking all possibilities.
+    im_or_vid : int, optional
+        Indicator whether data is from image or video. 0 for image and 1 for video.
+        Default is 0.
+
+    Returns
+    -------
+    ProgramOrganizer
+        An instance of the ProgramOrganizer class with loaded data.
+
+    Examples
+    --------
+    >>> po = load_data(pathway="data/single_experiment", sample_number=1, radical="test", extension="jpg")
+    >>> print(po.all)
+    {'global_pathway': 'data/single_experiment', 'first_folder_sample_number': 1, 'radical': 'test', 'extension': 'jpg', 'im_or_vid': 0}
+    """
     po = ProgramOrganizer()
     if rgb_video is None:
         if len(pathway) == 0:
@@ -52,14 +115,42 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
         po.all['im_or_vid'] = 1
     return po
 
-def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
+def run_image_analysis(po, run_automatic_color_space_finding: bool=False, last_im:NDArray=None):
+    """
+    Use the first image of the timelapse to extract all necessary information for video tracking.
+
+    Do nothing if the experiment is already ready to run. Compute the Complete image analysis otherwise.
+
+    Parameters
+    ----------
+    po : object
+        The object containing current analysis parameters and connecting all methods of the software.
+    run_automatic_color_space_finding : bool, optional
+        Whether to perform automatic color space finding. Default is False.
+    last_im : NDArray, optional
+        The last image to be analyzed. Default is None, will read the last image in the folder.
+
+    Returns
+    -------
+    po : object
+        The modified object containing current analysis parameters and connecting all methods of the software.
+
+    Notes
+    -----
+    This function modifies the `po` object in place to perform various
+    image analysis tasks such as cropping, delineating arenas,
+    finding background, saving origins and backgrounds lists,
+    segmenting the first and last images, and finding lighter
+    background.
+
+    """
     if not po.first_exp_ready_to_run:
-        if PCA:
-            po.fast_first_image_segmentation()
-        else:
+        if run_automatic_color_space_finding:
             params = init_params()
             params['is_first_image'] = True
             po.first_image.find_color_space_combinations(params)
+        else:
+            po.fast_first_image_segmentation()
         po.cropping(is_first_image=True)
         po.get_average_pixel_size()
         po.delineate_each_arena()
@@ -73,8 +164,28 @@ def run_image_analysis(po, PCA: bool=True, last_im:NDArray=None):
         print('Image analysis already done, run video analysis')
     return po
 
-def run_one_video_analysis(po, with_video_in_ram: bool=False, remove_files: bool=False):
-    i=0
+def run_one_video_analysis(po, arena_id: int=1, do_segmentation: bool= True, with_video_in_ram: bool=False, remove_files: bool=False):
+    """
+    Load the video of one arena and (if required) runs motion analysis on it.
+
+    Parameters
+    ----------
+    po : object
+        The object containing current analysis parameters and connecting all methods of the software.
+    arena_id : int, optional
+        Arena ID to process. Default and first is 1.
+    do_segmentation : bool, optional
+        Whether to perform segmentation during analysis. Default is True.
+    with_video_in_ram : bool, optional
+        Whether the video is already in RAM or need to be loaded. Default is False.
+    remove_files : bool, optional
+        Whether to remove output files after processing. Default is False.
+
+    Returns
+    -------
+    MotionAnalysis
+        The Motion Analysis object containing the videos and its segmentation (if required).
+    """
     show_seg= False
     po.vars['frame_by_frame_segmentation'] = True
     po.vars['do_threshold_segmentation'] = False
@@ -85,11 +196,10 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False, remove_files: bool
     if with_video_in_ram:
         converted_video, _ = convert_subtract_and_filter_video(po.analysis_instance, po.vars['convert_for_motion'])
         videos_already_in_ram = [po.analysis_instance, converted_video]
-    segment: bool = True
-    l = [i, i + 1, po.vars, segment, False, show_seg, videos_already_in_ram]
+    l = [arena_id - 1, arena_id, po.vars, do_segmentation, False, show_seg, videos_already_in_ram]
     MA = MotionAnalysis(l)
     if MA.binary is None:
-        return None
+        return MA
     MA.get_descriptors_from_binary()
     if remove_files:
         files = insensitive_glob("colony_centroids*") + insensitive_glob("ind_*")
@@ -102,7 +212,32 @@ def run_one_video_analysis(po, with_video_in_ram: bool=False, remove_files: bool
     # MA.study_cytoscillations(show_seg)
     return MA
 
-def write_videos(po):
+def write_videos(po: object):
+    """
+    Write one video per arena in the current folder.
+
+    This method requires the first_exp_ready_to_run argument of the ProgramOrganizer instance (po) to be true.
+
+    Parameters
+    ----------
+    po : object
+        The object containing current analysis parameters and connecting all methods of the software.
+
+    Returns
+    -------
+    po : object
+        The modified object containing current analysis parameters and connecting all methods of the software.
+
+    Raises
+    ------
+    ValueError
+        If there is an issue with writing videos (e.g., insufficient memory, invalid parameters).
+
+    Notes
+    -----
+    This function updates the output list and makes a decision on whether to write videos based on certain conditions. If the decision is positive, it prepares and writes video sets.
+
+    """
     po.update_output_list()
     do_write_videos = video_writing_decision(len(po.vars['analyzed_individuals']), po.all['im_or_vid'], po.all['overwrite_unaltered_videos'])
     if do_write_videos:
@@ -118,6 +253,22 @@ def write_videos(po):
     return po
 
 def run_all_arenas(po):
+    """
+    Run analysis on all arenas and save the results.
+
+    Performs motion analysis on each arena, updates visualization,
+    saves basic statistics and descriptors in long format, and saves the tables.
+
+    Parameters
+    ----------
+    po : object
+        The object containing current analysis parameters and connecting all methods of the software.
+
+    Returns
+    -------
+    po : object
+        The modified object containing current analysis parameters and connecting all methods of the software.
+    """
     po.instantiate_tables()
     for i, arena in enumerate(po.vars['analyzed_individuals']):
         l = [i, arena, po.vars, True, True, False, None]
@@ -145,6 +296,23 @@ def run_all_arenas(po):
     return po
 
 def detect_network_in_one_image(im_path, edge_max_width, save_path=None):
+    """
+    Detect and visualize the best network detection method for a given image.
+
+    Parameters
+    ----------
+    im_path : str
+        Path to the input image.
+    edge_max_width : int
+        Maximum width of edges in pixels for network detection.
+    save_path : str or None, optional
+        Path to save the visualization of detected networks. If `None`, the visualization is not saved.
+
+    Notes
+    -----
+    This function uses image processing techniques to detect networks in a given grayscale image.
+    It then visualizes the detection results and saves them if the `save_path` is specified.
+    """
     im = readim(im_path)
     # im = im[100:870, 200:1000]
     greyscale_image = im.mean(axis=2)

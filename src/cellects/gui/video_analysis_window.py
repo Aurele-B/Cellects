@@ -25,12 +25,14 @@ from cellects.gui.ui_strings import FW, VAW
 
 
 class VideoAnalysisWindow(MainTabsType):
-    def __init__(self, parent, night_mode):
+    def __init__(self, po, parent, night_mode):
         """
         Initialize the VideoAnalysis window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -52,8 +54,7 @@ class VideoAnalysisWindow(MainTabsType):
         super().__init__(parent, night_mode)
         logging.info("Initialize VideoAnalysisWindow")
         self.setParent(parent)
-        self.thread_dict = {}
-        self.video_task: str = 'all'
+        self.po = po
         self.previous_arena = 0
         self.true_init()
 
@@ -76,8 +77,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.video_tab.set_in_use()
         self.data_tab.clicked.connect(self.data_tab_is_clicked)
         self.image_tab.clicked.connect(self.image_tab_is_clicked)
-        self.thread_dict['VideoReader'] = VideoReaderThread(self.parent())
-        self.thread_dict['VideoTracking'] = VideoTrackingThread(self.parent())
+        self.thread_dict['VideoReader'] = VideoReaderThread(self.po, self.parent())
+        self.thread_dict['VideoTracking'] = VideoTrackingThread(self.po, self.parent())
         curr_row_main_layout = 0
         self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
         curr_row_main_layout += 1
@@ -86,8 +87,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.general_step_widget = QtWidgets.QWidget()
         self.general_step_layout = QtWidgets.QHBoxLayout()
         self.current_step = 0
-        self.general_step_label = FixedText('Step 1: Tune parameters to improve Detection', night_mode=self.parent().po.all['night_mode'])
-        self.general_step_button = PButton('Done', night_mode=self.parent().po.all['night_mode'])
+        self.general_step_label = FixedText('Step 1: Tune parameters to improve Detection', night_mode=self.po.all['night_mode'])
+        self.general_step_button = PButton('Done', night_mode=self.po.all['night_mode'])
         self.general_step_button.clicked.connect(self.step_done_is_clicked)
         self.general_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.general_step_layout.addWidget(self.general_step_label)
@@ -111,13 +112,13 @@ class VideoAnalysisWindow(MainTabsType):
         self.arena_layout = QtWidgets.QHBoxLayout()
         self.arena_label = FixedText(VAW["Arena_to_analyze"]["label"] + ':',
                                        tip=VAW["Arena_to_analyze"]["tips"],
-                                       night_mode=self.parent().po.all['night_mode'])
-        sample_size = self.parent().po.all['sample_number_per_folder'][0]
-        if self.parent().po.all['arena'] > sample_size:
-            self.parent().po.all['arena'] = 1
+                                       night_mode=self.po.all['night_mode'])
+        sample_size = self.po.all['sample_number_per_folder'][0]
+        if self.po.all['arena'] > sample_size:
+            self.po.all['arena'] = 1
 
-        self.arena = Spinbox(min=1, max=1000000, val=self.parent().po.all['arena'],
-                               night_mode=self.parent().po.all['night_mode'])
+        self.arena = Spinbox(min=1, max=1000000, val=self.po.all['arena'],
+                               night_mode=self.po.all['night_mode'])
         self.arena.valueChanged.connect(self.arena_changed)
 
         self.arena_layout.addWidget(self.arena_label)
@@ -129,15 +130,15 @@ class VideoAnalysisWindow(MainTabsType):
         self.growth_per_frame_widget = QtWidgets.QWidget()
         self.growth_per_frame_layout = QtWidgets.QHBoxLayout()
         try:
-            self.parent().po.vars['maximal_growth_factor']
+            self.po.vars['maximal_growth_factor']
         except KeyError:
-            self.parent().po.vars['maximal_growth_factor'] = 0.02
-            self.parent().po.vars['repeat_video_smoothing'] = self.parent().po.vars['iterate_smoothing']
-        self.maximal_growth_factor = Spinbox(min=0, max=0.5, val=self.parent().po.vars['maximal_growth_factor'],
-                                            decimals=3, night_mode=self.parent().po.all['night_mode'])
+            self.po.vars['maximal_growth_factor'] = 0.02
+            self.po.vars['repeat_video_smoothing'] = self.po.vars['iterate_smoothing']
+        self.maximal_growth_factor = Spinbox(min=0, max=0.5, val=self.po.vars['maximal_growth_factor'],
+                                            decimals=3, night_mode=self.po.all['night_mode'])
         self.maximal_growth_factor_label = FixedText(VAW["Maximal_growth_factor"]["label"] + ':',
                                                     tip=VAW["Maximal_growth_factor"]["tips"],
-                                                    night_mode=self.parent().po.all['night_mode'])
+                                                    night_mode=self.po.all['night_mode'])
         self.maximal_growth_factor.valueChanged.connect(self.maximal_growth_factor_changed)
         self.growth_per_frame_layout.addWidget(self.maximal_growth_factor_label)
         self.growth_per_frame_layout.addWidget(self.maximal_growth_factor)
@@ -146,11 +147,11 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.iterate_widget = QtWidgets.QWidget()
         self.iterate_layout = QtWidgets.QHBoxLayout()
-        self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.parent().po.vars['repeat_video_smoothing'],
-                                         night_mode=self.parent().po.all['night_mode'])
+        self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.po.vars['repeat_video_smoothing'],
+                                         night_mode=self.po.all['night_mode'])
         self.repeat_video_smoothing_label = FixedText(VAW["Temporal_smoothing"]["label"] + ':',
                                                  tip=VAW["Temporal_smoothing"]["tips"],
-                                                 night_mode=self.parent().po.all['night_mode'])
+                                                 night_mode=self.po.all['night_mode'])
         self.repeat_video_smoothing.valueChanged.connect(self.repeat_video_smoothing_changed)
         self.iterate_layout.addWidget(self.repeat_video_smoothing_label)
         self.iterate_layout.addWidget(self.repeat_video_smoothing)
@@ -160,8 +161,8 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.select_option_label = FixedText(VAW["Segmentation_method"]["label"] + ':',
                                              tip=VAW["Segmentation_method"]["tips"],
-                                             night_mode=self.parent().po.all['night_mode'])
-        self.select_option = Combobox([], night_mode=self.parent().po.all['night_mode'])
+                                             night_mode=self.po.all['night_mode'])
+        self.select_option = Combobox([], night_mode=self.po.all['night_mode'])
         self.select_option_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.select_option.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.select_option.setFixedWidth(175)
@@ -170,7 +171,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.select_option.addItem("3. Dynamical slope")
         self.select_option.addItem("4. Threshold and Slope")
         self.select_option.addItem("5. Threshold or Slope")
-        self.select_option.setCurrentIndex(self.parent().po.all['video_option'])
+        self.select_option.setCurrentIndex(self.po.all['video_option'])
         self.select_option.currentTextChanged.connect(self.option_changed)
 
         # Open the choose best option row layout
@@ -202,8 +203,8 @@ class VideoAnalysisWindow(MainTabsType):
 
         self.compute_all_options_label = FixedText('Compute all options',
                                                    tip=VAW["Segmentation_method"]["tips"],
-                                                   night_mode=self.parent().po.all['night_mode'])
-        self.compute_all_options_cb = Checkbox(self.parent().po.all['compute_all_options'])
+                                                   night_mode=self.po.all['night_mode'])
+        self.compute_all_options_cb = Checkbox(self.po.all['compute_all_options'])
         self.compute_all_options_cb.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
@@ -223,12 +224,12 @@ class VideoAnalysisWindow(MainTabsType):
         self.right_options_layout.addWidget(self.all_options_row_widget)
 
         self.load_one_arena = PButton(VAW["Load_one_arena"]["label"], tip=VAW["Load_one_arena"]["tips"],
-                                      night_mode=self.parent().po.all['night_mode'])
+                                      night_mode=self.po.all['night_mode'])
         self.load_one_arena.clicked.connect(self.load_one_arena_is_clicked)
         self.detection_pbutton = PButton(VAW["Detection"]["label"], tip=VAW["Detection"]["tips"],
-                                 night_mode=self.parent().po.all['night_mode'])
+                                 night_mode=self.po.all['night_mode'])
         self.detection_pbutton.clicked.connect(self.detection_is_clicked)
-        self.read = PButton(VAW["Read"]["label"], tip=VAW["Read"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.read = PButton(VAW["Read"]["label"], tip=VAW["Read"]["tips"], night_mode=self.po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
         self.read.setVisible(False)
         self.right_options_layout.addWidget(self.load_one_arena, alignment=QtCore.Qt.AlignCenter)
@@ -255,19 +256,19 @@ class VideoAnalysisWindow(MainTabsType):
         self.specimen_activity_layout = QtWidgets.QHBoxLayout()
         self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"] + ':',
                                        tip=VAW["Specimen_activity"]["tips"],
-                                       night_mode=self.parent().po.all['night_mode'])
+                                       night_mode=self.po.all['night_mode'])
         self.specimen_activity = Combobox(['move', 'grow', 'move and grow'],
-                                       night_mode=self.parent().po.all['night_mode'])
+                                       night_mode=self.po.all['night_mode'])
         self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.specimen_activity.setFixedWidth(175)
-        self.specimen_activity.setCurrentText(self.parent().po.vars['specimen_activity'])
+        self.specimen_activity.setCurrentText(self.po.vars['specimen_activity'])
         self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
         self.fading_label = FixedText(VAW["Fading_detection"]["label"],
                                        tip=VAW["Fading_detection"]["tips"] + ':',
-                                       night_mode=self.parent().po.all['night_mode'])
-        self.fading = Spinbox(min=- 1, max=1, val=self.parent().po.vars['fading'], decimals=2,
-                               night_mode=self.parent().po.all['night_mode'])
+                                       night_mode=self.po.all['night_mode'])
+        self.fading = Spinbox(min=- 1, max=1, val=self.po.vars['fading'], decimals=2,
+                               night_mode=self.po.all['night_mode'])
         self.fading.valueChanged.connect(self.fading_changed)
         self.specimen_activity_layout.addWidget(self.specimen_activity_label)
         self.specimen_activity_layout.addWidget(self.specimen_activity)
@@ -278,12 +279,12 @@ class VideoAnalysisWindow(MainTabsType):
         self.second_step_layout.addWidget(self.specimen_activity_widget)
 
         self.post_processing = PButton(VAW["Post_processing"]["label"], tip=VAW["Post_processing"]["tips"],
-                                       night_mode=self.parent().po.all['night_mode'])
+                                       night_mode=self.po.all['night_mode'])
         self.post_processing.clicked.connect(self.post_processing_is_clicked)
         self.second_step_layout.addWidget(self.post_processing)
 
         self.save_one_result = PButton(VAW["Save_one_result"]["label"], tip=VAW["Save_one_result"]["tips"],
-                                       night_mode=self.parent().po.all['night_mode'])
+                                       night_mode=self.po.all['night_mode'])
         self.save_one_result.clicked.connect(self.save_one_result_is_clicked)
         self.second_step_layout.addWidget(self.save_one_result)
 
@@ -302,19 +303,19 @@ class VideoAnalysisWindow(MainTabsType):
         self.last_options_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
 
         self.advanced_parameters = PButton(FW["Advanced_parameters"]["label"], tip=FW["Advanced_parameters"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
+                                           night_mode=self.po.all['night_mode'])
         self.advanced_parameters.clicked.connect(self.advanced_parameters_is_clicked)
         self.last_options_layout.addWidget(self.advanced_parameters)
 
         #  Required Outputs widget
         self.required_outputs = PButton(FW["Required_outputs"]["label"], tip=FW["Required_outputs"]["tips"],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        night_mode=self.po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         self.last_options_layout.addWidget(self.required_outputs)
 
         #  Save all choices widget
         self.save_all_vars = PButton(VAW["Save_all_choices"]["label"], tip=VAW["Save_all_choices"]["tips"],
-                                     night_mode=self.parent().po.all['night_mode'])
+                                     night_mode=self.po.all['night_mode'])
         self.save_all_vars.clicked.connect(self.save_current_settings)
         self.last_options_layout.addWidget(self.save_all_vars)
 
@@ -329,11 +330,11 @@ class VideoAnalysisWindow(MainTabsType):
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
         self.message.setAlignment(QtCore.Qt.AlignLeft)
 
-        self.previous = PButton('Previous', night_mode=self.parent().po.all['night_mode'])
+        self.previous = PButton('Previous', night_mode=self.po.all['night_mode'])
         self.previous.clicked.connect(self.previous_is_clicked)
 
         self.run_all = PButton(VAW["Run_All"]["label"], tip=VAW["Run_All"]["tips"],
-                               night_mode=self.parent().po.all['night_mode'])
+                               night_mode=self.po.all['night_mode'])
         self.run_all.clicked.connect(self.run_all_is_clicked)
 
         # Open last row widget
@@ -354,9 +355,9 @@ class VideoAnalysisWindow(MainTabsType):
         """
         Display Conditionally Visible Widgets
         """
-        self.select_option_label.setVisible(self.parent().po.vars["color_number"] == 2)
-        self.select_option.setVisible(self.parent().po.vars["color_number"] == 2)
-        do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+        self.select_option_label.setVisible(self.po.vars["color_number"] == 2)
+        self.select_option.setVisible(self.po.vars["color_number"] == 2)
+        do_fading = self.po.vars['specimen_activity'] == 'move and grow'
         self.fading.setVisible(do_fading)
         self.fading_label.setVisible(do_fading)
 
@@ -378,7 +379,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.general_step_label.setText('Step 2: Tune fading and advanced parameters to improve Post processing')
             self.general_step_label.setToolTip('Post processing is slower than Detection.\nIt improves detection with the following optional algorithms:\n - Fading detection\n - Correct errors around initial shape\n - Organism internal oscillation period\n - Connect distant shape\n - Appearing cell selection')
             self.second_step_widget.setVisible(True)
-            do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+            do_fading = self.po.vars['specimen_activity'] == 'move and grow'
             self.fading.setVisible(do_fading)
             self.fading_label.setVisible(do_fading)
             self.save_one_result.setVisible(False)
@@ -427,31 +428,31 @@ class VideoAnalysisWindow(MainTabsType):
             self.thread_dict['VideoReader'].requestInterruption()
             self.thread_dict['VideoReader'].wait()
             self.message.setText("")
-        self.parent().po.all['video_option'] = self.select_option.currentIndex()
-        self.parent().po.vars['frame_by_frame_segmentation'] = False
-        self.parent().po.vars['do_threshold_segmentation'] = False
-        self.parent().po.vars['do_slope_segmentation'] = False
+        self.po.all['video_option'] = self.select_option.currentIndex()
+        self.po.vars['frame_by_frame_segmentation'] = False
+        self.po.vars['do_threshold_segmentation'] = False
+        self.po.vars['do_slope_segmentation'] = False
 
-        if self.parent().po.vars['color_number'] > 2 or self.parent().po.all['video_option'] == 0:
-            logging.info(f"This option will detect {self.parent().po.vars['color_number']} distinct luminosity groups for each frame.")
-            self.parent().po.vars['frame_by_frame_segmentation'] = True
+        if self.po.vars['color_number'] > 2 or self.po.all['video_option'] == 0:
+            logging.info(f"This option will detect {self.po.vars['color_number']} distinct luminosity groups for each frame.")
+            self.po.vars['frame_by_frame_segmentation'] = True
         else:
-            self.parent().po.vars['frame_by_frame_segmentation'] = False
-            if self.parent().po.all['video_option'] == 1:
-                logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
-                self.parent().po.vars['do_threshold_segmentation'] = True
-            elif self.parent().po.all['video_option'] == 2:
-                logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
-                self.parent().po.vars['do_slope_segmentation'] = True
-            elif self.parent().po.all['video_option'] > 2:
-                self.parent().po.vars['do_threshold_segmentation'] = True
-                self.parent().po.vars['do_slope_segmentation'] = True
-                if self.parent().po.all['video_option'] == 3:
-                    logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
-                    self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = True
-                elif self.parent().po.all['video_option'] == 4:
-                    logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.parent().po.vars['maximal_growth_factor']}")
-                    self.parent().po.vars['true_if_use_light_AND_slope_else_OR'] = False
+            self.po.vars['frame_by_frame_segmentation'] = False
+            if self.po.all['video_option'] == 1:
+                logging.info(f"This option will detect cell(s) using a dynamic threshold algorithm with a maximal growth factor of {self.po.vars['maximal_growth_factor']}")
+                self.po.vars['do_threshold_segmentation'] = True
+            elif self.po.all['video_option'] == 2:
+                logging.info(f"This option will detect cell(s) using a dynamic slope algorithm with a maximal growth factor of {self.po.vars['maximal_growth_factor']}")
+                self.po.vars['do_slope_segmentation'] = True
+            elif self.po.all['video_option'] > 2:
+                self.po.vars['do_threshold_segmentation'] = True
+                self.po.vars['do_slope_segmentation'] = True
+                if self.po.all['video_option'] == 3:
+                    logging.info(f"This option will detect cell(s) using the dynamic threshold AND slope algorithms with a maximal growth factor of {self.po.vars['maximal_growth_factor']}")
+                    self.po.vars['true_if_use_light_AND_slope_else_OR'] = True
+                elif self.po.all['video_option'] == 4:
+                    logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.po.vars['maximal_growth_factor']}")
+                    self.po.vars['true_if_use_light_AND_slope_else_OR'] = False
 
     def data_tab_is_clicked(self):
         """
@@ -485,7 +486,7 @@ class VideoAnalysisWindow(MainTabsType):
             else:
                 # Reset the VideoTracking thread for one arena
                 if not self.thread_dict['VideoTracking'].isRunning():
-                    self.parent().po.motion = None
+                    self.po.motion = None
                 self.parent().last_tab = "video_analysis"
                 self.parent().change_widget(2)
                 self.parent().imageanalysiswindow.advanced_mode_cb.setVisible(True)
@@ -505,7 +506,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         # Reset the VideoTracking thread for one arena
         if not self.thread_dict['VideoTracking'].isRunning():
-            self.parent().po.motion = None
+            self.po.motion = None
         self.parent().last_is_first = False
         self.parent().widget(5).update_csc_editing_display()
         self.parent().change_widget(5)  # AdvancedParameters
@@ -549,11 +550,11 @@ class VideoAnalysisWindow(MainTabsType):
         them in a persistent data structure to ensure settings are saved across
         sessions.
         """
-        self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
-        self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
-        self.parent().po.vars['specimen_activity'] = self.specimen_activity.currentText()
-        self.parent().po.vars['fading'] = self.fading.value()
-        self.parent().po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
+        self.po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
+        self.po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
+        self.po.vars['specimen_activity'] = self.specimen_activity.currentText()
+        self.po.vars['fading'] = self.fading.value()
+        self.po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
         self.option_changed()
         self.save_all_vars_thread()
 
@@ -562,14 +563,14 @@ class VideoAnalysisWindow(MainTabsType):
         Save the repeat_video_smoothing spinbox value to set how many times the pixel intensity dynamics will be
         smoothed.
         """
-        self.parent().po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
+        self.po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
 
     def specimen_activity_changed(self):
         """
         Save the fading checkbox value to allow cases where pixels can be left by the specimen(s).
         """
-        self.parent().po.vars['specimen_activity'] = self.specimen_activity.currentText()
-        do_fading = self.parent().po.vars['specimen_activity'] == 'move and grow'
+        self.po.vars['specimen_activity'] = self.specimen_activity.currentText()
+        do_fading = self.po.vars['specimen_activity'] == 'move and grow'
         self.fading_label.setVisible(do_fading)
         self.fading.setVisible(do_fading)
 
@@ -577,13 +578,13 @@ class VideoAnalysisWindow(MainTabsType):
         """
         Save the fading spinbox value to modify how intensity must decrease to detect a pixel left by the specimen(s).
         """
-        self.parent().po.vars['fading'] = self.fading.value()
+        self.po.vars['fading'] = self.fading.value()
 
     def maximal_growth_factor_changed(self):
         """
         Save the maximal_growth_factor spinbox value to modulate the maximal growth between two frames.
         """
-        self.parent().po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
+        self.po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
 
     def arena_changed(self):
         """
@@ -602,10 +603,10 @@ class VideoAnalysisWindow(MainTabsType):
                 self.thread_dict['VideoReader'].requestInterruption()
                 self.thread_dict['VideoReader'].wait()
                 self.message.setText("")
-            self.parent().po.motion = None
+            self.po.motion = None
             self.reset_general_step()
-            self.parent().po.computed_video_options = np.zeros(5, bool)
-            self.parent().po.all['arena'] = int(np.round(self.arena.value()))
+            self.po.computed_video_options = np.zeros(5, bool)
+            self.po.all['arena'] = int(np.round(self.arena.value()))
 
     def load_one_arena_is_clicked(self):
         """
@@ -617,14 +618,14 @@ class VideoAnalysisWindow(MainTabsType):
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             self.reset_general_step()
-            self.parent().po.load_quick_full = 0
+            self.po.load_quick_full = 0
             self.run_one_arena_thread()
 
     def compute_all_options_check(self):
         """
         Save the compute_all_options checkbox value to process every video segmentation algorithms during the next run.
         """
-        self.parent().po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
+        self.po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
 
     def detection_is_clicked(self):
         """
@@ -644,7 +645,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             self.reset_general_step()
-            self.parent().po.load_quick_full = 1
+            self.po.load_quick_full = 1
             self.run_one_arena_thread()
 
     def post_processing_is_clicked(self):
@@ -659,7 +660,7 @@ class VideoAnalysisWindow(MainTabsType):
         if self.thread_dict['VideoTracking'].isRunning():
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
-            self.parent().po.load_quick_full = 2
+            self.po.load_quick_full = 2
             self.run_one_arena_thread()
 
     def run_one_arena_thread(self):
@@ -680,9 +681,9 @@ class VideoAnalysisWindow(MainTabsType):
             self.thread_dict['VideoReader'].wait()
         self.message.setText("Load the video and initialize analysis, wait...")
         self.save_current_settings()
-        if self.previous_arena != self.parent().po.all['arena']:
-            self.parent().po.motion = None
-        self.video_task = 'one_arena'
+        if self.previous_arena != self.po.all['arena']:
+            self.po.motion = None
+        self.po.video_task = 'one_arena'
         self.thread_dict['VideoTracking'].start()
         self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
         self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
@@ -699,11 +700,11 @@ class VideoAnalysisWindow(MainTabsType):
         'arena' key and a `load_quick_full` attribute. It also assumes that the
         parent object has a 'thread' dictionary and a message UI component.
         """
-        self.previous_arena = self.parent().po.all['arena']
+        self.previous_arena = self.po.all['arena']
         if save_loaded_video:
-            self.thread_dict['WriteVideo'] = WriteVideoThread(self.parent())
+            self.thread_dict['WriteVideo'] = WriteVideoThread(self.po, self.parent())
             self.thread_dict['WriteVideo'].start()
-        if self.parent().po.load_quick_full == 0:
+        if self.po.load_quick_full == 0:
             self.message.setText("Loading done, you can watch the video")
         self.read.setVisible(True)
 
@@ -728,23 +729,23 @@ class VideoAnalysisWindow(MainTabsType):
         This function assumes that the parent object has attributes `po` and
         `image_to_display`, and methods like `display_image.update_image`.
         """
-        self.previous_arena = self.parent().po.all['arena']
+        self.previous_arena = self.po.all['arena']
         if self.thread_dict['VideoReader'].isRunning():  # VideoReaderThreadInThirdWidget
             self.thread_dict['VideoReader'].wait()
-        if self.parent().po.load_quick_full > 0:
-            image = self.parent().po.motion.segmented[-1, ...]
-        if self.parent().po.motion.visu is None:
-            image = self.parent().po.motion.converted_video[-1, ...] * (1 - image)
+        if self.po.load_quick_full > 0:
+            image = self.po.motion.segmented[-1, ...]
+        if self.po.motion.visu is None:
+            image = self.po.motion.converted_video[-1, ...] * (1 - image)
             image = np.round(image).astype(np.uint8)
             image = np.stack((image, image, image), axis=2)
         else:
             image = np.stack((image, image, image), axis=2)
-            image = self.parent().po.motion.visu[-1, ...] * (1 - image)
+            image = self.po.motion.visu[-1, ...] * (1 - image)
         self.parent().image_to_display = image
         self.display_image.update_image(image)
         self.message.setText(message)
-        self.select_option_label.setVisible(self.parent().po.vars["color_number"] == 2)
-        self.select_option.setVisible(self.parent().po.vars["color_number"] == 2)
+        self.select_option_label.setVisible(self.po.vars["color_number"] == 2)
+        self.select_option.setVisible(self.po.vars["color_number"] == 2)
         self.read.setVisible(True)
 
     def display_image_during_thread(self, dictionary: dict):
@@ -773,14 +774,14 @@ class VideoAnalysisWindow(MainTabsType):
         if self.thread_dict['VideoTracking'].isRunning():
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
-            if self.parent().po.motion is None or self.parent().po.load_quick_full < 2:
+            if self.po.motion is None or self.po.load_quick_full < 2:
                 self.message.setText("Run Post processing first")
             else:
                 if self.thread_dict['VideoReader'].isRunning():
                     self.thread_dict['VideoReader'].requestInterruption()
                     self.thread_dict['VideoReader'].wait()
-                self.message.setText(f"Arena {self.parent().po.all['arena']}: Finalize analysis and save, wait...")
-                self.video_task = 'change_one_arena_result'
+                self.message.setText(f"Arena {self.po.all['arena']}: Finalize analysis and save, wait...")
+                self.po.video_task = 'change_one_arena_result'
                 self.compute_all_options_cb.setChecked(False)
                 self.thread_dict['VideoTracking'].start()
                 self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
@@ -793,7 +794,7 @@ class VideoAnalysisWindow(MainTabsType):
         This function checks if the detection has been run and if the video reader or analysis thread is running.
         If both threads are idle, it starts the video reading process. Otherwise, it updates the message accordingly.
         """
-        if self.parent().po.motion is None or self.parent().po.motion.segmented is None:
+        if self.po.motion is None or self.po.motion.segmented is None:
             self.message.setText("Run detection first")
         else:
             if self.thread_dict['VideoReader'].isRunning():
@@ -825,12 +826,12 @@ class VideoAnalysisWindow(MainTabsType):
                 self.message.setText('Analysis has already begun in the first window.')
             else:
                 self.save_current_settings()
-                self.parent().po.motion = None
-                self.parent().po.converted_video = None
-                self.parent().po.converted_video2 = None
-                self.parent().po.visu = None
+                self.po.motion = None
+                self.po.converted_video = None
+                self.po.converted_video2 = None
+                self.po.visu = None
                 self.message.setText("Complete analysis has started, wait...")
-                self.video_task = 'all'
+                self.po.video_task = 'all'
                 self.compute_all_options_cb.setChecked(False)
                 self.thread_dict['VideoTracking'].start()
                 self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)

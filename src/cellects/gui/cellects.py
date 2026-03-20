@@ -106,14 +106,14 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             the code and should not be set directly.
         """
         logging.info("Instantiate Cellects")
-        self.firstwindow = FirstWindow(
+        self.firstwindow = FirstWindow(self.po,
             self,
             night_mode=self.po.all['night_mode'])
         self.insertWidget(0, self.firstwindow)
 
         self.instantiate_widgets()
 
-        self.thread_dict['SaveAllVars'] = SaveAllVarsThread(self)
+        self.thread_dict['SaveAllVars'] = SaveAllVarsThread(self.po, self)
         self.change_widget(0)
         self.center()
 
@@ -131,18 +131,18 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         """
         logging.info("Other widgets are instantiating")
         if several_folder_included:
-            self.ifseveralfolderswindow = IfSeveralFoldersWindow(self, night_mode=self.po.all['night_mode'])
+            self.ifseveralfolderswindow = IfSeveralFoldersWindow(self.po, self, night_mode=self.po.all['night_mode'])
             self.insertWidget(1, self.ifseveralfolderswindow)
-        self.imageanalysiswindow = ImageAnalysisWindow(self, night_mode=self.po.all['night_mode'])
+        self.imageanalysiswindow = ImageAnalysisWindow(self.po, self, night_mode=self.po.all['night_mode'])
         self.insertWidget(2, self.imageanalysiswindow)
 
-        self.videoanalysiswindow = VideoAnalysisWindow(self, night_mode=self.po.all['night_mode'])
+        self.videoanalysiswindow = VideoAnalysisWindow(self.po, self, night_mode=self.po.all['night_mode'])
         self.insertWidget(3, self.videoanalysiswindow)
 
-        self.requiredoutputwindow = RequiredOutput(self, night_mode=self.po.all['night_mode'])
+        self.requiredoutputwindow = RequiredOutput(self.po, self, night_mode=self.po.all['night_mode'])
         self.insertWidget(4, self.requiredoutputwindow)
 
-        self.advancedparameterswindow = AdvancedParameters(self, night_mode=self.po.all['night_mode'])
+        self.advancedparameterswindow = AdvancedParameters(self.po, self, night_mode=self.po.all['night_mode'])
         self.insertWidget(5, self.advancedparameterswindow)
 
 

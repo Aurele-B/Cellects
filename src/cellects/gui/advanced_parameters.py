@@ -35,12 +35,14 @@ class AdvancedParameters(WindowType):
         some parameters stored in the directory po.all (in RAM) and in cellects_settings.json (in ROM).
         Clicking "Ok" save the directory in RAM and in ROM.
     """
-    def __init__(self, parent, night_mode):
+    def __init__(self, po, parent, night_mode):
         """
         Initialize the AdvancedParameters window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -60,14 +62,14 @@ class AdvancedParameters(WindowType):
         >>> sys.exit(app.exec())
         """
         super().__init__(parent, night_mode)
-
         self.setParent(parent)
+        self.po = po
         try:
             self.true_init()
         except KeyError:
             default_dicts = DefaultDicts()
-            self.parent().po.all = default_dicts.all
-            self.parent().po.vars = default_dicts.vars
+            self.po.all = default_dicts.all
+            self.po.vars = default_dicts.vars
             self.true_init()
 
     def true_init(self):
@@ -97,7 +99,7 @@ class AdvancedParameters(WindowType):
         self.left_col_widget = QtWidgets.QWidget()
         self.right_col_widget = QtWidgets.QWidget()
         # Create the main Title
-        self.title = FixedText('Advanced parameters', police=30, night_mode=self.parent().po.all['night_mode'])
+        self.title = FixedText('Advanced parameters', police=30, night_mode=self.po.all['night_mode'])
         self.title.setAlignment(QtCore.Qt.AlignHCenter)
         # Create the main layout
         self.layout.addWidget(self.title)
@@ -112,25 +114,25 @@ class AdvancedParameters(WindowType):
         # I/ First box: General parameters
         # I/A/ Title
         self.image_param_box_label = FixedText('Image parameters:', tip="",
-                                         night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
         self.left_col_layout.addWidget(self.image_param_box_label)
         # I/B/ Create the box
         self.image_param_box_layout = QtWidgets.QGridLayout()
         self.image_param_box_widget = QtWidgets.QWidget()
         self.image_param_box_widget.setStyleSheet(boxstylesheet)
         # I/C/ Create widgets
-        self.automatically_crop = Checkbox(self.parent().po.all['automatically_crop'])
+        self.automatically_crop = Checkbox(self.po.all['automatically_crop'])
         self.automatically_crop_label = FixedText(AP["Crop_images"]["label"], tip=AP["Crop_images"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
-        self.subtract_background = Checkbox(self.parent().po.vars['subtract_background'])
+        self.subtract_background = Checkbox(self.po.vars['subtract_background'])
         self.subtract_background.stateChanged.connect(self.subtract_background_check)
-        self.subtract_background_label = FixedText(AP["Subtract_background"]["label"], tip=AP["Subtract_background"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.subtract_background_label = FixedText(AP["Subtract_background"]["label"], tip=AP["Subtract_background"]["tips"], night_mode=self.po.all['night_mode'])
 
-        self.all_specimens_have_same_direction = Checkbox(self.parent().po.all['all_specimens_have_same_direction'])
+        self.all_specimens_have_same_direction = Checkbox(self.po.all['all_specimens_have_same_direction'])
         self.all_specimens_have_same_direction_label = FixedText(AP["Specimens_have_same_direction"]["label"],
                                                          tip=AP["Specimens_have_same_direction"]["tips"],
-                                                         night_mode=self.parent().po.all['night_mode'])
+                                                         night_mode=self.po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
         self.image_param_box_layout.addWidget(self.automatically_crop, 0, 0)
@@ -146,7 +148,7 @@ class AdvancedParameters(WindowType):
         # II/ Second box: One cell/colony per arena
         # II/A/ Title
         self.post_processing_label = FixedText('Post processing parameters:', tip="",
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
         self.left_col_layout.addWidget(self.post_processing_label)
         # II/B/ Create the box
         self.post_processing_box_layout = QtWidgets.QGridLayout()
@@ -154,87 +156,87 @@ class AdvancedParameters(WindowType):
         self.post_processing_box_widget.setStyleSheet(boxstylesheet)
 
         # II/C/ Create widgets
-        self.sliding_window_segmentation = Checkbox(self.parent().po.vars['sliding_window_segmentation'])
+        self.sliding_window_segmentation = Checkbox(self.po.vars['sliding_window_segmentation'])
         self.sliding_window_segmentation_label = FixedText(AP["Sliding_window_segmentation"]["label"],
                                                tip=AP["Sliding_window_segmentation"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
-        self.morphological_opening = Checkbox(self.parent().po.vars['morphological_opening'])
+        self.morphological_opening = Checkbox(self.po.vars['morphological_opening'])
         self.morphological_opening_label = FixedText(AP["Morphological_opening"]["label"],
                                                tip=AP["Morphological_opening"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
-        self.morphological_closing = Checkbox(self.parent().po.vars['morphological_closing'])
+        self.morphological_closing = Checkbox(self.po.vars['morphological_closing'])
         self.morphological_closing_label = FixedText(AP["Morphological_closing"]["label"],
                                                tip=AP["Morphological_closing"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
-        self.correct_errors_around_initial = Checkbox(self.parent().po.vars['correct_errors_around_initial'])
+        self.correct_errors_around_initial = Checkbox(self.po.vars['correct_errors_around_initial'])
         self.correct_errors_around_initial_label = FixedText(AP["Correct_errors_around_initial"]["label"],
                                                tip=AP["Correct_errors_around_initial"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
-        self.prevent_fast_growth_near_periphery = Checkbox(self.parent().po.vars['prevent_fast_growth_near_periphery'])
+        self.prevent_fast_growth_near_periphery = Checkbox(self.po.vars['prevent_fast_growth_near_periphery'])
         self.prevent_fast_growth_near_periphery_label = FixedText(AP["Prevent_fast_growth_near_periphery"]["label"],
                                                tip=AP["Prevent_fast_growth_near_periphery"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
         self.prevent_fast_growth_near_periphery.stateChanged.connect(self.prevent_fast_growth_near_periphery_check)
-        self.periphery_width = Spinbox(min=1, max=1000, val=self.parent().po.vars['periphery_width'],
-                                            decimals=0, night_mode=self.parent().po.all['night_mode'])
+        self.periphery_width = Spinbox(min=1, max=1000, val=self.po.vars['periphery_width'],
+                                            decimals=0, night_mode=self.po.all['night_mode'])
         self.periphery_width_label = FixedText('Periphery width',
                                                tip="The width, in pixels, of the arena s border designated as the peripheral region",
-                                               night_mode=self.parent().po.all['night_mode'])
-        self.max_periphery_growth = Spinbox(min=1, max=1000000, val=self.parent().po.vars['max_periphery_growth'],
-                                            decimals=0, night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
+        self.max_periphery_growth = Spinbox(min=1, max=1000000, val=self.po.vars['max_periphery_growth'],
+                                            decimals=0, night_mode=self.po.all['night_mode'])
         self.max_periphery_growth_label = FixedText('Max periphery growth',
                                                tip="The maximum detectable size (in pixels) of a shape in a single frame near the periphery of the arena.\nLarger shapes will be considered as noise.",
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
         self.prevent_fast_growth_near_periphery_check()
 
-        connect_distant_shape = self.parent().po.all['connect_distant_shape_during_segmentation']
+        connect_distant_shape = self.po.all['connect_distant_shape_during_segmentation']
         self.connect_distant_shape_during_segmentation = Checkbox(connect_distant_shape)
         self.connect_distant_shape_during_segmentation.stateChanged.connect(self.do_distant_shape_int_changed)
         self.connect_distant_shape_label = FixedText(AP["Connect_distant_shapes"]["label"],
                                                          tip=AP["Connect_distant_shapes"]["tips"],
-                                                         night_mode=self.parent().po.all['night_mode'])
+                                                         night_mode=self.po.all['night_mode'])
         self.detection_range_factor = Spinbox(min=0, max=1000000,
-                                                      val=self.parent().po.vars['detection_range_factor'],
-                                                      night_mode=self.parent().po.all['night_mode'])
+                                                      val=self.po.vars['detection_range_factor'],
+                                                      night_mode=self.po.all['night_mode'])
         self.detection_range_factor_label = FixedText('Detection range factor:',
                                                               tip="From 1 to 10, increase the allowed distance from original shape(s) to connect distant shapes",
-                                                              night_mode=self.parent().po.all['night_mode'])
+                                                              night_mode=self.po.all['night_mode'])
 
         # Connect distant shape algo:
-        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and connect_distant_shape
-        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and connect_distant_shape
-        self.use_max_size = Checkbox(do_use_max_size, night_mode=self.parent().po.all['night_mode'])
-        self.use_min_size = Checkbox(do_use_min_size, night_mode=self.parent().po.all['night_mode'])
+        do_use_max_size = self.po.vars['max_size_for_connection'] is not None and connect_distant_shape
+        do_use_min_size = self.po.vars['min_size_for_connection'] is not None and connect_distant_shape
+        self.use_max_size = Checkbox(do_use_max_size, night_mode=self.po.all['night_mode'])
+        self.use_min_size = Checkbox(do_use_min_size, night_mode=self.po.all['night_mode'])
         self.use_max_size.stateChanged.connect(self.use_max_size_changed)
         self.use_min_size.stateChanged.connect(self.use_min_size_changed)
 
         self.use_max_size_label = FixedText('Use max size as a threshold',
                                             tip="To decide whether distant shapes should get connected",
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
         self.use_min_size_label = FixedText('Use min size as a threshold',
                                             tip="To decide whether distant shapes should get connected",
-                                            night_mode=self.parent().po.all['night_mode'])
-        self.max_size_for_connection_label = FixedText('Max (pixels):', night_mode=self.parent().po.all['night_mode'])
-        self.min_size_for_connection_label = FixedText('Min (pixels):', night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
+        self.max_size_for_connection_label = FixedText('Max (pixels):', night_mode=self.po.all['night_mode'])
+        self.min_size_for_connection_label = FixedText('Min (pixels):', night_mode=self.po.all['night_mode'])
         if do_use_max_size:
             self.max_size_for_connection = Spinbox(min=0, max=1000000,
-                                                  val=self.parent().po.vars['max_size_for_connection'],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  val=self.po.vars['max_size_for_connection'],
+                                                  night_mode=self.po.all['night_mode'])
         else:
             self.max_size_for_connection = Spinbox(min=0, max=1000000, val=50,
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
         if do_use_min_size:
             self.min_size_for_connection = Spinbox(min=0, max=1000000,
-                                                  val=self.parent().po.vars['min_size_for_connection'],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  val=self.po.vars['min_size_for_connection'],
+                                                  night_mode=self.po.all['night_mode'])
         else:
             self.min_size_for_connection = Spinbox(min=0, max=1000000, val=0,
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
         self.use_min_size.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
@@ -303,7 +305,7 @@ class AdvancedParameters(WindowType):
         # III/ Third box: Appearing cell/colony
         # III/A/ Title
         self.appearing_cell_label = FixedText('Appearing cell/colony parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
+                                              night_mode=self.po.all['night_mode'])
 
         self.left_col_layout.addWidget(self.appearing_cell_label)
         # III/B/ Create the box
@@ -312,21 +314,21 @@ class AdvancedParameters(WindowType):
         self.appearing_cell_box_widget.setStyleSheet(boxstylesheet)
 
         # III/C/ Create widgets
-        self.first_move_threshold = Spinbox(min=0, max=1000000, val=self.parent().po.all['first_move_threshold_in_mm²'],
-                                            decimals=6, night_mode=self.parent().po.all['night_mode'])
+        self.first_move_threshold = Spinbox(min=0, max=1000000, val=self.po.all['first_move_threshold_in_mm²'],
+                                            decimals=6, night_mode=self.po.all['night_mode'])
         self.first_move_threshold_label = FixedText('Minimal size to detect a cell/colony',
                                                     tip="In mm². All appearing cell/colony lesser than this value will be considered as noise",
-                                                    night_mode=self.parent().po.all['night_mode'])
-        self.do_automatic_size_thresholding = Checkbox(self.parent().po.all['automatic_size_thresholding'])
+                                                    night_mode=self.po.all['night_mode'])
+        self.do_automatic_size_thresholding = Checkbox(self.po.all['automatic_size_thresholding'])
         self.do_automatic_size_thresholding_label = FixedText(AP["Appearance_size_threshold"]["label"],
                                                               tip=AP["Appearance_size_threshold"]["tips"],
-                                                              night_mode=self.parent().po.all['night_mode'])
+                                                              night_mode=self.po.all['night_mode'])
         self.do_automatic_size_thresholding.stateChanged.connect(self.do_automatic_size_thresholding_changed)
-        self.appearing_selection = Combobox(["largest", "most_central"], night_mode=self.parent().po.all['night_mode'])
+        self.appearing_selection = Combobox(["largest", "most_central"], night_mode=self.po.all['night_mode'])
         self.appearing_selection_label = FixedText(AP["Appearance_detection_method"]["label"],
                                                    tip=AP["Appearance_detection_method"]["tips"],
-                                                   night_mode=self.parent().po.all['night_mode'])
-        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
+                                                   night_mode=self.po.all['night_mode'])
+        self.appearing_selection.setCurrentText(self.po.vars['appearance_detection_method'])
         self.appearing_selection.setFixedWidth(190)
 
         # III/D/ Arrange widgets in the box
@@ -348,52 +350,52 @@ class AdvancedParameters(WindowType):
         # IV/A/ Title
         self.rolling_window_s_label = FixedText(IAW["Rolling_window_segmentation"]["label"] + ': (auto if checked)',
                                                 tip=IAW["Rolling_window_segmentation"]["tips"],
-                                              night_mode=self.parent().po.all['night_mode'])
+                                              night_mode=self.po.all['night_mode'])
         self.left_col_layout.addWidget(self.rolling_window_s_label)
         self.rolling_window_s_layout = QtWidgets.QGridLayout()
         self.rolling_window_s_widget = QtWidgets.QWidget()
         self.rolling_window_s_widget.setStyleSheet(boxstylesheet)
-        self.mesh_side_length_cb = Checkbox(self.parent().po.all['auto_mesh_side_length'],
-                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_side_length_cb = Checkbox(self.po.all['auto_mesh_side_length'],
+                                        night_mode=self.po.all['night_mode'])
         self.mesh_side_length_cb.stateChanged.connect(self.mesh_side_length_cb_changed)
         self.mesh_side_length_label = FixedText(AP["Mesh_side_length"]["label"], tip=AP["Mesh_side_length"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
-        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+                                                night_mode=self.po.all['night_mode'])
+        if self.po.vars['rolling_window_segmentation']['side_len'] is None:
             self.mesh_side_length = Spinbox(min=0, max=1000000, val=4, decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
             self.mesh_side_length.setVisible(False)
         else:
-            self.mesh_side_length = Spinbox(min=0, max=1000000, val=self.parent().po.vars['rolling_window_segmentation']['side_len'], decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_side_length = Spinbox(min=0, max=1000000, val=self.po.vars['rolling_window_segmentation']['side_len'], decimals=0,
+                                            night_mode=self.po.all['night_mode'])
 
 
-        self.mesh_step_length_cb = Checkbox(self.parent().po.all['auto_mesh_step_length'],
-                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_step_length_cb = Checkbox(self.po.all['auto_mesh_step_length'],
+                                        night_mode=self.po.all['night_mode'])
         self.mesh_step_length_cb.stateChanged.connect(self.mesh_step_length_cb_changed)
         self.mesh_step_length_label = FixedText(AP["Mesh_step_length"]["label"], tip=AP["Mesh_step_length"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
-        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+                                                night_mode=self.po.all['night_mode'])
+        if self.po.vars['rolling_window_segmentation']['side_len'] is None:
             self.mesh_step_length = Spinbox(min=0, max=1000, val=2, decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
             self.mesh_step_length.setVisible(False)
         else:
-            self.mesh_step_length = Spinbox(min=0, max=1000, val=self.parent().po.vars['rolling_window_segmentation']['step'], decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_step_length = Spinbox(min=0, max=1000, val=self.po.vars['rolling_window_segmentation']['step'], decimals=0,
+                                            night_mode=self.po.all['night_mode'])
 
 
-        self.mesh_min_int_var_cb = Checkbox(self.parent().po.all['auto_mesh_min_int_var'],
-                                        night_mode=self.parent().po.all['night_mode'])
+        self.mesh_min_int_var_cb = Checkbox(self.po.all['auto_mesh_min_int_var'],
+                                        night_mode=self.po.all['night_mode'])
         self.mesh_min_int_var_cb.stateChanged.connect(self.mesh_min_int_var_cb_changed)
-        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is None:
+        if self.po.vars['rolling_window_segmentation']['side_len'] is None:
             self.mesh_min_int_var = Spinbox(min=0, max=1000, val=2, decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
             self.mesh_min_int_var.setVisible(False)
         else:
-            self.mesh_min_int_var = Spinbox(min=0, max=1000, val=self.parent().po.vars['rolling_window_segmentation']['min_int_var'], decimals=0,
-                                            night_mode=self.parent().po.all['night_mode'])
+            self.mesh_min_int_var = Spinbox(min=0, max=1000, val=self.po.vars['rolling_window_segmentation']['min_int_var'], decimals=0,
+                                            night_mode=self.po.all['night_mode'])
         self.mesh_min_int_var_label = FixedText(AP["Mesh_minimal_intensity_variation"]["label"],
                                                 tip=AP["Mesh_minimal_intensity_variation"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
         self.rolling_window_s_layout.addWidget(self.mesh_side_length_cb, 0, 0)
         self.rolling_window_s_layout.addWidget(self.mesh_side_length_label, 0, 1)
         self.rolling_window_s_layout.addWidget(self.mesh_side_length, 0, 2)
@@ -409,24 +411,24 @@ class AdvancedParameters(WindowType):
         # IV/ X box: Oscillation period:
         # IV/A/ Title
         self.oscillation_label = FixedText('Oscillatory parameters:', tip="",
-                                              night_mode=self.parent().po.all['night_mode'])
+                                              night_mode=self.po.all['night_mode'])
         self.left_col_layout.addWidget(self.oscillation_label)
 
         self.oscillation_period_layout = QtWidgets.QGridLayout()
         self.oscillation_period_widget = QtWidgets.QWidget()
         self.oscillation_period_widget.setStyleSheet(boxstylesheet)
 
-        self.oscillation_period = Spinbox(min=0, max=10000, val=self.parent().po.vars['expected_oscillation_period'], decimals=2,
-                                          night_mode=self.parent().po.all['night_mode'])
+        self.oscillation_period = Spinbox(min=0, max=10000, val=self.po.vars['expected_oscillation_period'], decimals=2,
+                                          night_mode=self.po.all['night_mode'])
         self.oscillation_period_label = FixedText(AP["Expected_oscillation_period"]["label"],
                                                   tip=AP["Expected_oscillation_period"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
-        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.parent().po.vars['minimal_oscillating_cluster_size'],
-                                          night_mode=self.parent().po.all['night_mode'])
+        self.minimal_oscillating_cluster_size = Spinbox(min=1, max=1000000000, decimals=0, val=self.po.vars['minimal_oscillating_cluster_size'],
+                                          night_mode=self.po.all['night_mode'])
         self.minimal_oscillating_cluster_size_label = FixedText(AP["Minimal_oscillating_cluster_size"]["label"],
                                                   tip=AP["Minimal_oscillating_cluster_size"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
         self.oscillation_period_layout.addWidget(self.oscillation_period, 0, 0)
         self.oscillation_period_layout.addWidget(self.oscillation_period_label, 0, 1)
@@ -446,7 +448,7 @@ class AdvancedParameters(WindowType):
         self.right_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.scale_box_label = FixedText(AP["Spatio_temporal_scaling"]["label"] + ':',
                                          tip=AP["Spatio_temporal_scaling"]["tips"],
-                                         night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
         self.right_col_layout.addWidget(self.scale_box_label)
 
         # I/B/ Create the box
@@ -455,24 +457,24 @@ class AdvancedParameters(WindowType):
         self.scale_box_widget.setStyleSheet(boxstylesheet)
 
         # I/C/ Create widgets
-        self.extract_time = Checkbox(self.parent().po.all['extract_time_interval'])
+        self.extract_time = Checkbox(self.po.all['extract_time_interval'])
         self.extract_time.clicked.connect(self.extract_time_is_clicked)
-        self.time_step = Spinbox(min=0, max=100000, val=self.parent().po.vars['time_step'], decimals=3,
-                                 night_mode=self.parent().po.all['night_mode'])
+        self.time_step = Spinbox(min=0, max=100000, val=self.po.vars['time_step'], decimals=3,
+                                 night_mode=self.po.all['night_mode'])
         self.time_step.setFixedWidth(60)
-        if self.parent().po.all['extract_time_interval']:
+        if self.po.all['extract_time_interval']:
             self.time_step.setVisible(False)
             self.time_step_label = FixedText('Automatically extract time interval between images',
                                          tip="Uses the exif data of the images (if available), to extract these intervals\nOtherwise, default time interval is 1 min",
-                                         night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
         else:
             self.time_step_label = FixedText('Set the time interval between images',
                                          tip="In minutes",
-                                         night_mode=self.parent().po.all['night_mode'])
-        self.pixels_to_mm = Checkbox(self.parent().po.vars['output_in_mm'])
+                                         night_mode=self.po.all['night_mode'])
+        self.pixels_to_mm = Checkbox(self.po.vars['output_in_mm'])
         self.pixels_to_mm_label = FixedText('Convert areas and distances from pixels to mm',
                                             tip="Check if you want output variables to be in mm\nUncheck if you want output variables to be in pixels",
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
         self.scale_box_layout.addWidget(self.extract_time, 0, 0)
@@ -486,7 +488,7 @@ class AdvancedParameters(WindowType):
         # IV/ Fourth box: Batch processing
         # IV/A/ Title
         self.batch_processing_label = FixedText('Batch processing:', tip="",
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
         self.right_col_layout.addWidget(self.batch_processing_label)
         # IV/B/ Create the box
         self.batch_processing_layout = QtWidgets.QGridLayout()
@@ -494,10 +496,10 @@ class AdvancedParameters(WindowType):
         self.batch_processing_widget.setStyleSheet(boxstylesheet)
 
         # IV/C/ Create widgets
-        self.keep_cell_and_back_for_all_folders = Checkbox(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.keep_cell_and_back_for_all_folders = Checkbox(self.po.all['keep_cell_and_back_for_all_folders'])
         self.keep_cell_and_back_for_all_folders_label = FixedText(AP["Keep_drawings"]["label"],
                                                tip=AP["Keep_drawings"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
         # IV/D/ Arrange widgets in the box
         self.batch_processing_layout.addWidget(self.keep_cell_and_back_for_all_folders, 0, 0)
@@ -509,7 +511,7 @@ class AdvancedParameters(WindowType):
         # IV/ Fourth box: Computer resources
         # IV/A/ Title
         self.resources_label = FixedText('Computer resources:', tip="",
-                                            night_mode=self.parent().po.all['night_mode'])
+                                            night_mode=self.po.all['night_mode'])
         self.right_col_layout.addWidget(self.resources_label)
 
         # IV/B/ Create the box
@@ -518,27 +520,27 @@ class AdvancedParameters(WindowType):
         self.resources_box_widget.setStyleSheet(boxstylesheet)
 
         # IV/C/ Create widgets
-        self.do_multiprocessing = Checkbox(self.parent().po.all['do_multiprocessing'])
+        self.do_multiprocessing = Checkbox(self.po.all['do_multiprocessing'])
         self.do_multiprocessing_label = FixedText(AP["Parallel_analysis"]["label"], tip=AP["Parallel_analysis"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
         self.do_multiprocessing.stateChanged.connect(self.do_multiprocessing_is_clicked)
-        self.max_core_nb = Spinbox(min=0, max=256, val=self.parent().po.all['cores'],
-                                   night_mode=self.parent().po.all['night_mode'])
+        self.max_core_nb = Spinbox(min=0, max=256, val=self.po.all['cores'],
+                                   night_mode=self.po.all['night_mode'])
         self.max_core_nb_label = FixedText(AP["Proc_max_core_nb"]["label"],
                                            tip=AP["Proc_max_core_nb"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
+                                           night_mode=self.po.all['night_mode'])
         # Min should be 10% of the total And 1G0
         total_ram_gb = psutil.virtual_memory().total / (1024 ** 3)
-        self.min_memory_left = Spinbox(min=np.max((total_ram_gb * .1, 1.)), max=total_ram_gb * .9, val=self.parent().po.vars['min_ram_free'], decimals=1,
-                                       night_mode=self.parent().po.all['night_mode'])
+        self.min_memory_left = Spinbox(min=np.max((total_ram_gb * .1, 1.)), max=total_ram_gb * .9, val=self.po.vars['min_ram_free'], decimals=1,
+                                       night_mode=self.po.all['night_mode'])
         self.min_memory_left_label = FixedText(AP["Minimal_RAM_let_free"]["label"],
                                                 tip=AP["Minimal_RAM_let_free"]["tips"],
-                                               night_mode=self.parent().po.all['night_mode'])
+                                               night_mode=self.po.all['night_mode'])
 
-        self.lose_accuracy_to_save_memory = Checkbox(self.parent().po.vars['lose_accuracy_to_save_memory'])
+        self.lose_accuracy_to_save_memory = Checkbox(self.po.vars['lose_accuracy_to_save_memory'])
         self.lose_accuracy_to_save_memory_label = FixedText(AP["Lose_accuracy_to_save_RAM"]["label"],
                                                   tip=AP["Lose_accuracy_to_save_RAM"]["tips"],
-                                                  night_mode=self.parent().po.all['night_mode'])
+                                                  night_mode=self.po.all['night_mode'])
 
         # IV/D/ Arrange widgets in the box
         self.resources_box_layout.addWidget(self.do_multiprocessing, 0, 0)
@@ -555,7 +557,7 @@ class AdvancedParameters(WindowType):
         # V/ Fifth box: Video saving
         # V/A/ Title
         self.video_saving_label = FixedText('Video saving:', tip="",
-                                         night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
         self.right_col_layout.addWidget(self.video_saving_label)
 
         # V/B/ Create the box
@@ -564,18 +566,18 @@ class AdvancedParameters(WindowType):
         self.video_saving_widget.setStyleSheet(boxstylesheet)
 
         # V/C/ Create widgets
-        self.video_fps = Spinbox(min=0, max=10000, val=self.parent().po.vars['video_fps'], decimals=2,
-                                 night_mode=self.parent().po.all['night_mode'])
+        self.video_fps = Spinbox(min=0, max=10000, val=self.po.vars['video_fps'], decimals=2,
+                                 night_mode=self.po.all['night_mode'])
         self.video_fps_label = FixedText(AP["Video_fps"]["label"], tip=AP["Video_fps"]["tips"],
-                                         night_mode=self.parent().po.all['night_mode'])
-        self.keep_unaltered_videos = Checkbox(self.parent().po.vars['keep_unaltered_videos'])
+                                         night_mode=self.po.all['night_mode'])
+        self.keep_unaltered_videos = Checkbox(self.po.vars['keep_unaltered_videos'])
         self.keep_unaltered_videos_label = FixedText(AP["Keep_unaltered_videos"]["label"],
                                                      tip=AP["Keep_unaltered_videos"]["tips"],
-                                                     night_mode=self.parent().po.all['night_mode'])
-        self.save_processed_videos = Checkbox(self.parent().po.vars['save_processed_videos'])
+                                                     night_mode=self.po.all['night_mode'])
+        self.save_processed_videos = Checkbox(self.po.vars['save_processed_videos'])
         self.save_processed_videos_label = FixedText(AP["Save_processed_videos"]["label"],
                                                      tip=AP["Save_processed_videos"]["tips"],
-                                                     night_mode=self.parent().po.all['night_mode'])
+                                                     night_mode=self.po.all['night_mode'])
 
         # V/D/ Arrange widgets in the box
         curr_box_row = 0
@@ -622,17 +624,17 @@ class AdvancedParameters(WindowType):
         # Last row
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_widget = QtWidgets.QWidget()
-        self.night_mode_cb = Checkbox(self.parent().po.all['night_mode'])
+        self.night_mode_cb = Checkbox(self.po.all['night_mode'])
         self.night_mode_cb.clicked.connect(self.night_mode_is_clicked)
         self.night_mode_label = FixedText(AP["Night_mode"]["label"], tip=AP["Night_mode"]["tips"],
-                                          night_mode=self.parent().po.all['night_mode'])
+                                          night_mode=self.po.all['night_mode'])
         self.reset_all_settings = PButton(AP["Reset_all_settings"]["label"], tip=AP["Reset_all_settings"]["tips"],
-                                          night_mode=self.parent().po.all['night_mode'])
+                                          night_mode=self.po.all['night_mode'])
         self.reset_all_settings.clicked.connect(self.reset_all_settings_is_clicked)
-        self.message = FixedText('', night_mode=self.parent().po.all['night_mode'])
-        self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
+        self.message = FixedText('', night_mode=self.po.all['night_mode'])
+        self.cancel = PButton('Cancel', night_mode=self.po.all['night_mode'])
         self.cancel.clicked.connect(self.cancel_is_clicked)
-        self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
+        self.ok = PButton('Ok', night_mode=self.po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
         self.last_row_layout.addWidget(self.night_mode_cb)
         self.last_row_layout.addWidget(self.night_mode_label)
@@ -654,13 +656,13 @@ class AdvancedParameters(WindowType):
         values in the parent object's `all` dictionary and `vars` dictionary. It ensures
         that only relevant widgets are shown to the user, depending on the current settings.
         """
-        self.max_core_nb.setVisible(self.parent().po.all['do_multiprocessing'])
-        self.max_core_nb_label.setVisible(self.parent().po.all['do_multiprocessing'])
-        self.first_move_threshold.setVisible(not self.parent().po.all['automatic_size_thresholding'])
-        self.first_move_threshold_label.setVisible(not self.parent().po.all['automatic_size_thresholding'])
-        connect_distant_shape = self.parent().po.all['connect_distant_shape_during_segmentation']
-        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and connect_distant_shape
-        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and connect_distant_shape
+        self.max_core_nb.setVisible(self.po.all['do_multiprocessing'])
+        self.max_core_nb_label.setVisible(self.po.all['do_multiprocessing'])
+        self.first_move_threshold.setVisible(not self.po.all['automatic_size_thresholding'])
+        self.first_move_threshold_label.setVisible(not self.po.all['automatic_size_thresholding'])
+        connect_distant_shape = self.po.all['connect_distant_shape_during_segmentation']
+        do_use_max_size = self.po.vars['max_size_for_connection'] is not None and connect_distant_shape
+        do_use_min_size = self.po.vars['min_size_for_connection'] is not None and connect_distant_shape
         self.detection_range_factor.setVisible(connect_distant_shape)
         self.detection_range_factor_label.setVisible(connect_distant_shape)
         self.use_max_size.setVisible(connect_distant_shape)
@@ -674,7 +676,7 @@ class AdvancedParameters(WindowType):
         self.min_size_for_connection_label.setVisible(do_use_min_size)
         self.display_more_than_two_colors_option()
 
-        if self.parent().po.vars['convert_for_motion'] is not None:
+        if self.po.vars['convert_for_motion'] is not None:
             self.update_csc_editing_display()
         else:
             self.row1[0].setCurrentIndex(4)
@@ -687,9 +689,9 @@ class AdvancedParameters(WindowType):
         Handles the logic for using background subtraction or not during image segmentation.
         """
         if not self.parent().videoanalysiswindow.thread_dict['VideoTracking'].isRunning():
-            self.parent().po.motion = None
+            self.po.motion = None
         if self.subtract_background.isChecked():
-            self.parent().po.first_exp_ready_to_run = False
+            self.po.first_exp_ready_to_run = False
 
     def prevent_fast_growth_near_periphery_check(self):
         """
@@ -802,7 +804,7 @@ class AdvancedParameters(WindowType):
         # 2) Titles
         self.video_csc_label = FixedText(AP["Csc_for_video_analysis"]["label"] + ':',
                                          tip=AP["Csc_for_video_analysis"]["tips"],
-                                         night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
         self.video_csc_label.setFixedHeight(30)
         self.edit_layout.addWidget(self.video_csc_label)
         self.both_csc_widget = QtWidgets.QWidget()
@@ -817,12 +819,13 @@ class AdvancedParameters(WindowType):
         self.row2[4].clicked.connect(self.display_row3)
         self.row3 = self.one_csc_editing()# Second CSC
         self.logical_operator_between_combination_result = Combobox(["None", "Or", "And", "Xor"],
-                                                                    night_mode=self.parent().po.all['night_mode'])
-        self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
+                                                                    night_mode=self.po.all['night_mode'])
+        if self.po.vars['convert_for_motion'] is not None:
+            self.logical_operator_between_combination_result.setCurrentText(self.po.vars['convert_for_motion']['logical'])
         self.logical_operator_between_combination_result.currentTextChanged.connect(self.logical_op_changed)
         self.logical_operator_between_combination_result.setFixedWidth(100)
         self.logical_operator_label = FixedText(IAW["Logical_operator"]["label"], halign='c', tip=IAW["Logical_operator"]["tips"],
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
         self.row21 = self.one_csc_editing()
         self.row21[4].clicked.connect(self.display_row22)
         self.row22 = self.one_csc_editing()
@@ -874,7 +877,7 @@ class AdvancedParameters(WindowType):
         # 6) Open the more_than_2_colors row layout
         self.more_than_2_colors_widget = QtWidgets.QWidget()
         self.more_than_2_colors_layout = QtWidgets.QHBoxLayout()
-        self.more_than_two_colors = Checkbox(self.parent().po.all["more_than_two_colors"])
+        self.more_than_two_colors = Checkbox(self.po.all["more_than_two_colors"])
         self.more_than_two_colors.setStyleSheet("QCheckBox::indicator {width: 12px;height: 12px;background-color: transparent;"
                             "border-radius: 5px;border-style: solid;border-width: 1px;"
                             "border-color: rgb(100,100,100);}"
@@ -886,10 +889,10 @@ class AdvancedParameters(WindowType):
         self.more_than_two_colors.stateChanged.connect(self.display_more_than_two_colors_option)
 
         self.more_than_two_colors_label = FixedText(IAW["Kmeans"]["label"],
-                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.parent().po.all['night_mode'])
+                                                    tip=IAW["Kmeans"]["tips"], night_mode=self.po.all['night_mode'])
         self.more_than_two_colors_label.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.more_than_two_colors_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.distinct_colors_number = Spinbox(min=2, max=5, val=self.parent().po.vars["color_number"], night_mode=self.parent().po.all['night_mode'])
+        self.distinct_colors_number = Spinbox(min=2, max=5, val=self.po.vars["color_number"], night_mode=self.po.all['night_mode'])
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors)
         self.more_than_2_colors_layout.addWidget(self.more_than_two_colors_label)
         self.more_than_2_colors_layout.addWidget(self.distinct_colors_number)
@@ -917,13 +920,13 @@ class AdvancedParameters(WindowType):
         """
         widget_list = []
         widget_list.insert(0, Combobox(["None", "bgr", "hsv", "hls", "lab", "luv", "yuv"],
-                                       night_mode=self.parent().po.all['night_mode']))
+                                       night_mode=self.po.all['night_mode']))
         widget_list[0].setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         widget_list[0].setFixedWidth(100)
         for i in [1, 2, 3]:
-            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.parent().po.all['night_mode']))
+            widget_list.insert(i, Spinbox(min=-126, max=126, val=0, night_mode=self.po.all['night_mode']))
             widget_list[i].setFixedWidth(45)
-        widget_list.insert(i + 1, PButton("+", night_mode=self.parent().po.all['night_mode']))
+        widget_list.insert(i + 1, PButton("+", night_mode=self.po.all['night_mode']))
 
         return widget_list
 
@@ -1015,13 +1018,13 @@ class AdvancedParameters(WindowType):
         remaining_c_spaces = []
         row_number1 = 0
         row_number2 = 0
-        if "PCA" in self.parent().po.vars['convert_for_motion'].keys():
+        if "PCA" in self.po.vars['convert_for_motion'].keys():
             self.row1[0].setCurrentIndex(0)
             self.row1[0].setVisible(True)
             for i in range(1, 4):
                 self.row1[i].setVisible(False)
         else:
-            for i, (k, v) in enumerate(self.parent().po.vars['convert_for_motion'].items()):
+            for i, (k, v) in enumerate(self.po.vars['convert_for_motion'].items()):
                 if k != "logical":
                     if k[-1] != "2":
                         if row_number1 == 0:
@@ -1075,7 +1078,7 @@ class AdvancedParameters(WindowType):
         self.row21[4].setVisible(row_number2 == 1)
         self.row22[4].setVisible(row_number2 == 2)
         if row_number2 > 0:
-            self.logical_operator_between_combination_result.setCurrentText(self.parent().po.vars['convert_for_motion']['logical'])
+            self.logical_operator_between_combination_result.setCurrentText(self.po.vars['convert_for_motion']['logical'])
         if row_number2 == 0:
             self.logical_operator_between_combination_result.setCurrentText('None')
             self.logical_operator_between_combination_result.setVisible(False)
@@ -1110,7 +1113,7 @@ class AdvancedParameters(WindowType):
         """
         Save user-defined combination of color spaces and channels.
         """
-        self.parent().po.vars['convert_for_motion'] = {}
+        self.po.vars['convert_for_motion'] = {}
         spaces = [self.row1[0].currentText(), self.row2[0].currentText(), self.row3[0].currentText()]
         channels = np.array(
             ((self.row1[1].value(), self.row1[2].value(), self.row1[3].value()),
@@ -1129,22 +1132,22 @@ class AdvancedParameters(WindowType):
                                      (self.row22[1].value(), self.row22[2].value(), self.row22[3].value()),
                                      (self.row23[1].value(), self.row23[2].value(), self.row23[3].value())),
                                     dtype=np.float64)))
-            self.parent().po.vars['convert_for_motion']['logical'] = self.logical_operator_between_combination_result.currentText()
+            self.po.vars['convert_for_motion']['logical'] = self.logical_operator_between_combination_result.currentText()
         else:
-            self.parent().po.vars['convert_for_motion']['logical'] = 'None'
+            self.po.vars['convert_for_motion']['logical'] = 'None'
         channels = channels.tolist()
         if not np.all(spaces == "None"):
             for i, space in enumerate(spaces):
                 if space != "None" and space != "None2":
-                    self.parent().po.vars['convert_for_motion'][space] = channels[i]
-        if len(self.parent().po.vars['convert_for_motion']) == 1 or np.sum(channels) == 0:
+                    self.po.vars['convert_for_motion'][space] = channels[i]
+        if len(self.po.vars['convert_for_motion']) == 1 or np.sum(channels) == 0:
             self.csc_dict_is_empty = True
         else:
             self.csc_dict_is_empty = False
 
-        self.parent().po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
+        self.po.all["more_than_two_colors"] = self.more_than_two_colors.isChecked()
         if self.more_than_two_colors.isChecked():
-            self.parent().po.vars["color_number"] = int(self.distinct_colors_number.value())
+            self.po.vars["color_number"] = int(self.distinct_colors_number.value())
             self.parent().videoanalysiswindow.select_option.setVisible(True)
             self.parent().videoanalysiswindow.select_option_label.setVisible(True)
 
@@ -1166,7 +1169,7 @@ class AdvancedParameters(WindowType):
 
     def night_mode_is_clicked(self):
         """ Triggered when night_mode_cb check status changes"""
-        self.parent().po.all['night_mode'] = self.night_mode_cb.isChecked()
+        self.po.all['night_mode'] = self.night_mode_cb.isChecked()
         self.message.setText('Close and restart Cellects to apply night or light mode')
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
 
@@ -1174,11 +1177,11 @@ class AdvancedParameters(WindowType):
         """
         Reset All Settings on Click
 
-        Resets the application settings to their default state by removing specific pickle files and saving new default dictionaries.
+        Resets the application settings to their default state by removing specific .json files and saving new default dictionaries.
 
         Notes
         -----
-        - This function removes specific pickle files to reset settings.
+        - This function removes specific .json files to reset settings.
         - The function changes the current working directory temporarily.
         """
         if os.path.isfile('cellects_settings.json'):
@@ -1199,73 +1202,73 @@ class AdvancedParameters(WindowType):
         widget depending on a condition.
         """
         # Image parameters:
-        self.automatically_crop.setChecked(self.parent().po.all['automatically_crop'])
-        self.subtract_background.setChecked(self.parent().po.vars['subtract_background'])
-        self.all_specimens_have_same_direction.setChecked(self.parent().po.all['all_specimens_have_same_direction'])
+        self.automatically_crop.setChecked(self.po.all['automatically_crop'])
+        self.subtract_background.setChecked(self.po.vars['subtract_background'])
+        self.all_specimens_have_same_direction.setChecked(self.po.all['all_specimens_have_same_direction'])
 
         # Post-processing parameters:
-        self.sliding_window_segmentation.setChecked(self.parent().po.vars['sliding_window_segmentation'])
-        self.morphological_opening.setChecked(self.parent().po.vars['morphological_opening'])
-        self.morphological_closing.setChecked(self.parent().po.vars['morphological_closing'])
-        self.correct_errors_around_initial.setChecked(self.parent().po.vars['correct_errors_around_initial'])
-        self.prevent_fast_growth_near_periphery.setChecked(self.parent().po.vars['prevent_fast_growth_near_periphery'])
-        self.periphery_width.setValue(self.parent().po.vars['periphery_width'])
-        self.max_periphery_growth.setValue(self.parent().po.vars['max_periphery_growth'])
-        self.connect_distant_shape_during_segmentation.setChecked(self.parent().po.all['connect_distant_shape_during_segmentation'])
-        do_use_max_size = self.parent().po.vars['max_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
-        do_use_min_size = self.parent().po.vars['min_size_for_connection'] is not None and self.parent().po.all['connect_distant_shape_during_segmentation']
+        self.sliding_window_segmentation.setChecked(self.po.vars['sliding_window_segmentation'])
+        self.morphological_opening.setChecked(self.po.vars['morphological_opening'])
+        self.morphological_closing.setChecked(self.po.vars['morphological_closing'])
+        self.correct_errors_around_initial.setChecked(self.po.vars['correct_errors_around_initial'])
+        self.prevent_fast_growth_near_periphery.setChecked(self.po.vars['prevent_fast_growth_near_periphery'])
+        self.periphery_width.setValue(self.po.vars['periphery_width'])
+        self.max_periphery_growth.setValue(self.po.vars['max_periphery_growth'])
+        self.connect_distant_shape_during_segmentation.setChecked(self.po.all['connect_distant_shape_during_segmentation'])
+        do_use_max_size = self.po.vars['max_size_for_connection'] is not None and self.po.all['connect_distant_shape_during_segmentation']
+        do_use_min_size = self.po.vars['min_size_for_connection'] is not None and self.po.all['connect_distant_shape_during_segmentation']
         self.use_max_size.setChecked(do_use_max_size)
         self.use_min_size.setChecked(do_use_min_size)
         if do_use_max_size:
-            self.max_size_for_connection.setValue(self.parent().po.vars['max_size_for_connection'])
+            self.max_size_for_connection.setValue(self.po.vars['max_size_for_connection'])
         else:
             self.max_size_for_connection.setValue(50)
         if do_use_min_size:
-            self.min_size_for_connection.setValue(self.parent().po.vars['min_size_for_connection'])
+            self.min_size_for_connection.setValue(self.po.vars['min_size_for_connection'])
         else:
             self.min_size_for_connection.setValue(0)
-        self.detection_range_factor.setValue(self.parent().po.vars['detection_range_factor'])
+        self.detection_range_factor.setValue(self.po.vars['detection_range_factor'])
 
         # Appearing cell/colony parameters
-        self.first_move_threshold.setValue(self.parent().po.all['first_move_threshold_in_mm²'])
-        self.do_automatic_size_thresholding.setChecked(self.parent().po.all['automatic_size_thresholding'])
-        self.appearing_selection.setCurrentText(self.parent().po.vars['appearance_detection_method'])
+        self.first_move_threshold.setValue(self.po.all['first_move_threshold_in_mm²'])
+        self.do_automatic_size_thresholding.setChecked(self.po.all['automatic_size_thresholding'])
+        self.appearing_selection.setCurrentText(self.po.vars['appearance_detection_method'])
 
         # Rolling window segmentation
-        self.mesh_step_length_cb.setChecked(self.parent().po.all['auto_mesh_step_length'])
-        if self.parent().po.vars['rolling_window_segmentation']['step'] is not None:
-            self.mesh_step_length.setValue(self.parent().po.vars['rolling_window_segmentation']['step'])
+        self.mesh_step_length_cb.setChecked(self.po.all['auto_mesh_step_length'])
+        if self.po.vars['rolling_window_segmentation']['step'] is not None:
+            self.mesh_step_length.setValue(self.po.vars['rolling_window_segmentation']['step'])
 
-        self.mesh_side_length_cb.setChecked(self.parent().po.all['auto_mesh_side_length'])
-        if self.parent().po.vars['rolling_window_segmentation']['side_len'] is not None:
-            self.mesh_side_length.setValue(self.parent().po.vars['rolling_window_segmentation']['side_len'])
+        self.mesh_side_length_cb.setChecked(self.po.all['auto_mesh_side_length'])
+        if self.po.vars['rolling_window_segmentation']['side_len'] is not None:
+            self.mesh_side_length.setValue(self.po.vars['rolling_window_segmentation']['side_len'])
 
-        self.mesh_min_int_var_cb.setChecked(self.parent().po.all['auto_mesh_min_int_var'])
-        if self.parent().po.vars['rolling_window_segmentation']['min_int_var'] is not None:
-            self.mesh_min_int_var.setValue(self.parent().po.vars['rolling_window_segmentation']['min_int_var'])
+        self.mesh_min_int_var_cb.setChecked(self.po.all['auto_mesh_min_int_var'])
+        if self.po.vars['rolling_window_segmentation']['min_int_var'] is not None:
+            self.mesh_min_int_var.setValue(self.po.vars['rolling_window_segmentation']['min_int_var'])
 
         # Oscillatory parameters:
-        self.oscillation_period.setValue(self.parent().po.vars['expected_oscillation_period'])
-        self.minimal_oscillating_cluster_size.setValue(self.parent().po.vars['minimal_oscillating_cluster_size'])
+        self.oscillation_period.setValue(self.po.vars['expected_oscillation_period'])
+        self.minimal_oscillating_cluster_size.setValue(self.po.vars['minimal_oscillating_cluster_size'])
 
         # Spatio-temporal scaling:
-        self.extract_time.setChecked(self.parent().po.all['extract_time_interval'])
-        self.time_step.setValue(self.parent().po.vars['time_step'])
-        self.pixels_to_mm.setChecked(self.parent().po.vars['output_in_mm'])
+        self.extract_time.setChecked(self.po.all['extract_time_interval'])
+        self.time_step.setValue(self.po.vars['time_step'])
+        self.pixels_to_mm.setChecked(self.po.vars['output_in_mm'])
 
         # Batch processing:
-        self.keep_cell_and_back_for_all_folders.setChecked(self.parent().po.all['keep_cell_and_back_for_all_folders'])
+        self.keep_cell_and_back_for_all_folders.setChecked(self.po.all['keep_cell_and_back_for_all_folders'])
 
         # Computer ressources:
-        self.do_multiprocessing.setChecked(self.parent().po.all['do_multiprocessing'])
-        self.max_core_nb.setValue(self.parent().po.all['cores'])
-        self.min_memory_left.setValue(self.parent().po.vars['min_ram_free'])
-        self.lose_accuracy_to_save_memory.setChecked(self.parent().po.vars['lose_accuracy_to_save_memory'])
+        self.do_multiprocessing.setChecked(self.po.all['do_multiprocessing'])
+        self.max_core_nb.setValue(self.po.all['cores'])
+        self.min_memory_left.setValue(self.po.vars['min_ram_free'])
+        self.lose_accuracy_to_save_memory.setChecked(self.po.vars['lose_accuracy_to_save_memory'])
 
         # Video saving:
-        self.video_fps.setValue(self.parent().po.vars['video_fps'])
-        self.keep_unaltered_videos.setChecked(self.parent().po.vars['keep_unaltered_videos'])
-        self.save_processed_videos.setChecked(self.parent().po.vars['save_processed_videos'])
+        self.video_fps.setValue(self.po.vars['video_fps'])
+        self.keep_unaltered_videos.setChecked(self.po.vars['keep_unaltered_videos'])
+        self.save_processed_videos.setChecked(self.po.vars['save_processed_videos'])
 
         # Color space combination for video analysis:
         self.update_csc_editing_display()
@@ -1291,101 +1294,101 @@ class AdvancedParameters(WindowType):
         options variables. This allows the software to retain user preferences across
         sessions and ensures that all settings are correctly applied before processing.
         """
-        if self.automatically_crop.isChecked() != self.parent().po.all['automatically_crop']:
+        if self.automatically_crop.isChecked() != self.po.all['automatically_crop']:
             if os.path.isfile('cellects_data.h5'):
                 remove_h5_key('cellects_data.h5', 'crop_coord')
 
         # Image parameters:
-        self.parent().po.all['automatically_crop'] = self.automatically_crop.isChecked()
-        self.parent().po.vars['subtract_background'] = self.subtract_background.isChecked()
-        self.parent().po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
+        self.po.all['automatically_crop'] = self.automatically_crop.isChecked()
+        self.po.vars['subtract_background'] = self.subtract_background.isChecked()
+        self.po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
 
         # Post-processing parameters:
-        self.parent().po.vars['sliding_window_segmentation'] = self.sliding_window_segmentation.isChecked()
-        self.parent().po.vars['morphological_opening'] = self.morphological_opening.isChecked()
-        self.parent().po.vars['morphological_closing'] = self.morphological_closing.isChecked()
-        self.parent().po.vars['correct_errors_around_initial'] = self.correct_errors_around_initial.isChecked()
-        self.parent().po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
-        self.parent().po.vars['periphery_width'] = int(self.periphery_width.value())
-        self.parent().po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
+        self.po.vars['sliding_window_segmentation'] = self.sliding_window_segmentation.isChecked()
+        self.po.vars['morphological_opening'] = self.morphological_opening.isChecked()
+        self.po.vars['morphological_closing'] = self.morphological_closing.isChecked()
+        self.po.vars['correct_errors_around_initial'] = self.correct_errors_around_initial.isChecked()
+        self.po.vars['prevent_fast_growth_near_periphery'] = self.prevent_fast_growth_near_periphery.isChecked()
+        self.po.vars['periphery_width'] = int(self.periphery_width.value())
+        self.po.vars['max_periphery_growth'] = int(self.max_periphery_growth.value())
         do_distant_shape_int = self.connect_distant_shape_during_segmentation.isChecked()
-        self.parent().po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
+        self.po.all['connect_distant_shape_during_segmentation'] = do_distant_shape_int
         if do_distant_shape_int:
-            self.parent().po.vars['detection_range_factor'] = int(
+            self.po.vars['detection_range_factor'] = int(
                 np.round(self.detection_range_factor.value()))
         else:
-            self.parent().po.vars['detection_range_factor'] = 0
+            self.po.vars['detection_range_factor'] = 0
         if self.use_max_size.isChecked():
-            self.parent().po.vars['max_size_for_connection'] = int(np.round(self.max_size_for_connection.value()))
+            self.po.vars['max_size_for_connection'] = int(np.round(self.max_size_for_connection.value()))
         else:
-            self.parent().po.vars['max_size_for_connection'] = None
+            self.po.vars['max_size_for_connection'] = None
         if self.use_min_size.isChecked():
-            self.parent().po.vars['min_size_for_connection'] = int(np.round(self.min_size_for_connection.value()))
+            self.po.vars['min_size_for_connection'] = int(np.round(self.min_size_for_connection.value()))
         else:
-            self.parent().po.vars['min_size_for_connection'] = None
+            self.po.vars['min_size_for_connection'] = None
 
         # Appearing cell/colony parameters
-        self.parent().po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
-        self.parent().po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
-        self.parent().po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
+        self.po.all['first_move_threshold_in_mm²'] = self.first_move_threshold.value()
+        self.po.all['automatic_size_thresholding'] = self.do_automatic_size_thresholding.isChecked()
+        self.po.vars['appearance_detection_method'] = self.appearing_selection.currentText()
 
         # Rolling window segmentation
-        self.parent().po.all['auto_mesh_step_length'] = self.mesh_step_length_cb.isChecked()
-        if self.parent().po.all['auto_mesh_step_length']:
-            self.parent().po.vars['rolling_window_segmentation']['step'] = None
+        self.po.all['auto_mesh_step_length'] = self.mesh_step_length_cb.isChecked()
+        if self.po.all['auto_mesh_step_length']:
+            self.po.vars['rolling_window_segmentation']['step'] = None
         else:
-            self.parent().po.vars['rolling_window_segmentation']['step'] = int(self.mesh_step_length.value())
+            self.po.vars['rolling_window_segmentation']['step'] = int(self.mesh_step_length.value())
 
-        self.parent().po.all['auto_mesh_side_length'] = self.mesh_side_length_cb.isChecked()
-        if self.parent().po.all['auto_mesh_side_length']:
-            self.parent().po.vars['rolling_window_segmentation']['side_len'] = None
+        self.po.all['auto_mesh_side_length'] = self.mesh_side_length_cb.isChecked()
+        if self.po.all['auto_mesh_side_length']:
+            self.po.vars['rolling_window_segmentation']['side_len'] = None
         else:
-            self.parent().po.vars['rolling_window_segmentation']['side_len'] = int(self.mesh_side_length.value())
+            self.po.vars['rolling_window_segmentation']['side_len'] = int(self.mesh_side_length.value())
 
-        self.parent().po.all['auto_mesh_min_int_var'] = self.mesh_min_int_var_cb.isChecked()
-        if self.parent().po.all['auto_mesh_min_int_var']:
-            self.parent().po.vars['rolling_window_segmentation']['min_int_var'] = None
+        self.po.all['auto_mesh_min_int_var'] = self.mesh_min_int_var_cb.isChecked()
+        if self.po.all['auto_mesh_min_int_var']:
+            self.po.vars['rolling_window_segmentation']['min_int_var'] = None
         else:
-            self.parent().po.vars['rolling_window_segmentation']['min_int_var'] = int(self.mesh_min_int_var.value())
+            self.po.vars['rolling_window_segmentation']['min_int_var'] = int(self.mesh_min_int_var.value())
 
         # Oscillatory parameters:
-        self.parent().po.vars['expected_oscillation_period'] = self.oscillation_period.value()
-        self.parent().po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
+        self.po.vars['expected_oscillation_period'] = self.oscillation_period.value()
+        self.po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
 
         # Spatio-temporal scaling:
-        self.parent().po.all['extract_time_interval'] = self.extract_time.isChecked()
-        self.parent().po.vars['time_step'] = float(self.time_step.value())
-        self.parent().po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
+        self.po.all['extract_time_interval'] = self.extract_time.isChecked()
+        self.po.vars['time_step'] = float(self.time_step.value())
+        self.po.vars['output_in_mm'] = self.pixels_to_mm.isChecked()
 
         # Batch processing:
-        self.parent().po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
+        self.po.all['keep_cell_and_back_for_all_folders'] = self.keep_cell_and_back_for_all_folders.isChecked()
 
         # Computer ressources:
-        self.parent().po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
-        self.parent().po.all['cores'] = int(self.max_core_nb.value())
-        self.parent().po.vars['min_ram_free'] = self.min_memory_left.value()
-        self.parent().po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
+        self.po.all['do_multiprocessing'] = self.do_multiprocessing.isChecked()
+        self.po.all['cores'] = int(self.max_core_nb.value())
+        self.po.vars['min_ram_free'] = self.min_memory_left.value()
+        self.po.vars['lose_accuracy_to_save_memory'] = self.lose_accuracy_to_save_memory.isChecked()
 
         # Video saving:
-        self.parent().po.vars['video_fps'] = float(self.video_fps.value())
-        self.parent().po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
-        self.parent().po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
+        self.po.vars['video_fps'] = float(self.video_fps.value())
+        self.po.vars['keep_unaltered_videos'] = self.keep_unaltered_videos.isChecked()
+        self.po.vars['save_processed_videos'] = self.save_processed_videos.isChecked()
 
         # Color space combination for video analysis:
-        previous_csc = self.parent().po.vars['convert_for_motion'].copy()
+        previous_csc = self.po.vars['convert_for_motion'].copy()
         self.save_user_defined_csc()
-        if self.parent().po.first_exp_ready_to_run:
+        if self.po.first_exp_ready_to_run:
             are_dicts_equal: bool = True
             for key in previous_csc.keys():
                 if key != 'logical':
-                    are_dicts_equal = are_dicts_equal and np.all(key in self.parent().po.vars['convert_for_motion'] and previous_csc[key] == self.parent().po.vars['convert_for_motion'][key])
-            for key in self.parent().po.vars['convert_for_motion'].keys():
+                    are_dicts_equal = are_dicts_equal and np.all(key in self.po.vars['convert_for_motion'] and previous_csc[key] == self.po.vars['convert_for_motion'][key])
+            for key in self.po.vars['convert_for_motion'].keys():
                 if key != 'logical':
                     are_dicts_equal = are_dicts_equal and np.all(
-                        key in previous_csc and self.parent().po.vars['convert_for_motion'][key] ==
+                        key in previous_csc and self.po.vars['convert_for_motion'][key] ==
                         previous_csc[key])
             if not are_dicts_equal:
-                self.parent().po.update_background_luminosity = True
+                self.po.update_background_luminosity = True
 
         # Save settings
         if not self.parent().thread_dict['SaveAllVars'].isRunning():

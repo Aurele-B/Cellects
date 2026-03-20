@@ -24,12 +24,14 @@ from cellects.image_analysis.shape_descriptors import descriptors_names_to_displ
 from cellects.gui.ui_strings import RO
 
 class RequiredOutput(WindowType):
-    def __init__(self, parent, night_mode):
+    def __init__(self, po, parent, night_mode):
         """
         Initialize the RequiredOutput window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -50,6 +52,7 @@ class RequiredOutput(WindowType):
         """
         super().__init__(parent, night_mode)
         self.setParent(parent)
+        self.po = po
         # Create the main Title
         self.true_init()
 
@@ -66,7 +69,7 @@ class RequiredOutput(WindowType):
         This method assumes that the parent widget has a 'po' attribute with specific settings and variables.
         """
         logging.info("Initialize RequiredOutput window")
-        self.title = FixedText('Required Output', police=30, night_mode=self.parent().po.all['night_mode'])
+        self.title = FixedText('Required Output', police=30, night_mode=self.po.all['night_mode'])
         self.title.setAlignment(QtCore.Qt.AlignHCenter)
         # Create the main layout
         self.vlayout = QtWidgets.QVBoxLayout()
@@ -83,7 +86,7 @@ class RequiredOutput(WindowType):
         # I/ First box: Save presence coordinates
         # I/A/ Title
         self.save_presence_coordinates_label = FixedText('Save presence coordinates:', tip="Saved in the h5 format",
-                                                 night_mode=self.parent().po.all['night_mode'])
+                                                 night_mode=self.po.all['night_mode'])
         self.vlayout.addWidget(self.save_presence_coordinates_label) #
 
         # I/B/ Create the box
@@ -92,19 +95,19 @@ class RequiredOutput(WindowType):
         self.save_presence_coordinates_widget.setStyleSheet(boxstylesheet)
 
         # I/C/ Create widgets
-        self.save_coord_specimen = Checkbox(self.parent().po.vars['save_coord_specimen'])
+        self.save_coord_specimen = Checkbox(self.po.vars['save_coord_specimen'])
         self.save_coord_specimen_label = FixedText(RO["coord_specimen"]["label"], tip=RO["coord_specimen"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
-        self.save_graph = Checkbox(self.parent().po.vars['save_graph'])
+                                           night_mode=self.po.all['night_mode'])
+        self.save_graph = Checkbox(self.po.vars['save_graph'])
         self.save_graph_label = FixedText(RO["Graph"]["label"], tip=RO["Graph"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
-        self.save_coord_thickening_slimming = Checkbox(self.parent().po.vars['save_coord_thickening_slimming'])
+                                           night_mode=self.po.all['night_mode'])
+        self.save_coord_thickening_slimming = Checkbox(self.po.vars['save_coord_thickening_slimming'])
         self.save_coord_thickening_slimming_label = FixedText(RO["coord_oscillating"]["label"],
                                                               tip=RO["coord_oscillating"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
-        self.save_coord_network = Checkbox(self.parent().po.vars['save_coord_network'])
+                                           night_mode=self.po.all['night_mode'])
+        self.save_coord_network = Checkbox(self.po.vars['save_coord_network'])
         self.save_coord_network_label = FixedText(RO["coord_network"]["label"], tip=RO["coord_network"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
+                                           night_mode=self.po.all['night_mode'])
 
         # I/D/ Arrange widgets in the box
         self.save_presence_coordinates_layout.addWidget(self.save_coord_specimen_label, 0, 0)
@@ -123,7 +126,7 @@ class RequiredOutput(WindowType):
         # II/A/ Title
         self.save_descriptors_label = FixedText('Save descriptors:',
                                                          tip="Saved in .csv",
-                                                         night_mode=self.parent().po.all['night_mode'])
+                                                         night_mode=self.po.all['night_mode'])
         self.vlayout.addWidget(self.save_descriptors_label)  #
 
         # II/B/ Create the box
@@ -146,9 +149,9 @@ class RequiredOutput(WindowType):
         self.last_row_layout = QtWidgets.QHBoxLayout()
         self.last_row_widget = QtWidgets.QWidget()
 
-        self.cancel = PButton('Cancel', night_mode=self.parent().po.all['night_mode'])
+        self.cancel = PButton('Cancel', night_mode=self.po.all['night_mode'])
         self.cancel.clicked.connect(self.cancel_is_clicked)
-        self.ok = PButton('Ok', night_mode=self.parent().po.all['night_mode'])
+        self.ok = PButton('Ok', night_mode=self.po.all['night_mode'])
         self.ok.clicked.connect(self.ok_is_clicked)
         self.last_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.last_row_layout.addWidget(self.cancel)
@@ -178,15 +181,15 @@ class RequiredOutput(WindowType):
         -----
         The layout of checkboxes changes based on the number of descriptors.
         """
-        saved_names = list(self.parent().po.all['descriptors'].keys())
+        saved_names = list(self.po.all['descriptors'].keys())
         available_names = list(descriptors_categories.keys())
         if not np.array_equal(saved_names, available_names):
             new_idx = np.nonzero(np.logical_not(np.isin(available_names, saved_names)))[0]
             for idx in new_idx:
                 new_name = available_names[idx]
-                self.parent().po.all['descriptors'][new_name] = descriptors_categories[new_name]
+                self.po.all['descriptors'][new_name] = descriptors_categories[new_name]
 
-        for i, name in enumerate(self.parent().po.all['descriptors'].keys()):
+        for i, name in enumerate(self.po.all['descriptors'].keys()):
             label_index = i * 2
             if i > 9:
                 row = i - 10 + 1 + 3
@@ -194,9 +197,9 @@ class RequiredOutput(WindowType):
             else:
                 row = i + 1 + 3
                 col = 1
-            self.descriptor_widgets_list.append(FixedText(descriptors_names_to_display[i], 14, night_mode=self.parent().po.all['night_mode']))
+            self.descriptor_widgets_list.append(FixedText(descriptors_names_to_display[i], 14, night_mode=self.po.all['night_mode']))
             self.save_descriptors_layout.addWidget(self.descriptor_widgets_list[label_index], row, col)
-            self.descriptor_widgets_list.append(Checkbox(self.parent().po.all['descriptors'][name]))
+            self.descriptor_widgets_list.append(Checkbox(self.po.all['descriptors'][name]))
             cb_index = label_index + 1
 
             # if name == 'fractal_analysis' or name == 'oscilacyto_analysis':
@@ -213,22 +216,22 @@ class RequiredOutput(WindowType):
         and descriptors. It also changes the active widget to either the first or third
         widget depending on a condition.
         """
-        self.save_coord_specimen.setChecked(self.parent().po.vars['save_coord_specimen'])
-        self.save_graph.setChecked(self.parent().po.vars['save_graph'])
-        self.save_coord_thickening_slimming.setChecked(self.parent().po.vars['save_coord_thickening_slimming'])
-        self.save_coord_network.setChecked(self.parent().po.vars['save_coord_network'])
+        self.save_coord_specimen.setChecked(self.po.vars['save_coord_specimen'])
+        self.save_graph.setChecked(self.po.vars['save_graph'])
+        self.save_coord_thickening_slimming.setChecked(self.po.vars['save_coord_thickening_slimming'])
+        self.save_coord_network.setChecked(self.po.vars['save_coord_network'])
 
-        descriptor_names = self.parent().po.all['descriptors']
+        descriptor_names = self.po.all['descriptors']
         for i, name in enumerate(descriptor_names):
             k = i * 2 + 1
             if name == 'iso_digi_analysis':
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['iso_digi_analysis'])
+                self.descriptor_widgets_list[k].setChecked(self.po.vars['iso_digi_analysis'])
             elif name == 'oscilacyto_analysis':
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['oscilacyto_analysis'])
+                self.descriptor_widgets_list[k].setChecked(self.po.vars['oscilacyto_analysis'])
             elif name == 'fractal_analysis':
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.vars['fractal_analysis'])
+                self.descriptor_widgets_list[k].setChecked(self.po.vars['fractal_analysis'])
             else:
-                self.descriptor_widgets_list[k].setChecked(self.parent().po.all['descriptors'][name])
+                self.descriptor_widgets_list[k].setChecked(self.po.all['descriptors'][name])
 
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
@@ -248,24 +251,24 @@ class RequiredOutput(WindowType):
         This method does not return any value. It updates the internal state of the
         parent object, which saves all user defined parameters.
         """
-        self.parent().po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
-        self.parent().po.vars['save_graph'] = self.save_graph.isChecked()
-        self.parent().po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
-        self.parent().po.vars['save_coord_network'] = self.save_coord_network.isChecked()
-        descriptor_names = self.parent().po.all['descriptors'].keys()
+        self.po.vars['save_coord_specimen'] = self.save_coord_specimen.isChecked()
+        self.po.vars['save_graph'] = self.save_graph.isChecked()
+        self.po.vars['save_coord_thickening_slimming'] = self.save_coord_thickening_slimming.isChecked()
+        self.po.vars['save_coord_network'] = self.save_coord_network.isChecked()
+        descriptor_names = self.po.all['descriptors'].keys()
         for i, name in enumerate(descriptor_names):
             k = i * 2 + 1
             checked_status = self.descriptor_widgets_list[k].isChecked()
-            self.parent().po.all['descriptors'][name] = checked_status
+            self.po.all['descriptors'][name] = checked_status
             if name == 'iso_digi_analysis':
-                self.parent().po.vars['iso_digi_analysis'] = checked_status
+                self.po.vars['iso_digi_analysis'] = checked_status
             if name == 'oscilacyto_analysis':
-                self.parent().po.vars['oscilacyto_analysis'] = checked_status
+                self.po.vars['oscilacyto_analysis'] = checked_status
             if name == 'fractal_analysis':
-                self.parent().po.vars['fractal_analysis'] = checked_status
+                self.po.vars['fractal_analysis'] = checked_status
         if not self.parent().thread_dict['SaveAllVars'].isRunning():
             self.parent().thread_dict['SaveAllVars'].start()
-        self.parent().po.update_output_list()
+        self.po.update_output_list()
         if self.parent().last_is_first:
             self.parent().change_widget(0) # FirstWidget
         else:

@@ -1361,14 +1361,15 @@ def read_one_arena(arena_label, already_greyscale:bool, csc_dict: dict, videos_a
                 visu = video2numpy(vid_name, None, background, background2, true_frame_width)
         else:
             vid_name = f"ind_{arena_label}.h5"
-            h5_keys = get_h5_keys(vid_name)
-            if os.path.isfile(vid_name) and 'video' in h5_keys:
-                if already_greyscale:
-                    converted_video = video2numpy(vid_name, None, background, background2, true_frame_width)
-                    if len(converted_video.shape) == 4:
-                        converted_video = converted_video[:, :, :, 0]
-                else:
-                    visu = video2numpy(vid_name, None, background, background2, true_frame_width)
+            if os.path.isfile(vid_name):
+                h5_keys = get_h5_keys(vid_name)
+                if os.path.isfile(vid_name) and 'video' in h5_keys:
+                    if already_greyscale:
+                        converted_video = video2numpy(vid_name, None, background, background2, true_frame_width)
+                        if len(converted_video.shape) == 4:
+                            converted_video = converted_video[:, :, :, 0]
+                    else:
+                        visu = video2numpy(vid_name, None, background, background2, true_frame_width)
     return visu, converted_video, converted_video2
 
 def create_empty_videos(image_list: list, cr: list, lose_accuracy_to_save_memory: bool,

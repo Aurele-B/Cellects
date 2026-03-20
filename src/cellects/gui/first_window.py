@@ -26,12 +26,14 @@ class FirstWindow(MainTabsType):
     """
     First window of the Cellects GUI.
     """
-    def __init__(self, parent, night_mode):
+    def __init__(self, po, parent, night_mode):
         """
         Initialize the First window with a parent widget and night mode setting.
 
         Parameters
         ----------
+        po: ProgramOrganizer
+            The object containing current analysis parameters and connecting all methods of the software.
         parent : QWidget
             The parent widget to which this window will be attached.
         night_mode : bool
@@ -54,7 +56,7 @@ class FirstWindow(MainTabsType):
         super().__init__(parent, night_mode)
         logging.info("Initialize first window")
         self.setParent(parent)
-        self.video_task: str = 'all'
+        self.po = po
         self.true_init()
 
     def true_init(self):
@@ -72,16 +74,15 @@ class FirstWindow(MainTabsType):
         self.data_tab.set_in_use()
         self.image_tab.set_not_usable()
         self.video_tab.set_not_usable()
-        self.thread_dict = {}
-        self.thread_dict["LookForData"] = LookForDataThreadInFirstW(self.parent())
-        self.thread_dict["VideoTracking"] = VideoTrackingThread(self.parent())
-        self.thread_dict["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.parent())
-        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.parent())
-        self.thread_dict["GetExifDataThread"] = GetExifDataThread(self.parent())
+        self.thread_dict["LookForData"] = LookForDataThreadInFirstW(self.po, self.parent())
+        self.thread_dict["VideoTracking"] = VideoTrackingThread(self.po, self.parent())
+        self.thread_dict["LoadDataToRunCellectsQuickly"] = LoadDataToRunCellectsQuicklyThread(self.po, self.parent())
+        self.thread_dict["GetFirstIm"] = GetFirstImThread(self.po, self.parent())
+        self.thread_dict["GetExifDataThread"] = GetExifDataThread(self.po, self.parent())
         self.instantiate: bool = True
-        self.title_label = FixedText('Cellects', police=60, night_mode=self.parent().po.all['night_mode'])
+        self.title_label = FixedText('Cellects', police=60, night_mode=self.po.all['night_mode'])
         self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
-        self.subtitle_line = LineWidget(size=[1, 50], night_mode=self.parent().po.all['night_mode'])
+        self.subtitle_line = LineWidget(size=[1, 50], night_mode=self.po.all['night_mode'])
 
         self.Vlayout.addWidget(self.title_label)
         self.Vlayout.addWidget(self.subtitle_line)
@@ -92,9 +93,9 @@ class FirstWindow(MainTabsType):
         self.second_row_widget = QtWidgets.QWidget()
         self.second_row_layout = QtWidgets.QHBoxLayout()
         self.im_or_vid_label = FixedText(FW['Image_list_or_videos']['label'], tip=FW['Image_list_or_videos']['tips'],
-                                         night_mode=self.parent().po.all['night_mode'])
-        # self.im_or_vid_label = FixedText('Image list or Videos:', tip="What type of data do(es) contain(s) folder(s)?", night_mode=self.parent().po.all['night_mode'])
-        self.im_or_vid = Combobox(["Image list", "Videos"], self.parent().po.all['im_or_vid'], night_mode=self.parent().po.all['night_mode'])
+                                         night_mode=self.po.all['night_mode'])
+        # self.im_or_vid_label = FixedText('Image list or Videos:', tip="What type of data do(es) contain(s) folder(s)?", night_mode=self.po.all['night_mode'])
+        self.im_or_vid = Combobox(["Image list", "Videos"], self.po.all['im_or_vid'], night_mode=self.po.all['night_mode'])
         self.im_or_vid.setFixedWidth(150)
         self.im_or_vid.currentTextChanged.connect(self.im2vid)
         # Set their positions on layout
@@ -109,34 +110,34 @@ class FirstWindow(MainTabsType):
         self.third_row_widget = QtWidgets.QWidget()
         self.third_row_layout = QtWidgets.QHBoxLayout()
         # Set default images radical and extension widgets
-        if self.parent().po.all['im_or_vid'] == 0:
+        if self.po.all['im_or_vid'] == 0:
             what = 'Images'
-            self.parent().po.all['radical'] = 'img'
-            self.parent().po.all['extension'] = '.jpg'
+            self.po.all['radical'] = 'img'
+            self.po.all['extension'] = '.jpg'
             self.arena_number_label = FixedText('Arena number per folder:',
                                                 tip=FW["Arena_number_per_folder"]["tips"] , #"If this number is not always the same (depending on the folder), it can be changed later",
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
         else:
             what = 'Videos'
-            self.parent().po.all['radical'] = ''
-            self.parent().po.all['extension'] = '.mp4'
+            self.po.all['radical'] = ''
+            self.po.all['extension'] = '.mp4'
             self.arena_number_label = FixedText('Arena number per folder:',
                                                 tip=FW["Arena_number_per_folder"]["tips"], #"If this number is not always the same (depending on the video), it can be changed later",
-                                                night_mode=self.parent().po.all['night_mode'])
+                                                night_mode=self.po.all['night_mode'])
         self.arena_number_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.arena_number = Spinbox(min=0, max=255, val=self.parent().po.all['first_folder_sample_number'],
-                                     decimals=0, night_mode=self.parent().po.all['night_mode'])
+        self.arena_number = Spinbox(min=0, max=255, val=self.po.all['first_folder_sample_number'],
+                                     decimals=0, night_mode=self.po.all['night_mode'])
         self.arena_number.valueChanged.connect(self.re_instantiate_widgets)
-        self.radical_label = FixedText(what + ' prefix:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.radical_label = FixedText(what + ' prefix:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.po.all['night_mode'])
         self.radical_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.radical = EditText(self.parent().po.all['radical'],
-                                       night_mode=self.parent().po.all['night_mode'])
+        self.radical = EditText(self.po.all['radical'],
+                                       night_mode=self.po.all['night_mode'])
         self.radical.textChanged.connect(self.re_instantiate_widgets)
 
-        self.extension_label = FixedText(what + ' extension:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.parent().po.all['night_mode'])
+        self.extension_label = FixedText(what + ' extension:', tip=FW["Image_prefix_and_extension"]["tips"], night_mode=self.po.all['night_mode'])
         self.extension_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.extension = EditText(self.parent().po.all['extension'],
-                                       night_mode=self.parent().po.all['night_mode'])
+        self.extension = EditText(self.po.all['extension'],
+                                       night_mode=self.po.all['night_mode'])
         self.extension.textChanged.connect(self.re_instantiate_widgets)
 
         # Set their positions on layout
@@ -158,14 +159,14 @@ class FirstWindow(MainTabsType):
 
         self.folder_label = FixedText(FW["Folder"]["label"] + ':',
                                       tip=FW["Folder"]["tips"],#"Path to the folder containing images or videos\nThe selected folder may also contain several folders of data",
-                                      night_mode=self.parent().po.all['night_mode'])
+                                      night_mode=self.po.all['night_mode'])
         self.folder_label.setAlignment(QtCore.Qt.AlignVCenter)
-        self.global_pathway = EditText(self.parent().po.all['global_pathway'],
-                                       night_mode=self.parent().po.all['night_mode'])
+        self.global_pathway = EditText(self.po.all['global_pathway'],
+                                       night_mode=self.po.all['night_mode'])
         self.global_pathway.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.global_pathway.textChanged.connect(self.pathway_changed)
         self.browse = PButton(FW["Browse"]["label"], tip=FW["Browse"]["tips"],
-                              night_mode=self.parent().po.all['night_mode'])
+                              night_mode=self.po.all['night_mode'])
         self.browse.clicked.connect(self.browse_is_clicked)
 
         # Set their positions on layout
@@ -198,17 +199,17 @@ class FirstWindow(MainTabsType):
         # Add shortcuts: Video_analysis and Run directly
         # Shortcut 1 : Advanced Parameters
         self.advanced_parameters = PButton(FW["Advanced_parameters"]["label"], tip=FW["Advanced_parameters"]["tips"],
-                                           night_mode=self.parent().po.all['night_mode'])
+                                           night_mode=self.po.all['night_mode'])
         self.advanced_parameters.clicked.connect(self.advanced_parameters_is_clicked)
         # Shortcut 2 : Required Outputs
         self.required_outputs = PButton(FW["Required_outputs"]["label"], tip=FW["Required_outputs"]["tips"],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        night_mode=self.po.all['night_mode'])
         self.required_outputs.clicked.connect(self.required_outputs_is_clicked)
         # Shortcut 3 :
         self.video_tab.clicked.connect(self.video_analysis_window_is_clicked)
         # Shortcut 4 :
         self.Run_all_directly = PButton(FW["Run_all_directly"]["label"], tip=FW["Run_all_directly"]["tips"],
-                                        night_mode=self.parent().po.all['night_mode'])
+                                        night_mode=self.po.all['night_mode'])
         self.Run_all_directly.clicked.connect(self.Run_all_directly_is_clicked)
         self.Run_all_directly.setVisible(False)
 
@@ -225,11 +226,11 @@ class FirstWindow(MainTabsType):
         self.last_row_layout = QtWidgets.QHBoxLayout()
 
         # Message
-        self.message = FixedText('', halign='r', night_mode=self.parent().po.all['night_mode'])
+        self.message = FixedText('', halign='r', night_mode=self.po.all['night_mode'])
         self.message.setStyleSheet("color: rgb(230, 145, 18)")
         # Next button
         self.next = PButton(FW['Next']['label'], tip=FW['Next']['tips'],
-                            night_mode=self.parent().po.all['night_mode'])
+                            night_mode=self.po.all['night_mode'])
         self.image_tab.clicked.connect(self.next_is_clicked)
         self.next.clicked.connect(self.next_is_clicked)
         # Add widgets to the last_row_layout
@@ -278,31 +279,31 @@ class FirstWindow(MainTabsType):
 
         Notes
         -----
-        This function assumes that `self.parent().po.all` is a dictionary with a key `'global_pathway'`.
+        This function assumes that `self.po.all` is a dictionary with a key `'global_pathway'`.
         """
         dialog = QtWidgets.QFileDialog()
-        dialog.setDirectory(self.parent().po.all['global_pathway'])
-        self.parent().po.all['global_pathway'] = dialog.getExistingDirectory(self,
+        dialog.setDirectory(self.po.all['global_pathway'])
+        self.po.all['global_pathway'] = dialog.getExistingDirectory(self,
                                                                              'Select a folder containing images (/videos) or folders of data images (/videos)')
-        self.global_pathway.setText(self.parent().po.all['global_pathway'])
+        self.global_pathway.setText(self.po.all['global_pathway'])
 
     def im2vid(self):
         """
         Toggle between processing images or videos based on UI selection.
         """
-        self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
+        self.po.all['im_or_vid'] = self.im_or_vid.currentIndex()
         if self.im_or_vid.currentIndex() == 0:
             what = 'Images'
-            self.parent().po.all['radical'] = 'img'
-            self.parent().po.all['extension'] = '.jpg'
+            self.po.all['radical'] = 'img'
+            self.po.all['extension'] = '.jpg'
         else:
-            self.parent().po.all['radical'] = ''
-            self.parent().po.all['extension'] = '.mp4'
+            self.po.all['radical'] = ''
+            self.po.all['extension'] = '.mp4'
             what = 'Videos'
         self.radical_label.setText(what + ' prefix:')
         self.extension_label.setText(what + ' extension:')
-        self.radical.setText(self.parent().po.all['radical'])
-        self.extension.setText(self.parent().po.all['extension'])
+        self.radical.setText(self.po.all['radical'])
+        self.extension.setText(self.po.all['extension'])
 
     def display_message_from_thread(self, text_from_thread: str):
         """
@@ -338,22 +339,22 @@ class FirstWindow(MainTabsType):
         and starts a data-looking thread if conditions are met.
         """
         if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["VideoTracking"].isRunning():
-            self.parent().po.all['im_or_vid'] = self.im_or_vid.currentIndex()
-            self.parent().po.all['radical'] = self.radical.text()
-            self.parent().po.all['extension'] = self.extension.text()
-            self.parent().po.sample_number = int(self.arena_number.value())
-            self.parent().po.all['first_folder_sample_number'] = self.parent().po.sample_number
-            self.parent().po.all['sample_number_per_folder'] = [self.parent().po.sample_number]
-            if not self.instantiate:  # not self.parent().imageanalysiswindow.initialized:
+            self.po.all['im_or_vid'] = self.im_or_vid.currentIndex()
+            self.po.all['radical'] = self.radical.text()
+            self.po.all['extension'] = self.extension.text()
+            self.po.sample_number = int(self.arena_number.value())
+            self.po.all['first_folder_sample_number'] = self.po.sample_number
+            self.po.all['sample_number_per_folder'] = [self.po.sample_number]
+            if not self.instantiate:
                 logging.info("No need to look for data, images or videos already found previously.")
                 self.first_im_read(True)
             else:
-                self.parent().po.all['global_pathway'] = self.global_pathway.text()
-                if not os.path.isdir(self.parent().po.all['global_pathway']):
+                self.po.all['global_pathway'] = self.global_pathway.text()
+                if not os.path.isdir(self.po.all['global_pathway']):
                     self.message.setText('The folder selected is not valid')
                 else:
                     self.message.setText('')
-                    self.message.setText(f"Looking for {self.parent().po.all['radical']}***{self.parent().po.all['extension']} Wait...")
+                    self.message.setText(f"Looking for {self.po.all['radical']}***{self.po.all['extension']} Wait...")
                     self.message.setStyleSheet("color: rgb(230, 145, 18)")
                     self.thread_dict["LookForData"].start()
                     self.thread_dict["LookForData"].finished.connect(self.when_look_for_data_finished)
@@ -370,15 +371,15 @@ class FirstWindow(MainTabsType):
         This function checks if there are any data items (images or videos) left in the selected folder and its sub-folders.
         If no data is found, it displays an error message. Otherwise, it proceeds with instantiating widgets or starting a thread.
         """
-        if len(self.parent().po.all['folder_list']) == 0 and len(self.parent().po.data_list) == 0:
-            if self.parent().po.all['im_or_vid'] == 1:
-                error_message = f"There is no videos ({self.parent().po.all['radical']}...{self.parent().po.all['extension']}) in the selected folder and its sub-folders"
+        if len(self.po.all['folder_list']) == 0 and len(self.po.data_list) == 0:
+            if self.po.all['im_or_vid'] == 1:
+                error_message = f"There is no videos ({self.po.all['radical']}...{self.po.all['extension']}) in the selected folder and its sub-folders"
             else:
-                error_message = f"There is no images ({self.parent().po.all['radical']}...{self.parent().po.all['extension']}) in the selected folder and its sub-folders"
+                error_message = f"There is no images ({self.po.all['radical']}...{self.po.all['extension']}) in the selected folder and its sub-folders"
             self.message.setText(error_message)
         else:
             self.message.setText('')
-            if self.parent().po.all['folder_number'] > 1:
+            if self.po.all['folder_number'] > 1:
                 self.parent().instantiate_widgets()
                 self.parent().ifseveralfolderswindow.true_init()
                 self.instantiate = False
@@ -399,7 +400,7 @@ class FirstWindow(MainTabsType):
         self.parent().instantiate_widgets()
         self.parent().imageanalysiswindow.true_init()
         self.instantiate = False
-        if self.parent().po.first_exp_ready_to_run and (self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1):
+        if self.po.first_exp_ready_to_run and (self.po.all["im_or_vid"] == 1 or len(self.po.data_list) > 1):
             self.parent().imageanalysiswindow.video_tab.set_not_in_use()
         self.parent().change_widget(2) # imageanalysiswindow
         # From now on, image analysis will be available from video analysis:
@@ -467,9 +468,9 @@ class FirstWindow(MainTabsType):
           progress messages.
         """
         if not self.thread_dict["LookForData"].isRunning() and not self.thread_dict["VideoTracking"].isRunning():
-            self.parent().po.motion = None
+            self.po.motion = None
             self.message.setText("Complete analysis has started, wait until this message disappear...")
-            self.video_task = 'all'
+            self.po.video_task = 'all'
             self.thread_dict["VideoTracking"].start()
             self.thread_dict["VideoTracking"].message_from_thread.connect(self.display_message_from_thread)
             self.thread_dict["VideoTracking"].image_from_thread.connect(self.display_image_during_thread)
@@ -495,8 +496,8 @@ class FirstWindow(MainTabsType):
         if self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
             self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
         if os.path.isdir(Path(self.global_pathway.text())):
-            self.parent().po.all['global_pathway'] = self.global_pathway.text()
-            os.chdir(Path(self.parent().po.all['global_pathway']))
+            self.po.all['global_pathway'] = self.global_pathway.text()
+            os.chdir(Path(self.po.all['global_pathway']))
             # 1) Put invisible widgets
             self.radical.setVisible(False)
             self.extension.setVisible(False)
@@ -542,14 +543,14 @@ class FirstWindow(MainTabsType):
         self.required_outputs.setVisible(True)
         self.next.setVisible(True)
 
-        if self.parent().po.first_exp_ready_to_run:
+        if self.po.first_exp_ready_to_run:
             self.parent().instantiate_widgets()
-            self.arena_number.setValue(self.parent().po.all['first_folder_sample_number'])
-            self.im_or_vid.setCurrentIndex(self.parent().po.all['im_or_vid'])
-            self.radical.setText(self.parent().po.all['radical'])
-            self.extension.setText(self.parent().po.all['extension'])
+            self.arena_number.setValue(self.po.all['first_folder_sample_number'])
+            self.im_or_vid.setCurrentIndex(self.po.all['im_or_vid'])
+            self.radical.setText(self.po.all['radical'])
+            self.extension.setText(self.po.all['extension'])
             self.Run_all_directly.setVisible(True)
-            if self.parent().po.all["im_or_vid"] == 1 or len(self.parent().po.data_list) > 1:
+            if self.po.all["im_or_vid"] == 1 or len(self.po.data_list) > 1:
                 self.video_tab.set_not_in_use()
 
 
