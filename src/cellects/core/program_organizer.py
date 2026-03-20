@@ -490,6 +490,7 @@ class ProgramOrganizer:
             logging.info("The current folder is ready to run")
         else:
             logging.info("The current folder is not ready to run")
+            self.update_variable_dict()
 
     def save_data_to_run_cellects_quickly(self, new_one_if_does_not_exist: bool=True):
         """
