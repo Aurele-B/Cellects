@@ -1046,18 +1046,14 @@ class VideoTrackingThread(QtCore.QThread):
                 if self.po.motion is None or self.po.load_quick_full == 0:
                     self.load_one_arena()
                 if self.status['continue'] and self.po.load_quick_full > 0:
-                    if self.po.motion.start is not None:
-                        logging.info("One arena detection has started")
-                        self.one_detection()
-                        if self.status['continue']:
-                            if self.po.load_quick_full > 1:
-                                logging.info("One arena post-processing has started")
-                                self.post_processing()
-                            else:
-                                self.when_detection_finished.emit("Detection done, read to see the result")
-                    else:
-                        self.status['message'] = f"The current parameters failed to detect the cell(s) motion"
-                        self.status['continue'] = False
+                    logging.info("One arena detection has started")
+                    self.one_detection()
+                    if self.status['continue']:
+                        if self.po.load_quick_full > 1:
+                            logging.info("One arena post-processing has started")
+                            self.post_processing()
+                        else:
+                            self.when_detection_finished.emit("Detection done, read to see the result")
 
         if not self.status['continue']:
             self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
@@ -1279,7 +1275,7 @@ class VideoTrackingThread(QtCore.QThread):
         try:
             memory_diff = self.po.update_available_core_nb()
             if self.po.cores > 0:  # i.e. enough memory
-                if not self.po.all['do_multiprocessing'] or self.po.cores == 1:
+                if not self.po.all['do_multiprocessing']:
                     arena_nb = len(self.po.vars['analyzed_individuals'])
                     self.status['message'] = f"Starting sequential analysis of {arena_nb} arena(s)"
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
@@ -1632,7 +1628,8 @@ class VideoTrackingThread(QtCore.QThread):
                             mask = self.po.motion.logical_and
                         elif seg_i == 4:
                             mask = self.po.motion.logical_or
-                        analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
+                        if mask is not None:
+                            analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
                 else:
                     if self.po.computed_video_options[self.po.all['video_option']]:
                         if self.po.motion is None:
@@ -1716,7 +1713,8 @@ class VideoTrackingThread(QtCore.QThread):
                     elif self.po.all['video_option'] == 4:
                         mask = self.po.motion.logical_or
                     self.po.motion.binary = np.zeros(self.po.motion.dims, dtype=np.uint8)
-                    self.po.motion.binary[mask[0], mask[1], mask[2]] = 1
+                    if mask is not None:
+                        self.po.motion.binary[mask[0], mask[1], mask[2]] = 1
             else:
                 self.po.motion.binary = np.zeros(self.po.motion.dims[:3], dtype=np.uint8)
                 if self.po.computed_video_options[self.po.all['video_option']]:

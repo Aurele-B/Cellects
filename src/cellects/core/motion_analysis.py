@@ -134,6 +134,10 @@ class MotionAnalysis:
         self.sun = None
         self.holes = None
         self.coord_network = None
+        self.luminosity_segmentation = None
+        self.gradient_segmentation = None
+        self.logical_and = None
+        self.logical_or = None
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
