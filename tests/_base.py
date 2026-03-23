@@ -8,6 +8,7 @@ import itertools
 import os
 from pathlib import Path
 import unittest
+import time
 
 class CellectsUnitTest(unittest.TestCase):
     @classmethod
@@ -16,9 +17,15 @@ class CellectsUnitTest(unittest.TestCase):
         cls.path_input = cls.d + '/' + "input"
         cls.path_output = cls.d + '/' + "output"
         cls.path_experiment = cls.d + '/' + "single_experiment"
-
+        cls.sleeping_time = 0.001
         if not os.path.isdir(cls.path_output):
             os.mkdir(cls.path_output)
+
+    def sleep(self, duration: float=None):
+        if duration is None:
+            time.sleep(self.sleeping_time)
+        else:
+            time.sleep(duration)
 
 np.random.seed(42)
 # AIM: Make one test for each condition:

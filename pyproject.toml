@@ -82,7 +82,6 @@ USE_NUMBA = "0"
 omit = [
     "src/cellects/gui/*",
     "src/cellects/utils/load_display_save.py",
-    "src/cellects/core/cellects_threads.py",
     "src/cellects/core/script_based_run.py",
     "src/cellects/__main__.py",
     "src/cellects/analyses/*",
