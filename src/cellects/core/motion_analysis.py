@@ -153,12 +153,11 @@ class MotionAnalysis:
         self.start = None
         if detect_shape:
             self.assess_motion_detection()
-            if self.start is not None:
-                self.detection()
-                self.initialize_post_processing()
-                self.t = self.start
-                while self.t < self.dims[0]:  #200:
-                    self.update_shape(show_seg)
+            self.detection()
+            self.initialize_post_processing()
+            self.t = self.start
+            while self.t < self.dims[0]:  #200:
+                self.update_shape(show_seg)
                 #
 
             if analyse_shape:
@@ -257,6 +256,9 @@ class MotionAnalysis:
         if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
             self.start = None
             self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
+            self.substantial_time = 1
+            self.substantial_growth = 1
+            self.substantial_image = self.origin
         else:
             self.get_covering_duration(step)
 
@@ -445,6 +447,11 @@ class MotionAnalysis:
         """
         if self.start is None:
             self.start = 1
+            logging.info("Failed to detect growth using the available frame number, use the default frame-by-frame segmentation algorithm")
+            self.vars['frame_by_frame_segmentation'] = True
+            self.vars['do_threshold_segmentation'] = False
+            self.vars['do_slope_segmentation'] = False
+            compute_all_possibilities = False
         else:
             self.start = np.max((self.start, 1))
         self.lost_frames = np.min((self.step, self.dims[0] // 4))
@@ -468,7 +475,7 @@ class MotionAnalysis:
                     else:
                         self.converted_video2[t, ...] = analysisi.image2
 
-        if self.vars['color_number'] == 2:
+        if not self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
             luminosity_segmentation, l_threshold_over_time = self.lum_value_segmentation(self.converted_video, do_threshold_segmentation=self.vars['do_threshold_segmentation'] or compute_all_possibilities)
             self.converted_video = self.smooth_pixel_slopes(self.converted_video)
             gradient_segmentation = None
