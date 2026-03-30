@@ -83,7 +83,6 @@ omit = [
     "src/cellects/gui/*",
     "src/cellects/io/*",
     "src/cellects/display/*",
-    "src/cellects/core/script_based_run.py",
     "src/cellects/__main__.py",
     "src/cellects/analyses/*",
     "src/cellects/paper_illustrations/*",
