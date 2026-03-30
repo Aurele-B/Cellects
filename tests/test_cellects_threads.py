@@ -65,7 +65,7 @@ class TestOnSeveralFolders(CellectsUnitTest):
         """Test running all arenas of all folders with the VideoTrackingThread class."""
         self.po.video_task = 'all'
         self.video_tracking_thread.run()
-        self.assertTrue(os.path.isfile( f"Analysis efficiency, last image.jpg"))
+        self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
 
     def tearDown(self):
         """Remove all written files."""
@@ -193,7 +193,7 @@ class TestCellectsThreads(CellectsUnitTest):
         self.po.all['do_multiprocessing'] = True
         os.remove('cellects_settings.json')
         self.video_tracking_thread.run()
-        self.assertTrue(os.path.isfile( f"Analysis efficiency, last image.jpg"))
+        self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
 
     def tearDown(self):
         """Remove all written files."""
