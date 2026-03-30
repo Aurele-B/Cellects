@@ -22,7 +22,7 @@ def colorize_mask(mask, blob_to_back_diff: int=100, blob_extent: int=20, back_ex
     ----------
     mask
         Binary mask indicating foreground (`> 0`) and background (`== 0`). Can be 2‑D
-        (height × width) or 3‑D (height × width × depth).
+        (height × width) or 3‑D (height × width × depth).
     blob_to_back_diff : int, optional
         Minimum absolute difference between foreground and background colors per
         channel. Default is ``100``.

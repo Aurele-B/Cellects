@@ -2186,7 +2186,7 @@ def add_mask_contour(img: NDArray, mask: NDArray, color=None, dilate: int=0) -> 
     -----
     * The original ``img`` is not modified; a copy is created before drawing.
     * Automatic color selection is based on the overall brightness of ``img``.
-    * Dilation uses a 3 × 3 cross‑shaped kernel (``cross_33``) defined elsewhere
+    * Dilation uses a 3 × 3 cross‑shaped kernel (``cross_33``) defined elsewhere
       in the module.
 
     Examples
