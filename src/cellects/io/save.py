@@ -392,8 +392,9 @@ def tear_down_temp_files():
     """
     dir_list = ["", DATA_DIR, DATA_DIR / "single_experiment"]
     for dir_i in dir_list:
-        os.chdir(dir_i)
-        temp_files = insensitive_glob('*.json') + insensitive_glob('*.h5') + insensitive_glob('*.csv') + insensitive_glob('ind_*') + insensitive_glob('Analysis e*')
-        for temp_file in temp_files:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+        if os.path.isdir(dir_i):
+            os.chdir(dir_i)
+            temp_files = insensitive_glob('*.json') + insensitive_glob('*.h5') + insensitive_glob('*.csv') + insensitive_glob('ind_*') + insensitive_glob('Analysis e*')
+            for temp_file in temp_files:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
