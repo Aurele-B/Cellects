@@ -390,7 +390,7 @@ def tear_down_temp_files():
     """
     Delete temporary experiment files created during tests or documentation creation.
     """
-    dir_list = [DATA_DIR, DATA_DIR / "single_experiment"]
+    dir_list = ["", DATA_DIR, DATA_DIR / "single_experiment"]
     for dir_i in dir_list:
         os.chdir(dir_i)
         temp_files = insensitive_glob('*.json') + insensitive_glob('*.h5') + insensitive_glob('*.csv') + insensitive_glob('ind_*') + insensitive_glob('Analysis e*')
