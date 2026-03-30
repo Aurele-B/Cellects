@@ -265,16 +265,14 @@ def find_growth_features(
     mean_diff = np.mean(np.diff(y))
 
     # Detect slope‑shift frames (possible rupture points)
-    #   _slope_shifts returns **1‑based* frame numbers multiplied by the
-    #   cluster length, identical to the R ``which(...)*cluster_length``.
-    #   We convert them back to 0‑based indices for subsequent NumPy work.
+    # _slope_shifts returns **1‑based* frame numbers multiplied by the cluster length.
     cluster_len = 5
     shift_frames_onebased = _slope_shifts(y, cluster_len, shape_flag, mean_diff)
     shift_frames = shift_frames_onebased - 1          # now 0‑based
 
     # Determine where (if ever) a “rupture” occurs
     # A rupture is the *first* slope‑shift that happens after the signal
-    # has moved through 90 % of its total amplitude.
+    # has moved through 90 % of its total amplitude.
     if shape == "increasing":
         high_thr = y[1] + 0.9 * maximal_variation
         high_idx = np.where(y > high_thr)[0]

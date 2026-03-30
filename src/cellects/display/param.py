@@ -96,37 +96,27 @@ def get_mpl_colormap(cmap_name: str):
 
 def generate_color_gradient(colors: list, n_steps: int) -> list:
     """
-    Generate a linear color gradient by interpolating between consecutive colors.
+    Generate a linear color gradient interpolating between a sequence of RGB colors.
 
     Parameters
     ----------
-    `colors`
+    colors : list
         List of RGB tuples defining the colors to interpolate through.
-    `n_steps`
-        Total number of steps (including the start and end colors) to
-        generate in the gradient.
+    n_steps : int
+        Total number of color tuples to generate to fill the gradient between the provided colors.
 
     Returns
     -------
-    `gradient`
-        List of RGB tuples representing the interpolated gradient. The
-        length of the returned list is at most ``n_steps``; the final
-        color is always included.
-
-    Notes
-    -----
-    The function divides ``n_steps`` evenly across the segments formed by
-    adjacent colors.  If ``n_steps`` is not an exact multiple of the number
-    of segments, the excess steps are discarded, and the last color in
-    ``colors`` is appended to ensure the gradient ends with the final
-    specified color.
+    list
+        A list of RGB tuples forming a gradient between the provided colors.
 
     Examples
     --------
-    >>> colors = [firebrick_rgb, orange_rgb, yellow_rgb]
+    >>> colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
     >>> gradient = generate_color_gradient(colors, 5)
     >>> print(gradient)
-    [(178.0, 34.0, 34.0), (216.5, 99.5, 17.0), (255.0, 165.0, 0.0), (254.5, 180.5, 39.5), (254, 196, 79)]
+    [(255.0, 0.0, 0.0), (127.5, 127.5, 0.0), (0.0, 255.0, 0.0),
+     (0.0, 127.5, 127.5), (0.0, 0.0, 255.0)]
     """
     gradient = []
     n_segments = len(colors) - 1

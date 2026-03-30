@@ -18,6 +18,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from cellects.utils.utilitarian import insensitive_glob
 from cellects.io.load import get_h5_keys, list_image_dir, is_raw_image, read_and_rotate, read_rotate_crop_and_reduce_image
+from cellects.core.cellects_paths import DATA_DIR
 
 
 
@@ -384,4 +385,15 @@ def save_im(img: NDArray, full_path: str=None, cmap=None):
     else:
         fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
         plt.close(fig)
-        
+
+def tear_down_temp_files():
+    """
+    Delete temporary experiment files created during tests or documentation creation.
+    """
+    dir_list = ["", DATA_DIR, DATA_DIR / "single_experiment"]
+    for dir_i in dir_list:
+        os.chdir(dir_i)
+        temp_files = insensitive_glob('*.json') + insensitive_glob('*.h5') + insensitive_glob('*.csv') + insensitive_glob('ind_*') + insensitive_glob('Analysis e*')
+        for temp_file in temp_files:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)

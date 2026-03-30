@@ -57,7 +57,7 @@ def curve(y, x=None, y_label: str="", x_label: str="", color=None, save_path: st
     -----
     * If all values in `y` are greater than ``10000`` or smaller than
       ``0.001``, the y‑axis uses a scientific‑notation formatter.
-    * The figure size is fixed at 10 × 10 inches; saved figures use a DPI
+    * The figure size is fixed at 10 × 10 inches; saved figures use a DPI
       of 500 with a tight layout and minimal padding.
     * ``transparent=True`` is used when saving, making the background
       invisible.

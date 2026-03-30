@@ -39,7 +39,7 @@ def sim_noisy_circle(size: int) -> NDArray[np.uint8]:
     Returns
     -------
     noisy_circle : NDArray[np.uint8]
-        A ``size`` × ``size`` array of type ``uint8`` where pixel values
+        A ``size`` × ``size`` array of type ``uint8`` where pixel values
         are ``0`` (background) or ``255`` (foreground).  The foreground
         approximates a circle with random gaps and optional erosion.
 

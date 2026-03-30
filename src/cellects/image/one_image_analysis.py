@@ -210,6 +210,8 @@ class OneImageAnalysis:
             self.image, self.image2, all_c_spaces, self.first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, subtract_background, subtract_background2)
             if len(all_c_spaces) > len(self.all_c_spaces):
                 self.all_c_spaces = all_c_spaces
+        if not 'logical' in c_space_dict:
+            c_space_dict['logical'] = 'None'
 
         self.segmentation(logical=c_space_dict['logical'], color_number=color_number, bio_mask=bio_mask,
                           back_mask=back_mask, rolling_window_segmentation=rolling_window_segmentation,
