@@ -29,8 +29,8 @@ from cellects.gui.ui_strings import IAW
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
-from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.image_segmentation import filter_dict
+from cellects.image.one_image_analysis import OneImageAnalysis
+from cellects.image.image_segmentation import filter_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
@@ -513,7 +513,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.is_image_analysis_running:
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
-                self.parent().last_tab = "image_analysis"
+                self.parent().last_tab = "image"
                 self.parent().change_widget(3)
 
     def read_is_clicked(self):
@@ -2473,7 +2473,7 @@ class ImageAnalysisWindow(MainTabsType):
 
 
             self.message.setText(f"Final checks, wait... ")
-            self.parent().last_tab = "image_analysis"
+            self.parent().last_tab = "image"
             self.thread_dict['PrepareVideoAnalysis'].start()
             if self.po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
@@ -2485,7 +2485,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.message.setText(f"")
 
             self.video_tab.set_not_in_use()
-            self.parent().last_tab = "image_analysis"
+            self.parent().last_tab = "image"
             self.parent().change_widget(3)  # VideoAnalysisWindow
 
             # self.popup.close()

@@ -4,8 +4,8 @@ This script contains all unit tests of the cell leaving detection script
 """
 import unittest
 from tests._base import CellectsUnitTest
-from cellects.image_analysis.cell_leaving_detection import *
-from cellects.image_analysis.morphological_operations import cross_33
+from cellects.video.cell_leaving_detection import *
+from cellects.image.morphological_operations import cross_33
 
 
 class TestCellLeavingDetection(CellectsUnitTest):

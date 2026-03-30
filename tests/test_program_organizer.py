@@ -5,10 +5,11 @@ This script contains all unit tests of the one_video_per_blob script
 import unittest
 import psutil
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.motion_analysis import MotionAnalysis
+from cellects.video.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.morphological_operations import rhombus_55, cross_33
-from cellects.utils.load_display_save import write_video_sets, read_json, write_json
+from cellects.image.morphological_operations import rhombus_55, cross_33
+from cellects.io.save import write_video_sets, write_json
+from cellects.io.load import read_json
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid, rgb_video_test, binary_video_test, back_vary_rgb_many_small_blobs, small_blob_nb, many_small_blobs
 import numpy as np

@@ -20,7 +20,7 @@ from PySide6 import QtWidgets, QtCore
 import logging
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Checkbox, FixedText)
-from cellects.image_analysis.shape_descriptors import descriptors_names_to_display, descriptors_categories
+from cellects.image.shape_descriptors import descriptors_names_to_display, descriptors_categories
 from cellects.gui.ui_strings import RO
 
 class RequiredOutput(WindowType):

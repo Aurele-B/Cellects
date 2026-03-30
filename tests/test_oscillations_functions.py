@@ -5,7 +5,7 @@ This script contains all unit tests of the oscillations functions script
 import unittest
 import os
 from tests._base import CellectsUnitTest, rgb_video_test, binary_video_test
-from cellects.image_analysis.oscillations_functions import *
+from cellects.video.oscillations_functions import *
 
 class TestOscillationsFunctions(CellectsUnitTest):
     @classmethod

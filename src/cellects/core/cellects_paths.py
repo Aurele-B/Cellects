@@ -16,7 +16,7 @@ CONFIG_DIR = CELLECTS_DIR / "config"
 CORE_DIR = CELLECTS_DIR / "core"
 GUI_DIR = CELLECTS_DIR / "gui"
 ICONS_DIR = CELLECTS_DIR / "icons"
-IMAGE_ANALYSIS_DIR = CELLECTS_DIR / "image_analysis"
+IMAGE_ANALYSIS_DIR = CELLECTS_DIR / "image"
 UTILS_DIR = CELLECTS_DIR / "utils"
 
 # Repo root (src/..)

@@ -31,16 +31,14 @@ import cv2
 from numba.typed import Dict as TDict
 import numpy as np
 from PySide6 import QtCore
-
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.image_analysis.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours
-from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
-from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
-from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
-                                              create_empty_videos, write_video, read_h5, remove_h5_key,
-                                              video_writing_decision, write_h5)
+from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours
+from cellects.image.image_segmentation import convert_subtract_and_filter_video
+from cellects.io.save import video_writing_decision, write_video, remove_h5_key, write_h5
+from cellects.io.load import create_empty_videos, read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image, read_h5
+from cellects.utils.formulas import bracket_to_uint8_image_contrast, get_contour_width_from_im_shape, scale_coordinates
 from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
-from cellects.core.motion_analysis import MotionAnalysis
+from cellects.video.motion_analysis import MotionAnalysis
 
 class PrecompileNJITThread(QtCore.QThread):
     """
@@ -1091,6 +1089,8 @@ class VideoTrackingThread(QtCore.QThread):
         bool
             Returns True if pre-processing completed successfully; False otherwise.
         """
+        if len(self.po.data_list) == 0:
+            self.po.look_for_data()
         self.po.load_data_to_run_cellects_quickly()
         if not self.po.first_exp_ready_to_run:
             logging.info("Pre-processing has started")

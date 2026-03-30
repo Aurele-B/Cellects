@@ -5,7 +5,7 @@ This script contains all unit tests of the image segmentation script
 
 import unittest
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img
-from cellects.image_analysis.image_segmentation import *
+from cellects.image.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
 import cv2

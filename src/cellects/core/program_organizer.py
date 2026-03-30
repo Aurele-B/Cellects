@@ -21,19 +21,19 @@ from psutil import virtual_memory
 from pathlib import Path
 import natsort
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.image_analysis.network_functions import extract_graph_dynamics
-from cellects.utils.load_display_save import readim, is_raw_image, read_h5, extract_time, write_h5, \
-    read_and_rotate, video2numpy, write_json, read_json, get_h5_keys, remove_h5_key
+from cellects.video.graph_tracking import extract_graph_dynamics
+from cellects.io.save import remove_h5_key, write_h5,  write_json
+from cellects.io.load import get_h5_keys, readim, is_raw_image, extract_time, read_and_rotate, video2numpy, read_h5, read_json
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len, smallest_memory_array
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame
-from cellects.image_analysis.connected_components_tracking import ConnectedComponentsTracking
-from cellects.image_analysis.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
+from cellects.image.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame
+from cellects.video.connected_components_tracking import ConnectedComponentsTracking
+from cellects.image.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
     get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
-from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.core.one_image_analysis import OneImageAnalysis, init_params
-from cellects.image_analysis.morphological_operations import shape_selection, draw_img_with_mask
+from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
+from cellects.image.one_image_analysis import OneImageAnalysis, init_params
+from cellects.image.morphological_operations import shape_selection, draw_img_with_mask
 
 
 class ProgramOrganizer:
@@ -985,14 +985,17 @@ class ProgramOrganizer:
         self.vars['lighter_background']: bool = True
         self.vars['contour_color']: np.uint8 = 0
         are_dicts_equal: bool = True
-        if self.vars['convert_for_origin'] is not None and self.vars['convert_for_origin'] is not None:
+        if self.vars['convert_for_origin'] is not None and self.vars['convert_for_motion'] is not None:
             for key in self.vars['convert_for_origin'].keys():
                 are_dicts_equal = are_dicts_equal and np.all(key in self.vars['convert_for_motion'] and self.vars['convert_for_origin'][key] == self.vars['convert_for_motion'][key])
 
             for key in self.vars['convert_for_motion'].keys():
                 are_dicts_equal = are_dicts_equal and np.all(key in self.vars['convert_for_origin'] and self.vars['convert_for_motion'][key] == self.vars['convert_for_origin'][key])
         else:
-            self.vars['convert_for_origin'] = {"logical": 'None', "PCA": [1, 1, 1]}
+            if self.vars['convert_for_motion'] is None:
+                self.vars['convert_for_motion'] = self.vars['convert_for_origin']
+            else:
+                self.vars['convert_for_origin'] = self.vars['convert_for_motion']
         if are_dicts_equal:
             if self.first_im is None:
                 self.get_first_image()
@@ -1398,13 +1401,23 @@ class ProgramOrganizer:
                                            0, None, coord_pseudopods)
 
             else:
-                CCTracking = ConnectedComponentsTracking(binary[None, :, :], self.vars['first_move_threshold'])
-                one_row_per_frame = CCTracking.compute_one_descriptor_per_cc(arena, self.vars['exif'],
+                cc_tracking = ConnectedComponentsTracking(binary[None, :, :], self.vars['first_move_threshold'])
+                one_row_per_frame, cc_centroids, cc_coord, cc_final_number = cc_tracking.compute_one_descriptor_per_cc(arena, self.vars['exif'],
                                                                                   self.vars['descriptors'],
                                                                                   self.vars['output_in_mm'],
                                                                                   self.vars['average_pixel_size'],
-                                                                                  self.vars['specimen_activity'] == 'move and grow',
-                                                                                  self.vars['save_coord_specimen'])
+                                                                                  self.vars['specimen_activity'] == 'move and grow')
+
+                if self.vars['save_coord_specimen']:
+                    cc_coord = pd.DataFrame(cc_coord, columns=["time", "colony", "y", "x"])
+                    cc_coord.to_csv(
+                        f"coord{arena}_{cc_final_number}col_t{0}_y{binary.shape[0]}_x{binary.shape[1]}.csv",
+                        sep=';', index=False, lineterminator='\n')
+
+                cc_centroids = pd.DataFrame(cc_centroids, columns=["time", "colony", "y", "x"])
+                cc_centroids.to_csv(
+                    f"colony_centroids{arena}_{cc_final_number}col_t{0}_y{binary.shape[0]}_x{binary.shape[1]}.csv",
+                    sep=';', index=False, lineterminator='\n')
             if self.vars['fractal_analysis']:
                 zoomed_binary, side_lengths = prepare_box_counting(binary,
                                                                    min_mesh_side=self.vars[

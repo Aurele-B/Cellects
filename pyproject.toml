@@ -81,7 +81,8 @@ USE_NUMBA = "0"
 [tool.coverage.run]
 omit = [
     "src/cellects/gui/*",
-    "src/cellects/utils/load_display_save.py",
+    "src/cellects/io/*",
+    "src/cellects/display/*",
     "src/cellects/core/script_based_run.py",
     "src/cellects/__main__.py",
     "src/cellects/analyses/*",

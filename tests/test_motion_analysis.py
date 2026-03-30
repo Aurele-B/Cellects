@@ -5,7 +5,8 @@ This script contains all unit tests of the one_image_analysis script
 import unittest
 
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.core.motion_analysis import *
+from cellects.video.motion_analysis import *
+from cellects.io.load import readim
 from tests._base import CellectsUnitTest, rgb_video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 

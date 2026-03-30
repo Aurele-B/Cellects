@@ -25,7 +25,7 @@ from cellects.core.cellects_paths import CELLECTS_DIR, CONFIG_DIR
 from cellects.gui.custom_widgets import (
     WindowType, PButton, Spinbox, Combobox, Checkbox, FixedText)
 from cellects.gui.ui_strings import AP, IAW
-from cellects.utils.load_display_save import remove_h5_key
+from cellects.io.save import remove_h5_key
 
 
 class AdvancedParameters(WindowType):

@@ -32,7 +32,7 @@ import pandas as pd
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
 from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
                                      get_newly_explored_area)
-from cellects.utils.load_display_save import write_h5
+from cellects.io.save import write_h5
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
                           'total_hole_area': False, 'solidity': False, 'convexity': False, 'eccentricity': False,

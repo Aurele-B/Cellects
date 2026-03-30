@@ -633,7 +633,7 @@ def inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance:
 
 
 @njit()
-def get_line_points(start, end) -> NDArray[int]:
+def get_line_points(start: Tuple[np.int64], end: Tuple[np.int64]) -> NDArray[np.int64]:
     """
     Get line points between two endpoints using Bresenham's line algorithm.
 
@@ -2157,3 +2157,53 @@ def draw_img_with_mask(img:NDArray, dims: Tuple, minmax: Tuple, shape: str, draw
     img[minmax[0]:minmax[1], minmax[2]:minmax[3], 1] += mask * drawing[1]
     img[minmax[0]:minmax[1], minmax[2]:minmax[3], 2] += mask * drawing[2]
     return img
+
+def add_mask_contour(img: NDArray, mask: NDArray, color=None, dilate: int=0) -> NDArray:
+    """
+    Add the contours of a binary mask onto an image.
+
+    Parameters
+    ----------
+    img
+        Input image array (e.g., shape ``(H, W, C)``).  The function works with
+        any color depth but expects a three‑channel image for proper coloring.
+    mask
+        Binary mask where non‑zero values define the contour to be drawn.
+    color
+        ``(R, G, B)`` tuple or list specifying the contour color.  If ``None`` a
+        color is chosen automatically: white for bright images (mean intensity
+        > 126) and black otherwise.
+    dilate
+        Number of dilation iterations applied to the contour before drawing.
+        ``0`` leaves the contour unchanged.
+
+    Returns
+    -------
+    contoured_img
+        A copy of ``img`` with the contour from ``mask`` drawn using ``color``.
+
+    Notes
+    -----
+    * The original ``img`` is not modified; a copy is created before drawing.
+    * Automatic color selection is based on the overall brightness of ``img``.
+    * Dilation uses a 3 × 3 cross‑shaped kernel (``cross_33``) defined elsewhere
+      in the module.
+
+    Examples
+    --------
+    >>> result = add_mask_contour(img, mask, dilate=2)
+    >>> result.shape
+    (480, 640, 3)
+    """
+    contoured_img = img.copy()
+    contours = get_contours(mask)
+    if dilate > 0:
+        contours = cv2.dilate(contours, kernel=cross_33, iterations=dilate)
+    contours_coord = np.nonzero(contours)
+    if color is None:
+        if img.mean() > 126:
+            color = (255, 255, 255)
+        else:
+            color = (0, 0, 0)
+    contoured_img[contours_coord[0], contours_coord[1], :] = color
+    return contoured_img
