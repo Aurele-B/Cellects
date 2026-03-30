@@ -6,7 +6,7 @@ Unit tests for morphological operations.
 import unittest
 import numpy as np
 from tests._base import CellectsUnitTest, several_arenas_bin_img
-from cellects.image_analysis.morphological_operations import *
+from cellects.image.morphological_operations import *
 
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):

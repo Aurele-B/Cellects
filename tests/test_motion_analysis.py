@@ -5,7 +5,8 @@ This script contains all unit tests of the one_image_analysis script
 import unittest
 
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.core.motion_analysis import *
+from cellects.video.motion_analysis import *
+from cellects.io.load import readim
 from tests._base import CellectsUnitTest, rgb_video_test, binary_video_test, several_arenas_vid, several_arenas_bin_vid
 import numpy as np
 
@@ -37,12 +38,11 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
     def setUpClass(cls):
         super().setUpClass()
         os.chdir(cls.path_output)
-        cls.color_space_combination = {"logical": 'None', "PCA": [1, 1, 1]}
         cls.videos_already_in_ram = [rgb_video_test[0, :, :, :][None, :, :, :], rgb_video_test[0, :, :, 0][None, :, :]]
         cls.i = 0
         cls.vars = DefaultDicts().vars
         write_h5(f'ind_{1}.h5', np.array(np.nonzero(binary_video_test[0])), 'origin_coord')
-        cls.vars['lighter_background'] = False
+        cls.vars['lighter_background'] = True
         cls.vars['first_move_threshold'] = 1
         cls.vars['average_pixel_size'] = 1.
         cls.vars['save_coord_network'] = True
@@ -50,9 +50,9 @@ class TestMotionAnalysisWithOneFrame(CellectsUnitTest):
         cls.vars['oscilacyto_analysis'] = True
         cls.vars['save_coord_thickening_slimming'] = True
         cls.vars['fractal_analysis'] = True
-        cls.l = [cls.i, cls.i + 1, cls.vars, True, True, False, cls.videos_already_in_ram]
 
     def test_one_frame_motion_analysis(self):
+        self.l = [self.i, self.i + 1, self.vars, True, True, False, self.videos_already_in_ram]
         self.ma = MotionAnalysis(self.l)
 
 class TestMotionAnalysisWithMP4(CellectsUnitTest):
@@ -88,6 +88,7 @@ class TestMotionAnalysisWithMP4(CellectsUnitTest):
         self.vars['already_greyscale'] = True
         self.l = [self.i, self.i + 1, self.vars, False, False, False, self.videos_already_in_ram]
         self.ma = MotionAnalysis(self.l)
+        self.assertTrue(self.ma.converted_video.any())
 
     def tearDown(self):
         """Remove all written files."""

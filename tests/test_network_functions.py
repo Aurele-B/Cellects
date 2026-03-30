@@ -1,6 +1,6 @@
 
 import unittest
-from cellects.image_analysis.network_functions import *
+from cellects.image.network_functions import *
 from tests._base import CellectsUnitTest
 
 # --- Tests -------------------------------------------------------------------

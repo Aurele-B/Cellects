@@ -40,18 +40,23 @@ from gc import collect
 import numpy as np
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
-from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.cell_leaving_detection import cell_leaving_detection
-from cellects.image_analysis.oscillations_functions import detect_oscillations_dynamics
-from cellects.image_analysis.connected_components_tracking import ConnectedComponentsTracking
-from cellects.image_analysis.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
-from cellects.image_analysis.morphological_operations import (find_major_incline, create_ellipse, draw_me_a_sun,
-                                                              inverted_distance_transform, dynamically_expand_to_fill_holes,
-                                                              box_counting_dimension, prepare_box_counting, cc)
-from cellects.image_analysis.network_functions import *
-from cellects.image_analysis.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
-from cellects.image_analysis.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
+from cellects.image.one_image_analysis import OneImageAnalysis
+from cellects.video.cell_leaving_detection import cell_leaving_detection
+from cellects.video.oscillations_functions import detect_oscillations_dynamics
+from cellects.video.connected_components_tracking import ConnectedComponentsTracking
+from cellects.video.network_tracking import detect_network_dynamics
+from cellects.video.graph_tracking import extract_graph_dynamics
+from cellects.image.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
+from cellects.image.morphological_operations import (find_major_incline, draw_me_a_sun,
+                                                     inverted_distance_transform, dynamically_expand_to_fill_holes,
+                                                     box_counting_dimension, prepare_box_counting, cc)
+from cellects.image.network_functions import *
+from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
+from cellects.image.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
+from cellects.display.param import red_bgr, purple_bgr, darkblue_bgr, teal_bgr, firebrick_bgr
+from cellects.io.load import read_h5, read_one_arena, get_h5_keys, video2numpy
+from cellects.io.save import remove_h5_key, write_video
 
 
 class MotionAnalysis:
@@ -134,6 +139,10 @@ class MotionAnalysis:
         self.sun = None
         self.holes = None
         self.coord_network = None
+        self.luminosity_segmentation = None
+        self.gradient_segmentation = None
+        self.logical_and = None
+        self.logical_or = None
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
@@ -153,12 +162,11 @@ class MotionAnalysis:
         self.start = None
         if detect_shape:
             self.assess_motion_detection()
-            if self.start is not None:
-                self.detection()
-                self.initialize_post_processing()
-                self.t = self.start
-                while self.t < self.dims[0]:  #200:
-                    self.update_shape(show_seg)
+            self.detection()
+            self.initialize_post_processing()
+            self.t = self.start
+            while self.t < self.dims[0]:  #200:
+                self.update_shape(show_seg)
                 #
 
             if analyse_shape:
@@ -257,6 +265,9 @@ class MotionAnalysis:
         if self.dims[0] == 1 or self.start >= (self.dims[0] - step - 1):
             self.start = None
             self.binary = np.repeat(np.expand_dims(self.origin, 0), self.converted_video.shape[0], axis=0)
+            self.substantial_time = 1
+            self.substantial_growth = 1
+            self.substantial_image = self.origin
         else:
             self.get_covering_duration(step)
 
@@ -445,6 +456,11 @@ class MotionAnalysis:
         """
         if self.start is None:
             self.start = 1
+            logging.info("Failed to detect growth using the available frame number, use the default frame-by-frame segmentation algorithm")
+            self.vars['frame_by_frame_segmentation'] = True
+            self.vars['do_threshold_segmentation'] = False
+            self.vars['do_slope_segmentation'] = False
+            compute_all_possibilities = False
         else:
             self.start = np.max((self.start, 1))
         self.lost_frames = np.min((self.step, self.dims[0] // 4))
@@ -468,7 +484,7 @@ class MotionAnalysis:
                     else:
                         self.converted_video2[t, ...] = analysisi.image2
 
-        if self.vars['color_number'] == 2:
+        if not self.vars['frame_by_frame_segmentation'] or compute_all_possibilities:
             luminosity_segmentation, l_threshold_over_time = self.lum_value_segmentation(self.converted_video, do_threshold_segmentation=self.vars['do_threshold_segmentation'] or compute_all_possibilities)
             self.converted_video = self.smooth_pixel_slopes(self.converted_video)
             gradient_segmentation = None
@@ -1245,13 +1261,22 @@ class MotionAnalysis:
                                                                       self.vars['specimen_activity'] == 'move and grow',
                                                                       self.vars['save_coord_specimen'])
         else:
-            CCTracking = ConnectedComponentsTracking(self.binary, self.vars['first_move_threshold'])
-            self.one_row_per_frame = CCTracking.compute_one_descriptor_per_cc(self.one_descriptor_per_arena['arena'],
+            cc_tracking = ConnectedComponentsTracking(self.binary, self.vars['first_move_threshold'])
+            self.one_row_per_frame, self.cc_centroids, self.cc_coord, self.cc_final_number = cc_tracking.compute_one_descriptor_per_cc(self.one_descriptor_per_arena['arena'],
                                                                               timings, self.vars['descriptors'],
                                                                               self.vars['output_in_mm'],
                                                                               self.vars['average_pixel_size'],
-                                                                              self.vars['specimen_activity'] == 'move and grow',
-                                                                              self.vars['save_coord_specimen'])
+                                                                              self.vars['specimen_activity'] == 'move and grow')
+
+            self.cc_coord = pd.DataFrame(self.cc_coord, columns=["time", "colony", "y", "x"])
+            self.cc_centroids = pd.DataFrame(self.cc_centroids, columns=["time", "colony", "y", "x"])
+            if self.vars['save_coord_specimen']:
+                self.cc_coord.to_csv(
+                    f"coord{self.one_descriptor_per_arena['arena']}_{self.cc_final_number}col_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
+                    sep=';', index=False, lineterminator='\n')
+                self.cc_centroids.to_csv(
+                    f"colony_centroids{self.one_descriptor_per_arena['arena']}_{self.cc_final_number}col_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
+                    sep=';', index=False, lineterminator='\n')
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
         if self.vars['output_in_mm']:
             self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
@@ -1544,7 +1569,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     if self.vars['iso_digi_analysis']  and not self.vars['several_blob_per_arena'] and not pd.isna(self.one_descriptor_per_arena["iso_digi_transi"]):
                         if self.one_descriptor_per_arena['is_growth_isotropic'] == 1:
                             if t < self.one_descriptor_per_arena["iso_digi_transi"]:
-                                self.converted_video[t, contours[0], contours[1], :] = 0, 0, 255
+                                self.converted_video[t, contours[0], contours[1], :] = red_bgr
             del self.binary
             del self.surfarea
             del self.borders
@@ -1587,8 +1612,8 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     slim[slim_coord[0], slim_coord[1]] = 1
                     thick = np.nonzero(thick * dotted_image)
                     slim = np.nonzero(slim * dotted_image)
-                    self.converted_video[t, thick[0], thick[1], :] = 153, 153, 0
-                    self.converted_video[t, slim[0], slim[1], :] = 204, 0, 0
+                    self.converted_video[t, thick[0], thick[1], :] = teal_bgr
+                    self.converted_video[t, slim[0], slim[1], :] = darkblue_bgr
                 del thickening
                 del slimming
             self.converted_video = np.concatenate((self.visu, self.converted_video), axis=2)
@@ -1600,7 +1625,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
                     binary[network_t[0, :], network_t[1, :]] = 1
                     bin_coord = np.nonzero(get_contours(binary))
-                    self.converted_video[t, bin_coord[0], bin_coord[1], :] = 0, 0, 240
+                    self.converted_video[t, bin_coord[0], bin_coord[1], :] = firebrick_bgr
                 del network
                 if os.path.isfile(f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5"):
                     pseudopods = read_h5(
@@ -1610,7 +1635,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                         binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
                         binary[pseudopods_t[0, :], pseudopods_t[1, :]] = 1
                         bin_coord = np.nonzero(get_contours(binary))
-                        self.converted_video[t, bin_coord[0], bin_coord[1], :] = 200, 0, 200
+                        self.converted_video[t, bin_coord[0], bin_coord[1], :] = purple_bgr
                     del pseudopods
 
             if np.any(self.one_row_per_frame['time'] > 0):

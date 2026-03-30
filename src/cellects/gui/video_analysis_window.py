@@ -528,7 +528,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         if self.parent().last_tab == "data_specifications":
             self.parent().change_widget(0)  # FirstWidget
-        elif self.parent().last_tab == "image_analysis":
+        elif self.parent().last_tab == "image":
             self.parent().change_widget(2)  # ThirdWidget
         self.parent().last_tab = "video_analysis"
 

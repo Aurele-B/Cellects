@@ -1,70 +1,21 @@
 #!/usr/bin/env python3
 """This file contains lines to run Cellects without user interface"""
 
-import logging
 import os
-from pathlib import Path
 from numpy.typing import NDArray
 import numpy as np
-import pandas as pd
 import cv2
 from cellects.core.cellects_paths import DATA_DIR
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.utils.utilitarian import insensitive_glob
-from cellects.core.motion_analysis import MotionAnalysis
-from cellects.image_analysis.morphological_operations import create_ellipse
-from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
-from cellects.core.one_image_analysis import init_params
-from cellects.utils.load_display_save import write_video_sets, readim, display_network_methods, video_writing_decision
-from cellects.image_analysis.network_functions import NetworkDetection
+from cellects.video.motion_analysis import MotionAnalysis
+from cellects.image.image_segmentation import convert_subtract_and_filter_video
+from cellects.image.one_image_analysis import init_params
+from cellects.io.save import write_video_sets, video_writing_decision
+from cellects.io.load import readim
+from cellects.display.image import display_network_methods
+from cellects.image.network_functions import NetworkDetection
 
-def generate_colony_like_video():
-    """
-    Generate a colony-like video by applying dilation operations and random color filling.
-    This function creates a binary video with randomized initial frames, dilates the
-    frames using a circular kernel to simulate colony growth over time, and then converts
-    the binary video into a colored RGB video.
-
-    Parameters
-    ----------
-    None
-
-    Other Parameters
-    ----------------
-    seed : int, optional
-        The seed for the random number generator. Defaults to 42.
-
-    ellipse_shape : tuple of int, optional
-        The shape of the ellipse used for dilation. Defaults to (7, 7).
-
-    binary_video_shape : tuple of int, optional
-        The shape of the binary video. Defaults to (20, 1000, 1000).
-
-    returns
-    -------
-    rgb_video : numpy.ndarray
-        A video with shape `(20, 1000, 1000, 3)` where each frame is represented in RGB format.
-        The video shows the growth and coloration of the colony over time.
-
-    Examples
-    --------
-    >>> rgb_video = generate_colony_like_video()
-    >>> print(rgb_video.shape)
-    (20, 1000, 1000, 3)
-    """
-    np.random.seed(42)
-    ellipse = create_ellipse(7, 7).astype(np.uint8)
-    binary_video = np.zeros((20, 1000, 1000), dtype=np.uint8)
-    binary_video[0, np.random.randint(100, 900, 20), np.random.randint(100, 900, 20)] = 1
-    binary_video[0, ...] = cv2.dilate(binary_video[0, ...], ellipse)
-    for t in range(1, binary_video.shape[0]):
-        binary_video[t, ...] = cv2.dilate(binary_video[t - 1, ...], ellipse, iterations=1)
-    rgb_video = np.zeros((binary_video.shape[0], binary_video.shape[1], binary_video.shape[2], 3), dtype=np.uint8)
-    for c_ in range(3):
-        rgb_video[:, :, :, c_][binary_video > 0] = np.random.randint(150 + c_ * 20, 250 - c_ * 20, binary_video.sum())
-        rgb_video[:, :, :, c_][binary_video == 0] = np.random.randint(5 ,20 ,
-                                                               binary_video.size - binary_video.sum())
-    return rgb_video
 
 def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, radical: str='', extension: str='', im_or_vid: int=0):
     """
@@ -93,8 +44,8 @@ def load_data(rgb_video: NDArray=None, pathway: str='', sample_number:int=None, 
 
     Examples
     --------
-    >>> po = load_data(pathway="data/single_experiment", sample_number=1, radical="test", extension="jpg")
-    >>> print(po.all)
+    >>> po_instance = load_data(pathway="data/single_experiment", sample_number=1, radical="test", extension="jpg")
+    >>> print(po_instance.all)
     {'global_pathway': 'data/single_experiment', 'first_folder_sample_number': 1, 'radical': 'test', 'extension': 'jpg', 'im_or_vid': 0}
     """
     po = ProgramOrganizer()
@@ -123,7 +74,7 @@ def run_image_analysis(po, run_automatic_color_space_finding: bool=False, last_i
 
     Parameters
     ----------
-    po : object
+    po : ProgramOrganizer
         The object containing current analysis parameters and connecting all methods of the software.
     run_automatic_color_space_finding : bool, optional
         Whether to perform automatic color space finding. Default is False.
@@ -132,7 +83,7 @@ def run_image_analysis(po, run_automatic_color_space_finding: bool=False, last_i
 
     Returns
     -------
-    po : object
+    po : ProgramOrganizer
         The modified object containing current analysis parameters and connecting all methods of the software.
 
     Notes
@@ -170,7 +121,7 @@ def run_one_video_analysis(po, arena_id: int=1, do_segmentation: bool= True, wit
 
     Parameters
     ----------
-    po : object
+    po : ProgramOrganizer
         The object containing current analysis parameters and connecting all methods of the software.
     arena_id : int, optional
         Arena ID to process. Default and first is 1.
@@ -197,22 +148,22 @@ def run_one_video_analysis(po, arena_id: int=1, do_segmentation: bool= True, wit
         converted_video, _ = convert_subtract_and_filter_video(po.analysis_instance, po.vars['convert_for_motion'])
         videos_already_in_ram = [po.analysis_instance, converted_video]
     l = [arena_id - 1, arena_id, po.vars, do_segmentation, False, show_seg, videos_already_in_ram]
-    MA = MotionAnalysis(l)
-    if MA.binary is None:
-        return MA
-    MA.get_descriptors_from_binary()
+    ma = MotionAnalysis(l)
+    if ma.binary is None:
+        return ma
+    ma.get_descriptors_from_binary()
     if remove_files:
         files = insensitive_glob("colony_centroids*") + insensitive_glob("ind_*")
         for f in files:
             os.remove(f)
         if os.path.isfile('cellects_data.h5'):
             os.remove('cellects_data.h5')
-    # MA.detect_growth_transitions()
-    # MA.networks_analysis(show_seg)
-    # MA.study_cytoscillations(show_seg)
-    return MA
+    # ma.detect_growth_transitions()
+    # ma.networks_analysis(show_seg)
+    # ma.study_cytoscillations(show_seg)
+    return ma
 
-def write_videos(po: object):
+def write_videos(po: ProgramOrganizer):
     """
     Write one video per arena in the current folder.
 
@@ -220,12 +171,12 @@ def write_videos(po: object):
 
     Parameters
     ----------
-    po : object
+    po : ProgramOrganizer
         The object containing current analysis parameters and connecting all methods of the software.
 
     Returns
     -------
-    po : object
+    po : ProgramOrganizer
         The modified object containing current analysis parameters and connecting all methods of the software.
 
     Raises
@@ -261,12 +212,12 @@ def run_all_arenas(po):
 
     Parameters
     ----------
-    po : object
+    po : ProgramOrganizer
         The object containing current analysis parameters and connecting all methods of the software.
 
     Returns
     -------
-    po : object
+    po : ProgramOrganizer
         The modified object containing current analysis parameters and connecting all methods of the software.
     """
     po.instantiate_tables()

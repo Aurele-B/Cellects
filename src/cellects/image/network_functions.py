@@ -26,11 +26,12 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
-from cellects.image_analysis.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
+from cellects.image.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
-from cellects.utils.load_display_save import *
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
+from cellects.io.save import *
+from cellects.display.image import zoom_on_nonzero
+from cellects.image.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
 from numba.typed import Dict as TDict
 from skimage import morphology
 from skimage.filters import frangi, sato, threshold_otsu
@@ -38,162 +39,12 @@ from collections import deque
 from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
 import networkx as nx
-import pandas as pd
-from timeit import default_timer as timer
 
 # 8-connectivity neighbors
 neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
              (0, -1), (0, 1),
              (1, -1), (1, 0), (1, 1)]
 neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
-
-def detect_network_dynamics(converted_video: NDArray, binary: NDArray[np.uint8], arena_label: int=1,
-                            starting_time: int=0, visu: NDArray=None, origin: NDArray[np.uint8]=None,
-                            smooth_segmentation_over_time: bool = True, morphological_closing: bool=True,
-                            edge_max_width:int = 5, detect_pseudopods: bool = True, save_coord_network: bool = True,
-                            show_seg: bool = False):
-    """
-    Detects and tracks dynamic features (e.g., pseudopods) in a biological network over time from video data.
-
-    Analyzes spatiotemporal dynamics of a network structure using binary masks and grayscale video data. Processes each frame to detect network components, optionally identifies pseudopods, applies temporal smoothing, and generates visualization overlays. Saves coordinate data for detected networks if enabled.
-
-    Parameters
-    ----------
-    converted_video : NDArray
-        Input video data array with shape (time x y x z) representing grayscale intensities.
-    binary : NDArray[np.uint8]
-        Binary mask array with shape (time x y x z) indicating filled regions in each frame.
-    arena_label : int
-        Unique identifier for the current processing arena/session to name saved output files.
-    starting_time : int
-        Zero-based index of the first frame to begin network detection and analysis from.
-    visu : NDArray
-        Visualization video array (time x y x z) with RGB channels for overlay rendering.
-    origin : NDArray[np.uint8]
-        Binary mask defining a central region of interest to exclude from network detection.
-    smooth_segmentation_over_time : bool, optional (default=True)
-        Flag indicating whether to apply temporal smoothing using adjacent frame data.
-    morphological_closing : bool, optional (default=True)
-        Flag indicating whether to apply morphological closing on binary images of the network.
-    edge_max_width : int, optional
-        Maximal width of network edges. Defaults to 5.
-    detect_pseudopods : bool, optional (default=True)
-        Determines if pseudopod regions should be detected and merged with the network.
-    save_coord_network : bool, optional (default=True)
-        Controls saving of detected network/pseudopod coordinates as NumPy arrays.
-    show_seg : bool, optional (default=False)
-        Enables real-time visualization display during processing.
-
-    Returns
-    -------
-    NDArray[np.uint8]
-        3D array containing detected network structures with shape (time x y x z). Uses:
-        - `0` for background,
-        - `1` for regular network components,
-        - `2` for pseudopod regions when detect_pseudopods is True.
-
-    Notes
-    -----
-    - Memory-intensive operations on large arrays may require system resources.
-    - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
-    - Pseudopod detection requires sufficient contrast with the background in grayscale images.
-    """
-    logging.info(f"Arena n°{arena_label}. Starting network detection.")
-    # converted_video = self.converted_video; binary=self.binary; arena_label=1; starting_time=0; visu=self.visu; origin=None; smooth_segmentation_over_time=True; detect_pseudopods=True;save_coord_network=True; show_seg=False
-    dims = binary.shape
-    pseudopod_min_size = 50
-    if detect_pseudopods:
-        pseudopod_vid = np.zeros_like(binary, dtype=bool)
-    potential_network = np.zeros_like(binary, dtype=bool)
-    network_dynamics = np.zeros_like(binary, dtype=np.uint8)
-    do_convert = True
-    if visu is None:
-        do_convert = False
-        visu = np.stack((converted_video, converted_video, converted_video), axis=3)
-        greyscale = converted_video[-1, ...]
-    else:
-        greyscale = visu[-1, ...].mean(axis=-1)
-    NetDet = NetworkDetection(greyscale, possibly_filled_pixels=binary[-1, ...],
-                              origin_to_add=origin, morphological_closing=morphological_closing)
-    NetDet.get_best_network_detection_method()
-    if do_convert:
-        NetDet.greyscale_image = converted_video[-1, ...]
-    lighter_background = NetDet.greyscale_image[binary[-1, ...] > 0].mean() < NetDet.greyscale_image[
-        binary[-1, ...] == 0].mean()
-
-    for t in np.arange(starting_time, dims[0]):  # 20):#
-        if do_convert:
-            greyscale = visu[t, ...].mean(axis=-1)
-        else:
-            greyscale = converted_video[t, ...]
-        NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=binary[t, ...], origin_to_add=origin,
-                                       edge_max_width=edge_max_width, morphological_closing=morphological_closing,
-                                       best_result=NetDet.best_result)
-        NetDet_fast.detect_network()
-        NetDet_fast.greyscale_image = converted_video[t, ...]
-        if detect_pseudopods:
-            NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size)
-            pseudopod_vid[t, ...] = NetDet_fast.pseudopods
-        potential_network[t, ...] = NetDet_fast.complete_network
-    del NetDet_fast
-    del NetDet
-    if dims[0] == 1:
-        network_dynamics = potential_network
-    else:
-        for t in np.arange(starting_time, dims[0]):  # 20):#
-            if smooth_segmentation_over_time:
-                if 2 <= t <= (dims[0] - 2):
-                    computed_network = potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
-                    computed_network[computed_network == 1] = 0
-                    computed_network[computed_network > 1] = 1
-                else:
-                    if t < 2:
-                        computed_network = potential_network[:2, :, :].sum(axis=0)
-                    else:
-                        computed_network = potential_network[-2:, :, :].sum(axis=0)
-                    computed_network[computed_network > 0] = 1
-            else:
-                computed_network = potential_network[t, :, :].copy()
-
-            if origin is not None:
-                computed_network = computed_network * (1 - origin)
-                origin_contours = get_contours(origin)
-                complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-            else:
-                complete_network = computed_network
-            complete_network = keep_one_connected_component(complete_network)
-
-            if detect_pseudopods:
-                # Make sure that removing pseudopods do not cut the network:
-                without_pseudopods = complete_network * (1 - pseudopod_vid[t])
-                only_connected_network = keep_one_connected_component(without_pseudopods)
-                # # Option A: To add these cutting regions to the pseudopods do:
-                pseudopods = (1 - only_connected_network) * complete_network
-                pseudopod_vid[t] = pseudopods
-            network_dynamics[t] = complete_network
-
-            imtoshow = visu[t, ...]
-            eroded_binary = cv2.erode(network_dynamics[t, ...], cross_33)
-            net_coord = np.nonzero(network_dynamics[t, ...] - eroded_binary)
-            imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
-            if show_seg:
-                cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
-                cv2.waitKey(1)
-            else:
-                visu[t, ...] = imtoshow
-            if show_seg:
-                cv2.destroyAllWindows()
-
-    network_coord = smallest_memory_array(np.nonzero(network_dynamics), "uint")
-    pseudopod_coord = None
-    if detect_pseudopods:
-        network_dynamics[pseudopod_vid > 0] = 2
-        pseudopod_coord = smallest_memory_array(np.nonzero(pseudopod_vid), "uint")
-        if save_coord_network:
-            write_h5(f"coord_pseudopods{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", pseudopod_coord)
-    if save_coord_network:
-        write_h5(f"coord_network{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.h5", network_coord)
-    return network_coord, pseudopod_coord
 
 
 class  NetworkDetection:
@@ -559,98 +410,6 @@ class  NetworkDetection:
             self.pseudopods = true_pseudopods.astype(np.uint8)
             self.complete_network = complete_network
         self.incomplete_network *= (1 - self.pseudopods)
-
-
-def extract_graph_dynamics(converted_video: NDArray, coord_network: NDArray, arena_label: int,
-                            starting_time: int=0, origin: NDArray[np.uint8]=None, coord_pseudopods: NDArray=None):
-    """
-    Extracts dynamic graph data from video frames based on network dynamics.
-
-    This function processes time-series binary network structures to extract evolving vertices and edges over time. It computes spatial relationships between networks and an origin point through image processing steps including contour detection, padding for alignment, skeleton extraction, and morphological analysis. Vertex and edge attributes like position, connectivity, width, intensity, and betweenness are compiled into tables saved as CSV files.
-
-    Parameters
-    ----------
-    converted_video : NDArray
-        3D video data array (t x y x) containing pixel intensities used for calculating edge intensity attributes during table generation.
-    coord_network : NDArray[np.uint8]
-        3D binary network mask array (t x y x) representing connectivity structures across time points.
-    arena_label : int
-        Unique identifier to prefix output filenames corresponding to specific experimental arenas.
-    starting_time : int, optional (default=0)
-        Time index within `coord_network` to begin processing from (exclusive of origin initialization).
-    origin : NDArray[np.uint8], optional (default=None)
-        Binary mask identifying the region of interest's central origin for spatial reference during network comparison.
-
-    Returns
-    -------
-    None
-    Saves two CSV files in working directory:
-    1. `vertex_table{arena_label}_t{T}_y{Y}_x{X}.csv` - Vertex table with time, coordinates, and connectivity information
-    2. `edge_table{arena_label}_t{T}_y{Y}_x{X}.csv` - Edge table containing attributes like length, width, intensity, and betweenness
-
-    Notes
-    ---
-    Output CSVs use NumPy arrays converted to pandas DataFrames with columns:
-    - Vertex table includes timestamps (t), coordinates (y,x), and connectivity flags.
-    - Edge table contains betweenness centrality calculated during skeleton processing.
-    Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
-    """
-    logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
-    # converted_video = self.converted_video; coord_network=self.coord_network; arena_label=1; starting_time=0; origin=self.origin
-    dims = converted_video.shape[:3]
-    if origin is not None:
-        _, _, _, origin_centroid = cv2.connectedComponentsWithStats(origin)
-        origin_centroid = np.round((origin_centroid[1, 1], origin_centroid[1, 0])).astype(np.int64)
-        pad_origin_centroid = origin_centroid + 1
-        origin_contours = get_contours(origin)
-        pad_origin = add_padding([origin])[0]
-    else:
-        pad_origin_centroid = None
-        pad_origin = None
-        origin_contours = None
-    vertex_table = None
-    edge_table = None
-    for t in np.arange(starting_time, dims[0]): # t=320   Y, X = 729, 554
-        computed_network = np.zeros((dims[1], dims[2]), dtype=np.uint8)
-        net_t = coord_network[1:, coord_network[0, :] == t]
-        computed_network[net_t[0], net_t[1]] = 1
-        if origin is not None:
-            computed_network = computed_network * (1 - origin)
-            computed_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-        else:
-            computed_network = computed_network.astype(np.uint8)
-        if computed_network.any():
-            computed_network = keep_one_connected_component(computed_network)
-            pad_network = add_padding([computed_network])[0]
-            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, pad_origin,
-                                                                                           pad_origin_centroid)
-            edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
-            edge_id.run_edge_identification()
-            if pad_origin_contours is not None:
-                origin_contours = remove_padding([pad_origin_contours])[0]
-            growing_areas = None
-            if coord_pseudopods is not None:
-                growing_areas = coord_pseudopods[1:, coord_pseudopods[0, :] == t]
-            edge_id.make_vertex_table(origin_contours, growing_areas)
-            edge_id.make_edge_table(converted_video[t, ...])
-            edge_id.vertex_table = np.hstack((np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-            edge_id.edge_table = np.hstack((np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-            if vertex_table is None:
-                vertex_table = edge_id.vertex_table.copy()
-                edge_table = edge_id.edge_table.copy()
-            else:
-                vertex_table = np.vstack((vertex_table, edge_id.vertex_table))
-                edge_table = np.vstack((edge_table, edge_id.edge_table))
-
-    vertex_table = pd.DataFrame(vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
-                                                       "vertex_connected"])
-    edge_table = pd.DataFrame(edge_table,
-                              columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity",
-                                       "betweenness_centrality"])
-    vertex_table.to_csv(
-        f"vertex_table{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv")
-    edge_table.to_csv(
-        f"edge_table{arena_label}_t{dims[0]}_y{dims[1]}_x{dims[2]}.csv")
 
 
 def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray[np.int64]=None) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
@@ -1711,7 +1470,7 @@ class EdgeIdentification:
         """
         if self.vertices is None:
             self._remove_padding()
-        self.vertex_table = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=self.vertices.dtype)
+        self.vertex_table = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
         self.vertex_table[:self.tips_coord.shape[0], :2] = self.tips_coord
         self.vertex_table[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
         self.vertex_table[:self.tips_coord.shape[0], 2] = self.vertices[self.tips_coord[:, 0], self.tips_coord[:, 1]]

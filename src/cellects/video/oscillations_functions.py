@@ -17,8 +17,8 @@ Maintains cumulative pixel data for active clusters during time-lapse processing
 import numpy as np
 from numpy.typing import NDArray
 import logging
-from cellects.image_analysis.morphological_operations import cc, CompareNeighborsWithValue
-from cellects.utils.load_display_save import write_h5
+from cellects.image.morphological_operations import cc, CompareNeighborsWithValue
+from cellects.io.save import write_h5
 from cellects.utils.utilitarian import smallest_memory_array
 from psutil import virtual_memory
 

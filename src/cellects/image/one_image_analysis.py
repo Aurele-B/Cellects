@@ -28,10 +28,10 @@ import pandas as pd
 from scipy.stats import rankdata
 
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
-from cellects.image_analysis.one_image_analysis_threads import ProcessImage
-from cellects.image_analysis.network_functions import NetworkDetection
+from cellects.image.morphological_operations import cross_33, create_ellipse
+from cellects.image.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image.one_image_analysis_threads import ProcessImage
+from cellects.image.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import split_dict
 

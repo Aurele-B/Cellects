@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cellects"
-version = "1.0.7"
+version = "1.0.9"
 description = "Cell Expansion Computer Tracking Software."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -81,8 +81,8 @@ USE_NUMBA = "0"
 [tool.coverage.run]
 omit = [
     "src/cellects/gui/*",
-    "src/cellects/utils/load_display_save.py",
-    "src/cellects/core/cellects_threads.py",
+    "src/cellects/io/*",
+    "src/cellects/display/*",
     "src/cellects/core/script_based_run.py",
     "src/cellects/__main__.py",
     "src/cellects/analyses/*",
