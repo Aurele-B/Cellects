@@ -716,19 +716,19 @@ class AdvancedParameters(WindowType):
         """
         Set the mesh side length setting visible when the corresponding checkbox is checked.
         """
-        self.mesh_side_length.setVisible(self.mesh_side_length_cb.isChecked())
+        self.mesh_side_length.setVisible(not self.mesh_side_length_cb.isChecked())
 
     def mesh_step_length_cb_changed(self):
         """
         Set the mesh step length setting visible when the corresponding checkbox is checked.
         """
-        self.mesh_step_length.setVisible(self.mesh_step_length_cb.isChecked())
+        self.mesh_step_length.setVisible(not self.mesh_step_length_cb.isChecked())
 
     def mesh_min_int_var_cb_changed(self):
         """
         Set the mesh minimal intensity variation setting visible when the corresponding checkbox is checked.
         """
-        self.mesh_min_int_var.setVisible(self.mesh_min_int_var_cb.isChecked())
+        self.mesh_min_int_var.setVisible(not self.mesh_min_int_var_cb.isChecked())
 
     def extract_time_is_clicked(self):
         """
