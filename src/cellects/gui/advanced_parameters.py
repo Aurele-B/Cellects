@@ -156,6 +156,11 @@ class AdvancedParameters(WindowType):
         self.post_processing_box_widget.setStyleSheet(boxstylesheet)
 
         # II/C/ Create widgets
+        self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.po.vars['repeat_video_smoothing'],
+                                         night_mode=self.po.all['night_mode'])
+        self.repeat_video_smoothing_label = FixedText(AP["Temporal_smoothing"]["label"],
+                                                 tip=AP["Temporal_smoothing"]["tips"],
+                                                 night_mode=self.po.all['night_mode'])
         self.sliding_window_segmentation = Checkbox(self.po.vars['sliding_window_segmentation'])
         self.sliding_window_segmentation_label = FixedText(AP["Sliding_window_segmentation"]["label"],
                                                tip=AP["Sliding_window_segmentation"]["tips"],
@@ -259,6 +264,9 @@ class AdvancedParameters(WindowType):
 
         # II/D/ Arrange widgets in the box
         curr_box_row = 0
+        self.post_processing_box_layout.addWidget(self.repeat_video_smoothing, curr_box_row, 0)
+        self.post_processing_box_layout.addWidget(self.repeat_video_smoothing_label, curr_box_row, 1)
+        curr_box_row += 1
         self.post_processing_box_layout.addWidget(self.sliding_window_segmentation, curr_box_row, 0)
         self.post_processing_box_layout.addWidget(self.sliding_window_segmentation_label, curr_box_row, 1)
         curr_box_row += 1
@@ -1207,6 +1215,7 @@ class AdvancedParameters(WindowType):
         self.all_specimens_have_same_direction.setChecked(self.po.all['all_specimens_have_same_direction'])
 
         # Post-processing parameters:
+        self.repeat_video_smoothing.setValue(self.po.vars['repeat_video_smoothing'])
         self.sliding_window_segmentation.setChecked(self.po.vars['sliding_window_segmentation'])
         self.morphological_opening.setChecked(self.po.vars['morphological_opening'])
         self.morphological_closing.setChecked(self.po.vars['morphological_closing'])
@@ -1304,6 +1313,7 @@ class AdvancedParameters(WindowType):
         self.po.all['all_specimens_have_same_direction'] = self.all_specimens_have_same_direction.isChecked()
 
         # Post-processing parameters:
+        self.po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
         self.po.vars['sliding_window_segmentation'] = self.sliding_window_segmentation.isChecked()
         self.po.vars['morphological_opening'] = self.morphological_opening.isChecked()
         self.po.vars['morphological_closing'] = self.morphological_closing.isChecked()

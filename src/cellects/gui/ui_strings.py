@@ -347,94 +347,6 @@ image to assess segmentation accuracy.
 #################################################
 
 VAW = dict()
-VAW["Arena_to_analyze"] = {}
-VAW["Arena_to_analyze"]["label"] = "Arena to analyze"
-# START_TIP
-VAW["Arena_to_analyze"]["tips"] = \
-f"""This arena number selects a specific arena in the current folder. The user can choose an arena,
-click *Detection* to load and analyze it, then *Read* results.
-NB:
-- Cellects automatically names the arena by their position (left to right, top to bottom).
-- For single arena setups, use 1.
-- *Post processing* triggers *Detection*, which in turn triggers *Load One arena*.
-- Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unaltered
-videos*.
-"""
-# END_TIP
-
-VAW["Maximal_growth_factor"] = {}
-VAW["Maximal_growth_factor"]["label"] = "Maximal growth factor"
-# START_TIP
-VAW["Maximal_growth_factor"]["tips"] = \
-f"""This is the maximum allowable proportion of image area that may be covered by specimen movement
-between frames. Adjust accordingly:
-- Increase if specimen size is underestimated.
-- Decrease if specimen size is overestimated.
-NB:
-- Precisely, this defines an upper bound on relative coverage changes between sequential images.
-"""
-# END_TIP
-
-VAW["Temporal_smoothing"] = {}
-VAW["Temporal_smoothing"]["label"] = "Temporal smoothing"
-# START_TIP
-VAW["Temporal_smoothing"]["tips"] = \
-f"""Applies temporal smoothing to reduce noise and highlight long
--term trends by averaging pixel intensity changes. Use when analyzing slope
--based segmentation results.
-NB:
-- This uses a moving window algorithm on pixel intensity curves over time.
-- Excessive iterations produce constant values, preventing accurate detection.
-"""
-# END_TIP
-
-VAW["Segmentation_method"] = {}
-VAW["Segmentation_method"]["label"] = "Segmentation method"
-# START_TIP
-VAW["Segmentation_method"]["tips"] = \
-f"""Cellects includes five video tracking options:
-- **Frame option**: Applies the image analysis algorithm frame by frame, without temporal dynamics.
-- **Threshold option**: Compares pixel intensity with the average intensity of the whole image at
-each time step.
-- **Slope option**: Compares pixel intensity slopes with an automatically defined threshold.
-- **T and S option**: logical AND of threshold and slope options.
-- **T or S option**: logical OR of threshold and slope options.
-NB:
-- Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Once
-analysis completes. Once the analysis completed, select one option and click *Read*.
-- Computing only one option is faster and requires less memory.
-- When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
-window, only the *Frame* option remains available.
-"""
-# END_TIP
-
-VAW["Load_one_arena"] = {}
-VAW["Load_one_arena"]["label"] = "Load one arena"
-# START_TIP
-VAW["Load_one_arena"]["tips"] = \
-f"""Clicking this button loads the arena associated with *Arena to analyze*. The center of the window
-displays the first frame of that arena's video. Click *Read* to review the full video.
-"""
-# END_TIP
-
-VAW["Detection"] = {}
-VAW["Detection"]["label"] = "Detection"
-# START_TIP
-VAW["Detection"]["tips"] = \
-f"""*Detection* applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
-view the detection result. If correct, answer *Done* to proceed with tuning parameters for post
-processing.
-"""
-# END_TIP
-
-VAW["Read"] = {}
-VAW["Read"]["label"] = "Read"
-# START_TIP
-VAW["Read"]["tips"] = \
-f"""Clicking *Read* starts the video display corresponding to the current state of the analysis.
-"""
-# END_TIP
-
 VAW["Specimen_activity"] = {}
 VAW["Specimen_activity"]["label"] = "Specimen activity"
 # START_TIP
@@ -465,27 +377,94 @@ one and one to control sensitivity:
 """
 # END_TIP
 
-VAW["Post_processing"] = {}
-VAW["Post_processing"]["label"] = "Post processing"
+VAW["Maximal_growth_factor"] = {}
+VAW["Maximal_growth_factor"]["label"] = "Maximal growth factor"
 # START_TIP
-VAW["Post_processing"]["tips"] = \
-f"""*Post processing* applies detection algorithms with additional enhancements:
-- Binary operations: opening, closing, logical ops.
-- Fading detection* tracking: when specimen(s) may leave areas (optional).
-- *Correct errors around initial shape*: when the contour of the initial position of the specimen is
-hard to detect (optional).
-- *Connect distant shapes*: when the specimen's heterogeneity create wrong disconnections in the
-video detection (optional).
-- *Prevent fast growth near periphery*: when arena's border (typically petri dishes) may be wrongly
-detected as specimen (optional).
+VAW["Maximal_growth_factor"]["tips"] = \
+f"""This is the maximum allowable proportion of image area that may be covered by specimen movement
+between frames. Adjust accordingly:
+- Increase if specimen size is underestimated.
+- Decrease if specimen size is overestimated.
 NB:
-- Once Post processing works, the user can click “*Done*” to *Step 2: Tune fading and advanced
-parameters to improve Post processing*, and then *Run All* arenas.
+- Precisely, this defines an upper bound on relative coverage changes between sequential images.
+"""
+# END_TIP
+
+VAW["Segmentation_method"] = {}
+VAW["Segmentation_method"]["label"] = "Segmentation method"
+# START_TIP
+VAW["Segmentation_method"]["tips"] = \
+f"""Cellects includes five video tracking options:
+- **Frame option**: Applies the image analysis algorithm frame by frame, without temporal dynamics.
+- **Threshold option**: Compares pixel intensity with the average intensity of the whole image at
+each time step.
+- **Slope option**: Compares pixel intensity slopes with an automatically defined threshold.
+- **T and S option**: logical AND of threshold and slope options.
+- **T or S option**: logical OR of threshold and slope options.
+NB:
+- Selecting the *Compute all options* before dunning *Detection* allows method comparison.  Once
+analysis completes. Once the analysis completed, select one option and click *Read*.
+- Computing only one option is faster and requires less memory.
+- When *Heterogeneous background* or *Grid segmentation* has been selected in the image analysis
+window, only the *Frame* option remains available.
+"""
+# END_TIP
+
+VAW["Arena_to_analyze"] = {}
+VAW["Arena_to_analyze"]["label"] = "Arena to analyze"
+# START_TIP
+VAW["Arena_to_analyze"]["tips"] = \
+f"""This arena number selects a specific arena in the current folder. The user can choose an arena, use
+an *Operation* to load and analyze it, then *Read* results.
+NB:
+- Cellects automatically names the arena by their position (left to right, top to bottom).
+- For single arena setups, use 1.
+- *full detect* load the arena video, apply the segmentation method and post processing algorithms.
+- Videos can be saved (as .h5 files) for later analysis using the Advanced parameter *Keep unaltered
+videos*.
+"""
+# END_TIP
+
+VAW["Operation"] = {}
+VAW["Operation"]["label"] = "Operation"
+# START_TIP
+VAW["Operation"]["tips"] = \
+f"""Selecting the 'load' operation
+- *load*: will load one arena associated with *Arena to analyze*. The center of the window displays
+the first frame of that arena's video.
+- *quick detect*: applies a (or all) segmentation methods to one arena. Once finished, click *Read*
+to view the detection result. If correct, try post processing using *full detect*.
+- *full detect*: applies detection enhancements such as binary operations (opening, closing, logical
+ops), fading detection tracking (when specimens not only grow but also move), correct errors around
+initial shape (when the contour of the initial position of the specimen is hard to detect), connect
+distant shapes (when the specimen's heterogeneity create wrong disconnections in the video
+detection),  prevent fast growth near periphery (when arena's border may be wrongly detected as
+specimen).
+NB:
+- Click *Run one* to apply current operation to the current *Arena to analyze*
+- Click *Read* to review the full video.
+"""
+# END_TIP
+
+VAW["Run_one"] = {}
+VAW["Run_one"]["label"] = "Run"
+# START_TIP
+VAW["Run_one"]["tips"] = \
+f"""Clicking *Run one arena* triggers the selected *Operation* and *Segmentation method* on the *Arena
+to analyze*
+"""
+# END_TIP
+
+VAW["Read"] = {}
+VAW["Read"]["label"] = "Read"
+# START_TIP
+VAW["Read"]["tips"] = \
+f"""Clicking *Read* starts the video display corresponding to the current state of the analysis.
 """
 # END_TIP
 
 VAW["Save_one_result"] = {}
-VAW["Save_one_result"]["label"] = "Save one result"
+VAW["Save_one_result"]["label"] = "Save Results"
 # START_TIP
 VAW["Save_one_result"]["tips"] = \
 f"""Complete the current video analysis by clicking this button for single arena processing. Saving
@@ -499,10 +478,10 @@ NB:
 # END_TIP
 
 VAW["Run_All"] = {}
-VAW["Run_All"]["label"] = "Run All"
+VAW["Run_All"]["label"] = "Run All Arenas"
 # START_TIP
 VAW["Run_All"]["tips"] = \
-f"""Apply validated parameters to all arenas by clicking *Run All*. This action:
+f"""Apply validated parameters to all arenas by clicking *Run All Arenas*. This action:
 - Generates full
 -resolution video outputs (storage
 -intensive)
@@ -534,7 +513,7 @@ MF["Check_to_select_all_folders"]["tips"] = \
 f"""Select this option to run the analysis on all folders containing images matching the *Image prefix*
 and *Images extension*. Otherwise, use Ctrl/Cmd to select specific folders for analysis.
 NB:
-- This setting affects only the *Run All* functionality.
+- This setting affects only the *Run All Arenas* functionality.
 - To apply saved masks (e.g., background or specimen initiation regions) across selected folders,
 enable    *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 """
@@ -625,6 +604,18 @@ f"""Select to optimize arena detection for specimens moving move in the same dir
 NB:
 - Both options work equally when growth is roughly isotropic.
 - Only works when there is only one specimen per arena
+"""
+# END_TIP
+
+AP["Temporal_smoothing"] = {}
+AP["Temporal_smoothing"]["label"] = "Temporal smoothing"
+# START_TIP
+AP["Temporal_smoothing"]["tips"] = \
+f"""Applies temporal smoothing to reduce noise and highlight long term trends by averaging pixel
+intensity changes.  Use when analyzing slope based segmentation results.
+NB:
+- This uses a moving window algorithm on pixel intensity curves over time.
+- Excessive iterations produce constant values, preventing accurate detection.
 """
 # END_TIP
 

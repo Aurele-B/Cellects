@@ -84,19 +84,9 @@ class VideoAnalysisWindow(MainTabsType):
         curr_row_main_layout += 1
 
         # Open subtitle
-        self.general_step_widget = QtWidgets.QWidget()
-        self.general_step_layout = QtWidgets.QHBoxLayout()
-        self.current_step = 0
-        self.general_step_label = FixedText('Step 1: Tune parameters to improve Detection', night_mode=self.po.all['night_mode'])
-        self.general_step_button = PButton('Done', night_mode=self.po.all['night_mode'])
-        self.general_step_button.clicked.connect(self.step_done_is_clicked)
-        self.general_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
-        self.general_step_layout.addWidget(self.general_step_label)
-        self.general_step_layout.addWidget(self.general_step_button)
-        self.general_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
-
-        self.general_step_widget.setLayout(self.general_step_layout)
-        self.Vlayout.addWidget(self.general_step_widget)#, curr_row_main_layout, 0, 1, ncol)
+        self.title_label = FixedText("Video tracking", police=60)
+        self.title_label.setAlignment(QtCore.Qt.AlignHCenter)
+        self.Vlayout.addWidget(self.title_label)
         curr_row_main_layout += 1
 
         # Open central widget
@@ -108,24 +98,35 @@ class VideoAnalysisWindow(MainTabsType):
         self.left_options_layout = QtWidgets.QVBoxLayout()
         self.left_options_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
-        self.arena_widget = QtWidgets.QWidget()
-        self.arena_layout = QtWidgets.QHBoxLayout()
-        self.arena_label = FixedText(VAW["Arena_to_analyze"]["label"] + ':',
-                                       tip=VAW["Arena_to_analyze"]["tips"],
+        self.specimen_activity_widget = QtWidgets.QWidget()
+        self.specimen_activity_layout = QtWidgets.QHBoxLayout()
+        self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"] + ':',
+                                       tip=VAW["Specimen_activity"]["tips"],
                                        night_mode=self.po.all['night_mode'])
-        sample_size = self.po.all['sample_number_per_folder'][0]
-        if self.po.all['arena'] > sample_size:
-            self.po.all['arena'] = 1
+        self.specimen_activity = Combobox(['move', 'grow', 'move and grow'],
+                                       night_mode=self.po.all['night_mode'])
+        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.specimen_activity.setFixedWidth(175)
+        self.specimen_activity.setCurrentText(self.po.vars['specimen_activity'])
+        self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
+        self.specimen_activity_layout.addWidget(self.specimen_activity_label)
+        self.specimen_activity_layout.addWidget(self.specimen_activity)
+        self.specimen_activity_widget.setLayout(self.specimen_activity_layout)
+        self.left_options_layout.addWidget(self.specimen_activity_widget)
 
-        self.arena = Spinbox(min=1, max=1000000, val=self.po.all['arena'],
+        self.fading_widget = QtWidgets.QWidget()
+        self.fading_layout = QtWidgets.QHBoxLayout()
+        self.fading_label = FixedText(VAW["Fading_detection"]["label"],
+                                       tip=VAW["Fading_detection"]["tips"] + ':',
+                                       night_mode=self.po.all['night_mode'])
+        self.fading = Spinbox(min=- 1, max=1, val=self.po.vars['fading'], decimals=2,
                                night_mode=self.po.all['night_mode'])
-        self.arena.valueChanged.connect(self.arena_changed)
-
-        self.arena_layout.addWidget(self.arena_label)
-        self.arena_layout.addWidget(self.arena)
-        self.arena_widget.setLayout(self.arena_layout)
-        self.left_options_layout.addWidget(self.arena_widget)
-
+        self.fading.valueChanged.connect(self.fading_changed)
+        self.fading_layout.addWidget(self.fading_label)
+        self.fading_layout.addWidget(self.fading)
+        self.fading_widget.setLayout(self.fading_layout)
+        self.left_options_layout.addWidget(self.fading_widget)
 
         self.growth_per_frame_widget = QtWidgets.QWidget()
         self.growth_per_frame_layout = QtWidgets.QHBoxLayout()
@@ -133,7 +134,6 @@ class VideoAnalysisWindow(MainTabsType):
             self.po.vars['maximal_growth_factor']
         except KeyError:
             self.po.vars['maximal_growth_factor'] = 0.02
-            self.po.vars['repeat_video_smoothing'] = self.po.vars['iterate_smoothing']
         self.maximal_growth_factor = Spinbox(min=0, max=0.5, val=self.po.vars['maximal_growth_factor'],
                                             decimals=3, night_mode=self.po.all['night_mode'])
         self.maximal_growth_factor_label = FixedText(VAW["Maximal_growth_factor"]["label"] + ':',
@@ -144,19 +144,6 @@ class VideoAnalysisWindow(MainTabsType):
         self.growth_per_frame_layout.addWidget(self.maximal_growth_factor)
         self.growth_per_frame_widget.setLayout(self.growth_per_frame_layout)
         self.left_options_layout.addWidget(self.growth_per_frame_widget)
-
-        self.iterate_widget = QtWidgets.QWidget()
-        self.iterate_layout = QtWidgets.QHBoxLayout()
-        self.repeat_video_smoothing = Spinbox(min=0, max=10, val=self.po.vars['repeat_video_smoothing'],
-                                         night_mode=self.po.all['night_mode'])
-        self.repeat_video_smoothing_label = FixedText(VAW["Temporal_smoothing"]["label"] + ':',
-                                                 tip=VAW["Temporal_smoothing"]["tips"],
-                                                 night_mode=self.po.all['night_mode'])
-        self.repeat_video_smoothing.valueChanged.connect(self.repeat_video_smoothing_changed)
-        self.iterate_layout.addWidget(self.repeat_video_smoothing_label)
-        self.iterate_layout.addWidget(self.repeat_video_smoothing)
-        self.iterate_widget.setLayout(self.iterate_layout)
-        self.left_options_layout.addWidget(self.iterate_widget)
 
 
         self.select_option_label = FixedText(VAW["Segmentation_method"]["label"] + ':',
@@ -201,7 +188,64 @@ class VideoAnalysisWindow(MainTabsType):
         self.right_options_layout = QtWidgets.QVBoxLayout()
         self.right_options_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
 
-        self.compute_all_options_label = FixedText('Compute all options',
+        self.test_one_arena_label = FixedText('Test one arena:', tip="",
+                                         night_mode=self.po.all['night_mode'])
+        self.right_options_layout.addWidget(self.test_one_arena_label)
+        # I/B/ Create the box
+        self.one_arena_box_layout = QtWidgets.QVBoxLayout()
+        self.one_arena_box_widget = QtWidgets.QWidget()
+        # boxstylesheet = \
+        #     ".QWidget {\n" \
+        #     + "border: 1px solid black;\n" \
+        #     + "border-radius: 20px;\n" \
+        #     + "}"
+        self.one_arena_box_widget.setObjectName("box_widget")
+        self.one_arena_box_widget.setStyleSheet("""
+            #box_widget {
+                border: 1px solid black;
+                border-radius: 20px;
+            }
+        """)
+        # I/C/ Create widgets
+        self.arena_widget = QtWidgets.QWidget()
+        self.arena_layout = QtWidgets.QHBoxLayout()
+        self.arena_label = FixedText(VAW["Arena_to_analyze"]["label"] + ':',
+                                       tip=VAW["Arena_to_analyze"]["tips"],
+                                       night_mode=self.po.all['night_mode'])
+        sample_size = self.po.all['sample_number_per_folder'][0]
+        if self.po.all['arena'] > sample_size:
+            self.po.all['arena'] = 1
+
+        self.arena = Spinbox(min=1, max=1000000, val=self.po.all['arena'],
+                               night_mode=self.po.all['night_mode'])
+        self.arena.valueChanged.connect(self.arena_changed)
+
+        self.arena_layout.addWidget(self.arena_label)
+        self.arena_layout.addWidget(self.arena)
+        self.arena_widget.setLayout(self.arena_layout)
+        self.one_arena_box_layout.addWidget(self.arena_widget)
+
+        self.operation_widget = QtWidgets.QWidget()
+        self.operation_layout = QtWidgets.QHBoxLayout()
+        self.operation_label = FixedText(VAW["Operation"]["label"] + ':', tip=VAW["Operation"]["tips"],
+                                      night_mode=self.po.all['night_mode'])
+        self.operation_list = ['load', 'quick detect', 'full detect']
+        self.operation = Combobox(self.operation_list,
+                                       night_mode=self.po.all['night_mode'])
+        self.operation.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.operation.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.operation.setFixedWidth(150)
+        self.operation.setCurrentText(self.operation_list[2])
+        self.operation.currentTextChanged.connect(self.operation_changed)
+
+        self.operation_layout.addWidget(self.operation_label)
+        self.operation_layout.addWidget(self.operation)
+        self.operation_widget.setLayout(self.operation_layout)
+        self.one_arena_box_layout.addWidget(self.operation_widget)
+
+        self.all_options_row_widget = QtWidgets.QWidget()
+        self.all_options_row_layout = QtWidgets.QHBoxLayout()
+        self.compute_all_options_label = FixedText('Try the 5 segmentation methods:',
                                                    tip=VAW["Segmentation_method"]["tips"],
                                                    night_mode=self.po.all['night_mode'])
         self.compute_all_options_cb = Checkbox(self.po.all['compute_all_options'])
@@ -214,28 +258,36 @@ class VideoAnalysisWindow(MainTabsType):
                             "QCheckBox:margin-left {0%}"
                             "QCheckBox:margin-right {0%}")
         self.compute_all_options_cb.stateChanged.connect(self.compute_all_options_check)
-        self.all_options_row_widget = QtWidgets.QWidget()
-        self.all_options_row_layout = QtWidgets.QHBoxLayout()
-        self.all_options_row_layout.addWidget(self.compute_all_options_cb)
         self.all_options_row_layout.addWidget(self.compute_all_options_label)
+        self.all_options_row_layout.addWidget(self.compute_all_options_cb)
         self.all_options_row_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.all_options_row_layout.setAlignment(QtCore.Qt.AlignVCenter)
         self.all_options_row_widget.setLayout(self.all_options_row_layout)
-        self.right_options_layout.addWidget(self.all_options_row_widget)
+        self.one_arena_box_layout.addWidget(self.all_options_row_widget)
 
-        self.load_one_arena = PButton(VAW["Load_one_arena"]["label"], tip=VAW["Load_one_arena"]["tips"],
+        self.post_analysis_widget = QtWidgets.QWidget()
+        self.post_analysis_layout = QtWidgets.QHBoxLayout()
+        self.run_one = PButton(VAW["Run_one"]["label"], tip=VAW["Run_one"]["tips"],
                                       night_mode=self.po.all['night_mode'])
-        self.load_one_arena.clicked.connect(self.load_one_arena_is_clicked)
-        self.detection_pbutton = PButton(VAW["Detection"]["label"], tip=VAW["Detection"]["tips"],
-                                 night_mode=self.po.all['night_mode'])
-        self.detection_pbutton.clicked.connect(self.detection_is_clicked)
+        self.run_one.clicked.connect(self.run_one_arena_thread)
+
         self.read = PButton(VAW["Read"]["label"], tip=VAW["Read"]["tips"], night_mode=self.po.all['night_mode'])
         self.read.clicked.connect(self.read_is_clicked)
         self.read.setVisible(False)
-        self.right_options_layout.addWidget(self.load_one_arena, alignment=QtCore.Qt.AlignCenter)
-        self.right_options_layout.addWidget(self.detection_pbutton, alignment=QtCore.Qt.AlignCenter)
-        self.right_options_layout.addWidget(self.read, alignment=QtCore.Qt.AlignCenter)
 
+        self.save_one_result = PButton(VAW["Save_one_result"]["label"], tip=VAW["Save_one_result"]["tips"],
+                                       night_mode=self.po.all['night_mode'])
+        self.save_one_result.clicked.connect(self.save_one_result_is_clicked)
+        self.save_one_result.setVisible(False)
+
+        self.post_analysis_layout.addWidget(self.run_one)
+        self.post_analysis_layout.addWidget(self.read)
+        self.post_analysis_layout.addWidget(self.save_one_result)
+        self.post_analysis_widget.setLayout(self.post_analysis_layout)
+        self.one_arena_box_layout.addWidget(self.post_analysis_widget)
+
+        self.one_arena_box_widget.setLayout(self.one_arena_box_layout)
+        self.right_options_layout.addWidget(self.one_arena_box_widget)
 
         self.right_options_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.right_options_widget.setLayout(self.right_options_layout)
@@ -244,57 +296,6 @@ class VideoAnalysisWindow(MainTabsType):
         # Close central widget
         self.video_display_widget.setLayout(self.video_display_layout)
         self.Vlayout.addWidget(self.video_display_widget)#, curr_row_main_layout, 0)
-        curr_row_main_layout += 1
-
-        # Open Second step row
-        self.second_step_widget = QtWidgets.QWidget()
-        self.second_step_layout = QtWidgets.QHBoxLayout()
-        self.second_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
-        self.second_step_widget.setVisible(False)
-
-        self.specimen_activity_widget = QtWidgets.QWidget()
-        self.specimen_activity_layout = QtWidgets.QHBoxLayout()
-        self.specimen_activity_label = FixedText(VAW["Specimen_activity"]["label"] + ':',
-                                       tip=VAW["Specimen_activity"]["tips"],
-                                       night_mode=self.po.all['night_mode'])
-        self.specimen_activity = Combobox(['move', 'grow', 'move and grow'],
-                                       night_mode=self.po.all['night_mode'])
-        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        self.specimen_activity.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
-        self.specimen_activity.setFixedWidth(175)
-        self.specimen_activity.setCurrentText(self.po.vars['specimen_activity'])
-        self.specimen_activity.currentTextChanged.connect(self.specimen_activity_changed)
-        self.fading_label = FixedText(VAW["Fading_detection"]["label"],
-                                       tip=VAW["Fading_detection"]["tips"] + ':',
-                                       night_mode=self.po.all['night_mode'])
-        self.fading = Spinbox(min=- 1, max=1, val=self.po.vars['fading'], decimals=2,
-                               night_mode=self.po.all['night_mode'])
-        self.fading.valueChanged.connect(self.fading_changed)
-        self.specimen_activity_layout.addWidget(self.specimen_activity_label)
-        self.specimen_activity_layout.addWidget(self.specimen_activity)
-        self.specimen_activity_layout.addWidget(self.fading_label)
-        self.specimen_activity_layout.addWidget(self.fading)
-        self.specimen_activity_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.specimen_activity_widget.setLayout(self.specimen_activity_layout)
-        self.second_step_layout.addWidget(self.specimen_activity_widget)
-
-        self.post_processing = PButton(VAW["Post_processing"]["label"], tip=VAW["Post_processing"]["tips"],
-                                       night_mode=self.po.all['night_mode'])
-        self.post_processing.clicked.connect(self.post_processing_is_clicked)
-        self.second_step_layout.addWidget(self.post_processing)
-
-        self.save_one_result = PButton(VAW["Save_one_result"]["label"], tip=VAW["Save_one_result"]["tips"],
-                                       night_mode=self.po.all['night_mode'])
-        self.save_one_result.clicked.connect(self.save_one_result_is_clicked)
-        self.second_step_layout.addWidget(self.save_one_result)
-
-        # Close Second step row
-        self.second_step_layout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.second_step_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
-        self.second_step_widget.setLayout(self.second_step_layout)
-        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))#, curr_row_main_layout, 0, 1, ncol)
-        curr_row_main_layout += 1
-        self.Vlayout.addWidget(self.second_step_widget)#, curr_row_main_layout, 0)
         curr_row_main_layout += 1
 
         # Open last options row widget
@@ -361,44 +362,6 @@ class VideoAnalysisWindow(MainTabsType):
         self.fading.setVisible(do_fading)
         self.fading_label.setVisible(do_fading)
 
-    def step_done_is_clicked(self):
-        """
-        Step the analysis progress when 'Done' button is clicked.
-
-        Increments the current step and updates the UI accordingly based on the
-        new step value. Updates labels, tooltips, and visibility of widgets.
-
-        Notes
-        -----
-        This method is automatically called when the 'Done' button is clicked.
-        It updates the GUI elements to reflect progress in a multi-step
-        analysis process.
-        """
-        self.current_step += 1
-        if self.current_step == 1:
-            self.general_step_label.setText('Step 2: Tune fading and advanced parameters to improve Post processing')
-            self.general_step_label.setToolTip('Post processing is slower than Detection.\nIt improves detection with the following optional algorithms:\n - Fading detection\n - Correct errors around initial shape\n - Organism internal oscillation period\n - Connect distant shape\n - Appearing cell selection')
-            self.second_step_widget.setVisible(True)
-            do_fading = self.po.vars['specimen_activity'] == 'move and grow'
-            self.fading.setVisible(do_fading)
-            self.fading_label.setVisible(do_fading)
-            self.save_one_result.setVisible(False)
-        elif self.current_step == 2:
-            self.general_step_label.setText('Step 3: Run the full analysis or save the result of one arena.')
-            self.general_step_label.setToolTip('Once all settings are correct for a arena, click on "Run All" to start the full analysis.\nIf the detection is unsatisfactory for a arena, you can repeat the detection for this\narena and save the results by clicking "Save One Result".\nRepeat the process for as many arenas as necessary.')
-            self.save_one_result.setVisible(True)
-            self.general_step_button.setVisible(False)
-
-    def reset_general_step(self):
-        """
-        Reset the general step counter and update UI labels.
-        """
-        self.current_step = 0
-        self.general_step_label.setText('Step 1: Tune parameters to improve Detection')
-        self.general_step_label.setToolTip('Detection uses only the visible parameters and those\npreviously determined on the first or last image.')
-        self.general_step_button.setVisible(True)
-        self.second_step_widget.setVisible(False)
-
     def full_screen_display(self, event):
         """
         Full-screen display of an image.
@@ -453,6 +416,9 @@ class VideoAnalysisWindow(MainTabsType):
                 elif self.po.all['video_option'] == 4:
                     logging.info(f"This option will detect cell(s) using the dynamic threshold OR slope algorithms with a maximal growth factor of {self.po.vars['maximal_growth_factor']}")
                     self.po.vars['true_if_use_light_AND_slope_else_OR'] = False
+
+    def operation_changed(self):
+        self.po.load_quick_full = self.operation.currentIndex()
 
     def data_tab_is_clicked(self):
         """
@@ -551,19 +517,11 @@ class VideoAnalysisWindow(MainTabsType):
         sessions.
         """
         self.po.vars['maximal_growth_factor'] = self.maximal_growth_factor.value()
-        self.po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
         self.po.vars['specimen_activity'] = self.specimen_activity.currentText()
         self.po.vars['fading'] = self.fading.value()
         self.po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
         self.option_changed()
         self.save_all_vars_thread()
-
-    def repeat_video_smoothing_changed(self):
-        """
-        Save the repeat_video_smoothing spinbox value to set how many times the pixel intensity dynamics will be
-        smoothed.
-        """
-        self.po.vars['repeat_video_smoothing'] = int(np.round(self.repeat_video_smoothing.value()))
 
     def specimen_activity_changed(self):
         """
@@ -608,60 +566,11 @@ class VideoAnalysisWindow(MainTabsType):
             self.po.computed_video_options = np.zeros(5, bool)
             self.po.all['arena'] = int(np.round(self.arena.value()))
 
-    def load_one_arena_is_clicked(self):
-        """
-        Load one arena if clicked.
-
-        Resets the general step, sets `load_quick_full` to 0, and runs the arena in a separate thread.
-        """
-        if self.thread_dict['VideoTracking'].isRunning():
-            self.message.setText("A video tracking task is already running, wait or restart Cellects")
-        else:
-            self.reset_general_step()
-            self.po.load_quick_full = 0
-            self.run_one_arena_thread()
-
     def compute_all_options_check(self):
         """
         Save the compute_all_options checkbox value to process every video segmentation algorithms during the next run.
         """
         self.po.all['compute_all_options'] = self.compute_all_options_cb.isChecked()
-
-    def detection_is_clicked(self):
-        """
-        Trigger detection when a button is clicked.
-
-        This method handles the logic when the user clicks the "detection" button.
-        It resets certain states, sets a flag for quick full processing,
-        and starts a thread to run the detection in one arena.
-
-        Notes
-        -----
-        This method is part of a larger state machine for handling user interactions.
-        It assumes that the parent object has a `po` attribute with a `load_quick_full`
-        flag and a method to run an arena thread.
-        """
-        if self.thread_dict['VideoTracking'].isRunning():
-            self.message.setText("A video tracking task is already running, wait or restart Cellects")
-        else:
-            self.reset_general_step()
-            self.po.load_quick_full = 1
-            self.run_one_arena_thread()
-
-    def post_processing_is_clicked(self):
-        """
-        Trigger post-processing when a button is clicked.
-
-        Extended Description
-        -------------------
-        This function updates the parent object's load_quick_full attribute,
-        logs a specific variable value, and runs an arena thread.
-        """
-        if self.thread_dict['VideoTracking'].isRunning():
-            self.message.setText("A video tracking task is already running, wait or restart Cellects")
-        else:
-            self.po.load_quick_full = 2
-            self.run_one_arena_thread()
 
     def run_one_arena_thread(self):
         """
@@ -676,19 +585,22 @@ class VideoAnalysisWindow(MainTabsType):
         Ensures that the previous arena settings are cleared and connects signals
         to display messages and images during thread execution.
         """
-        if self.thread_dict['VideoReader'].isRunning():
-            self.thread_dict['VideoReader'].requestInterruption()
-            self.thread_dict['VideoReader'].wait()
-        self.message.setText("Load the video and initialize analysis, wait...")
-        self.save_current_settings()
-        if self.previous_arena != self.po.all['arena']:
-            self.po.motion = None
-        self.po.video_task = 'one_arena'
-        self.thread_dict['VideoTracking'].start()
-        self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
-        self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
-        self.thread_dict['VideoTracking'].when_detection_finished.connect(self.when_detection_finished)
-        self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
+        if self.thread_dict['VideoTracking'].isRunning():
+            self.message.setText("A video tracking task is already running, wait or restart Cellects")
+        else:
+            if self.thread_dict['VideoReader'].isRunning():
+                self.thread_dict['VideoReader'].requestInterruption()
+                self.thread_dict['VideoReader'].wait()
+            self.message.setText("Load the video and initialize analysis, wait...")
+            self.save_current_settings()
+            if self.previous_arena != self.po.all['arena']:
+                self.po.motion = None
+            self.po.video_task = 'one_arena'
+            self.thread_dict['VideoTracking'].start()
+            self.thread_dict['VideoTracking'].message_from_thread.connect(self.display_message_from_thread)
+            self.thread_dict['VideoTracking'].when_loading_finished.connect(self.when_loading_thread_finished)
+            self.thread_dict['VideoTracking'].when_detection_finished.connect(self.when_detection_finished)
+            self.thread_dict['VideoTracking'].image_from_thread.connect(self.display_image_during_thread)
 
     def when_loading_thread_finished(self, save_loaded_video: bool):
         """
@@ -747,6 +659,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.select_option_label.setVisible(self.po.vars["color_number"] == 2)
         self.select_option.setVisible(self.po.vars["color_number"] == 2)
         self.read.setVisible(True)
+        self.save_one_result.setVisible(self.po.load_quick_full == 2)
 
     def display_image_during_thread(self, dictionary: dict):
         """
@@ -797,11 +710,14 @@ class VideoAnalysisWindow(MainTabsType):
         if self.po.motion is None or self.po.motion.segmented is None:
             self.message.setText("Run detection first")
         else:
-            if self.thread_dict['VideoReader'].isRunning():
-                self.thread_dict['VideoReader'].requestInterruption()
-                self.thread_dict['VideoReader'].wait()
-            self.thread_dict['VideoReader'].start()
-            self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
+            if self.thread_dict['VideoTracking'].isRunning():
+                self.message.setText("A video tracking task is running, wait or restart Cellects")
+            else:
+                if self.thread_dict['VideoReader'].isRunning():
+                    self.thread_dict['VideoReader'].requestInterruption()
+                    self.thread_dict['VideoReader'].wait()
+                self.thread_dict['VideoReader'].start()
+                self.thread_dict['VideoReader'].message_from_thread.connect(self.display_image_during_thread)
 
     def run_all_is_clicked(self):
         """
@@ -825,6 +741,8 @@ class VideoAnalysisWindow(MainTabsType):
             if self.parent().firstwindow.thread_dict["VideoTracking"].isRunning():
                 self.message.setText('Analysis has already begun in the first window.')
             else:
+                self.save_one_result.setVisible(False)
+                self.read.setVisible(False)
                 self.save_current_settings()
                 self.po.motion = None
                 self.po.converted_video = None
