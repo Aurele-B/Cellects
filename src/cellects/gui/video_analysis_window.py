@@ -418,6 +418,14 @@ class VideoAnalysisWindow(MainTabsType):
                     self.po.vars['true_if_use_light_AND_slope_else_OR'] = False
 
     def operation_changed(self):
+        """
+        Update the "load_quick_full" attribute based on the current UI operation index.
+
+        Returns
+        -------
+        None
+            The method only mutates self.po.load_quick_full.
+        """
         self.po.load_quick_full = self.operation.currentIndex()
 
     def data_tab_is_clicked(self):
