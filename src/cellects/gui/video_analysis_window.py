@@ -570,7 +570,6 @@ class VideoAnalysisWindow(MainTabsType):
                 self.thread_dict['VideoReader'].wait()
                 self.message.setText("")
             self.po.motion = None
-            self.reset_general_step()
             self.po.computed_video_options = np.zeros(5, bool)
             self.po.all['arena'] = int(np.round(self.arena.value()))
 
