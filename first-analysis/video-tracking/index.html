@@ -2910,102 +2910,6 @@ By iteratively testing tracking parameters and validating results through visual
 </figure>
 
 <hr />
-<!-- START_Arena_to_analyze -->
-<h2 id="arena-to-analyze">Arena to analyze:</h2>
-<p>This arena number selects a specific arena in the current folder. The user can choose an arena,
-click <em>Detection</em> to load and analyze it, then <em>Read</em> results.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul>
-<li>Cellects automatically names the arena by their position (left to right, top to bottom).</li>
-<li>For single arena setups, use 1.</li>
-<li><em>Post processing</em> triggers <em>Detection</em>, which in turn triggers <em>Load One arena</em>.</li>
-<li>Videos can be saved (as .h5 files) for later analysis using the Advanced parameter <em>Keep unalteredvideos</em>.</li>
-</ul>
-</div>
-<!-- END_Arena_to_analyze -->
-
-<hr />
-<!-- START_Maximal_growth_factor -->
-<h2 id="maximal-growth-factor">Maximal growth factor:</h2>
-<p>This is the maximum allowable proportion of image area that may be covered by specimen movement
-between frames. Adjust accordingly:</p>
-<ul>
-<li>Increase if specimen size is underestimated.</li>
-<li>Decrease if specimen size is overestimated.</li>
-</ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul>
-<li>Precisely, this defines an upper bound on relative coverage changes between sequential images.</li>
-</ul>
-</div>
-<!-- END_Maximal_growth_factor -->
-
-<hr />
-<!-- START_Temporal_smoothing -->
-<h2 id="temporal-smoothing">Temporal smoothing:</h2>
-<p>Applies temporal smoothing to reduce noise and highlight long</p>
-<p>-term trends by averaging pixel intensity changes. Use when analyzing slope
--based segmentation results.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul>
-<li>This uses a moving window algorithm on pixel intensity curves over time.</li>
-<li>Excessive iterations produce constant values, preventing accurate detection.</li>
-</ul>
-</div>
-<!-- END_Temporal_smoothing -->
-
-<hr />
-<!-- START_Segmentation_method -->
-<h2 id="segmentation-method">Segmentation method:</h2>
-<p>Cellects includes five video tracking options:</p>
-<ul>
-<li><strong>Frame option</strong>: Applies the image analysis algorithm frame by frame, without temporal dynamics.</li>
-<li><strong>Threshold option</strong>: Compares pixel intensity with the average intensity of the whole image at
-each time step.</li>
-<li><strong>Slope option</strong>: Compares pixel intensity slopes with an automatically defined threshold.</li>
-<li><strong>T and S option</strong>: logical AND of threshold and slope options.</li>
-<li><strong>T or S option</strong>: logical OR of threshold and slope options.</li>
-</ul>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<ul>
-<li>Selecting the <em>Compute all options</em> before dunning <em>Detection</em> allows method comparison.  Onceanalysis completes. Once the analysis completed, select one option and click <em>Read</em>.</li>
-<li>Computing only one option is faster and requires less memory.</li>
-<li>When <em>Heterogeneous background</em> or <em>Grid segmentation</em> has been selected in the image analysiswindow, only the <em>Frame</em> option remains available.</li>
-</ul>
-</div>
-<!-- END_Segmentation_method -->
-
-<hr />
-<!-- START_Load_one_arena -->
-<h2 id="load-one-arena">Load one arena:</h2>
-<p>Clicking this button loads the arena associated with <em>Arena to analyze</em>. The center of the window
-displays the first frame of that arena's video. Click <em>Read</em> to review the full video.</p>
-<!-- END_Load_one_arena -->
-
-<hr />
-<!-- START_Detection -->
-<h2 id="detection">Detection:</h2>
-<p><em>Detection</em> applies a (or all) segmentation methods to one arena. Once finished, click <em>Read</em>  to
-view the detection result. If correct, answer <em>Done</em> to proceed with tuning parameters for post
-processing.</p>
-<!-- END_Detection -->
-
-<!-- START_Read -->
-<h2 id="read">Read:</h2>
-<p>Clicking <em>Read</em> starts the video display corresponding to the current state of the analysis.</p>
-<!-- END_Read -->
-
-<figure>
-  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window during detection visualization"
-       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
-  <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
-</figure>
-
-<hr />
 <!-- START_Specimen_activity -->
 <h2 id="specimen-activity">Specimen activity:</h2>
 <p>The behavior of the specimen(s) changes how Cellects post processes the data (after video
@@ -3036,29 +2940,107 @@ one and one to control sensitivity:</p>
 <!-- END_Fading_detection -->
 
 <hr />
-<!-- START_Post_processing -->
-<h2 id="post-processing">Post processing:</h2>
-<p><em>Post processing</em> applies detection algorithms with additional enhancements:</p>
+<!-- START_Maximal_growth_factor -->
+<h2 id="maximal-growth-factor">Maximal growth factor:</h2>
+<p>This is the maximum allowable proportion of image area that may be covered by specimen movement
+between frames. Adjust accordingly:</p>
 <ul>
-<li>Binary operations: opening, closing, logical ops.</li>
-<li>Fading detection* tracking: when specimen(s) may leave areas (optional).</li>
-<li><em>Correct errors around initial shape</em>: when the contour of the initial position of the specimen is
-hard to detect (optional).</li>
-<li><em>Connect distant shapes</em>: when the specimen's heterogeneity create wrong disconnections in the
-video detection (optional).</li>
-<li><em>Prevent fast growth near periphery</em>: when arena's border (typically petri dishes) may be wrongly
-detected as specimen (optional).</li>
+<li>Increase if specimen size is underestimated.</li>
+<li>Decrease if specimen size is overestimated.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
-<li>Once Post processing works, the user can click “<em>Done</em>” to <em>Step 2: Tune fading and advancedparameters to improve Post processing</em>, and then <em>Run All</em> arenas.</li>
+<li>Precisely, this defines an upper bound on relative coverage changes between sequential images.</li>
 </ul>
 </div>
-<!-- END_Post_processing -->
+<!-- END_Maximal_growth_factor -->
 
+<hr />
+<!-- START_Segmentation_method -->
+<h2 id="segmentation-method">Segmentation method:</h2>
+<p>Cellects includes five video tracking options:</p>
+<ul>
+<li><strong>Frame option</strong>: Applies the image analysis algorithm frame by frame, without temporal dynamics.</li>
+<li><strong>Threshold option</strong>: Compares pixel intensity with the average intensity of the whole image at
+each time step.</li>
+<li><strong>Slope option</strong>: Compares pixel intensity slopes with an automatically defined threshold.</li>
+<li><strong>T and S option</strong>: logical AND of threshold and slope options.</li>
+<li><strong>T or S option</strong>: logical OR of threshold and slope options.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Selecting the <em>Compute all options</em> before dunning <em>Detection</em> allows method comparison.  Onceanalysis completes. Once the analysis completed, select one option and click <em>Read</em>.</li>
+<li>Computing only one option is faster and requires less memory.</li>
+<li>When <em>Heterogeneous background</em> or <em>Grid segmentation</em> has been selected in the image analysiswindow, only the <em>Frame</em> option remains available.</li>
+</ul>
+</div>
+<!-- END_Segmentation_method -->
+
+<hr />
+<!-- START_Arena_to_analyze -->
+<h2 id="arena-to-analyze">Arena to analyze:</h2>
+<p>This arena number selects a specific arena in the current folder. The user can choose an arena,
+use an <em>Operation</em> to load and analyze it, then <em>Read</em> results.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Cellects automatically names the arena by their position (left to right, top to bottom).</li>
+<li>For single arena setups, use 1.</li>
+<li><em>full detect</em> load the arena video, apply the segmentation method and post processing algorithms.</li>
+<li>Videos can be saved (as .h5 files) for later analysis using the Advanced parameter <em>Keep unalteredvideos</em>.</li>
+</ul>
+</div>
+<!-- END_Arena_to_analyze -->
+
+<hr />
+<!-- START_Operation -->
+<h2 id="operation">Operation:</h2>
+<p>Selecting the 'load' operation</p>
+<ul>
+<li><em>load</em>: will load one arena associated with <em>Arena to analyze</em>. The center of the window displays
+the first frame of that arena's video.</li>
+<li><em>quick detect</em>: applies a (or all) segmentation methods to one arena. Once finished, click <em>Read</em>  to
+view the detection result. If correct, try post processing using <em>full detect</em>.</li>
+<li><em>full detect</em>: applies detection enhancements such as binary operations (opening, closing,
+logical ops), fading detection tracking (when specimens not only grow but also move), correct errors
+around initial shape (when the contour of the initial position of the specimen is hard to detect),
+connect distant shapes (when the specimen's heterogeneity create wrong disconnections in the video
+detection),  prevent fast growth near periphery (when arena's border may be wrongly detected as
+specimen).</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>Click <em>Run one</em> to apply current operation to the current <em>Arena to analyze</em></li>
+<li>Click <em>Read</em> to review the full video.</li>
+</ul>
+</div>
+<!-- END_Operation -->
+
+<hr />
+<!-- START_Run_one -->
+<h2 id="run">Run:</h2>
+<p>Clicking <em>Run one arena</em> triggers the selected <em>Operation</em> and <em>Segmentation method</em> on the <em>Arena
+to analyze</em></p>
+<!-- END_Run_one -->
+
+<hr />
+<!-- START_Read -->
+<h2 id="read">Read:</h2>
+<p>Clicking <em>Read</em> starts the video display corresponding to the current state of the analysis.</p>
+<!-- END_Read -->
+
+<figure>
+  <img src="../../static/UserManualFigure7.png" alt="Cellects video tracking window during detection visualization"
+       style="display:block;float:none;margin-left:auto;margin-right:auto;width:100%">
+  <figcaption><strong>Figure 7:</strong> Cellects video tracking window during detection visualization</figcaption>
+</figure>
+
+<hr />
 <!-- START_Save_one_result -->
-<h2 id="save-one-result">Save one result:</h2>
+<h2 id="save-results">Save Results:</h2>
 <p>Complete the current video analysis by clicking this button for single arena processing. Saving
 includes:</p>
 <ul>
@@ -3082,8 +3064,8 @@ includes:</p>
 
 <hr />
 <!-- START_Run_All -->
-<h2 id="run-all">Run All:</h2>
-<p>Apply validated parameters to all arenas by clicking <em>Run All</em>. This action:</p>
+<h2 id="run-all-arenas">Run All Arenas:</h2>
+<p>Apply validated parameters to all arenas by clicking <em>Run All Arenas</em>. This action:</p>
 <ul>
 <li>Generates full
 -resolution video outputs (storage

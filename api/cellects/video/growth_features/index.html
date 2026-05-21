@@ -3069,7 +3069,15 @@ If the data are insufficient for regression the numeric fields are
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/video/growth_features.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-187">187</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
 <span class="normal"><a href="#__codelineno-0-188">188</a></span>
 <span class="normal"><a href="#__codelineno-0-189">189</a></span>
 <span class="normal"><a href="#__codelineno-0-190">190</a></span>
@@ -3240,194 +3248,186 @@ If the data are insufficient for regression the numeric fields are
 <span class="normal"><a href="#__codelineno-0-355">355</a></span>
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span>
-<span class="normal"><a href="#__codelineno-0-358">358</a></span>
-<span class="normal"><a href="#__codelineno-0-359">359</a></span>
-<span class="normal"><a href="#__codelineno-0-360">360</a></span>
-<span class="normal"><a href="#__codelineno-0-361">361</a></span>
-<span class="normal"><a href="#__codelineno-0-362">362</a></span>
-<span class="normal"><a href="#__codelineno-0-363">363</a></span>
-<span class="normal"><a href="#__codelineno-0-364">364</a></span>
-<span class="normal"><a href="#__codelineno-0-365">365</a></span>
-<span class="normal"><a href="#__codelineno-0-366">366</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_growth_features</span><span class="p">(</span>
-<a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="n">y</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
-<a id="__codelineno-0-189" name="__codelineno-0-189"></a>    <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="n">first_growth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-<a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">first_frame</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-<a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
-<a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">    Extract some growth descriptors from a time zeries.</span>
-<a id="__codelineno-0-195" name="__codelineno-0-195"></a>
-<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">    Parameters</span>
-<a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">    ----------</span>
-<a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    y : NDArray</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        Raw signal (one measurement per frame). A NumPy 1‑D array.</span>
-<a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">    time_step : float</span>
-<a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">        Temporal spacing between successive frames (the R script calls it</span>
-<a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">        ``time_step`` and later multiplies it by frame indices).</span>
-<a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">    first_growth : float</span>
-<a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">        Threshold used to locate the *pseudo‑peak* (the index where the</span>
-<a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">        curve first rises above ``y[2] + first_growth`` for increasing</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">        curves, or falls below it for decreasing curves).</span>
-<a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">        If first_growth is negative the curve is treated as decreasing;</span>
-<a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">        otherwise it is treated as increasing.</span>
-<a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">    first_frame : int, default 1</span>
-<a id="__codelineno-0-210" name="__codelineno-0-210"></a><span class="sd">        1‑based index of the frame where analysis should start.</span>
-<a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">         Frames before this are discarded.</span>
-<a id="__codelineno-0-212" name="__codelineno-0-212"></a>
-<a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="sd">    Returns</span>
-<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">    -------</span>
-<a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="sd">    GrowthFeatures</span>
-<a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="sd">        A namedtuple with 14 fields; the order matches exactly the column</span>
-<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="sd">        order of the data.frame produced by the R implementation.</span>
-<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">        If the data are insufficient for regression the numeric fields are</span>
-<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">        ``np.nan`` and the two rupture‑related fields contain the string</span>
-<a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">        ``&quot;censored&quot;`` (again matching the R behaviour).</span>
-<a id="__codelineno-0-221" name="__codelineno-0-221"></a>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a><span class="sd">    Notes</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a><span class="sd">    -----</span>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">    * The wrapper calls a handful of internal, JIT‑compiled helpers:</span>
-<a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">      `_slope_shifts`, `_fill_r_squared_matrices`, and `_linregress`.</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="sd">      Those helpers must be present in the same module – they are defined</span>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">      in the first part of *curve_features.py*.</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">    * the return type is a lightweight ``namedtuple``.</span>
-<a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-230" name="__codelineno-0-230"></a>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a>    <span class="k">if</span> <span class="n">first_frame</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;first_frame is 1‑based and must be &gt;= 1&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-233" name="__codelineno-0-233"></a>    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">first_frame</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span>                     <span class="c1"># 0‑based slice</span>
+<span class="normal"><a href="#__codelineno-0-358">358</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_growth_features</span><span class="p">(</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>    <span class="n">y</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="n">time_step</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="n">first_growth</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>    <span class="n">first_frame</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">    Extract some growth descriptors from a time zeries.</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">    y : NDArray</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a><span class="sd">        Raw signal (one measurement per frame). A NumPy 1‑D array.</span>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="sd">    time_step : float</span>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="sd">        Temporal spacing between successive frames (the R script calls it</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">        ``time_step`` and later multiplies it by frame indices).</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="sd">    first_growth : float</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">        Threshold used to locate the *pseudo‑peak* (the index where the</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">        curve first rises above ``y[2] + first_growth`` for increasing</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">        curves, or falls below it for decreasing curves).</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        If first_growth is negative the curve is treated as decreasing;</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">        otherwise it is treated as increasing.</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">    first_frame : int, default 1</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">        1‑based index of the frame where analysis should start.</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">         Frames before this are discarded.</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a><span class="sd">    GrowthFeatures</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a><span class="sd">        A namedtuple with 14 fields; the order matches exactly the column</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a><span class="sd">        order of the data.frame produced by the R implementation.</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a><span class="sd">        If the data are insufficient for regression the numeric fields are</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">        ``np.nan`` and the two rupture‑related fields contain the string</span>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">        ``&quot;censored&quot;`` (again matching the R behaviour).</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">    Notes</span>
+<a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="sd">    -----</span>
+<a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="sd">    * The wrapper calls a handful of internal, JIT‑compiled helpers:</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="sd">      `_slope_shifts`, `_fill_r_squared_matrices`, and `_linregress`.</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">      Those helpers must be present in the same module – they are defined</span>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">      in the first part of *curve_features.py*.</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">    * the return type is a lightweight ``namedtuple``.</span>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="k">if</span> <span class="n">first_frame</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;first_frame is 1‑based and must be &gt;= 1&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">first_frame</span> <span class="o">-</span> <span class="mi">1</span> <span class="p">:]</span>                     <span class="c1"># 0‑based slice</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="c1"># Decide whether the curve is increasing or decreasing</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a>    <span class="k">if</span> <span class="n">first_growth</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a>        <span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;decreasing&quot;</span>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a>        <span class="n">shape_flag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;increasing&quot;</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="n">shape_flag</span> <span class="o">=</span> <span class="mi">1</span>
 <a id="__codelineno-0-234" name="__codelineno-0-234"></a>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="c1"># Decide whether the curve is increasing or decreasing</span>
-<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="k">if</span> <span class="n">first_growth</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;decreasing&quot;</span>
-<a id="__codelineno-0-238" name="__codelineno-0-238"></a>        <span class="n">shape_flag</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-240" name="__codelineno-0-240"></a>        <span class="n">shape</span> <span class="o">=</span> <span class="s2">&quot;increasing&quot;</span>
-<a id="__codelineno-0-241" name="__codelineno-0-241"></a>        <span class="n">shape_flag</span> <span class="o">=</span> <span class="mi">1</span>
-<a id="__codelineno-0-242" name="__codelineno-0-242"></a>
-<a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="c1"># Remove a leading zero</span>
-<a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-<a id="__codelineno-0-245" name="__codelineno-0-245"></a>        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a>
-<a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="c1"># Replace interior zeros by the smallest non‑zero value</span>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">zeros</span> <span class="o">=</span> <span class="n">y</span> <span class="o">==</span> <span class="mf">0.0</span>
-<a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">zeros</span><span class="p">):</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a>        <span class="n">positive</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="o">~</span><span class="n">zeros</span><span class="p">]</span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a>        <span class="k">if</span> <span class="n">positive</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>               <span class="c1"># completely zero vector</span>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All values are zero; cannot replace zeros&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a>        <span class="n">smallest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">positive</span><span class="p">)</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a>        <span class="n">y</span><span class="p">[</span><span class="n">zeros</span><span class="p">]</span> <span class="o">=</span> <span class="n">smallest</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a>
-<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="n">n_frame</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
-<a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="k">if</span> <span class="n">n_frame</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-258" name="__codelineno-0-258"></a>        <span class="c1"># Degenerate input – nothing to analyze</span>
-<a id="__codelineno-0-259" name="__codelineno-0-259"></a>        <span class="k">return</span> <span class="n">default_features</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="c1"># Basic statistics needed later</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="n">max_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="n">min_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a>    <span class="n">maximal_variation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">max_y</span> <span class="o">-</span> <span class="n">min_y</span><span class="p">)</span>          <span class="c1"># abs(max-min)</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="n">mean_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="c1"># Detect slope‑shift frames (possible rupture points)</span>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="c1"># _slope_shifts returns **1‑based* frame numbers multiplied by the cluster length.</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="n">cluster_len</span> <span class="o">=</span> <span class="mi">5</span>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="n">shift_frames_onebased</span> <span class="o">=</span> <span class="n">_slope_shifts</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">cluster_len</span><span class="p">,</span> <span class="n">shape_flag</span><span class="p">,</span> <span class="n">mean_diff</span><span class="p">)</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="n">shift_frames</span> <span class="o">=</span> <span class="n">shift_frames_onebased</span> <span class="o">-</span> <span class="mi">1</span>          <span class="c1"># now 0‑based</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="c1"># Determine where (if ever) a “rupture” occurs</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="c1"># A rupture is the *first* slope‑shift that happens after the signal</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="c1"># has moved through 90 % of its total amplitude.</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;increasing&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a>        <span class="n">high_thr</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">maximal_variation</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a>        <span class="n">high_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="n">high_thr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a>        <span class="n">high_thr</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">maximal_variation</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a>        <span class="n">high_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">high_thr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="c1"># Intersection of the two sets gives candidate rupture frames</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="n">cand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">shift_frames</span><span class="p">,</span> <span class="n">high_idx</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="k">if</span> <span class="n">cand</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a>        <span class="n">rupture_time_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cand</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>               <span class="c1"># 0‑based</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a>        <span class="n">rupture_time_min</span> <span class="o">=</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">rupture_time_idx</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a>        <span class="n">rupture_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">rupture_time_idx</span><span class="p">])</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="n">rupture_time_min</span> <span class="o">=</span> <span class="s2">&quot;censored&quot;</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a>        <span class="n">rupture_value</span> <span class="o">=</span> <span class="s2">&quot;censored&quot;</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="n">rupture_time_idx</span> <span class="o">=</span> <span class="n">n_frame</span> <span class="o">-</span> <span class="mi">1</span>               <span class="c1"># we will search up to the end</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="n">max_end</span> <span class="o">=</span> <span class="n">rupture_time_idx</span>                       <span class="c1"># upper bound for the regression loops</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="c1"># Remove a leading zero</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="c1"># Replace interior zeros by the smallest non‑zero value</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="n">zeros</span> <span class="o">=</span> <span class="n">y</span> <span class="o">==</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">zeros</span><span class="p">):</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>        <span class="n">positive</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="o">~</span><span class="n">zeros</span><span class="p">]</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a>        <span class="k">if</span> <span class="n">positive</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>               <span class="c1"># completely zero vector</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All values are zero; cannot replace zeros&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a>        <span class="n">smallest</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">positive</span><span class="p">)</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a>        <span class="n">y</span><span class="p">[</span><span class="n">zeros</span><span class="p">]</span> <span class="o">=</span> <span class="n">smallest</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">n_frame</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="k">if</span> <span class="n">n_frame</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>        <span class="c1"># Degenerate input – nothing to analyze</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>        <span class="k">return</span> <span class="n">default_features</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="c1"># Basic statistics needed later</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>    <span class="n">max_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="n">min_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>    <span class="n">maximal_variation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">max_y</span> <span class="o">-</span> <span class="n">min_y</span><span class="p">)</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a>    <span class="n">mean_diff</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="c1"># Detect slope‑shift frames (possible rupture points)</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>    <span class="c1"># _slope_shifts returns **1‑based* frame numbers multiplied by the cluster length.</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="n">cluster_len</span> <span class="o">=</span> <span class="mi">5</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="n">shift_frames_onebased</span> <span class="o">=</span> <span class="n">_slope_shifts</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">cluster_len</span><span class="p">,</span> <span class="n">shape_flag</span><span class="p">,</span> <span class="n">mean_diff</span><span class="p">)</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="n">shift_frames</span> <span class="o">=</span> <span class="n">shift_frames_onebased</span> <span class="o">-</span> <span class="mi">1</span>          <span class="c1"># now 0‑based</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="c1"># Determine where (if ever) a “rupture” occurs</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="c1"># A rupture is the *first* slope‑shift that happens after the signal</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="c1"># has moved through 90 % of its total amplitude.</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;increasing&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>        <span class="n">high_thr</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">maximal_variation</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>        <span class="n">high_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="n">high_thr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="n">high_thr</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.9</span> <span class="o">*</span> <span class="n">maximal_variation</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a>        <span class="n">high_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">high_thr</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="c1"># Intersection of the two sets gives candidate rupture frames</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="n">cand</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">shift_frames</span><span class="p">,</span> <span class="n">high_idx</span><span class="p">,</span> <span class="n">assume_unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="k">if</span> <span class="n">cand</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>        <span class="n">rupture_time_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cand</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>               <span class="c1"># 0‑based</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a>        <span class="n">rupture_time_min</span> <span class="o">=</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">rupture_time_idx</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a>        <span class="n">rupture_value</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">rupture_time_idx</span><span class="p">])</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>        <span class="n">rupture_time_min</span> <span class="o">=</span> <span class="s2">&quot;censored&quot;</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a>        <span class="n">rupture_value</span> <span class="o">=</span> <span class="s2">&quot;censored&quot;</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a>        <span class="n">rupture_time_idx</span> <span class="o">=</span> <span class="n">n_frame</span> <span class="o">-</span> <span class="mi">1</span>               <span class="c1"># we will search up to the end</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="n">max_end</span> <span class="o">=</span> <span class="n">rupture_time_idx</span>                       <span class="c1"># upper bound for the regression loops</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="c1"># Determine the “growth” windows that bound the exhaustive search</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;increasing&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a>        <span class="n">max_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>        <span class="n">max_exp_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="n">max_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a>        <span class="n">max_exp_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
 <a id="__codelineno-0-294" name="__codelineno-0-294"></a>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>    <span class="c1"># Determine the “growth” windows that bound the exhaustive search</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;increasing&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="n">max_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>        <span class="n">max_exp_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>        <span class="n">max_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>        <span class="n">max_exp_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.01</span> <span class="o">*</span> <span class="n">maximal_variation</span><span class="p">))[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="c1"># Guard against pathological series where the thresholds are never crossed</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>    <span class="k">if</span> <span class="n">max_start</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">max_exp_start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>        <span class="k">return</span> <span class="n">default_features</span>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="c1"># Fill the two R‑squared matrices (the O(N²) part)</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="n">exp_r2_mat</span><span class="p">,</span> <span class="n">lin_r2_mat</span> <span class="o">=</span> <span class="n">_fill_r_squared_matrices</span><span class="p">(</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>        <span class="n">y</span><span class="p">,</span>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>        <span class="n">time_step</span><span class="p">,</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="n">max_start</span><span class="p">,</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>        <span class="n">max_exp_start</span><span class="p">,</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="n">max_end</span><span class="p">,</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="n">shape_flag</span><span class="p">,</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>        <span class="n">max_y</span><span class="p">,</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a>        <span class="n">maximal_variation</span><span class="p">,</span>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="p">)</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>    <span class="c1"># Locate the windows with maximal R² for each model</span>
-<a id="__codelineno-0-320" name="__codelineno-0-320"></a>    <span class="n">exp_flat_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">exp_r2_mat</span><span class="p">))</span>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">exp_flat_idx</span><span class="p">,</span> <span class="n">exp_r2_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>    <span class="n">best_exp_r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">exp_r2_mat</span><span class="p">[</span><span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span><span class="p">])</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a>    <span class="n">lin_flat_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">lin_r2_mat</span><span class="p">))</span>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">lin_flat_idx</span><span class="p">,</span> <span class="n">lin_r2_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="n">best_lin_r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lin_r2_mat</span><span class="p">[</span><span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span><span class="p">])</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>    <span class="c1"># Perform the *final* regressions on the selected windows</span>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="c1"># Exponential regression (log‑linear)</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;decreasing&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="c1"># Transform the data exactly as the R code does:</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>        <span class="c1"># y_neg_exp = -y + 2*max_y   → then take log</span>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>        <span class="n">y_exp_window</span> <span class="o">=</span> <span class="o">-</span><span class="n">y</span><span class="p">[</span><span class="n">exp_i</span> <span class="p">:</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">max_y</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="n">y_exp_window</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">exp_i</span> <span class="p">:</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
-<a id="__codelineno-0-336" name="__codelineno-0-336"></a>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="c1"># Time vector for the selected exponential window</span>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>    <span class="n">t_exp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">time_step</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="c1"># Linear regression on log(y) – SciPy gives slope, intercept,</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="c1"># rvalue, pvalue, stderr; we need only the first two.</span>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="n">log_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y_exp_window</span><span class="p">)</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">exp_reg</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">t_exp</span><span class="p">,</span> <span class="n">log_y</span><span class="p">)</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="n">exp_intercept</span> <span class="o">=</span> <span class="n">exp_reg</span><span class="o">.</span><span class="n">intercept</span>          <span class="c1"># this is the log‑intercept</span>
-<a id="__codelineno-0-345" name="__codelineno-0-345"></a>    <span class="n">exp_slope</span> <span class="o">=</span> <span class="n">exp_reg</span><span class="o">.</span><span class="n">slope</span>                  <span class="c1"># growth rate (per minute)</span>
-<a id="__codelineno-0-346" name="__codelineno-0-346"></a>
-<a id="__codelineno-0-347" name="__codelineno-0-347"></a>    <span class="c1"># Linear regression on raw data</span>
-<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="n">t_lin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">time_step</span>
-<a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="n">lin_reg</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">t_lin</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">lin_i</span> <span class="p">:</span> <span class="n">lin_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>    <span class="n">lin_intercept</span> <span class="o">=</span> <span class="n">lin_reg</span><span class="o">.</span><span class="n">intercept</span>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="n">lin_slope</span> <span class="o">=</span> <span class="n">lin_reg</span><span class="o">.</span><span class="n">slope</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="c1"># Assemble the final output (exactly the same order as R)</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>    <span class="n">features</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;exp_intercept&quot;</span><span class="p">:</span> <span class="n">exp_intercept</span><span class="p">,</span>  <span class="c1"># intercept of best exponential fit (log‑scale)</span>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a>                <span class="s2">&quot;exp_growth_rate_mm2s&quot;</span><span class="p">:</span> <span class="n">exp_slope</span><span class="p">,</span>  <span class="c1"># slope of best exponential fit</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a>                <span class="s2">&quot;exp_start&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">exp_i</span><span class="p">,</span>  <span class="c1"># start time (min) of that exponential window</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>                <span class="s2">&quot;exp_end&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">exp_j</span><span class="p">,</span>  <span class="c1"># end   time (min) of that exponential window</span>
-<a id="__codelineno-0-358" name="__codelineno-0-358"></a>                <span class="s2">&quot;exp_r_squared&quot;</span><span class="p">:</span> <span class="n">best_exp_r2</span><span class="p">,</span>  <span class="c1"># Maximum R² among exponential windows</span>
-<a id="__codelineno-0-359" name="__codelineno-0-359"></a>                <span class="s2">&quot;lin_intercept&quot;</span><span class="p">:</span> <span class="n">lin_intercept</span><span class="p">,</span>  <span class="c1"># intercept of best linear fit</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a>                <span class="s2">&quot;lin_growth_rate_mm2s&quot;</span><span class="p">:</span> <span class="n">lin_slope</span><span class="p">,</span>  <span class="c1"># slope of best linear fit</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a>                <span class="s2">&quot;lin_start&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">lin_i</span><span class="p">,</span>  <span class="c1"># start time (min) of that linear window</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>                <span class="s2">&quot;lin_end&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">lin_j</span><span class="p">,</span>  <span class="c1"># end   time (min) of that linear window</span>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a>                <span class="s2">&quot;lin_r_squared&quot;</span><span class="p">:</span> <span class="n">best_lin_r2</span><span class="p">,</span>  <span class="c1"># Maximum R² among linear windows</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a>                <span class="s2">&quot;growth_rupture_time_min&quot;</span><span class="p">:</span> <span class="n">rupture_time_min</span><span class="p">,</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a>                <span class="s2">&quot;growth_rupture_surface_mm2&quot;</span><span class="p">:</span> <span class="n">rupture_value</span><span class="p">}</span>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a>    <span class="k">return</span> <span class="n">features</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>    <span class="c1"># Guard against pathological series where the thresholds are never crossed</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="k">if</span> <span class="n">max_start</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">max_exp_start</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="k">return</span> <span class="n">default_features</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="c1"># Fill the two R‑squared matrices (the O(N²) part)</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a>    <span class="n">exp_r2_mat</span><span class="p">,</span> <span class="n">lin_r2_mat</span> <span class="o">=</span> <span class="n">_fill_r_squared_matrices</span><span class="p">(</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>        <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a>        <span class="n">time_step</span><span class="p">,</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>        <span class="n">max_start</span><span class="p">,</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a>        <span class="n">max_exp_start</span><span class="p">,</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>        <span class="n">max_end</span><span class="p">,</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>        <span class="n">shape_flag</span><span class="p">,</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>        <span class="n">max_y</span><span class="p">,</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>        <span class="n">maximal_variation</span><span class="p">,</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>    <span class="p">)</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>    <span class="c1"># Locate the windows with maximal R² for each model</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="n">exp_flat_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">exp_r2_mat</span><span class="p">))</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">exp_flat_idx</span><span class="p">,</span> <span class="n">exp_r2_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="n">best_exp_r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">exp_r2_mat</span><span class="p">[</span><span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span><span class="p">])</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>    <span class="n">lin_flat_idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">lin_r2_mat</span><span class="p">))</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">lin_flat_idx</span><span class="p">,</span> <span class="n">lin_r2_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>    <span class="n">best_lin_r2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lin_r2_mat</span><span class="p">[</span><span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span><span class="p">])</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a>    <span class="c1"># Perform the *final* regressions on the selected windows</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="c1"># Exponential regression (log‑linear)</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;decreasing&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>        <span class="c1"># Transform the data exactly as the R code does:</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>        <span class="c1"># y_neg_exp = -y + 2*max_y   → then take log</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>        <span class="n">y_exp_window</span> <span class="o">=</span> <span class="o">-</span><span class="n">y</span><span class="p">[</span><span class="n">exp_i</span> <span class="p">:</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">max_y</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>        <span class="n">y_exp_window</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">exp_i</span> <span class="p">:</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="c1"># Time vector for the selected exponential window</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="n">t_exp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">exp_i</span><span class="p">,</span> <span class="n">exp_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">time_step</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="c1"># Linear regression on log(y) – SciPy gives slope, intercept,</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>    <span class="c1"># rvalue, pvalue, stderr; we need only the first two.</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>    <span class="n">log_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">y_exp_window</span><span class="p">)</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>    <span class="n">exp_reg</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">t_exp</span><span class="p">,</span> <span class="n">log_y</span><span class="p">)</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>    <span class="n">exp_intercept</span> <span class="o">=</span> <span class="n">exp_reg</span><span class="o">.</span><span class="n">intercept</span>          <span class="c1"># this is the log‑intercept</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="n">exp_slope</span> <span class="o">=</span> <span class="n">exp_reg</span><span class="o">.</span><span class="n">slope</span>                  <span class="c1"># growth rate (per minute)</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>    <span class="c1"># Linear regression on raw data</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="n">t_lin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">lin_i</span><span class="p">,</span> <span class="n">lin_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">time_step</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="n">lin_reg</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">linregress</span><span class="p">(</span><span class="n">t_lin</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="n">lin_i</span> <span class="p">:</span> <span class="n">lin_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="n">lin_intercept</span> <span class="o">=</span> <span class="n">lin_reg</span><span class="o">.</span><span class="n">intercept</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">lin_slope</span> <span class="o">=</span> <span class="n">lin_reg</span><span class="o">.</span><span class="n">slope</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>    <span class="c1"># Assemble the final output (exactly the same order as R)</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a>    <span class="n">features</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;exp_intercept&quot;</span><span class="p">:</span> <span class="n">exp_intercept</span><span class="p">,</span>  <span class="c1"># intercept of best exponential fit (log‑scale)</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>                <span class="s2">&quot;exp_growth_rate_mm2s&quot;</span><span class="p">:</span> <span class="n">exp_slope</span><span class="p">,</span>  <span class="c1"># slope of best exponential fit</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>                <span class="s2">&quot;exp_start&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">exp_i</span><span class="p">,</span>  <span class="c1"># start time (min) of that exponential window</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a>                <span class="s2">&quot;exp_end&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">exp_j</span><span class="p">,</span>  <span class="c1"># end   time (min) of that exponential window</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>                <span class="s2">&quot;exp_r_squared&quot;</span><span class="p">:</span> <span class="n">best_exp_r2</span><span class="p">,</span>  <span class="c1"># Maximum R² among exponential windows</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a>                <span class="s2">&quot;lin_intercept&quot;</span><span class="p">:</span> <span class="n">lin_intercept</span><span class="p">,</span>  <span class="c1"># intercept of best linear fit</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>                <span class="s2">&quot;lin_growth_rate_mm2s&quot;</span><span class="p">:</span> <span class="n">lin_slope</span><span class="p">,</span>  <span class="c1"># slope of best linear fit</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>                <span class="s2">&quot;lin_start&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">lin_i</span><span class="p">,</span>  <span class="c1"># start time (min) of that linear window</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>                <span class="s2">&quot;lin_end&quot;</span><span class="p">:</span> <span class="n">time_step</span> <span class="o">*</span> <span class="n">lin_j</span><span class="p">,</span>  <span class="c1"># end   time (min) of that linear window</span>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>                <span class="s2">&quot;lin_r_squared&quot;</span><span class="p">:</span> <span class="n">best_lin_r2</span><span class="p">,</span>  <span class="c1"># Maximum R² among linear windows</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>                <span class="s2">&quot;growth_rupture_time_min&quot;</span><span class="p">:</span> <span class="n">rupture_time_min</span><span class="p">,</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>                <span class="s2">&quot;growth_rupture_surface_mm2&quot;</span><span class="p">:</span> <span class="n">rupture_value</span><span class="p">}</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>    <span class="k">return</span> <span class="n">features</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

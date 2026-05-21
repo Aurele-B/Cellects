@@ -2946,6 +2946,20 @@ depending on dataset characteristics.</p>
 <!-- END_Specimens_have_same_direction -->
 
 <hr />
+<!-- START_Temporal_smoothing -->
+<h2 id="temporal-smoothing">Temporal smoothing:</h2>
+<p>Applies temporal smoothing to reduce noise and highlight long term trends by averaging pixel
+intensity changes.  Use when analyzing slope based segmentation results.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<ul>
+<li>This uses a moving window algorithm on pixel intensity curves over time.</li>
+<li>Excessive iterations produce constant values, preventing accurate detection.</li>
+</ul>
+</div>
+<!-- END_Temporal_smoothing -->
+
+<hr />
 <!-- START_Sliding_window_segmentation -->
 <h2 id="sliding-window-segmentation">Sliding window segmentation:</h2>
 <p>Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as
