@@ -4,10 +4,14 @@ This script contains color, font, and size parameters for displaying images, vid
 """
 import numpy as np
 from matplotlib import pyplot as plt
+import colorsys
+from matplotlib.colors import to_hex
 
 # Colors:
 cblind = {"darkblue": "#332288", "blue": "#5E77BB", "darkgreen": "#117733", "lightgreen": "#44AA99", "lightblue": "#88CCEE",
                         "yellow": "#DDCC77", "salmon": "#CC6677", "fuchsia": "#AA4499","bordeaux": "#882255"}
+cblind_rgb = {"darkblue": (51, 34, 136), "blue": (94, 119, 187), "darkgreen": (17, 119, 51), "lightgreen": (68, 170, 153), "lightblue": (136, 204, 238),
+                        "yellow": (	221, 204, 119), "salmon": (204, 102, 119), "fuchsia": (170, 68, 153),"bordeaux": (136, 34, 85)}
 light_grey_hexa = "#787878"
 dark_grey_rgb = (50, 50, 50)
 dark_grey_hexa = "#323232"
@@ -135,3 +139,50 @@ def generate_color_gradient(colors: list, n_steps: int) -> list:
 
     gradient.append(colors[-1])
     return gradient[:n_steps]
+
+
+def random_pastel_colors(color_nb, hexadecimal: bool=False):
+    """
+    Generate random pastel colors.
+
+    This function generates a specified number of random pastel colors by manipulating the HSV color
+    space to ensure a soft, pastel-like appearance. The generated colors can be returned either in
+    hexadecimal format or as RGB tuples.
+
+    Parameters
+    ----------
+    color_nb : int
+        Number of pastel colors to generate.
+    hexadecimal : bool, default=False
+        If `True`, the colors are returned in hexadecimal format.
+        If `False`, the colors are returned as RGB tuples with each value ranging from 0 to 255.
+
+    Returns
+    -------
+    List[Union[tuple, str]]
+        A list of generated pastel colors. Each color is represented as an RGB tuple or hexadecimal
+        string, depending on the value of `hexadecimal`.
+
+    Raises
+    ------
+    IndexError
+        If the `colony_colors` list is accessed using an incorrect index.
+
+    Examples
+    --------
+    >>> colors = random_pastel_colors(3, hexadecimal=True)
+    >>> print(colors)
+    ['#d9d8ff', '#ffdabd', '#ffe5d3']
+
+    >>> colors = random_pastel_colors(3, hexadecimal=False)
+    >>> print(colors)
+    [(221, 187, 255), (255, 218, 187), (255, 227, 211)]
+    """
+    colony_colors = []
+    for i in range(color_nb):
+        color_code = np.array(colorsys.hsv_to_rgb((0.6 + i / color_nb) % 1, 0.3, 0.85))[::-1]
+        if hexadecimal:
+            colony_colors.append(to_hex(color_code))
+        else:
+            colony_colors.append(tuple((color_code * 255).astype(int)))
+    return colony_colors

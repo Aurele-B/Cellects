@@ -87,7 +87,7 @@ def update_markdown(file_path, dynamic_content):
         except ValueError:
             raise RuntimeError(f"Markers not found in Markdown file: {start_marker} and {end_marker}")
         modif_text = wrap_md_tip(value["tips"])
-        dynamic_lines.append(f"## {value["label"]}:\n{modif_text}\n")
+        dynamic_lines.append(f"## {value['label']}:\n{modif_text}\n")
         # Replace the marker block
         lines[start_idx + 1:end_idx] = dynamic_lines
 

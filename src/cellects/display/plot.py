@@ -4,7 +4,7 @@ This script contains functions to make graphical representation of the dynamical
 """
 import matplotlib.ticker as mticker
 from numpy.typing import NDArray
-from cellects.display.param import axes_label_dict, cblind, curve_width, curve_alpha, dark_grey_hexa, font_plot_titles, font_plot_ticks, teal_hexa, font_size
+from cellects.display.param import axes_label_dict, cblind, curve_width, curve_alpha, dark_grey_hexa, font_plot_titles, font_plot_ticks, teal_hexa, font_size, random_pastel_colors
 import cv2
 import numpy as np
 import pandas as pd
@@ -423,12 +423,8 @@ def plot_blob_directions(pixel_data, colony_centroids, boundaries: list=None, st
     # Create RGB canvas within specified bounds
     canvas_shape = (y_max - y_min + 1, x_max - x_min + 1, 3)
     canvas = np.ones(canvas_shape, dtype=np.uint8) * 255
-    import colorsys
-    colony_colors = [
-        tuple(
-            (np.array(colorsys.hsv_to_rgb((0.6 + i / len(selected_colony_ids)) % 1, 0.3, 0.85))[::-1] * 255).astype(int))
-        for i in range(len(selected_colony_ids))
-    ]
+    color_nb = len(selected_colony_ids)
+    colony_colors = random_pastel_colors(color_nb)
     colony_color_map = {colony: colony_colors[i] for i, colony in enumerate(selected_colony_ids)}
 
 

@@ -6,7 +6,7 @@
 </h1>
 
 [![Windows](https://img.shields.io/github/v/release/Aurele-B/Cellects?label=Windows%20Installer&logo=windows&color=blue)](https://github.com/Aurele-B/Cellects/releases/latest/)
-[![macOS](https://img.shields.io/github/v/release/Aurele-B/Cellects?label=macOS%20Installer&logo=apple&color=black)](https://github.com/Aurele-B/Cellects/releases/latest)
+[![macOS (silicon)](https://img.shields.io/github/v/release/Aurele-B/Cellects?label=macOS%20Installer&logo=apple&color=black)](https://github.com/Aurele-B/Cellects/releases/latest)
 [![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/cellects)
 [![Python versions](https://img.shields.io/pypi/pyversions/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)

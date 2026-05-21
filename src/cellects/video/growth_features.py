@@ -142,26 +142,18 @@ def _fill_r_squared_matrices(
             if np.abs(y[j] - y[i]) <= change_thr:
                 continue
 
-            # -----------------------------------------------------------------
             # Build the time vector for the (i…j) window
-            #   R: seq((frame_i-1)*time_step, (frame_j-1)*time_step, time_step)
-            #   Python 0‑based → (i … j) * time_step
-            # -----------------------------------------------------------------
             win_len = j - i + 1
             t = np.empty(win_len, dtype=np.float64)
             for k in range(win_len):
                 t[k] = (i + k) * time_step
 
-            # -----------------------------------------------------------------
             # Linear regression on raw y (always evaluated)
-            # -----------------------------------------------------------------
             y_lin = y[i:j + 1]
             _, _, r_lin = _linregress(t, y_lin)
             lin_r_squared[i, j] = r_lin * r_lin
 
-            # -----------------------------------------------------------------
             # Exponential regression (log‑linear) – only if i < max_exp_start
-            # -----------------------------------------------------------------
             if i < max_exp_start:
                 if shape_flag == -1:                     # decreasing curve
                     y_exp = -y[i:j + 1] + 2.0 * max_y
@@ -261,7 +253,7 @@ def find_growth_features(
     # Basic statistics needed later
     max_y = np.max(y)
     min_y = np.min(y)
-    maximal_variation = np.abs(max_y - min_y)          # abs(max-min)
+    maximal_variation = np.abs(max_y - min_y)
     mean_diff = np.mean(np.diff(y))
 
     # Detect slope‑shift frames (possible rupture points)
@@ -306,7 +298,7 @@ def find_growth_features(
 
     # Fill the two R‑squared matrices (the O(N²) part)
     exp_r2_mat, lin_r2_mat = _fill_r_squared_matrices(
-        y,
+        y.astype(np.float64),
         time_step,
         max_start,
         max_exp_start,

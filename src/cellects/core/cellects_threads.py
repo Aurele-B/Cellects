@@ -1073,7 +1073,7 @@ class VideoTrackingThread(QtCore.QThread):
                                               self.po.all['folder_list'][exp_i])
         else:
             self.status["folder"] = reduce_path_len(self.po.all['global_pathway'], 6, 10)
-            logging.info(f"Use {self.status["folder"]} folder")
+            logging.info(f"Use {self.status['folder']} folder")
             self.po.update_folder_id(self.po.all['first_folder_sample_number'])
 
     def pre_processing(self):

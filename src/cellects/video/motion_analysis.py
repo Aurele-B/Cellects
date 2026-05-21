@@ -214,8 +214,8 @@ class MotionAnalysis:
         vid_name = None
         if self.vars['video_list'] is not None:
             vid_name = self.vars['video_list'][i]
-        self.background = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'background')
-        self.background2 = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'background2')
+        self.background = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'background')
+        self.background2 = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'background2')
         vids = read_one_arena(self.one_descriptor_per_arena['arena'], self.vars['already_greyscale'],
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
@@ -245,7 +245,7 @@ class MotionAnalysis:
             self.converted_video, self.converted_video2 = vids
 
         self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
-        self.origin_idx = read_h5(f'ind_{self.one_descriptor_per_arena['arena']}.h5', 'origin_coord')
+        self.origin_idx = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'origin_coord')
         self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
 
     def assess_motion_detection(self):

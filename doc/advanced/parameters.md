@@ -47,6 +47,18 @@ Select to optimize arena detection for specimens moving move in the same directi
 
 ---
 
+<!-- START_Temporal_smoothing -->
+## Temporal smoothing:
+Applies temporal smoothing to reduce noise and highlight long term trends by averaging pixel
+intensity changes.  Use when analyzing slope based segmentation results.
+!!! note
+
+	 - This uses a moving window algorithm on pixel intensity curves over time.
+	 - Excessive iterations produce constant values, preventing accurate detection.
+<!-- END_Temporal_smoothing -->
+
+---
+
 <!-- START_Sliding_window_segmentation -->
 ## Sliding window segmentation:
 Smooth the result of the segmentation to facilitate detection. If checked, each pixel detected as
