@@ -214,7 +214,7 @@ class TestCellectsThreads(CellectsUnitTest):
         """Remove all written files."""
         if os.path.isfile("cellects_settings.json"):
             os.remove("cellects_settings.json")
-        files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_1.mp4')
+        files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_1.mp4') + insensitive_glob('edges_*') + insensitive_glob('vertices_*')
         for file in files_to_remove:
             os.remove(file)
 
