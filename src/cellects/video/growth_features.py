@@ -19,13 +19,13 @@ Notes
 * Relies on Numba JIT compilation for performance‑critical helpers.
 * Requires pandas, NumPy, SciPy and Numba at import time.
 """
-from collections import namedtuple
 from typing import Tuple
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
 from scipy import stats
-from numba import njit, prange
+from cellects.utils.decorators import njit
+from numba import prange
 from numba.typed import List
 
 # Public output container
@@ -68,7 +68,7 @@ def _linregress(x: np.ndarray, y: np.ndarray) -> Tuple[float, float, float]:
     return slope, intercept, r
 
 
-@njit
+@njit()
 def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     """Mean of each non‑overlapping block of length `cluster_len`."""
     n = y.shape[0]
@@ -83,7 +83,7 @@ def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     return out
 
 
-@njit
+@njit()
 def _slope_shifts(
     y: np.ndarray,
     cluster_len: int,

@@ -191,7 +191,22 @@ class TestCellectsThreads(CellectsUnitTest):
         """Test running all arenas of all folders with the VideoTrackingThread class."""
         self.po.video_task = 'all'
         self.po.all['do_multiprocessing'] = True
-        os.remove('cellects_settings.json')
+        if os.path.isfile('cellects_settings.json'):
+            os.remove('cellects_settings.json')
+        self.video_tracking_thread.run()
+        self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
+
+    def test_analyze_post_processing_results_in_video_tracking_thread(self):
+        """Test running analyses on the post processing results of all arenas and all folders."""
+        self.po.video_task = 'all'
+        self.po.all['do_multiprocessing'] = False
+        self.po.vars['save_coord_network'] = True
+        self.po.vars['save_graph'] = True
+        self.po.vars['save_coord_thickening_slimming'] = True
+        self.po.vars['fractal_analysis'] = True
+        if os.path.isfile('cellects_settings.json'):
+            os.remove('cellects_settings.json')
+        write_h5(f"ind_{1}.h5", self.po.first_image.binary_image, 'origin_coord')
         self.video_tracking_thread.run()
         self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
 

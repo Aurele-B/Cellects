@@ -129,6 +129,7 @@ class GraphTracking:
             self.origin_contours = None
         self.vertex_table = None
         self.edge_table = None
+        self.edge_pix_coord = None
         logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
 
 
@@ -161,14 +162,14 @@ class GraphTracking:
 
         Parameters
         ----------
-        t
+        t: int
             Index of the time frame to process.
 
         Returns
         -------
-        binary_image
-            A ``uint8`` array containing the skeleton (value ``1``) of a
-            network.  The array has the original image dimensions ``(height, width)``.
+        binary_image: ndarray of uint8
+            Array containing the skeleton (value ``1``) of a network.
+            The array has the original image dimensions ``(height, width)``.
 
         Notes
         -----
@@ -186,43 +187,46 @@ class GraphTracking:
         """
         computed_network = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
         net_t = self.coord_network[1:, self.coord_network[0, :] == t]
-        computed_network[net_t[0], net_t[1]] = 1
-        if self.origin is not None:
-            computed_network = computed_network * (1 - self.origin)
-            computed_network = np.logical_or(self.origin_contours, computed_network).astype(np.uint8)
-        else:
-            computed_network = computed_network.astype(np.uint8)
-        if computed_network.any():
-            computed_network = keep_one_connected_component(computed_network)
-            pad_network = ad_pad(computed_network)
-            pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, self.pad_origin,
-                                                                                       self.pad_origin_centroid)
-            edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
-            edge_id.run_edge_identification()
+        if net_t.any():
+            computed_network[net_t[0], net_t[1]] = 1
             if self.origin is not None:
-                self.origin_contours = un_pad(pad_origin_contours)
-            growing_areas = None
-            if self.coord_pseudopods is not None:
-                growing_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
-            edge_id.make_vertex_table(self.origin_contours, growing_areas)
-            edge_id.make_edge_table(self.converted_video[t, ...])
-            pad_skeleton[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 2
-
-            edge_id.edge_pix_coord = np.hstack(
-                (np.repeat(t, edge_id.edge_pix_coord.shape[0])[:, None], edge_id.edge_pix_coord))
-            edge_id.vertex_table = np.hstack(
-                (np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-            edge_id.edge_table = np.hstack(
-                (np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-            if self.vertex_table is None:
-                self.vertex_table = edge_id.vertex_table.copy()
-                self.edge_table = edge_id.edge_table.copy()
-                self.edge_pix_coord = edge_id.edge_pix_coord.copy()
+                computed_network = computed_network * (1 - self.origin)
+                computed_network = np.logical_or(self.origin_contours, computed_network).astype(np.uint8)
             else:
-                self.vertex_table = np.vstack((self.vertex_table, edge_id.vertex_table))
-                self.edge_table = np.vstack((self.edge_table, edge_id.edge_table))
-                self.edge_pix_coord = np.vstack((self.edge_pix_coord, edge_id.edge_pix_coord))
-        return un_pad(pad_skeleton)
+                computed_network = computed_network.astype(np.uint8)
+            if computed_network.any():
+                computed_network = keep_one_connected_component(computed_network)
+                pad_network = ad_pad(computed_network)
+                pad_skeleton, pad_distances, pad_origin_contours = get_skeleton_and_widths(pad_network, self.pad_origin,
+                                                                                           self.pad_origin_centroid)
+                edge_id = EdgeIdentification(pad_skeleton, pad_distances, t)
+                edge_id.run_edge_identification()
+                if self.origin is not None:
+                    self.origin_contours = un_pad(pad_origin_contours)
+                growing_areas = None
+                if self.coord_pseudopods is not None:
+                    growing_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
+                edge_id.make_vertex_table(self.origin_contours, growing_areas)
+                edge_id.make_edge_table(self.converted_video[t, ...])
+                pad_skeleton[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 2
+
+                edge_id.edge_pix_coord = np.hstack(
+                    (np.repeat(t, edge_id.edge_pix_coord.shape[0])[:, None], edge_id.edge_pix_coord))
+                edge_id.vertex_table = np.hstack(
+                    (np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+                edge_id.edge_table = np.hstack(
+                    (np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
+                if self.vertex_table is None:
+                    self.vertex_table = edge_id.vertex_table.copy()
+                    self.edge_table = edge_id.edge_table.copy()
+                    self.edge_pix_coord = edge_id.edge_pix_coord.copy()
+                else:
+                    self.vertex_table = np.vstack((self.vertex_table, edge_id.vertex_table))
+                    self.edge_table = np.vstack((self.edge_table, edge_id.edge_table))
+                    self.edge_pix_coord = np.vstack((self.edge_pix_coord, edge_id.edge_pix_coord))
+            return un_pad(pad_skeleton)
+        else:
+            return computed_network
     
     def save_graph(self):
         """
@@ -255,18 +259,21 @@ class GraphTracking:
         - ``edges_to_vertices{arena_label}_t{t}_y{y}_x{x}.csv``
         - ``edges_coord{arena_label}_t{t}_y{y}_x{x}.csv``
         """
-        self.vertex_table = pd.DataFrame(self.vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
-                                                           "vertex_connected"])
-        self.edge_table = pd.DataFrame(self.edge_table,
-                                  columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity",
-                                           "betweenness_centrality"])
-        self.edge_pix_coord = pd.DataFrame(self.edge_pix_coord, columns=["t", "y", "x", "edge_id"])
-        self.vertex_table.to_csv(
-            f"vertices_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
-            index=False)
-        self.edge_table.to_csv(
-            f"edges_to_vertices{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
-            index=False)
-        self.edge_pix_coord.to_csv(
-            f"edges_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
-            index=False)
+        if self.vertex_table is not None:
+            self.vertex_table = pd.DataFrame(self.vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
+                                                               "vertex_connected"])
+            self.vertex_table.to_csv(
+                f"vertices_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
+                index=False)
+        if self.edge_table is not None:
+            self.edge_table = pd.DataFrame(self.edge_table,
+                                      columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity",
+                                               "betweenness_centrality"])
+            self.edge_table.to_csv(
+                f"edges_to_vertices{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
+                index=False)
+        if self.edge_pix_coord is not None:
+            self.edge_pix_coord = pd.DataFrame(self.edge_pix_coord, columns=["t", "y", "x", "edge_id"])
+            self.edge_pix_coord.to_csv(
+                f"edges_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
+                index=False)

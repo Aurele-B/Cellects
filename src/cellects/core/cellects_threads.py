@@ -1820,7 +1820,7 @@ class VideoTrackingThread(QtCore.QThread):
         - Edge table contains betweenness centrality calculated during skeleton processing.
         Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
         """
-        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_graph']:
             if self.po.motion.coord_network is None:
                 self.po.motion.coord_network = np.array(np.nonzero(self.po.motion.binary))
             graph_track = GraphTracking(self.po.motion.converted_video, self.po.motion.coord_network,
