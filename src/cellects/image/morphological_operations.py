@@ -1474,8 +1474,8 @@ def create_ellipse(vsize: int, hsize: int, min_size: int=0) -> NDArray[np.uint8]
         the boundary of an ellipse centered at the image's center with radii determined by half of the dimensions.
     """
     # Use default values if input sizes are zero
-    vsize = min_size if vsize == 0 else vsize
-    hsize = min_size if hsize == 0 else hsize
+    vsize = min_size if vsize <= 0 else vsize
+    hsize = min_size if hsize <= 0 else hsize
 
     # Compute radii (half of each size)
     vr = hsize // 2
