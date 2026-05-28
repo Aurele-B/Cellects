@@ -237,6 +237,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.operation.setFixedWidth(150)
         self.operation.setCurrentText(self.operation_list[2])
         self.operation.currentTextChanged.connect(self.operation_changed)
+        self.operation_changed()
 
         self.operation_layout.addWidget(self.operation_label)
         self.operation_layout.addWidget(self.operation)
@@ -570,7 +571,6 @@ class VideoAnalysisWindow(MainTabsType):
                 self.thread_dict['VideoReader'].wait()
                 self.message.setText("")
             self.po.motion = None
-            self.reset_general_step()
             self.po.computed_video_options = np.zeros(5, bool)
             self.po.all['arena'] = int(np.round(self.arena.value()))
 
@@ -696,7 +696,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             if self.po.motion is None or self.po.load_quick_full < 2:
-                self.message.setText("Run Post processing first")
+                self.message.setText("Run full detect first")
             else:
                 if self.thread_dict['VideoReader'].isRunning():
                     self.thread_dict['VideoReader'].requestInterruption()

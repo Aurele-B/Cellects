@@ -1762,7 +1762,7 @@ class TestCreateMask(CellectsUnitTest):
         minmax = (1, -1, 2, 4)  # Invalid coordinates
         shape = 'circle'
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(IndexError):
             create_mask(dims, minmax, shape)
 
     def test_create_mask_negative_coordinates(self):

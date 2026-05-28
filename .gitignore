@@ -9,8 +9,8 @@ data/single_experiment/Analysis efficiency, last image.JPG
 data/single_experiment/Analysis efficiency, 3th image.JPG
 data/single_experiment/one_row_*
 data/single_experiment/coord_*
-data/single_experiment/edge_*
-data/single_experiment/vertex_*
+data/single_experiment/edge*
+data/single_experiment/vert*
 src/cellects/config/cellects_settings.json
 src/cellects/config/masks.h5
 src/cellects/analyses/

@@ -78,7 +78,7 @@ def colorize_mask(mask, blob_to_back_diff: int=100, blob_extent: int=20, back_ex
         elif blob_c[i] > 255 - blob_to_back_diff:
             back_c.append(np.random.randint(0 , blob_c[i] - blob_to_back_diff))
         else:
-            back_c.append(np.random.choice((np.random.randint(blob_c[i] + blob_to_back_diff , 256), np.random.randint(0, blob_c[i] - blob_to_back_diff))))
+            back_c.append(np.random.choice((np.random.randint(blob_c[i] + blob_to_back_diff , 256), np.random.randint(0, int(blob_c[i] - blob_to_back_diff)))))
         blob_c_min.append(np.max((blob_c[i] - blob_diff, 0)))
         blob_c_max.append(np.min((blob_c[i] + blob_diff, 255)))
         back_c_min.append(np.max((back_c[i] - back_diff, 0)))
@@ -93,8 +93,8 @@ def colorize_mask(mask, blob_to_back_diff: int=100, blob_extent: int=20, back_ex
     for c_, (blob_min, blob_max, back_min, back_max) in enumerate(zip(blob_c_min, blob_c_max, back_c_min, back_c_max)):
         if len(mask.shape) == 2:
             rgb_from_mask[:, :, c_][mask > 0] = np.random.randint(blob_min, blob_max, mask.sum())
-            rgb_from_mask[:, :, c_][mask == 0] = np.random.randint(back_min, back_max, mask.size - mask.sum())
+            rgb_from_mask[:, :, c_][mask == 0] = np.random.randint(back_min, back_max, int(mask.size - mask.sum()))
         elif len(mask.shape) == 3:
             rgb_from_mask[:, :, :, c_][mask > 0] = np.random.randint(blob_min, blob_max, mask.sum())
-            rgb_from_mask[:, :, :, c_][mask == 0] = np.random.randint(back_min, back_max, mask.size - mask.sum())
+            rgb_from_mask[:, :, :, c_][mask == 0] = np.random.randint(back_min, back_max, int(mask.size - mask.sum()))
     return rgb_from_mask

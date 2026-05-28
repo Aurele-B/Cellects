@@ -595,12 +595,12 @@ def moving_average(vector: NDArray, step: int) -> NDArray[float]:
     true_numbers = np.logical_not(np.isnan(vector))
     vector[np.logical_not(true_numbers)] = 0
     for step_i in np.arange(substep[1] + 1):
-        sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[(2 * step_i):]
-        n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[(2 * step_i):]
+        end = int(sums.size - step_i)
+        sums[step_i: end] = sums[step_i: end] + vector[(2 * step_i):]
+        n_okays[step_i: end] = n_okays[step_i: end] + true_numbers[(2 * step_i):]
         if np.logical_and(step_i > 0, step_i < np.absolute(substep[0])):
-            sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[:(sums.size - (2 * step_i)):]
-            n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[:(
-                        true_numbers.size - (2 * step_i))]
+            sums[step_i: end] = sums[step_i: end] + vector[:int(sums.size - (2 * step_i)):]
+            n_okays[step_i: end] = n_okays[step_i: end] + true_numbers[:int(true_numbers.size - (2 * step_i))]
     vector = sums / n_okays
     return vector
 

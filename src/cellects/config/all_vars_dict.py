@@ -91,7 +91,7 @@ class DefaultDicts:
             'maximal_growth_factor': 0.05,
             'repeat_video_smoothing': 1,
 
-            # Post-processing params
+            # Post-processing (full detect) params
             'specimen_activity': 'grow',
             'sliding_window_segmentation': False,
             'morphological_opening': True,

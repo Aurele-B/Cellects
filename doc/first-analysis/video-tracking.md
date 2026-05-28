@@ -81,8 +81,8 @@ each time step.
 
 <!-- START_Arena_to_analyze -->
 ## Arena to analyze:
-This arena number selects a specific arena in the current folder. The user can choose an arena,
-use an *Operation* to load and analyze it, then *Read* results.
+This arena number selects a specific arena in the current folder. The user can choose an arena, use
+an *Operation* to load and analyze it, then *Read* results.
 !!! note
 
 	 - Cellects automatically names the arena by their position (left to right, top to bottom).
@@ -99,12 +99,12 @@ Selecting the 'load' operation
 
 - *load*: will load one arena associated with *Arena to analyze*. The center of the window displays
 the first frame of that arena's video.
-- *quick detect*: applies a (or all) segmentation methods to one arena. Once finished, click *Read*  to
-view the detection result. If correct, try post processing using *full detect*.
-- *full detect*: applies detection enhancements such as binary operations (opening, closing,
-logical ops), fading detection tracking (when specimens not only grow but also move), correct errors
-around initial shape (when the contour of the initial position of the specimen is hard to detect),
-connect distant shapes (when the specimen's heterogeneity create wrong disconnections in the video
+- *quick detect*: applies a (or all) segmentation methods to one arena. Once finished, click *Read*
+to view the detection result. If correct, try post processing using *full detect*.
+- *full detect*: applies detection enhancements such as binary operations (opening, closing, logical
+ops), fading detection tracking (when specimens not only grow but also move), correct errors around
+initial shape (when the contour of the initial position of the specimen is hard to detect), connect
+distant shapes (when the specimen's heterogeneity create wrong disconnections in the video
 detection),  prevent fast growth near periphery (when arena's border may be wrongly detected as
 specimen).
 !!! note

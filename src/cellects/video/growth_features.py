@@ -1,14 +1,31 @@
-
+#!/usr/bin/env python3
 """
-"""
+Extract growth features from a time series.
 
-from collections import namedtuple
+This module implements the public function ``find_growth_features`` that
+calculates a collection of descriptors describing exponential and linear
+growth phases in a one‑dimensional signal.  Internally it uses a set of
+Numba‑compiled helpers for fast ordinary‑least‑squares regression, window
+R‑squared evaluation, and detection of slope changes.  Results are returned
+as a lightweight ``namedtuple``.  The module also provides ``default_features``,
+a dictionary of placeholder values used to initialise output tables.
+
+Functions
+---------
+find_growth_features : Extract growth descriptors from a time series.
+
+Notes
+-----
+* Relies on Numba JIT compilation for performance‑critical helpers.
+* Requires pandas, NumPy, SciPy and Numba at import time.
+"""
 from typing import Tuple
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
 from scipy import stats
-from numba import njit, prange
+from cellects.utils.decorators import njit
+from numba import prange
 from numba.typed import List
 
 # Public output container
@@ -51,7 +68,7 @@ def _linregress(x: np.ndarray, y: np.ndarray) -> Tuple[float, float, float]:
     return slope, intercept, r
 
 
-@njit
+@njit()
 def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     """Mean of each non‑overlapping block of length `cluster_len`."""
     n = y.shape[0]
@@ -66,7 +83,7 @@ def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     return out
 
 
-@njit
+@njit()
 def _slope_shifts(
     y: np.ndarray,
     cluster_len: int,
@@ -103,7 +120,7 @@ def _slope_shifts(
 
     out = np.empty(idx.size, dtype=np.int64)
     for k in range(idx.size):
-        out[k] = (idx[k] + 1) * cluster_len   # 1‑based × length  ← R behaviour
+        out[k] = (idx[k] + 1) * cluster_len   # 1‑based × length
     return out
 
 
@@ -190,8 +207,7 @@ def find_growth_features(
     y : NDArray
         Raw signal (one measurement per frame). A NumPy 1‑D array.
     time_step : float
-        Temporal spacing between successive frames (the R script calls it
-        ``time_step`` and later multiplies it by frame indices).
+        Temporal spacing between successive frames.
     first_growth : float
         Threshold used to locate the *pseudo‑peak* (the index where the
         curve first rises above ``y[2] + first_growth`` for increasing
@@ -205,11 +221,10 @@ def find_growth_features(
     Returns
     -------
     GrowthFeatures
-        A namedtuple with 14 fields; the order matches exactly the column
-        order of the data.frame produced by the R implementation.
+        A namedtuple with 14 fields.
         If the data are insufficient for regression the numeric fields are
         ``np.nan`` and the two rupture‑related fields contain the string
-        ``"censored"`` (again matching the R behaviour).
+        ``"censored"``.
 
     Notes
     -----
@@ -320,7 +335,7 @@ def find_growth_features(
     # Perform the *final* regressions on the selected windows
     # Exponential regression (log‑linear)
     if shape == "decreasing":
-        # Transform the data exactly as the R code does:
+        # Transform the data as follows:
         # y_neg_exp = -y + 2*max_y   → then take log
         y_exp_window = -y[exp_i : exp_j + 1] + 2.0 * max_y
     else:
