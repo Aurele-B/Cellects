@@ -696,7 +696,7 @@ class VideoAnalysisWindow(MainTabsType):
             self.message.setText("A video tracking task is already running, wait or restart Cellects")
         else:
             if self.po.motion is None or self.po.load_quick_full < 2:
-                self.message.setText("Run Post processing first")
+                self.message.setText("Run full detect first")
             else:
                 if self.thread_dict['VideoReader'].isRunning():
                     self.thread_dict['VideoReader'].requestInterruption()
