@@ -29,7 +29,7 @@ easy installation and user-friendly interface.
 ---
 
 ## Installation (Short version)
-Install on [Windows (.exe) and macOS (.dmg)](https://github.com/Aurele-B/Cellects/releases/)
+Install on [Windows .exe and macOS (silicon only) .dmg](https://github.com/Aurele-B/Cellects/releases/)
 
 Or, install via pip:
 ```bash
