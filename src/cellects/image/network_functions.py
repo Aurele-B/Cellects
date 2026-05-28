@@ -266,7 +266,7 @@ class  NetworkDetection:
         >>> possibly_filled_pixels[4, 1:-1] = 1
         >>> greyscale_image = possibly_filled_pixels.copy()
         >>> greyscale_image[greyscale_image > 0] = np.random.randint(170, 255, possibly_filled_pixels.sum())
-        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 120, possibly_filled_pixels.size - possibly_filled_pixels.sum())
+        >>> greyscale_image[greyscale_image == 0] = np.random.randint(0, 120, int(possibly_filled_pixels.size - possibly_filled_pixels.sum()))
         >>> add_rolling_window=False
         >>> origin_to_add = np.zeros((9, 9), dtype=np.uint8)
         >>> origin_to_add[3:6, 3:6] = 1
@@ -451,7 +451,15 @@ def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[
         pad_skeleton, pad_distances, pad_origin_contours = _add_central_contour(pad_skeleton, pad_distances, pad_origin, pad_network, pad_origin_centroid)
     else:
         pad_origin_contours = None
-    pad_skeleton, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
+
+    # Remove small loops: repeat algo until no loop remain
+    after, pad_distances = remove_small_loops(pad_skeleton, pad_distances)
+    count = 0
+    while after.sum() < pad_skeleton.sum() and count < 10:
+        pad_skeleton = after
+        after = remove_small_loops(pad_skeleton)
+        count += 1
+
     pad_skeleton = keep_one_connected_component(pad_skeleton)
     pad_distances *= pad_skeleton
     return pad_skeleton, pad_distances, pad_origin_contours
@@ -828,6 +836,7 @@ class EdgeIdentification:
         self.vertices = None
         self.growing_vertices = None
         self.im_shape = pad_skeleton.shape
+        self.padding_removed: bool = False
 
     def run_edge_identification(self):
         """
@@ -1158,12 +1167,15 @@ class EdgeIdentification:
         cropped_non_tip_vertices = self.non_tip_vertices.copy()
         cropped_non_tip_vertices = remove_coordinates(cropped_non_tip_vertices, self.vertex_clusters_coord)
         del self.vertex_clusters_coord
-        remaining_v = cropped_non_tip_vertices.shape[0] + 1
-        while remaining_v > cropped_non_tip_vertices.shape[0]:
+        remaining_v_remains_constant: int = 0
+        while remaining_v_remains_constant < 2:
             remaining_v = cropped_non_tip_vertices.shape[0]
             cropped_skeleton, cropped_non_tip_vertices = self._identify_edges_connecting_a_vertex_list(cropped_skeleton, cropped_non_tip_vertices, starting_vertices_coord)
             if self.new_level_vertices is not None:
                 starting_vertices_coord = np.unique(self.new_level_vertices[:, :2], axis=0)
+            if remaining_v == cropped_non_tip_vertices.shape[0]:
+                remaining_v_remains_constant += 1
+
 
     def label_edges_looping_on_1_vertex(self):
         """
@@ -1171,7 +1183,7 @@ class EdgeIdentification:
         This method processes the skeleton image to find looping edges and updates
         the edge data structure accordingly.
         """
-        self.identified = np.zeros_like(self.numbered_vertices)
+        self.identified = np.zeros_like(self.pad_skeleton)
         self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
         self.identified[self.non_tip_vertices[:, 0], self.non_tip_vertices[:, 1]] = 1
         self.identified[self.tips_coord[:, 0], self.tips_coord[:, 1]] = 1
@@ -1438,12 +1450,14 @@ class EdgeIdentification:
         It also removes padding from the skeleton, distances, and vertices
         using the `remove_padding` function.
         """
-        self.edge_pix_coord[:, :2] -= 1
-        self.tips_coord[:, :2] -= 1
-        self.non_tip_vertices[:, :2] -= 1
-        del self.vertex_index_map
-        self.skeleton, self.distances, self.vertices = remove_padding(
-            [self.pad_skeleton, self.pad_distances, self.numbered_vertices])
+        if not self.padding_removed:
+            self.edge_pix_coord[:, :2] -= 1
+            self.tips_coord[:, :2] -= 1
+            self.non_tip_vertices[:, :2] -= 1
+            del self.vertex_index_map
+            self.skeleton, self.distances, self.vertices = remove_padding(
+            	[self.pad_skeleton, self.pad_distances, self.numbered_vertices])
+            self.padding_removed = True
 
 
     def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
@@ -1468,8 +1482,7 @@ class EdgeIdentification:
             The method updates the instance attribute `self.vertex_table` with
             the generated vertex information.
         """
-        if self.vertices is None:
-            self._remove_padding()
+        self._remove_padding()
         self.vertex_table = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
         self.vertex_table[:self.tips_coord.shape[0], :2] = self.tips_coord
         self.vertex_table[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
@@ -1510,8 +1523,7 @@ class EdgeIdentification:
         greyscale : ndarray of uint8
             Grayscale image.
         """
-        if self.vertices is None:
-            self._remove_padding()
+        self._remove_padding()
         self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
         self.edge_table[:, :3] = self.edges_labels[:, :]
         self.edge_table[:, 3] = self.edge_lengths

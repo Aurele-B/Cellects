@@ -42,15 +42,15 @@ from numba.typed import Dict as TDict
 from psutil import virtual_memory
 from cellects.image.one_image_analysis import OneImageAnalysis
 from cellects.video.cell_leaving_detection import cell_leaving_detection
-from cellects.video.oscillations_functions import detect_oscillations_dynamics
 from cellects.video.connected_components_tracking import ConnectedComponentsTracking
-from cellects.video.network_tracking import detect_network_dynamics
-from cellects.video.graph_tracking import extract_graph_dynamics
 from cellects.image.image_segmentation import segment_with_lum_value, convert_subtract_and_filter_video
 from cellects.image.morphological_operations import (find_major_incline, draw_me_a_sun,
                                                      inverted_distance_transform, dynamically_expand_to_fill_holes,
                                                      box_counting_dimension, prepare_box_counting, cc)
 from cellects.image.network_functions import *
+from cellects.video.network_tracking import NetworkTracking
+from cellects.video.graph_tracking import GraphTracking
+from cellects.video.oscillations_tracking import OscillationsTracking
 from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move
@@ -126,6 +126,7 @@ class MotionAnalysis:
         analyse_shape = l[4]
         show_seg = l[5]
         videos_already_in_ram = l[6]
+        self.dict_signal = None
         self.visu = None
         self.binary = None
         self.origin_idx = None
@@ -1377,33 +1378,45 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             show_seg: bool = False
                 A flag that determines whether to display the segmentation visually.
         """
-        coord_pseudopods = None
         if not self.vars['several_blob_per_arena'] and self.vars['save_coord_network']:
             self.check_converted_video_type()
-
-            if self.vars['origin_state'] == "constant":
-                self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
-                                                       self.one_descriptor_per_arena['arena'], 0,
-                                                       self.visu, self.origin, self.vars['sliding_window_segmentation'],
-                                                       self.vars['morphological_closing'], 5, True,
-                                                       self.vars['save_coord_network'], show_seg)
+            net_track = NetworkTracking(self)
+            net_track.init_tracking()
+            for t in np.arange(net_track.starting_time, net_track.dims[0]):
+                complete_network = net_track.segment_frame(t)
+                if show_seg:
+                    cv2.imshow("", cv2.resize(complete_network, (1000, 1000)))
+                    cv2.waitKey(1)
+            if show_seg:
+                cv2.destroyAllWindows()
+            if net_track.dims[0] == 1:
+                net_track.network_dynamics = complete_network[None, :, :]
             else:
-                self.coord_network, coord_pseudopods = detect_network_dynamics(self.converted_video, self.binary,
-                                                       self.one_descriptor_per_arena['arena'], 0,
-                                                       self.visu, None, self.vars['sliding_window_segmentation'],
-                                                       self.vars['morphological_closing'], 5, True,
-                                                       self.vars['save_coord_network'], show_seg)
+                for t in np.arange(net_track.starting_time, net_track.dims[0]):
+                    imtoshow = net_track.post_process(t)
+                    if show_seg:
+                        cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
+                        cv2.waitKey(1)
+                if show_seg:
+                    cv2.destroyAllWindows()
+            self.coord_network, pseudopod_coord = net_track.save_network()
+            del net_track
 
         if not self.vars['several_blob_per_arena'] and self.vars['save_graph']:
             if self.coord_network is None:
                 self.coord_network = np.array(np.nonzero(self.binary))
-            if self.vars['origin_state'] == "constant":
-                extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
-                                       0, self.origin, coord_pseudopods)
-            else:
-                extract_graph_dynamics(self.converted_video, self.coord_network, self.one_descriptor_per_arena['arena'],
-                                       0, None, coord_pseudopods)
-        del coord_pseudopods
+            graph_track = GraphTracking(self.converted_video, self.coord_network,
+                                        self.one_descriptor_per_arena['arena'],
+                                        self.origin, self.pseudopod_coord)
+            for t in np.arange(graph_track.starting_time, graph_track.dims[0]):
+                computed_network = graph_track.extract_graph(t)
+                if show_seg:
+                    cv2.imshow("", cv2.resize(computed_network, (1000, 1000)))
+                    cv2.waitKey(1)
+            if show_seg:
+                cv2.destroyAllWindows()
+            graph_track.save_graph()
+            del graph_track
 
     def study_cytoscillations(self, show_seg: bool=False):
         """
@@ -1419,16 +1432,17 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 show_seg (bool): If True, display the segmentation results.
         """
         if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
-            oscillations_video = detect_oscillations_dynamics(self.converted_video, self.binary,
-                                                              self.one_descriptor_per_arena['arena'], self.start,
-                                                              self.vars['expected_oscillation_period'],
-                                                              self.time_interval,
-                                                              self.vars['minimal_oscillating_cluster_size'],
-                                                              self.vars['min_ram_free'],
-                                                              self.vars['lose_accuracy_to_save_memory'],
-                                                              self.vars['save_coord_thickening_slimming'])
-            del oscillations_video
-
+            osci_track = OscillationsTracking(self)
+            osci_track.init_tracking()
+            for t in np.arange(osci_track.starting_time, osci_track.dims[0]):
+                oscillations_image = osci_track.find_oscillations_in_frame(t)
+                if show_seg:
+                    cv2.imshow("", cv2.resize(oscillations_image, (1000, 1000)))
+                    cv2.waitKey(1)
+            if show_seg:
+                cv2.destroyAllWindows()
+            osci_track.save_oscillations()
+            del osci_track
 
     def fractal_descriptions(self):
         """
@@ -1637,6 +1651,14 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                         bin_coord = np.nonzero(get_contours(binary))
                         self.converted_video[t, bin_coord[0], bin_coord[1], :] = purple_bgr
                     del pseudopods
+
+            if self.vars['save_graph']:
+                edges_coord = pd.read_csv(f"edges_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+                vertices_coord = pd.read_csv(f"vertices_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+                self.converted_video[edges_coord['t'], edges_coord['y'], edges_coord['x'], :] = 0, 0, 0
+                self.converted_video[vertices_coord['t'], vertices_coord['y'], vertices_coord['x'], :] = 255, 255, 255
+                del edges_coord
+                del vertices_coord
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)

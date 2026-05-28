@@ -237,6 +237,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.operation.setFixedWidth(150)
         self.operation.setCurrentText(self.operation_list[2])
         self.operation.currentTextChanged.connect(self.operation_changed)
+        self.operation_changed()
 
         self.operation_layout.addWidget(self.operation_label)
         self.operation_layout.addWidget(self.operation)

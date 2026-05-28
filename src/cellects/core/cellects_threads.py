@@ -32,13 +32,16 @@ from numba.typed import Dict as TDict
 import numpy as np
 from PySide6 import QtCore
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours
+from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours, keep_one_connected_component, cc, CompareNeighborsWithValue, box_counting_dimension, prepare_box_counting
 from cellects.image.image_segmentation import convert_subtract_and_filter_video
 from cellects.io.save import video_writing_decision, write_video, remove_h5_key, write_h5
 from cellects.io.load import create_empty_videos, read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image, read_h5
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, get_contour_width_from_im_shape, scale_coordinates
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, smallest_memory_array
+from cellects.video.graph_tracking import GraphTracking
 from cellects.video.motion_analysis import MotionAnalysis
+from cellects.video.network_tracking import NetworkTracking
+from cellects.video.oscillations_tracking import OscillationsTracking
 
 class PrecompileNJITThread(QtCore.QThread):
     """
@@ -1739,6 +1742,7 @@ class VideoTrackingThread(QtCore.QThread):
         growth transition detection, network analysis, Oscillation study, fractal descriptions, and updating results.
         Each step is conditional on the absence of an interruption request.
         """
+        self.po.motion.dict_signal = self.image_from_thread.emit
         if self.isInterruptionRequested():
             return False
         self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing descriptors")
@@ -1750,20 +1754,176 @@ class VideoTrackingThread(QtCore.QThread):
         if self.isInterruptionRequested():
             return False
         self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network and graph")
-        self.po.motion.networks_analysis(False)
+        self.detect_network_dynamics()
+        self.extract_graph_dynamics()
+        # self.po.motion.networks_analysis(False)
         if self.isInterruptionRequested():
             return False
         self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting oscillatory patterns")
-        self.po.motion.study_cytoscillations(False)
+        self.detect_oscillations_dynamics()
+        # self.po.motion.study_cytoscillations(False)
         if self.isInterruptionRequested():
             return False
         self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing fractal dimension")
-        self.po.motion.fractal_descriptions()
+        self.fractal_descriptions()
+        # self.po.motion.fractal_descriptions()
         if self.isInterruptionRequested():
             return False
         else:
             return True
 
+    def detect_network_dynamics(self):
+        """
+        Detects and tracks dynamic features (e.g., pseudopods) in a biological network over time from video data.
+
+        Analyzes spatiotemporal dynamics of a network structure using binary masks and grayscale video data. Processes each frame to detect network components, optionally identifies pseudopods, applies temporal smoothing, and generates visualization overlays. Saves coordinate data for detected networks if enabled.
+
+        Notes
+        -----
+        - Memory-intensive operations on large arrays may require system resources.
+        - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
+        - Pseudopod detection requires sufficient contrast with the background in grayscale images.
+        """
+        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+            net_track = NetworkTracking(self.po.motion)
+            net_track.init_tracking()
+            for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
+                if self.isInterruptionRequested():
+                    return False
+                complete_network = net_track.segment_frame(t)
+                self.image_from_thread.emit({
+                                    'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network, step 1/2: rough detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                    'current_image': complete_network})
+            if net_track.dims[0] == 1:
+                net_track.network_dynamics = complete_network
+            else:
+                for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
+                    if self.isInterruptionRequested():
+                        return False
+                    imtoshow = net_track.post_process(t)
+                    self.image_from_thread.emit({
+                                        'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                        'current_image': imtoshow})
+            self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
+            del net_track
+
+    def extract_graph_dynamics(self):
+        """
+        Extracts dynamic graph data from video frames based on network dynamics.
+
+        This function processes time-series binary network structures to extract evolving vertices and edges over time. It computes spatial relationships between networks and an origin point through image processing steps including contour detection, padding for alignment, skeleton extraction, and morphological analysis. Vertex and edge attributes like position, connectivity, width, intensity, and betweenness are compiled into tables saved as CSV files.
+
+        Notes
+        ---
+        Output CSVs use NumPy arrays converted to pandas DataFrames with columns:
+        - Vertex table includes timestamps (t), coordinates (y,x), and connectivity flags.
+        - Edge table contains betweenness centrality calculated during skeleton processing.
+        Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
+        """
+        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+            if self.po.motion.coord_network is None:
+                self.po.motion.coord_network = np.array(np.nonzero(self.po.motion.binary))
+            graph_track = GraphTracking(self.po.motion.converted_video, self.po.motion.coord_network,
+                                        self.po.motion.one_descriptor_per_arena['arena'],
+                                        self.po.motion.origin, self.po.motion.pseudopod_coord)
+            for t in np.arange(graph_track.starting_time, graph_track.dims[0]):  # t=35 t=15  Y, X = 866, 733
+                graph = graph_track.extract_graph(t)
+                if self.isInterruptionRequested():
+                    return False
+                self.image_from_thread.emit(
+                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
+                     'current_image': graph})
+            graph_track.save_graph()
+            del graph_track
+
+    def detect_oscillations_dynamics(self):
+        """
+        Detects oscillatory dynamics in a labeled arena from processed video data
+
+        Notes
+        -----
+        - Processes video data by calculating intensity gradients to detect directional oscillations
+        - Memory-intensive operations use float16 when available RAM would otherwise be exceeded
+        - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
+        """
+        if (self.po.vars['save_coord_thickening_slimming'] or self.po.vars['oscilacyto_analysis']) and self.po.motion.converted_video.shape[0] > 1:
+
+            osci_track = OscillationsTracking(self.po.motion)
+            osci_track.init_tracking()
+            for t in np.arange(osci_track.starting_time, osci_track.dims[0]):
+                if self.isInterruptionRequested():
+                    return False
+                oscillations_image = osci_track.find_oscillations_in_frame(t)
+                self.image_from_thread.emit(
+                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting graph, {round(t / osci_track.dims[0] * 100, 2)}%",
+                     'current_image': oscillations_image})
+            osci_track.save_oscillations()
+            del osci_track
+
+
+    def fractal_descriptions(self):
+        """
+        Method for analyzing fractal patterns in binary data.
+
+        Fractal analysis is performed on the binary representation of the data,
+        optionally considering network dynamics if specified. The results
+        include fractal dimensions, R-values, and box counts for the data.
+
+        If network analysis is enabled, additional fractal dimensions,
+        R-values, and box counts are calculated for the inner network.
+        If 'output_in_mm' is True, then values in mm can be obtained.
+        """
+        if self.po.vars['fractal_analysis']:
+            logging.info(f"Arena n°{self.po.motion.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
+
+            if self.po.vars['save_coord_network']:
+                box_counting_dimensions = np.zeros((self.po.motion.dims[0], 7), dtype=np.float64)
+            else:
+                box_counting_dimensions = np.zeros((self.po.motion.dims[0], 3), dtype=np.float64)
+
+            for t in np.arange(self.po.motion.dims[0]):
+                if self.isInterruptionRequested():
+                    return False
+                if self.po.vars['save_coord_network']:
+                    current_network = np.zeros(self.po.motion.dims[1:], dtype=np.uint8)
+                    net_t = self.po.motion.coord_network[1:, self.po.motion.coord_network[0, :] == t]
+                    current_network[net_t[0], net_t[1]] = 1
+                    box_counting_dimensions[t, 0] = current_network.sum()
+                    zoomed_binary, side_lengths = prepare_box_counting(self.po.motion.binary[t, ...], min_mesh_side=self.po.vars[
+                        'fractal_box_side_threshold'], zoom_step=self.po.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
+                        t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
+                    zoomed_binary, side_lengths = prepare_box_counting(current_network,
+                                                                       min_mesh_side=self.po.vars[
+                                                                           'fractal_box_side_threshold'],
+                                                                       zoom_step=self.po.vars['fractal_zoom_step'],
+                                                                       contours=False)
+                    box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[
+                        t, 6] = box_counting_dimension(zoomed_binary, side_lengths)
+                else:
+                    zoomed_binary, side_lengths = prepare_box_counting(self.po.motion.binary[t, ...],
+                                                                       min_mesh_side=self.po.vars['fractal_box_side_threshold'],
+                                                                       zoom_step=self.po.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
+
+                self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing box-counting dimension, {round(t / self.po.motion.dims[0] * 100, 2)}%")
+
+            if self.po.vars['save_coord_network']:
+                self.po.motion.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
+                self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
+                self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 3]
+                self.po.motion.one_row_per_frame["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
+                self.po.motion.one_row_per_frame["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
+                self.po.motion.one_row_per_frame["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
+                if self.po.vars['output_in_mm']:
+                    self.po.motion.one_row_per_frame["inner_network_size"] *= self.po.vars['average_pixel_size']
+            else:
+                self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
+                self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
+                self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+            if self.po.vars['save_coord_network']:
+                del self.po.motion.coord_network
 
 class VideoReaderThread(QtCore.QThread):
     """
@@ -1837,6 +1997,8 @@ class VideoReaderThread(QtCore.QThread):
         frame_delay = (8 + np.log10(self.po.motion.dims[0])) / self.po.motion.dims[0]
         current_image = video_analysis[0, ...]
         for t in np.arange(self.po.motion.dims[0]):
+            if self.isInterruptionRequested():
+                break
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
             current_image = video_analysis[t, ...].copy()
@@ -1844,8 +2006,6 @@ class VideoReaderThread(QtCore.QThread):
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
             time.sleep(frame_delay)
-            if self.isInterruptionRequested():
-                break
         self.message_from_thread.emit({"current_image": current_image, "message": ""})#, "time": timings[t]
 
 

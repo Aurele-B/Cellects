@@ -3,7 +3,6 @@
 This script contains all unit tests of the one_image_analysis script
 """
 import unittest
-
 from cellects.config.all_vars_dict import DefaultDicts
 from cellects.video.motion_analysis import *
 from cellects.io.load import readim

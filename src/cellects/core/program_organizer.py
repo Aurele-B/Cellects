@@ -21,7 +21,7 @@ from psutil import virtual_memory
 from pathlib import Path
 import natsort
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.video.graph_tracking import extract_graph_dynamics
+from cellects.video.graph_tracking import GraphTracking
 from cellects.io.save import remove_h5_key, write_h5,  write_json
 from cellects.io.load import get_h5_keys, readim, is_raw_image, extract_time, read_and_rotate, video2numpy, read_h5, read_json
 from cellects.utils.utilitarian import insensitive_glob, vectorized_len, smallest_memory_array
@@ -1397,8 +1397,10 @@ class ProgramOrganizer:
                 if self.vars['save_graph']:
                     if coord_network is None:
                         coord_network = np.array(np.nonzero(binary))
-                    extract_graph_dynamics(self.last_image.image[None, :, :], coord_network, arena,
-                                           0, None, coord_pseudopods)
+                    graph_track = GraphTracking(self.last_image.image[None, :, :], coord_network,
+                                                arena,None, coord_pseudopods)
+                    graph_track.frame_by_frame_tracking()
+                    graph_track.save_graph()
 
             else:
                 cc_tracking = ConnectedComponentsTracking(binary[None, :, :], self.vars['first_move_threshold'])

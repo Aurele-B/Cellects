@@ -22,7 +22,7 @@ class TestNetworkDetection(CellectsUnitTest):
             cls.origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = cls.possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
         cls.greyscale_image = cls.possibly_filled_pixels.copy()
         cls.greyscale_image[cls.greyscale_image > 0] = np.random.randint(170, 255, cls.possibly_filled_pixels.sum())
-        cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum())
+        cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, int(cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum()))
         cls.add_rolling_window=True
         cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
                                       cls.origin_to_add, edge_max_width=1)
@@ -760,6 +760,36 @@ class TestRemoveSmallLoops(unittest.TestCase):
             [0,1,0,0,1,0,0],
             [1,0,0,0,0,1,0],
             [0,0,0,0,0,0,1],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(new_skeleton, target))
+
+    def test_remove_touching_loops(self):
+        skeleton = np.array([
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        before = ad_pad(skeleton)
+        after = remove_small_loops(before)
+        count = 0
+        while after.sum() < before.sum() and count < 10:
+            before = after
+            after = remove_small_loops(before)
+            count += 1
+
+        new_skeleton = remove_padding([before])[0]
+        target = np.array([
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
         ], dtype=np.uint8)
         self.assertTrue(np.array_equal(new_skeleton, target))
 
@@ -1565,7 +1595,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.make_vertex_table(origin_contours, growing_areas)
         greyscale = self.valid_skeleton.copy()
         greyscale[greyscale > 0] = np.random.randint(170, 255, self.valid_skeleton.sum())
-        greyscale[greyscale == 0] = np.random.randint(0, 50, self.valid_skeleton.size - self.valid_skeleton.sum())
+        greyscale[greyscale == 0] = np.random.randint(0, 50, int(self.valid_skeleton.size - self.valid_skeleton.sum()))
         greyscale = un_pad(greyscale)
         edge_id.make_edge_table(greyscale, True)
 
