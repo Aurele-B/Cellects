@@ -959,7 +959,10 @@ class MotionAnalysis:
             self.near_periphery = np.zeros(self.dims[1:])
             if self.vars['arena_shape'] == 'circle':
                 periphery_width = self.vars['periphery_width'] * 2
-                elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width, min_size=3)
+                if self.dims[1] > periphery_width + 3 and self.dims[2] > periphery_width + 3 :
+                    elliperiphery = create_ellipse(self.dims[1] - periphery_width, self.dims[2] - periphery_width, min_size=3)
+                else:
+                    elliperiphery = np.array([], dtype=np.uint8)
                 half_width = periphery_width // 2
                 if periphery_width % 2 == 0:
                     self.near_periphery[half_width:-half_width, half_width:-half_width] = elliperiphery

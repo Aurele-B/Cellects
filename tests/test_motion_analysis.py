@@ -295,8 +295,10 @@ class TestMotionAnalysisFullPipeline(TestMotionAnalysisWithOneBlob):
         self.ma.vars['do_slope_segmentation'] = False
         self.ma.vars['do_value_segmentation'] = False
         self.ma.vars['frame_by_frame_segmentation'] = True
+        self.ma.vars['arena_shape'] = 'circle'
         self.ma.detection(False)
         self.ma.initialize_post_processing()
+        self.ma.vars['sliding_window_segmentation'] = True
         self.ma.t = self.ma.start
         while self.ma.t < self.ma.binary.shape[0]:  # 200:
             self.ma.update_shape(False)

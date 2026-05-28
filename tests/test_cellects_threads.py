@@ -216,7 +216,8 @@ class TestCellectsThreads(CellectsUnitTest):
             os.remove("cellects_settings.json")
         files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_1.mp4') + insensitive_glob('edges_*') + insensitive_glob('vertices_*')
         for file in files_to_remove:
-            os.remove(file)
+            if os.path.isfile(file):
+                os.remove(file)
 
 if __name__ == '__main__':
     unittest.main()
