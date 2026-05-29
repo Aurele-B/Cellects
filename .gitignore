@@ -1,6 +1,7 @@
 # Ignore the .idea directory
 .tool-versions
 .idea/
+.cache/
 data/single_experiment/ind*
 data/multiple_experiments/f1/ind*
 data/single_experiment/cellects_data.h5
