@@ -1855,7 +1855,7 @@ class VideoTrackingThread(QtCore.QThread):
                     return False
                 oscillations_image = osci_track.find_oscillations_in_frame(t)
                 self.image_from_thread.emit(
-                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting graph, {round(t / osci_track.dims[0] * 100, 2)}%",
+                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
                      'current_image': oscillations_image})
             osci_track.save_oscillations()
             del osci_track
