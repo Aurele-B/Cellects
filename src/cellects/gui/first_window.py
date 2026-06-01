@@ -493,31 +493,30 @@ class FirstWindow(MainTabsType):
         This method performs actions to prepare the application for loading data from a new pathway.
         It ensures that certain widgets are hidden and starts necessary background processes.
         """
-        if self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
-            self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
-        if os.path.isdir(Path(self.global_pathway.text())):
-            self.po.all['global_pathway'] = self.global_pathway.text()
-            os.chdir(Path(self.po.all['global_pathway']))
-            # 1) Put invisible widgets
-            self.radical.setVisible(False)
-            self.extension.setVisible(False)
-            self.arena_number.setVisible(False)
-            self.im_or_vid.setVisible(False)
-            self.advanced_parameters.setVisible(False)
-            self.required_outputs.setVisible(False)
-            self.Run_all_directly.setVisible(False)
-            self.next.setVisible(False)
-            self.instantiate = True
-            self.video_tab.set_not_usable()
-            # 2) Load the dict
-            self.thread_dict["LoadDataToRunCellectsQuickly"].start()
-            self.thread_dict["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
-            # 3) go to another func to change, put visible and re_instantiate
-        else:
-            self.Run_all_directly.setVisible(False)
-            self.image_tab.set_not_usable()
-            self.video_tab.set_not_usable()
-            self.message.setText("Please, enter a valid path")
+        if not self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
+            if os.path.isdir(Path(self.global_pathway.text())):
+                self.po.all['global_pathway'] = self.global_pathway.text()
+                os.chdir(Path(self.po.all['global_pathway']))
+                # 1) Put invisible widgets
+                self.radical.setVisible(False)
+                self.extension.setVisible(False)
+                self.arena_number.setVisible(False)
+                self.im_or_vid.setVisible(False)
+                self.advanced_parameters.setVisible(False)
+                self.required_outputs.setVisible(False)
+                self.Run_all_directly.setVisible(False)
+                self.next.setVisible(False)
+                self.instantiate = True
+                self.video_tab.set_not_usable()
+                # 2) Load the dict
+                self.thread_dict["LoadDataToRunCellectsQuickly"].start()
+                self.thread_dict["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
+                # 3) go to another func to change, put visible and re_instantiate
+            else:
+                self.Run_all_directly.setVisible(False)
+                self.image_tab.set_not_usable()
+                self.video_tab.set_not_usable()
+                self.message.setText("Please, enter a valid path")
 
     def load_data_quickly_finished(self, message: str):
         """
