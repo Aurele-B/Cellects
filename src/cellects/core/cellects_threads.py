@@ -1308,6 +1308,7 @@ class VideoTrackingThread(QtCore.QThread):
                                                 im_to_display = self.po.motion.binary[t, :, :] * 255
                                             self.image_from_thread.emit({"current_image": im_to_display,
                                                                          "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
+                                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%, {eta})"
                                         if not self.isInterruptionRequested():
                                             do_continue = self.analyze_post_processing_results()
                                             if do_continue:
@@ -1697,7 +1698,8 @@ class VideoTrackingThread(QtCore.QThread):
         detection. It also handles optional computations like fading effects and
         segmentation based on different video options.
         """
-        self.message_from_thread.emit(f"{self.status['folder']}, Starting modifying Arena n°{self.po.all['arena']} results")
+        self.status['message'] = f"Analyze and save Arena n°{self.po.all['arena']}"
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
         if self.po.motion.start is None:
             self.po.motion.binary = np.repeat(np.expand_dims(self.po.motion.origin, 0),
                                                      self.po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
@@ -1726,10 +1728,11 @@ class VideoTrackingThread(QtCore.QThread):
         if not do_continue:
             self.status['message'] = "Was waiting for thread interruption"
             return
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}: Saving results")
+        self.status['message'] = f"Arena n°{self.po.all['arena']}: (Over)writing results"
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
         self.po.motion.change_results_of_one_arena()
         self.po.motion = None
-        self.status['message'] = f"Arena n°{self.po.all['arena']}: analysis finished"
+        self.status['message'] = f"Arena n°{self.po.all['arena']}: analysis done and saved"
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
     def analyze_post_processing_results(self) -> bool:
@@ -1745,26 +1748,26 @@ class VideoTrackingThread(QtCore.QThread):
         self.po.motion.dict_signal = self.image_from_thread.emit
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing descriptors")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing descriptors")
         self.po.motion.get_descriptors_from_binary(release_memory=False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting growth transitions")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting growth transitions")
         self.po.motion.detect_growth_transitions()
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network and graph")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network and graph")
         self.detect_network_dynamics()
         self.extract_graph_dynamics()
         # self.po.motion.networks_analysis(False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting oscillatory patterns")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting oscillatory patterns")
         self.detect_oscillations_dynamics()
         # self.po.motion.study_cytoscillations(False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing fractal dimension")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing fractal dimension")
         self.fractal_descriptions()
         # self.po.motion.fractal_descriptions()
         if self.isInterruptionRequested():
@@ -1792,7 +1795,7 @@ class VideoTrackingThread(QtCore.QThread):
                     return False
                 complete_network = net_track.segment_frame(t)
                 self.image_from_thread.emit({
-                                    'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network, step 1/2: rough detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                    'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 1/2: rough detection, {round(t / net_track.dims[0] * 100, 2)}%",
                                     'current_image': complete_network})
             if net_track.dims[0] == 1:
                 net_track.network_dynamics = complete_network
@@ -1802,7 +1805,7 @@ class VideoTrackingThread(QtCore.QThread):
                         return False
                     imtoshow = net_track.post_process(t)
                     self.image_from_thread.emit({
-                                        'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                        'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
                                         'current_image': imtoshow})
             self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
             del net_track
@@ -1831,7 +1834,7 @@ class VideoTrackingThread(QtCore.QThread):
                 if self.isInterruptionRequested():
                     return False
                 self.image_from_thread.emit(
-                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
+                    {'message': f"{self.status['folder']}, {self.status['message']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
                      'current_image': graph})
             graph_track.save_graph()
             del graph_track
@@ -1855,7 +1858,7 @@ class VideoTrackingThread(QtCore.QThread):
                     return False
                 oscillations_image = osci_track.find_oscillations_in_frame(t)
                 self.image_from_thread.emit(
-                    {'message': f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
+                    {'message': f"{self.status['folder']}, {self.status['message']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
                      'current_image': oscillations_image})
             osci_track.save_oscillations()
             del osci_track
@@ -1874,7 +1877,7 @@ class VideoTrackingThread(QtCore.QThread):
         If 'output_in_mm' is True, then values in mm can be obtained.
         """
         if self.po.vars['fractal_analysis']:
-            logging.info(f"Arena n°{self.po.motion.one_descriptor_per_arena['arena']}. Starting fractal analysis.")
+            logging.info(f"{self.status['message']}. Starting fractal analysis.")
 
             if self.po.vars['save_coord_network']:
                 box_counting_dimensions = np.zeros((self.po.motion.dims[0], 7), dtype=np.float64)
@@ -1906,7 +1909,7 @@ class VideoTrackingThread(QtCore.QThread):
                                                                        zoom_step=self.po.vars['fractal_zoom_step'], contours=True)
                     box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
 
-                self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing box-counting dimension, {round(t / self.po.motion.dims[0] * 100, 2)}%")
+                self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing box-counting dimension, {round(t / self.po.motion.dims[0] * 100, 2)}%")
 
             if self.po.vars['save_coord_network']:
                 self.po.motion.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
