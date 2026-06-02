@@ -1131,6 +1131,9 @@ class VideoTrackingThread(QtCore.QThread):
             else:
                 self.status['message'] = f"Wrong folder or parameters"
                 self.status['continue'] = False
+        else:
+            if len(self.po.vars['analyzed_individuals']) != self.po.sample_number:
+                self.po.set_analyzed_individuals()
 
     def run_video_writing(self):
         """
