@@ -178,15 +178,6 @@ class TestCellectsThreads(CellectsUnitTest):
         self.save_all_vars_thread.run()
         self.assertFalse(os.path.isfile(CONFIG_DIR / 'masks.h5'))
 
-    def test_one_arena_video_tracking_thread(self):
-        """Test the behavior of the VideoTrackingThread class."""
-        self.po.video_task = 'one_arena'
-        self.video_tracking_thread.run()
-        self.assertTrue(len(self.po.motion.one_descriptor_per_arena) > 0)
-        self.po.video_task = 'change_one_arena_result'
-        self.video_tracking_thread.run()
-        self.assertTrue(os.path.isfile('one_row_per_arena.csv'))
-
     def test_all_video_tracking_thread(self):
         """Test running all arenas of all folders with the VideoTrackingThread class."""
         self.po.video_task = 'all'
@@ -209,6 +200,69 @@ class TestCellectsThreads(CellectsUnitTest):
         write_h5(f"ind_{1}.h5", self.po.first_image.binary_image, 'origin_coord')
         self.video_tracking_thread.run()
         self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
+
+    def tearDown(self):
+        """Remove all written files."""
+        if os.path.isfile("cellects_settings.json"):
+            os.remove("cellects_settings.json")
+        files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_1.mp4')
+        for file in files_to_remove:
+            if os.path.isfile(file):
+                os.remove(file)
+
+
+class TestOneArenaThread(CellectsUnitTest):
+    """Test suite for cellects basic threads."""
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.po = ProgramOrganizer()
+        cls.po.all['global_pathway'] = cls.d + '/single_experiment'
+        cls.po.all['radical'] = 'im'
+        cls.po.all['extension'] = 'tif'
+        cls.po.all['im_or_vid'] = 0
+        cls.po.all['first_folder_sample_number'] = 1
+        cls.po.sample_number = 1
+        cls.load_quick_thread = LoadDataToRunCellectsQuicklyThread(cls.po)
+        cls.look_for_data_thread = LookForDataThreadInFirstW(cls.po)
+        cls.get_first_im_thread = GetFirstImThread(cls.po)
+        cls.get_last_im_thread = GetLastImThread(cls.po)
+        cls.load_quick_thread.run()
+        cls.get_first_im_thread.run()
+        cls.get_last_im_thread.run()
+        cls.po.drawn_image = cls.po.first_image.image.copy()
+        cls.po.current_image = cls.po.first_image.image.copy()
+        cls.update_image_thread = UpdateImageThread(cls.po)
+        cls.first_image_analysis_thread = FirstImageAnalysisThread(cls.po)
+        cls.first_image_analysis_thread.run()
+        cls.po.bio_masks_number = 1
+        cls.po.back_masks_number = 1
+        cls.dims = cls.po.first_image.image.shape[:2]
+        cls.po.bio_mask = np.zeros(cls.dims, dtype=np.uint8)
+        cls.po.back_mask = np.zeros(cls.dims, dtype=np.uint8)
+        cls.po.back_mask[0, :] = 1
+        cls.po.bio_mask[cls.dims[0] // 2, cls.dims[1] // 2] = 1
+        cls.last_image_analysis_thread = LastImageAnalysisThread(cls.po)
+        cls.crop_scale_subtract_delineate_thread = CropScaleSubtractDelineateThread(cls.po)
+        cls.po.arena_mask = np.ones(cls.dims, dtype=np.uint8)
+        cls.save_manual_delineation_thread = SaveManualDelineationThread(cls.po)
+        cls.save_manual_delineation_thread.run()
+        cls.get_exif_data_thread = GetExifDataThread(cls.po)
+        cls.get_exif_data_thread.run()
+        cls.complete_image_analysis_thread = CompleteImageAnalysisThread(cls.po)
+        cls.po.vars['convert_for_motion'] = {'lab': [0, 0, 1], 'logical': 'None'}
+        cls.prepare_video_analysis_thread = PrepareVideoAnalysisThread(cls.po)
+        cls.save_all_vars_thread = SaveAllVarsThread(cls.po)
+        cls.video_tracking_thread = VideoTrackingThread(cls.po)
+
+    def test_one_arena_video_tracking_thread(self):
+        """Test the behavior of the VideoTrackingThread class."""
+        self.po.video_task = 'one_arena'
+        self.video_tracking_thread.run()
+        self.assertTrue(len(self.po.motion.one_descriptor_per_arena) > 0)
+        self.po.video_task = 'change_one_arena_result'
+        self.video_tracking_thread.run()
+        self.assertTrue(os.path.isfile('one_row_per_arena.csv'))
 
     def tearDown(self):
         """Remove all written files."""
