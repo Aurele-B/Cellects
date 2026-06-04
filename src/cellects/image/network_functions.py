@@ -1041,7 +1041,7 @@ class EdgeIdentification:
         self.vertices = None
         self.vertex_index_map = {}
         for idx, (y, x) in enumerate(ordered_v_coord):
-            self.vertex_index_map[idx + 1] = tuple((np.uint32(y), np.uint32(x)))
+            self.vertex_index_map[idx + 1] = tuple((np.float64(y), np.float64(x)))
 
         # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
         self.edges_labels = np.zeros((self.tip_number, 3), dtype=np.uint32)
@@ -1224,8 +1224,8 @@ class EdgeIdentification:
                 dist_to_pix2 = np.zeros(v_nb, np.float64)
                 for _i, v_i in enumerate(unique_vertices):
                     v_coord = self.vertex_index_map[v_i]
-                    dist_to_pix1[_i] = eudist(pix1, v_coord)
-                    dist_to_pix2[_i] = eudist(pix2, v_coord)
+                    dist_to_pix1[_i] = eudist_opti(pix1, v_coord)
+                    dist_to_pix2[_i] = eudist_opti(pix2, v_coord)
                 start, end = unique_vertices[np.argmin(dist_to_pix1)], unique_vertices[np.argmin(dist_to_pix2)]
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
