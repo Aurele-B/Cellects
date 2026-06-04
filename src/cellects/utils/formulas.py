@@ -507,15 +507,15 @@ def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
 
 
 @njit()
-def eudist(v1, v2) -> floating[Any]:
+def eudist_opti(v1: NDArray[np.float64], v2: NDArray[np.float64]) -> np.float64:
     """
     Calculate the Euclidean distance between two points in n-dimensional space.
 
     Parameters
     ----------
-    v1 : iterable of float
+    v1 : ndarray of float
         The coordinates of the first point.
-    v2 : iterable of float
+    v2 : ndarray of float
         The coordinates of the second point.
 
     Returns
@@ -523,15 +523,31 @@ def eudist(v1, v2) -> floating[Any]:
     float
         The Euclidean distance between `v1` and `v2`.
 
-    Raises
-    ------
-    ValueError
-        If `v1` and `v2` do not have the same length.
+    Examples
+    --------
+    >>> v1 = np.array((1.0, 2.0), dtype=np.float64)
+    >>> v2 =  np.array((4.0, 6.0), dtype=np.float64)
+    >>> eudist(v1, v2)
+    5.0
+    """
+    return np.linalg.norm(v1 - v2)
 
-    Notes
-    -----
-    The Euclidean distance is calculated using the standard formula:
-    √((x2 − x1)^2 + (y2 − y1)^2 + ...).
+
+def eudist(v1, v2) -> np.float64:
+    """
+    Calculate the Euclidean distance between two points in n-dimensional space.
+
+    Parameters
+    ----------
+    v1 : iterable
+        The coordinates of the first point.
+    v2 : iterable
+        The coordinates of the second point.
+
+    Returns
+    -------
+    float
+        The Euclidean distance between `v1` and `v2`.
 
     Examples
     --------
@@ -547,7 +563,9 @@ def eudist(v1, v2) -> floating[Any]:
     """
     v1 = np.asarray(v1)
     v2 = np.asarray(v2)
-    return np.linalg.norm(v1 - v2)
+    v1 = v1.astype(np.float64)
+    v2 = v2.astype(np.float64)
+    return eudist_opti(v1, v2)
 
 
 def moving_average(vector: NDArray, step: int) -> NDArray[float]:
