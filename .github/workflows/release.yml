@@ -123,6 +123,8 @@ jobs:
     if: ${{ needs.resolve.outputs.docs == 'true' }}
     permissions:
       contents: write
+    env:
+      NO_MKDOCS_2_WARNING: 1
     steps:
       - uses: actions/checkout@v4
         with:

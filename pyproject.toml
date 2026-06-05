@@ -46,7 +46,7 @@ test = [
 ]
 doc = [
   "mkdocs",
-  "mkdocs-material",
+  "mkdocs-material>=9.7.5",
   "mkdocstrings[python]",
   "mkdocs-gen-files",
   "mkdocs-autorefs",
