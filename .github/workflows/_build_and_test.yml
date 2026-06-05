@@ -67,6 +67,7 @@ jobs:
           else
             pytest
           fi
+        shell: bash
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.coverage && matrix.python == inputs.py_build }}
         with:
