@@ -8,10 +8,10 @@ on:
         required: true
       py_build:
         type: string
-        default: "3.12"
+        default: "3.14"
       py_test:
         type: string
-        default: '["3.12","3.13"]'
+        default: '["3.14"]'
       coverage:
         type: boolean
         default: false

@@ -68,8 +68,8 @@ jobs:
     uses: ./.github/workflows/_build_and_test.yml
     with:
       ref: ${{ needs.resolve.outputs.ref }}
-      py_build: "3.12"
-      py_test: '["3.12","3.13"]'
+      py_build: "3.14"
+      py_test: '["3.14"]'
       coverage: true
 
   coverage-badge:
@@ -133,7 +133,7 @@ jobs:
           lfs: true
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
           cache: pip
       - run: |
           python -m pip install -U pip

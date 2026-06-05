@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==76.1.0", "wheel"]
+requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,10 +24,10 @@ dependencies = [
   "opencv-python",
   "pandas",
   "psutil",
-  "PySide6>=6.5",
+  "PySide6",
   "scipy",
   "screeninfo",
-  "numpy>=1.26",
+  "numpy",
   "scikit-image",
   "tqdm",
   "h5py",
