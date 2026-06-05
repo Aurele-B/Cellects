@@ -2941,14 +2941,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../api/cellects/video/oscillations_functions/" class="md-nav__link">
+      <a href="../api/cellects/video/oscillations_tracking/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    oscillations_functions
+    oscillations_tracking
   
 
     
@@ -3807,7 +3807,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <ol start="3">
 <li><p>Image analysis → apply config, validate specimen/arena, etc.</p>
 </li>
-<li><p>Video tracking → <strong>Done</strong> → <strong>Post processing</strong> → <strong>Read</strong></p>
+<li><p>Video tracking → operation: full detect → <strong>Run</strong> → <strong>Read</strong></p>
 </li>
 <li><p><strong>Save one result</strong> to export CSV time series.</p>
 </li>
@@ -3845,9 +3845,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python nb-code"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-
-<span class="kn">from</span><span class="w"> </span><span class="nn">cellects.core.cellects_paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">DATA_DIR</span>
+<div class="highlight-ipynb hl-python nb-code"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">cellects.core.cellects_paths</span><span class="w"> </span><span class="kn">import</span> <span class="n">DATA_DIR</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cellects.core.program_organizer</span><span class="w"> </span><span class="kn">import</span> <span class="n">ProgramOrganizer</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cellects.core.cellects_threads</span><span class="w"> </span><span class="kn">import</span> <span class="n">VideoTrackingThread</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cellects.display.image</span><span class="w"> </span><span class="kn">import</span> <span class="n">show</span>
@@ -3878,9 +3876,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 <span class="c1"># 4. Plot the growth curve</span>
 <span class="n">curve</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">po</span><span class="o">.</span><span class="n">motion</span><span class="o">.</span><span class="n">segmented</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)),</span> <span class="n">y_label</span><span class="o">=</span><span class="s1">'Surface area (pixels)'</span><span class="p">,</span> <span class="n">x_label</span><span class="o">=</span><span class="s1">'Time (frames)'</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-1">import os
-
-from cellects.core.cellects_paths import DATA_DIR
+<div class="clipboard-copy-txt" id="cell-1">from cellects.core.cellects_paths import DATA_DIR
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.cellects_threads import VideoTrackingThread
 from cellects.display.image import show

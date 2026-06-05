@@ -2776,14 +2776,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../video/oscillations_functions/" class="md-nav__link">
+      <a href="../../video/oscillations_tracking/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    oscillations_functions
+    oscillations_tracking
   
 
     
@@ -5616,8 +5616,8 @@ the boundary of an ellipse centered at the image's center with radii determined 
 <a id="__codelineno-0-1474" name="__codelineno-0-1474"></a><span class="sd">        the boundary of an ellipse centered at the image&#39;s center with radii determined by half of the dimensions.</span>
 <a id="__codelineno-0-1475" name="__codelineno-0-1475"></a><span class="sd">    &quot;&quot;&quot;</span>
 <a id="__codelineno-0-1476" name="__codelineno-0-1476"></a>    <span class="c1"># Use default values if input sizes are zero</span>
-<a id="__codelineno-0-1477" name="__codelineno-0-1477"></a>    <span class="n">vsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">vsize</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">vsize</span>
-<a id="__codelineno-0-1478" name="__codelineno-0-1478"></a>    <span class="n">hsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">hsize</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">hsize</span>
+<a id="__codelineno-0-1477" name="__codelineno-0-1477"></a>    <span class="n">vsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">vsize</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">vsize</span>
+<a id="__codelineno-0-1478" name="__codelineno-0-1478"></a>    <span class="n">hsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">hsize</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">hsize</span>
 <a id="__codelineno-0-1479" name="__codelineno-0-1479"></a>
 <a id="__codelineno-0-1480" name="__codelineno-0-1480"></a>    <span class="c1"># Compute radii (half of each size)</span>
 <a id="__codelineno-0-1481" name="__codelineno-0-1481"></a>    <span class="n">vr</span> <span class="o">=</span> <span class="n">hsize</span> <span class="o">//</span> <span class="mi">2</span>
