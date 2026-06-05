@@ -330,8 +330,6 @@ class Spinbox(QtWidgets.QWidget):
             self.setDecimals(0)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setFont(QFont(textfont, textsize, QFont.Medium))
-        self.night_mode_switch(night_mode)
-
         self.setStyleSheet("""
             QPushButton {
                 font-size: 8px;
@@ -344,6 +342,8 @@ class Spinbox(QtWidgets.QWidget):
                 background-color: #e0e0e0;
             }
         """)
+        self.night_mode_switch(night_mode)
+
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
     def sizeHint(self):
