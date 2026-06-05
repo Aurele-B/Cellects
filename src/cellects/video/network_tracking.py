@@ -30,14 +30,6 @@ class NetworkTracking:
         Initialize tracking attributes, set up visualizations, and configure the
         network detection pipeline for the current motion data.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-
         Notes
         -----
         - Resets motion‑related buffers such as ``coord_network`` and
@@ -238,11 +230,12 @@ class NetworkTracking:
             current_network = np.logical_or(complete_network, self.pseudopod_vid[t]).astype(np.uint8)
         else:
             current_network = complete_network.copy()
-        max_pixel_number_decrease = self.network_dynamics[t - 1].sum() * (1 + self.motion.vars['maximal_growth_factor'])
-        if current_network.sum() < max_pixel_number_decrease:
+        minimal_network_size = self.network_dynamics[t - 1].sum() * (1 - self.motion.vars['maximal_growth_factor'])
+        if current_network.sum() < minimal_network_size:
             mising_pieces = (1 - current_network) * self.network_dynamics[t - 1]
             nb, sh, stats, centroids = cv2.connectedComponentsWithStats(mising_pieces)
-            large_shapes = stats[1:, 4] > max_pixel_number_decrease
+            largest_accepted_disappearance = minimal_network_size * .1
+            large_shapes = stats[1:, 4] > largest_accepted_disappearance
             if large_shapes.any():
                 large_shapes = np.nonzero(large_shapes)[0] + 1
                 for large_shape in large_shapes:

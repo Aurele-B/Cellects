@@ -28,10 +28,11 @@ Notes:
 - Image processing functions expect binary (boolean/int8) input matrices
 """
 import pandas as pd
+from numpy import floating
 from cellects.utils.decorators import njit
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Tuple, Any
 
 
 @njit()
@@ -505,15 +506,16 @@ def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
 
 
-def eudist(v1, v2) -> float:
+@njit()
+def eudist_opti(v1: NDArray[np.float64], v2: NDArray[np.float64]) -> np.float64:
     """
     Calculate the Euclidean distance between two points in n-dimensional space.
 
     Parameters
     ----------
-    v1 : iterable of float
+    v1 : ndarray of float
         The coordinates of the first point.
-    v2 : iterable of float
+    v2 : ndarray of float
         The coordinates of the second point.
 
     Returns
@@ -521,31 +523,49 @@ def eudist(v1, v2) -> float:
     float
         The Euclidean distance between `v1` and `v2`.
 
-    Raises
-    ------
-    ValueError
-        If `v1` and `v2` do not have the same length.
+    Examples
+    --------
+    >>> v1 = np.array((1.0, 2.0), dtype=np.float64)
+    >>> v2 =  np.array((4.0, 6.0), dtype=np.float64)
+    >>> eudist(v1, v2)
+    5.0
+    """
+    return np.linalg.norm(v1 - v2)
 
-    Notes
-    -----
-    The Euclidean distance is calculated using the standard formula:
-    √((x2 − x1)^2 + (y2 − y1)^2 + ...).
+
+def eudist(v1, v2) -> np.float64:
+    """
+    Calculate the Euclidean distance between two points in n-dimensional space.
+
+    Parameters
+    ----------
+    v1 : iterable
+        The coordinates of the first point.
+    v2 : iterable
+        The coordinates of the second point.
+
+    Returns
+    -------
+    float
+        The Euclidean distance between `v1` and `v2`.
 
     Examples
     --------
-    >>> v1 = [1.0, 2.0]
+    >>> v1 = np.array((1.0, 2.0))
     >>> v2 = [4.0, 6.0]
     >>> eudist(v1, v2)
     5.0
 
     >>> v1 = [1.0, 2.0, 3.0]
-    >>> v2 = [4.0, 6.0, 8.0]
+    >>> v2 = (4.0, 6.0, 8.0)
     >>> eudist(v1, v2)
     7.0710678118654755
     """
-    dist = [(a - b)**2 for a, b in zip(v1, v2)]
-    dist = np.sqrt(np.sum(dist))
-    return dist
+    v1 = np.asarray(v1)
+    v2 = np.asarray(v2)
+    v1 = v1.astype(np.float64)
+    v2 = v2.astype(np.float64)
+    return eudist_opti(v1, v2)
 
 
 def moving_average(vector: NDArray, step: int) -> NDArray[float]:

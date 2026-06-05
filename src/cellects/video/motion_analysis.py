@@ -53,7 +53,7 @@ from cellects.video.graph_tracking import GraphTracking
 from cellects.video.oscillations_tracking import OscillationsTracking
 from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
-from cellects.utils.formulas import detect_first_move
+from cellects.utils.formulas import detect_first_move, eudist_opti
 from cellects.display.param import red_bgr, purple_bgr, darkblue_bgr, teal_bgr, firebrick_bgr
 from cellects.io.load import read_h5, read_one_arena, get_h5_keys, video2numpy
 from cellects.io.save import remove_h5_key, write_video
@@ -316,10 +316,10 @@ class MotionAnalysis:
                 elif self.vars['appearance_detection_method'] == 'most_central':
                     nb_components, output, stats, centroids = cv2.connectedComponentsWithStats(analysisi.binary_image,
                                                                                                connectivity=8)
-                    center = np.array((self.dims[2] // 2, self.dims[1] // 2))
+                    center = np.array((self.dims[2] // 2, self.dims[1] // 2), dtype=np.float64)
                     stats = np.zeros(nb_components - 1)
                     for shape_i in np.arange(1, nb_components):
-                        stats[shape_i - 1] = eudist(center, centroids[shape_i, :])
+                        stats[shape_i - 1] = eudist_opti(center, centroids[shape_i, :])
                     # The shape having the minimal euclidean distance from the center will be the original shape
                     self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
                     self.origin[output == (np.argmin(stats) + 1)] = 1

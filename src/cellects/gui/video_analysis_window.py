@@ -565,6 +565,7 @@ class VideoAnalysisWindow(MainTabsType):
         """
         if self.thread_dict['VideoTracking'].isRunning():
             self.message.setText("Wait for the analysis to end, or restart Cellects")
+            self.arena.setValue(self.po.all['arena'])
         else:
             if self.thread_dict['VideoReader'].isRunning():
                 self.thread_dict['VideoReader'].requestInterruption()

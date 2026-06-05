@@ -1349,7 +1349,7 @@ class ProgramOrganizer:
             self._whole_image_bounding_boxes()
 
         if not self.first_image.validated_shapes.any():
-            if self.vars['convert_for_motion'] is not None:
+            if self.vars['convert_for_origin'] is None and self.vars['convert_for_motion'] is not None:
                 self.vars['convert_for_origin'] = self.vars['convert_for_motion']
             self.fast_first_image_segmentation()
         first_im = self.first_image.validated_shapes
