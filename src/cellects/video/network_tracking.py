@@ -30,14 +30,6 @@ class NetworkTracking:
         Initialize tracking attributes, set up visualizations, and configure the
         network detection pipeline for the current motion data.
 
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        None
-
         Notes
         -----
         - Resets motion‑related buffers such as ``coord_network`` and
