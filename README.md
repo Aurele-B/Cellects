@@ -9,6 +9,7 @@
 [![macOS (silicon)](https://img.shields.io/github/v/release/Aurele-B/Cellects?label=macOS%20(silicon)%20.dmg&logo=apple&color=black)](https://github.com/Aurele-B/Cellects/releases/latest)
 [![PyPI version](https://img.shields.io/pypi/v/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
 [![Python versions](https://img.shields.io/pypi/pyversions/cellects.svg?style=flat-square)](https://pypi.org/project/cellects/)
+![CI](https://github.com/Aurele-B/Cellects/actions/workflows/CI.yml/badge.svg)
 [![License](https://img.shields.io/pypi/l/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/blob/main/LICENSE)
 [![Stars](https://img.shields.io/github/stars/Aurele-B/cellects.svg?style=flat-square)](https://github.com/Aurele-B/cellects/stargazers)
 ![Coverage](https://raw.githubusercontent.com/Aurele-B/cellects/gh-pages/badges/coverage.svg)
