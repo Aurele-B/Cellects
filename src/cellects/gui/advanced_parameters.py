@@ -450,7 +450,7 @@ class AdvancedParameters(WindowType):
         # I/A/ Title
         self.right_scroll_table = QtWidgets.QScrollArea()   # Scroll Area which contains the widgets, set as the centralWidget
         self.right_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.right_scroll_table.setMinimumHeight(150)#self.parent().im_max_height - 100
+        self.right_scroll_table.setMinimumHeight(150)
         self.right_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.right_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.right_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
