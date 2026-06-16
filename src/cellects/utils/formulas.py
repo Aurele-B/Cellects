@@ -27,6 +27,7 @@ Notes:
 - All Numba-accelerated functions require congruent NumPy arrays as inputs
 - Image processing functions expect binary (boolean/int8) input matrices
 """
+import math
 import pandas as pd
 from numpy import floating
 from cellects.utils.decorators import njit
@@ -506,33 +507,6 @@ def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
 
 
-@njit()
-def eudist_opti(v1: NDArray[np.float64], v2: NDArray[np.float64]) -> np.float64:
-    """
-    Calculate the Euclidean distance between two points in n-dimensional space.
-
-    Parameters
-    ----------
-    v1 : ndarray of float
-        The coordinates of the first point.
-    v2 : ndarray of float
-        The coordinates of the second point.
-
-    Returns
-    -------
-    float
-        The Euclidean distance between `v1` and `v2`.
-
-    Examples
-    --------
-    >>> v1 = np.array((1.0, 2.0), dtype=np.float64)
-    >>> v2 =  np.array((4.0, 6.0), dtype=np.float64)
-    >>> eudist(v1, v2)
-    5.0
-    """
-    return np.linalg.norm(v1 - v2)
-
-
 def eudist(v1, v2) -> np.float64:
     """
     Calculate the Euclidean distance between two points in n-dimensional space.
@@ -561,11 +535,7 @@ def eudist(v1, v2) -> np.float64:
     >>> eudist(v1, v2)
     7.0710678118654755
     """
-    v1 = np.asarray(v1)
-    v2 = np.asarray(v2)
-    v1 = v1.astype(np.float64)
-    v2 = v2.astype(np.float64)
-    return eudist_opti(v1, v2)
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(v1, v2)))
 
 
 def moving_average(vector: NDArray, step: int) -> NDArray[float]:

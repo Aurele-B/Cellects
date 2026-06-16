@@ -26,6 +26,8 @@ Uses morphological operations for network refinement, including hole closing, co
 and distance transform analysis. Implements both Otsu thresholding and rolling window segmentation
 methods for image processing workflows.
 """
+import numpy as np
+
 from cellects.image.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
@@ -1383,13 +1385,11 @@ class EdgeIdentification:
                 # 2. Find the most distant pair of these
                 pix1, pix2 = get_min_or_max_euclidean_pair(vertex_connected_pixels, "max")
                 # 3. The two best vertices are the two nearest to these two most distant edge pixels
-                dist_to_pix1 = np.zeros(v_nb, np.float64)
-                dist_to_pix2 = np.zeros(v_nb, np.float64)
-                for _i, v_i in enumerate(unique_vertices):
-                    v_coord = self.vertex_index_map[v_i]
-                    dist_to_pix1[_i] = eudist_opti(pix1, v_coord)
-                    dist_to_pix2[_i] = eudist_opti(pix2, v_coord)
-                start, end = unique_vertices[np.argmin(dist_to_pix1)], unique_vertices[np.argmin(dist_to_pix2)]
+                unique_vertices_coord = np.transpose(np.array(np.nonzero(unique_vertices_im)))
+                dist_to_pix1 = cdist(unique_vertices_coord, [pix1])
+                dist_to_pix2 = cdist(unique_vertices_coord, [pix2])
+                start = unique_vertices_im[unique_vertices_coord[dist_to_pix1.argmin(), :]]
+                end = unique_vertices_im[unique_vertices_coord[dist_to_pix2.argmin(), :]]
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
                 logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
