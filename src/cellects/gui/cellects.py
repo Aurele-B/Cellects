@@ -87,6 +87,9 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.image_window_height_diff = 750 - 266
         self.image_to_display = np.zeros((self.im_max_height, self.im_max_width, 3), np.uint8)
         self.i = 1
+
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+
         self.po = ProgramOrganizer()
         self.po.load_variable_dict()
         self.resize(1380, 750)

@@ -60,8 +60,12 @@ class WindowType(QtWidgets.QWidget):
         self.thread_dict = {}
         self.setVisible(False)
         self.setParent(parent)
+
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
         self.frame = QtWidgets.QFrame(self)
         self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().screen_width, self.parent().screen_height))
+        self.frame.setAttribute(QtCore.Qt.WA_StyledBackground, True)
         self.display_image = None
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode = night_mode
