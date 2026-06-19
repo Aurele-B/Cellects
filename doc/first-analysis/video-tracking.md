@@ -19,12 +19,12 @@ By iteratively testing tracking parameters and validating results through visual
 The behavior of the specimen(s) changes how Cellects post processes the data (after video
 segmentation):
 
-- **move** → Specimen(s) can move from one place to another in the arena but are not expected to
+- **move**: Specimen(s) can move from one place to another in the arena but are not expected to
 grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
 previously.
-- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the
+- **grow**: Specimen(s) only grow, they cannot leave an area. The previous position of the
 specimen(s) is used to detect its current position.
-- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous
+- **move and grow**: Specimen(s) are expected to move and grow. This feature use the previous
 position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
 are left.
 

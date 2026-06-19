@@ -118,7 +118,6 @@ class ProgramOrganizer:
         self.temporary_mask_coord: list = []
         self.current_image = None
         self.drawn_image = None
-        self.image_scaling_factors: tuple = 1., 1.
         self.is_first_image_flag: bool = True
         self.arena0_back1_bio2: int = 0
         self.bio_masks_number: int = 0
@@ -138,6 +137,7 @@ class ProgramOrganizer:
         self.load_quick_full: int = 0
         self.converted_video = None
         self.converted_video2 = None
+        self.drawing_mode: str = "none"  # "rect", "circle", "free_hand"
 
     def update_variable_dict(self):
         """
@@ -1621,12 +1621,12 @@ class ProgramOrganizer:
                 video_bit_number -= 56
         if self.vars['already_greyscale']:
             video_bit_number -= 64
-        if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
-            video_bit_number += 16
-            image_bit_number += 128
-        if self.vars['save_coord_network']:
-            video_bit_number += 8
-            image_bit_number += 64
+        # if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
+        #     video_bit_number += 16
+        #     image_bit_number += 128
+        # if self.vars['save_coord_network']:
+        #     video_bit_number += 8
+        #     image_bit_number += 64
 
         if isinstance(self.bot, list):
             one_image_memory = np.multiply((self.bot[0] - self.top[0]),

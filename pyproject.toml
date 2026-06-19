@@ -26,7 +26,6 @@ dependencies = [
   "psutil",
   "PySide6",
   "scipy",
-  "screeninfo",
   "numpy",
   "scikit-image",
   "tqdm",

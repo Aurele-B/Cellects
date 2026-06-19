@@ -319,8 +319,10 @@ class UpdateImageThread(QtCore.QThread):
             if len(idx) < 2:
                 user_input = False
             else:
+                idx = np.asarray(idx)
                 # Convert coordinates:
-                idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=self.po.image_scaling_factors, dims=dims)
+                max_y, max_x = idx.max(0)
+                min_y, min_x = idx.min(0)
                 minmax = min_y, max_y, min_x, max_x
 
         if len(self.po.temporary_mask_coord) == 0:
@@ -354,17 +356,25 @@ class UpdateImageThread(QtCore.QThread):
                     # Color the segmentation mask in pink
                     self.po.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                if self.po.arena0_back1_bio2 == 0:
-                    mask_shape = self.po.vars['arena_shape']
-                elif self.po.arena0_back1_bio2 == 1:
-                    mask_shape = "rectangle"
+                if self.po.drawing_mode == "free_hand":
+                    mask = np.zeros(dims, dtype=np.uint8)
+                    pts = np.array(self.po.free_hand_points, dtype=np.int32)
+                    pts = pts[:, ::-1]
+                    pts = pts.reshape((-1, 1, 2))
+                    cv2.fillPoly(mask, [pts], 1)
+                    mask = np.nonzero(mask)
                 else:
-                    mask_shape = self.po.all['starting_blob_shape']
-                    if mask_shape is None:
-                        mask_shape = 'circle'
-                # Save the user drawn mask
-                mask = create_mask(dims, minmax, mask_shape)
-                mask = np.nonzero(mask)
+                    if self.po.arena0_back1_bio2 == 0:
+                        mask_shape = self.po.vars['arena_shape']
+                    elif self.po.arena0_back1_bio2 == 1:
+                        mask_shape = "rectangle"
+                    else:
+                        mask_shape = self.po.all['starting_blob_shape']
+                        if mask_shape is None:
+                            mask_shape = 'circle'
+                    # Save the user drawn mask
+                    mask = create_mask(dims, minmax, mask_shape)
+                    mask = np.nonzero(mask)
 
                 if self.po.arena0_back1_bio2 == 1:
                     self.po.back_masks_number += 1
@@ -413,16 +423,23 @@ class UpdateImageThread(QtCore.QThread):
                 image = self.po.drawn_image.copy()
                 if self.po.arena0_back1_bio2 == 2:
                     color = (17, 160, 212)
-                    mask_shape = self.po.all['starting_blob_shape']
-                    if mask_shape is None:
-                        mask_shape = 'circle'
                 elif self.po.arena0_back1_bio2 == 1:
                     color = (224, 160, 81)
-                    mask_shape = "rectangle"
                 else:
                     color = (0, 0, 0)
-                    mask_shape = self.po.vars['arena_shape']
-                image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
+                if self.po.drawing_mode == "free_hand":
+                    mask = np.array(self.po.free_hand_points, dtype=np.int32)
+                    image[mask[:, 0], mask[:, 1], :] = color
+                else:
+                    if self.po.arena0_back1_bio2 == 2:
+                        mask_shape = self.po.all['starting_blob_shape']
+                        if mask_shape is None:
+                            mask_shape = 'circle'
+                    elif self.po.arena0_back1_bio2 == 1:
+                        mask_shape = "rectangle"
+                    else:
+                        mask_shape = self.po.vars['arena_shape']
+                    image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.image_from_thread.emit({"current_image": image})
         self.message_when_thread_finished.emit(True)
 
@@ -1311,7 +1328,7 @@ class VideoTrackingThread(QtCore.QThread):
                                                 im_to_display = self.po.motion.binary[t, :, :] * 255
                                             self.image_from_thread.emit({"current_image": im_to_display,
                                                                          "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
-                                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%, {eta})"
+                                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%{eta})"
                                         if not self.isInterruptionRequested():
                                             do_continue = self.analyze_post_processing_results()
                                             if do_continue:
@@ -1759,8 +1776,11 @@ class VideoTrackingThread(QtCore.QThread):
         self.po.motion.detect_growth_transitions()
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network and graph")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network")
         self.detect_network_dynamics()
+        if self.isInterruptionRequested():
+            return False
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Extracting graph")
         self.extract_graph_dynamics()
         # self.po.motion.networks_analysis(False)
         if self.isInterruptionRequested():

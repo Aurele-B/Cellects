@@ -17,8 +17,7 @@ Uses QThread for background operations to maintain UI responsiveness.
 import logging
 import signal
 import numpy as np
-from PySide6 import QtWidgets, QtGui
-from screeninfo import get_monitors
+from PySide6 import QtWidgets, QtGui, QtCore
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.cellects_threads import SaveAllVarsThread, PrecompileNJITThread
 from cellects.gui.custom_widgets import backgroundcolor, night_background_color
@@ -54,10 +53,6 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             Height of the monitor in pixels.
         screen_width : int
             Width of the monitor in pixels.
-        im_max_width : int
-            Maximum width allowed for displayed images (default: 570).
-        im_max_height : int
-            Maximum height allowed for displayed images (default: 266).
         image_window_width_diff : int
             Difference in width between image window and max image size.
         image_window_height_diff : int
@@ -79,20 +74,13 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         self.last_is_first: bool = True
         self.last_tab: str = "data_specifications"
         self.pre_processing_done: bool = False
-        self.screen_height = get_monitors()[0].height
-        self.screen_width = get_monitors()[0].width
-        self.im_max_width = 570
-        self.im_max_height = 266
-        self.image_window_width_diff = 1380 - 570
-        self.image_window_height_diff = 750 - 266
-        self.image_to_display = np.zeros((self.im_max_height, self.im_max_width, 3), np.uint8)
         self.i = 1
 
         self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
 
         self.po = ProgramOrganizer()
         self.po.load_variable_dict()
-        self.resize(1380, 750)
+        self.apply_window_limits()
 
     def instantiate_cellects(self):
         """
@@ -170,10 +158,22 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
         position, regardless of screen resolution or window size.
         """
         qr = self.frameGeometry()
-        # cp = QtWidgets.QDesktopWidget().availableGeometry().center()  # PyQt 5
-        cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()  # Pyside 6
-        qr.moveCenter(cp)
+        if self.size().height() < self.screen_height - 150:
+            # cp = QtWidgets.QDesktopWidget().availableGeometry().center()  # PyQt 5/*
+            cp = QtGui.QGuiApplication.primaryScreen().availableGeometry().center()  # Pyside 6
+            qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def apply_window_limits(self):
+        screen = QtGui.QGuiApplication.primaryScreen()
+        if not screen:
+            return
+        geom = screen.availableGeometry()
+        self.screen_width, self.screen_height = geom.width(), geom.height()
+        self.win_width, self.win_height = min(self.screen_width, 1380), min(self.screen_height, 750)
+
+        self.setMaximumSize(self.screen_width, self.screen_height)
+        self.resize(self.win_width, self.win_height)
 
     def closeEvent(self, event):
         """
@@ -205,7 +205,7 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
                 for window in windows:
                     for thread_name, thread in window:
                         thread.requestInterruption()
-                        thread.wait(15000)
+                        thread.wait(20000)
             logging.info("Closing main window.")
             event.accept()
         else:

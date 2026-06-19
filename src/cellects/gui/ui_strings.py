@@ -170,6 +170,14 @@ enable *Keep Cell and Back drawing for all folders* in *Advanced parameters*.
 """
 # END_TIP
 
+IAW["Free_hand"] = {}
+IAW["Free_hand"]["label"] = "Free hand"
+# START_TIP
+IAW["Free_hand"]["tips"] = \
+f"""*Free hand* allows the user to draw any shape on the current image.
+"""
+# END_TIP
+
 IAW["Draw_buttons"] = {}
 IAW["Draw_buttons"]["label"] = "Draw buttons"
 # START_TIP
@@ -250,7 +258,7 @@ IAW["Generate_analysis_options"]["label"] = "Generate analysis options"
 IAW["Generate_analysis_options"]["tips"] = \
 f"""Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
 first or last image:
-- **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
+- **Basic**: provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
 NB:
 - Selecting *Basic* (or *Apply current config*) will trigger an orange working message during
@@ -267,7 +275,7 @@ analysis options, allowing direct quality assessment. For example, if Option 1 s
 detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis via:
 - Adjusting arena/spot shapes or sizes
 - Using *Select and draw* to annotate specimens/background
-- Manual configuration in advanced mode → Test changes with *Apply current config*
+- Manual configuration in advanced mode: Test changes with *Apply current config*
 NB:
 - Confirm when magenta/pink contours match expected positions and counts.
 """
@@ -314,8 +322,8 @@ IAW["Last_image_question"]["label"] = "Last image question"
 # START_TIP
 IAW["Last_image_question"]["tips"] = \
 f"""If parameters might fail on later images, test them first on the final frame:
-- *Yes* → validates with last image before tracking.
-- *No* → proceeds directly to video analysis.
+- *Yes*: validates with last image before tracking.
+- *No*: proceeds directly to video analysis.
 """
 # END_TIP
 
@@ -353,12 +361,12 @@ VAW["Specimen_activity"]["label"] = "Specimen activity"
 VAW["Specimen_activity"]["tips"] = \
 f"""The behavior of the specimen(s) changes how Cellects post processes the data (after video
 segmentation):
-- **move** → Specimen(s) can move from one place to another in the arena but are not expected to
+- **move**: Specimen(s) can move from one place to another in the arena but are not expected to
 grow. The status of an area (specimen or background) does not depend on where the specimen(s) were
 previously.
-- **grow** → Specimen(s) only grow, they cannot leave an area. The previous position of the
+- **grow**: Specimen(s) only grow, they cannot leave an area. The previous position of the
 specimen(s) is used to detect its current position.
-- **move and grow** → Specimen(s) are expected to move and grow. This feature use the previous
+- **move and grow**: Specimen(s) are expected to move and grow. This feature use the previous
 position of the specimen(s) to evaluate growth and the pixel intensity history to evaluate when they
 are left.
 """
@@ -599,11 +607,11 @@ AP["Specimens_have_same_direction"]["label"] = "All specimens have the same dire
 # START_TIP
 AP["Specimens_have_same_direction"]["tips"] = \
 f"""Select to optimize arena detection for specimens moving move in the same direction.
-- **Checked** → Uses motion pattern analysis for arena localization.
-- **Unchecked** → Employs standard centroid based algorithm.
+- **Checked**: Uses motion pattern analysis for arena localization.
+- **Unchecked**: Employs standard centroid based algorithm.
 NB:
 - Both options work equally when growth is roughly isotropic.
-- Only works when there is only one specimen per arena
+- Only works when there is only one specimen per arena.
 """
 # END_TIP
 
@@ -635,7 +643,7 @@ AP["Morphological_opening"]["tips"] = \
 f"""Morphological opening first erodes and then dilates all specimens detected during initial
 segmentation. If checked, this algorithm is applied to every frame after segmentation.
 NB:
-- Efficient for removing small noise from the background
+- Efficient for removing small noise from the background.
 """
 # END_TIP
 
@@ -646,7 +654,7 @@ AP["Morphological_closing"]["tips"] = \
 f"""Morphological opening first dilates and then erodes all specimens detected during initial
 segmentation. If checked, this algorithm is applied to every frame after segmentation.
 NB:
-- Efficient for removing small holes in the detected specimen(s)
+- Efficient for removing small holes in the detected specimen(s).
 """
 # END_TIP
 
@@ -656,12 +664,12 @@ AP["Correct_errors_around_initial"]["label"] = "Correct errors around initial sp
 AP["Correct_errors_around_initial"]["tips"] = \
 f"""Applies an algorithm to correct detection errors near the initial specimen position due to color
 variations (e.g., from nutrient patches). Technical workflow:
-- Identifies potential gaps around initial position
-- Monitors local growth velocity
-- Fills gaps using growth patterns from adjacent pixels
+- Identifies potential gaps around initial position.
+- Monitors local growth velocity.
+- Fills gaps using growth patterns from adjacent pixels.
 NB:
-- ⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no difference
-between starting and growth regions).
+- Not recommended if the substrate has the same transparency everywhere (i.e. no difference between
+starting and growth regions).
 """
 # END_TIP
 
@@ -671,9 +679,8 @@ AP["Prevent_fast_growth_near_periphery"]["label"] = "Prevent fast growth near pe
 AP["Prevent_fast_growth_near_periphery"]["tips"] = \
 f"""During video analysis, prevents false specimen detection at arena borders by filtering rapid
 periphery growth.
-- **Checked** → Exclude fast
--moving detections near boundaries
-- **Unchecked** → Use standard detection criteria
+- **Checked**: Exclude fast moving detections near boundaries.
+- **Unchecked**: Use standard detection criteria.
 """
 # END_TIP
 
@@ -682,14 +689,14 @@ AP["Connect_distant_shapes"]["label"] = "Connect distant shapes"
 # START_TIP
 AP["Connect_distant_shapes"]["tips"] = \
 f"""Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
-specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
-and the detection is smaller than the true specimen. Technical implementation:
-- Identifies disconnected subregions
-- Analyzes local growth dynamics
-- Recreates connections using spatially consistent growth patterns
+specimen per arena. This is useful when the specimen's heterogeneity create wrong disconnections and
+the detection is smaller than the true specimen. Technical implementation:
+- Identifies disconnected subregions.
+- Analyzes local growth dynamics.
+- Recreates connections using spatially consistent growth patterns.
 NB:
 - Increases analysis time substantially.
-- Only works when there is only one specimen per arena
+- Only works when there is only one specimen per arena.
 """
 # END_TIP
 
@@ -698,9 +705,8 @@ AP["Appearance_size_threshold"]["label"] = "Appearance size threshold (automatic
 # START_TIP
 AP["Appearance_size_threshold"]["tips"] = \
 f"""Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
-- **Checked** → Automatic threshold calculation.
-- **Unchecked** → Manual user
--defined threshold.
+- **Checked**: Automatic threshold calculation.
+- **Unchecked**: Manual user defined threshold.
 """
 # END_TIP
 
@@ -722,7 +728,7 @@ AP["Mesh_side_length"]["label"] = "Mesh side length"
 AP["Mesh_side_length"]["tips"] = \
 f"""Pixel dimension for analysis window size.
 NB:
-- Must not exceed minimum image dimension
+- Must not exceed minimum image dimension.
 """
 # END_TIP
 
@@ -753,7 +759,7 @@ AP["Spatio_temporal_scaling"]["label"] = "Spatio-temporal scaling"
 AP["Spatio_temporal_scaling"]["tips"] = \
 f"""Defines the spatiotemporal scale of the dataset:
 - Time between images or frames (minutes).
-- An option to convert areas/distances from pixels to mm/mm².
+- An option to convert areas and distances from pixels to mm² and mm.
 """
 # END_TIP
 
@@ -763,8 +769,8 @@ AP["Keep_drawings"]["label"] = "Keep Cell and Back drawings for all folders"
 AP["Keep_drawings"]["tips"] = \
 f"""During initial image analysis, if the user drew cell/back regions to assist detection, this option
 saves and uses these annotations across all folders. In summary:
-- **Checked** → retain annotations for all folders
-- **Unchecked** → apply only to current folder
+- **Checked**: retain annotations for all folders.
+- **Unchecked**: apply only to current folder.
 """
 # END_TIP
 
@@ -773,8 +779,8 @@ AP["Parallel_analysis"]["label"] = "Run analysis in parallel"
 # START_TIP
 AP["Parallel_analysis"]["tips"] = \
 f"""Allow the use of more than one core of the computer processor.
-- **Checked** → Uses multiple CPU cores to analyze arenas in parallel (faster).
-- **Unchecked** → Single core analysis.
+- **Checked**: Uses multiple CPU cores to analyze arenas in parallel (faster).
+- **Unchecked**: Single core analysis.
 """
 # END_TIP
 
@@ -801,8 +807,8 @@ AP["Lose_accuracy_to_save_RAM"]["label"] = "Lose accuracy to save RAM"
 # START_TIP
 AP["Lose_accuracy_to_save_RAM"]["tips"] = \
 f"""For low memory systems:
-- Converts video from `np.float64` to `uint8`
-- Saves RAM at the cost of a slight precision loss
+- Converts video from `np.float64` to `uint8`.
+- Saves RAM at the cost of a slight precision loss.
 """
 # END_TIP
 
@@ -819,8 +825,8 @@ AP["Keep_unaltered_videos"]["label"] = 'Keep unaltered videos'
 # START_TIP
 AP["Keep_unaltered_videos"]["tips"] = \
 f"""Keeps unaltered videos (`.h5` format) in hard drive.
-- **Checked** → Rerunning the same analysis will be faster.
-- **Unchecked** → These videos will be written and removed each run of the same analysis.
+- **Checked**: Rerunning the same analysis will be faster.
+- **Unchecked**: These videos will be written and removed each run of the same analysis.
 NB:
 - Large files: it is recommended to remove them once analysis is entirely finalized.
 """

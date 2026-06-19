@@ -19,7 +19,7 @@ from PySide6 import QtWidgets, QtCore
 
 from cellects.core.cellects_threads import VideoTrackingThread, VideoReaderThread, WriteVideoThread
 from cellects.gui.custom_widgets import (
-    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
 from cellects.gui.ui_strings import FW, VAW
 
@@ -56,6 +56,7 @@ class VideoAnalysisWindow(MainTabsType):
         self.setParent(parent)
         self.po = po
         self.previous_arena = 0
+        self.popup_img = None
         self.true_init()
 
     def true_init(self):
@@ -175,13 +176,9 @@ class VideoAnalysisWindow(MainTabsType):
         self.left_options_widget.setLayout(self.left_options_layout)
         self.video_display_layout.addWidget(self.left_options_widget)
 
-
         # Add the central video display widget
-        self.display_image = np.zeros((self.parent().im_max_height, self.parent().im_max_width, 3), np.uint8)
-        self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
-        self.display_image.mousePressEvent = self.full_screen_display
+        self.display_image = InsertImage(self, True)
         self.video_display_layout.addWidget(self.display_image)
-
 
         #   Open right widget
         self.right_options_widget = QtWidgets.QWidget()
@@ -363,16 +360,29 @@ class VideoAnalysisWindow(MainTabsType):
         self.fading.setVisible(do_fading)
         self.fading_label.setVisible(do_fading)
 
-    def full_screen_display(self, event):
+    def mouse_clicks(self, image_object, event):
         """
-        Full-screen display of an image.
+        Independent display of an image.
 
-        This method creates a full-screen image popup and displays it. The
-        full-screen image is initialized with the current image to display,
-        and its size is set to match the screen dimensions.
+        Displays the current `image_to_display` in a separate window.
+
+        Parameters
+        ----------
+        image_object : QtWidgets.QLabel
+            The object corresponding to the image to display.
+        event : QEvent
+            The event that triggers independent image display.
+
+        Notes
+        -----
+        The method creates a new instance of `InsertImage` and displays it.
+        This is intended to provide a full-screen view of the image currently
+        displayed in the parent window.
         """
-        self.popup_img = FullScreenImage(self.parent().image_to_display, self.parent().screen_width, self.parent().screen_height)
-        self.popup_img.show()
+        if self.popup_img is None or self.popup_img.closed:
+            self.popup_img = InsertImage(self, True)
+            self.popup_img.update_image(self.parent().image_to_display)
+            self.popup_img.show()
 
     def option_changed(self):
         """
@@ -684,6 +694,8 @@ class VideoAnalysisWindow(MainTabsType):
         self.message.setText(dictionary['message'])
         self.parent().image_to_display = dictionary['current_image']
         self.display_image.update_image(dictionary['current_image'])
+        if self.popup_img is not None and not self.popup_img.closed:
+            self.popup_img.update_image(dictionary['current_image'])
 
     def save_one_result_is_clicked(self):
         """

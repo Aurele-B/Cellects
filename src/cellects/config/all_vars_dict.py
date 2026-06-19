@@ -51,6 +51,7 @@ class DefaultDicts:
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
+            'free_hand': False,
             'initial_bio_mask': None,
             'initial_back_mask': None,
             'keep_cell_and_back_for_all_folders': False,

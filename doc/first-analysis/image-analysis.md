@@ -80,6 +80,14 @@ areas in images. To use, click *Cell* or *Back* button (button color changes), t
 
 ---
 
+<!-- START_Free_hand -->
+## Free hand:
+*Free hand* allows the user to draw any shape on the current image.
+
+<!-- END_Free_hand -->
+
+---
+
 <!-- START_Draw_buttons -->
 ## Draw buttons:
 Click the *Cell* or *Back* button and draw a corresponding area on the image by clicking and holding
@@ -94,7 +102,7 @@ mouse on the image.
 Cellects proposes algorithms to automatically determine optimal specimen detection parameters on the
 first or last image:
 
-- **Basic** → provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
+- **Basic**: provides suggestions in minutes. Alternatively, the user can switch to *Advanced mode*
 to review or modify more specific settings.
 !!! note
 
@@ -117,7 +125,7 @@ detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis 
 
 - Adjusting arena/spot shapes or sizes
 - Using *Select and draw* to annotate specimens/background
-- Manual configuration in advanced mode → Test changes with *Apply current config*
+- Manual configuration in advanced mode: Test changes with *Apply current config*
 !!! note
 
 	 - Confirm when magenta/pink contours match expected positions and counts.
@@ -246,8 +254,8 @@ After confirming initial detection, automatic video delimitation results appear 
 ## Last image question:
 If parameters might fail on later images, test them first on the final frame:
 
-- *Yes* → validates with last image before tracking.
-- *No* → proceeds directly to video analysis.
+- *Yes*: validates with last image before tracking.
+- *No*: proceeds directly to video analysis.
 
 <!-- END_Last_image_question -->
 
