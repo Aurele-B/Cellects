@@ -22,7 +22,7 @@ def wrap_tip(text, max_length=100):
     return wrapped_text
 
 def process_tips_in_file(file_path):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding="utf-8") as file:
         content = file.read()
 
     pattern = re.compile(r'# START_TIP.*?# END_TIP', re.DOTALL)
@@ -47,7 +47,7 @@ def process_tips_in_file(file_path):
         new_match = f'{tip_start}= \\\nf"""{processed_tip}"""{tip_end}'
         content = content.replace(match, new_match)
 
-    with open(file_path, 'w') as file:
+    with open(file_path, 'w', encoding="utf-8") as file:
         file.write(content)
 
 def wrap_md_tip(text):
@@ -96,7 +96,7 @@ def update_markdown(file_path, dynamic_content):
             f.writelines(lines)
 
 if __name__ == "__main__":
-    process_tips_in_file("../src/cellects/gui/UI_strings.py")
+    process_tips_in_file("../src/cellects/gui/ui_strings.py")
     update_markdown("first-analysis/data-localisation.md", FW)
     update_markdown("first-analysis/image-analysis.md", IAW)
     update_markdown("first-analysis/video-tracking.md", VAW)

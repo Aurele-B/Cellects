@@ -2933,14 +2933,14 @@ depending on dataset characteristics.</p>
 <h2 id="all-specimens-have-the-same-direction">All specimens have the same direction:</h2>
 <p>Select to optimize arena detection for specimens moving move in the same direction.</p>
 <ul>
-<li><strong>Checked</strong> → Uses motion pattern analysis for arena localization.</li>
-<li><strong>Unchecked</strong> → Employs standard centroid based algorithm.</li>
+<li><strong>Checked</strong>: Uses motion pattern analysis for arena localization.</li>
+<li><strong>Unchecked</strong>: Employs standard centroid based algorithm.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
 <li>Both options work equally when growth is roughly isotropic.</li>
-<li>Only works when there is only one specimen per arena</li>
+<li>Only works when there is only one specimen per arena.</li>
 </ul>
 </div>
 <!-- END_Specimens_have_same_direction -->
@@ -2974,7 +2974,7 @@ segmentation. If checked, this algorithm is applied to every frame after segment
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
-<li>Efficient for removing small noise from the background</li>
+<li>Efficient for removing small noise from the background.</li>
 </ul>
 </div>
 <!-- END_Morphological_opening -->
@@ -2987,7 +2987,7 @@ segmentation. If checked, this algorithm is applied to every frame after segment
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
-<li>Efficient for removing small holes in the detected specimen(s)</li>
+<li>Efficient for removing small holes in the detected specimen(s).</li>
 </ul>
 </div>
 <!-- END_Morphological_closing -->
@@ -2998,14 +2998,14 @@ segmentation. If checked, this algorithm is applied to every frame after segment
 <p>Applies an algorithm to correct detection errors near the initial specimen position due to color
 variations (e.g., from nutrient patches). Technical workflow:</p>
 <ul>
-<li>Identifies potential gaps around initial position</li>
-<li>Monitors local growth velocity</li>
-<li>Fills gaps using growth patterns from adjacent pixels</li>
+<li>Identifies potential gaps around initial position.</li>
+<li>Monitors local growth velocity.</li>
+<li>Fills gaps using growth patterns from adjacent pixels.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
-<li>⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no differencebetween starting and growth regions).</li>
+<li>Not recommended if the substrate has the same transparency everywhere (i.e. no difference betweenstarting and growth regions).</li>
 </ul>
 </div>
 <!-- END_Correct_errors_around_initial -->
@@ -3016,9 +3016,8 @@ variations (e.g., from nutrient patches). Technical workflow:</p>
 <p>During video analysis, prevents false specimen detection at arena borders by filtering rapid
 periphery growth.</p>
 <ul>
-<li><strong>Checked</strong> → Exclude fast
--moving detections near boundaries</li>
-<li><strong>Unchecked</strong> → Use standard detection criteria</li>
+<li><strong>Checked</strong>: Exclude fast moving detections near boundaries.</li>
+<li><strong>Unchecked</strong>: Use standard detection criteria.</li>
 </ul>
 <!-- END_Prevent_fast_growth_near_periphery -->
 
@@ -3026,18 +3025,18 @@ periphery growth.</p>
 <!-- START_Connect_distant_shapes -->
 <h2 id="connect-distant-shapes">Connect distant shapes:</h2>
 <p>Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
-specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
-and the detection is smaller than the true specimen. Technical implementation:</p>
+specimen per arena. This is useful when the specimen's heterogeneity create wrong disconnections and
+the detection is smaller than the true specimen. Technical implementation:</p>
 <ul>
-<li>Identifies disconnected subregions</li>
-<li>Analyzes local growth dynamics</li>
-<li>Recreates connections using spatially consistent growth patterns</li>
+<li>Identifies disconnected subregions.</li>
+<li>Analyzes local growth dynamics.</li>
+<li>Recreates connections using spatially consistent growth patterns.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
 <li>Increases analysis time substantially.</li>
-<li>Only works when there is only one specimen per arena</li>
+<li>Only works when there is only one specimen per arena.</li>
 </ul>
 </div>
 <!-- END_Connect_distant_shapes -->
@@ -3047,9 +3046,8 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <h2 id="appearance-size-threshold-automatic-if-checked">Appearance size threshold (automatic if checked):</h2>
 <p>Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).</p>
 <ul>
-<li><strong>Checked</strong> → Automatic threshold calculation.</li>
-<li><strong>Unchecked</strong> → Manual user
--defined threshold.</li>
+<li><strong>Checked</strong>: Automatic threshold calculation.</li>
+<li><strong>Unchecked</strong>: Manual user defined threshold.</li>
 </ul>
 <!-- END_Appearance_size_threshold -->
 
@@ -3076,7 +3074,7 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <ul>
-<li>Must not exceed minimum image dimension</li>
+<li>Must not exceed minimum image dimension.</li>
 </ul>
 </div>
 <!-- END_Mesh_side_length -->
@@ -3112,7 +3110,7 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <p>Defines the spatiotemporal scale of the dataset:</p>
 <ul>
 <li>Time between images or frames (minutes).</li>
-<li>An option to convert areas/distances from pixels to mm/mm².</li>
+<li>An option to convert areas and distances from pixels to mm^2 and mm.</li>
 </ul>
 <!-- END_Spatio_temporal_scaling -->
 
@@ -3122,8 +3120,8 @@ and the detection is smaller than the true specimen. Technical implementation:</
 <p>During initial image analysis, if the user drew cell/back regions to assist detection, this option
 saves and uses these annotations across all folders. In summary:</p>
 <ul>
-<li><strong>Checked</strong> → retain annotations for all folders</li>
-<li><strong>Unchecked</strong> → apply only to current folder</li>
+<li><strong>Checked</strong>: retain annotations for all folders.</li>
+<li><strong>Unchecked</strong>: apply only to current folder.</li>
 </ul>
 <!-- END_Keep_drawings -->
 
@@ -3132,8 +3130,8 @@ saves and uses these annotations across all folders. In summary:</p>
 <h2 id="run-analysis-in-parallel">Run analysis in parallel:</h2>
 <p>Allow the use of more than one core of the computer processor.</p>
 <ul>
-<li><strong>Checked</strong> → Uses multiple CPU cores to analyze arenas in parallel (faster).</li>
-<li><strong>Unchecked</strong> → Single core analysis.</li>
+<li><strong>Checked</strong>: Uses multiple CPU cores to analyze arenas in parallel (faster).</li>
+<li><strong>Unchecked</strong>: Single core analysis.</li>
 </ul>
 <!-- END_Parallel_analysis -->
 
@@ -3156,8 +3154,8 @@ memory, but increases crash risk if other apps are open.</p>
 <h2 id="lose-accuracy-to-save-ram">Lose accuracy to save RAM:</h2>
 <p>For low memory systems:</p>
 <ul>
-<li>Converts video from <code>np.float64</code> to <code>uint8</code></li>
-<li>Saves RAM at the cost of a slight precision loss</li>
+<li>Converts video from <code>np.float64</code> to <code>uint8</code>.</li>
+<li>Saves RAM at the cost of a slight precision loss.</li>
 </ul>
 <!-- END_Lose_accuracy_to_save_RAM -->
 
@@ -3172,8 +3170,8 @@ memory, but increases crash risk if other apps are open.</p>
 <h2 id="keep-unaltered-videos">Keep unaltered videos:</h2>
 <p>Keeps unaltered videos (<code>.h5</code> format) in hard drive.</p>
 <ul>
-<li><strong>Checked</strong> → Rerunning the same analysis will be faster.</li>
-<li><strong>Unchecked</strong> → These videos will be written and removed each run of the same analysis.</li>
+<li><strong>Checked</strong>: Rerunning the same analysis will be faster.</li>
+<li><strong>Unchecked</strong>: These videos will be written and removed each run of the same analysis.</li>
 </ul>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
