@@ -1388,8 +1388,10 @@ class EdgeIdentification:
                 unique_vertices_coord = np.transpose(np.array(np.nonzero(unique_vertices_im)))
                 dist_to_pix1 = cdist(unique_vertices_coord, [pix1])
                 dist_to_pix2 = cdist(unique_vertices_coord, [pix2])
-                start = unique_vertices_im[unique_vertices_coord[dist_to_pix1.argmin(), :]]
-                end = unique_vertices_im[unique_vertices_coord[dist_to_pix2.argmin(), :]]
+                start_coord = unique_vertices_coord[dist_to_pix1.argmin(), :]
+                start = np.unique(unique_vertices_im[start_coord[0], start_coord[1]])
+                end_coord = unique_vertices_coord[dist_to_pix2.argmin(), :]
+                end = np.unique(unique_vertices_im[end_coord[0], end_coord[1]])
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
                 logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
@@ -1559,11 +1561,15 @@ class EdgeIdentification:
         """
         if isinstance(start, np.ndarray):
             starts = start.astype(np.uint32, copy=False)
-            ends = end.astype(np.uint32, copy=False)
-            lengths = np.asarray(new_edge_lengths, dtype=np.float64)
         else:
             starts = np.array([start], dtype=np.uint32)
+        if isinstance(end, np.ndarray):
+            ends = end.astype(np.uint32, copy=False)
+        else:
             ends = np.array([end], dtype=np.uint32)
+        if isinstance(new_edge_lengths, np.ndarray):
+            lengths = np.asarray(new_edge_lengths, dtype=np.float64)
+        else:
             lengths = np.array([new_edge_lengths], dtype=np.float64)
 
         if isinstance(new_edge_pixels, np.ndarray):
