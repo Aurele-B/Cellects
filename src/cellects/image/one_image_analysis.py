@@ -28,10 +28,10 @@ import pandas as pd
 from scipy.stats import rankdata
 
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.morphological_operations import cross_33, create_ellipse
-from cellects.image_analysis.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
-from cellects.image_analysis.one_image_analysis_threads import ProcessImage
-from cellects.image_analysis.network_functions import NetworkDetection
+from cellects.image.morphological_operations import cross_33, create_ellipse
+from cellects.image.image_segmentation import generate_color_space_combination, get_color_spaces, filter_dict, filter_dict, apply_filter, otsu_thresholding, get_otsu_threshold, kmeans, windowed_thresholding
+from cellects.image.one_image_analysis_threads import ProcessImage
+from cellects.image.network_functions import NetworkDetection
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.utils.utilitarian import split_dict
 
@@ -210,6 +210,8 @@ class OneImageAnalysis:
             self.image, self.image2, all_c_spaces, self.first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, subtract_background, subtract_background2)
             if len(all_c_spaces) > len(self.all_c_spaces):
                 self.all_c_spaces = all_c_spaces
+        if not 'logical' in c_space_dict:
+            c_space_dict['logical'] = 'None'
 
         self.segmentation(logical=c_space_dict['logical'], color_number=color_number, bio_mask=bio_mask,
                           back_mask=back_mask, rolling_window_segmentation=rolling_window_segmentation,

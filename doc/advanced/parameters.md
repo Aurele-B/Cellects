@@ -37,13 +37,25 @@ depending on dataset characteristics.
 ## All specimens have the same direction:
 Select to optimize arena detection for specimens moving move in the same direction.
 
-- **Checked** → Uses motion pattern analysis for arena localization.
-- **Unchecked** → Employs standard centroid based algorithm.
+- **Checked**: Uses motion pattern analysis for arena localization.
+- **Unchecked**: Employs standard centroid based algorithm.
 !!! note
 
 	 - Both options work equally when growth is roughly isotropic.
-	 - Only works when there is only one specimen per arena
+	 - Only works when there is only one specimen per arena.
 <!-- END_Specimens_have_same_direction -->
+
+---
+
+<!-- START_Temporal_smoothing -->
+## Temporal smoothing:
+Applies temporal smoothing to reduce noise and highlight long term trends by averaging pixel
+intensity changes.  Use when analyzing slope based segmentation results.
+!!! note
+
+	 - This uses a moving window algorithm on pixel intensity curves over time.
+	 - Excessive iterations produce constant values, preventing accurate detection.
+<!-- END_Temporal_smoothing -->
 
 ---
 
@@ -62,7 +74,7 @@ Morphological opening first erodes and then dilates all specimens detected durin
 segmentation. If checked, this algorithm is applied to every frame after segmentation.
 !!! note
 
-	 - Efficient for removing small noise from the background
+	 - Efficient for removing small noise from the background.
 <!-- END_Morphological_opening -->
 
 ---
@@ -73,7 +85,7 @@ Morphological opening first dilates and then erodes all specimens detected durin
 segmentation. If checked, this algorithm is applied to every frame after segmentation.
 !!! note
 
-	 - Efficient for removing small holes in the detected specimen(s)
+	 - Efficient for removing small holes in the detected specimen(s).
 <!-- END_Morphological_closing -->
 
 ---
@@ -83,12 +95,12 @@ segmentation. If checked, this algorithm is applied to every frame after segment
 Applies an algorithm to correct detection errors near the initial specimen position due to color
 variations (e.g., from nutrient patches). Technical workflow:
 
-- Identifies potential gaps around initial position
-- Monitors local growth velocity
-- Fills gaps using growth patterns from adjacent pixels
+- Identifies potential gaps around initial position.
+- Monitors local growth velocity.
+- Fills gaps using growth patterns from adjacent pixels.
 !!! note
 
-	 - ⚠️ Not recommended if the substrate has the same transparency everywhere (i.e. no differencebetween starting and growth regions).
+	 - Not recommended if the substrate has the same transparency everywhere (i.e. no difference betweenstarting and growth regions).
 <!-- END_Correct_errors_around_initial -->
 
 ---
@@ -98,9 +110,8 @@ variations (e.g., from nutrient patches). Technical workflow:
 During video analysis, prevents false specimen detection at arena borders by filtering rapid
 periphery growth.
 
-- **Checked** → Exclude fast
--moving detections near boundaries
-- **Unchecked** → Use standard detection criteria
+- **Checked**: Exclude fast moving detections near boundaries.
+- **Unchecked**: Use standard detection criteria.
 
 <!-- END_Prevent_fast_growth_near_periphery -->
 
@@ -109,16 +120,16 @@ periphery growth.
 <!-- START_Connect_distant_shapes -->
 ## Connect distant shapes:
 Algorithm for connecting disjoint specimen regions in cases where there should be only one connected
-specimen per arena.  This is useful when the specimen's heterogeneity create wrong disconnections
-and the detection is smaller than the true specimen. Technical implementation:
+specimen per arena. This is useful when the specimen's heterogeneity create wrong disconnections and
+the detection is smaller than the true specimen. Technical implementation:
 
-- Identifies disconnected subregions
-- Analyzes local growth dynamics
-- Recreates connections using spatially consistent growth patterns
+- Identifies disconnected subregions.
+- Analyzes local growth dynamics.
+- Recreates connections using spatially consistent growth patterns.
 !!! note
 
 	 - Increases analysis time substantially.
-	 - Only works when there is only one specimen per arena
+	 - Only works when there is only one specimen per arena.
 <!-- END_Connect_distant_shapes -->
 
 ---
@@ -127,9 +138,8 @@ and the detection is smaller than the true specimen. Technical implementation:
 ## Appearance size threshold (automatic if checked):
 Minimum pixel count threshold for identifying specimen emergence (e.g., bacterial colony formation).
 
-- **Checked** → Automatic threshold calculation.
-- **Unchecked** → Manual user
--defined threshold.
+- **Checked**: Automatic threshold calculation.
+- **Unchecked**: Manual user defined threshold.
 
 <!-- END_Appearance_size_threshold -->
 
@@ -153,7 +163,7 @@ Selection criteria for initial specimen detection:
 Pixel dimension for analysis window size.
 !!! note
 
-	 - Must not exceed minimum image dimension
+	 - Must not exceed minimum image dimension.
 <!-- END_Mesh_side_length -->
 
 ---
@@ -184,7 +194,7 @@ The minimal variation in intensity to consider that a given window does contain 
 Defines the spatiotemporal scale of the dataset:
 
 - Time between images or frames (minutes).
-- An option to convert areas/distances from pixels to mm/mm².
+- An option to convert areas and distances from pixels to mm� and mm.
 
 <!-- END_Spatio_temporal_scaling -->
 
@@ -195,8 +205,8 @@ Defines the spatiotemporal scale of the dataset:
 During initial image analysis, if the user drew cell/back regions to assist detection, this option
 saves and uses these annotations across all folders. In summary:
 
-- **Checked** → retain annotations for all folders
-- **Unchecked** → apply only to current folder
+- **Checked**: retain annotations for all folders.
+- **Unchecked**: apply only to current folder.
 
 <!-- END_Keep_drawings -->
 
@@ -206,8 +216,8 @@ saves and uses these annotations across all folders. In summary:
 ## Run analysis in parallel:
 Allow the use of more than one core of the computer processor.
 
-- **Checked** → Uses multiple CPU cores to analyze arenas in parallel (faster).
-- **Unchecked** → Single core analysis.
+- **Checked**: Uses multiple CPU cores to analyze arenas in parallel (faster).
+- **Unchecked**: Single core analysis.
 
 <!-- END_Parallel_analysis -->
 
@@ -235,8 +245,8 @@ memory, but increases crash risk if other apps are open.
 ## Lose accuracy to save RAM:
 For low memory systems:
 
-- Converts video from `np.float64` to `uint8`
-- Saves RAM at the cost of a slight precision loss
+- Converts video from `np.float64` to `uint8`.
+- Saves RAM at the cost of a slight precision loss.
 
 <!-- END_Lose_accuracy_to_save_RAM -->
 
@@ -254,8 +264,8 @@ Frames per second of validation videos.
 ## Keep unaltered videos:
 Keeps unaltered videos (`.h5` format) in hard drive.
 
-- **Checked** → Rerunning the same analysis will be faster.
-- **Unchecked** → These videos will be written and removed each run of the same analysis.
+- **Checked**: Rerunning the same analysis will be faster.
+- **Unchecked**: These videos will be written and removed each run of the same analysis.
 !!! note
 
 	 - Large files: it is recommended to remove them once analysis is entirely finalized.

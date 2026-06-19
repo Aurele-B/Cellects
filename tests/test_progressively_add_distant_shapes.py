@@ -4,8 +4,8 @@ This script contains all unit tests of the progressively add distant shapes scri
 """
 import unittest
 from tests._base import CellectsUnitTest, binary_video_test
-from cellects.image_analysis.progressively_add_distant_shapes import *
-from cellects.image_analysis.morphological_operations import *
+from cellects.video.progressively_add_distant_shapes import *
+from cellects.image.morphological_operations import *
 
 
 class TestProgressivelyAddDistantShapes(CellectsUnitTest):

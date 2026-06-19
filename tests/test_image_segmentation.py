@@ -5,7 +5,7 @@ This script contains all unit tests of the image segmentation script
 
 import unittest
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img
-from cellects.image_analysis.image_segmentation import *
+from cellects.image.image_segmentation import *
 import numpy as np
 from numba.typed import Dict, List
 import cv2
@@ -259,12 +259,12 @@ class TestSegmentWithLumValue(CellectsUnitTest):
     """Unit test class for the `segment_with_lum_value` function."""
     def test_segment_with_lum_value_lighter_background(self):
         """Test segment_with_lum_value with a lighter background."""
-        converted_video = np.array([[[100, 120], [130, 140]], [[160, 170], [180, 200]]], dtype=np.uint8)
-        basic_bckgrnd_values = np.array([110, 150], dtype=np.uint8)
-        l_threshold = 180
+        converted_video = np.array([[[100, 120], [130, 190]], [[110, 120], [180, 200]]], dtype=np.uint8)
+        basic_bckgrnd_values = np.array([190, 190], dtype=np.uint8)
+        l_threshold = 140
         lighter_background = True
         expected_segmentation = np.array([[[1, 1], [1, 0]], [[1, 1], [0, 0]]], dtype=np.uint8)
-        expected_l_threshold_over_time = np.array([140, 180], dtype=np.int64)
+        expected_l_threshold_over_time = np.array([140, 140], dtype=np.int64)
 
         segmentation, l_threshold_over_time = segment_with_lum_value(converted_video, basic_bckgrnd_values,
                                                                      l_threshold, lighter_background)

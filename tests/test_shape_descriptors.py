@@ -7,7 +7,7 @@ as well as intermediate calculations like moment-of-inertia axes and contour det
 for individual descriptor methods and validation of edge case behavior across binary image inputs.
 """
 import unittest
-from cellects.image_analysis.shape_descriptors import *
+from cellects.image.shape_descriptors import *
 from tests._base import CellectsUnitTest
 
 

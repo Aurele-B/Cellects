@@ -5,10 +5,12 @@ This script contains all unit tests of the one_video_per_blob script
 import unittest
 import psutil
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.motion_analysis import MotionAnalysis
+from cellects.video.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
-from cellects.image_analysis.morphological_operations import rhombus_55, cross_33
-from cellects.utils.load_display_save import write_video_sets, read_json, write_json
+from cellects.image.morphological_operations import rhombus_55, cross_33
+from cellects.io.save import write_video_sets, write_json
+from cellects.io.load import read_json
+from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE, CONFIG_DIR
 from tests._base import CellectsUnitTest, rgb_several_arenas_img, several_arenas_bin_img, several_arenas_vid, several_arenas_bin_vid, rgb_video_test, binary_video_test, back_vary_rgb_many_small_blobs, small_blob_nb, many_small_blobs
 import numpy as np
@@ -563,11 +565,10 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(self.path_experiment  + '/' +  f"ind_1.h5"):
-            os.remove(self.path_experiment  + '/' +  f"ind_1.h5")
-        if os.path.isfile(self.path_experiment  + '/' +  f"ind_2.h5"):
-            os.remove(self.path_experiment  + '/' +  f"ind_2.h5")
-
+        files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_*')
+        for file in files_to_remove:
+            if os.path.isfile(file):
+                os.remove(file)
 
 class TestProgramOrganizerWithVideo(CellectsUnitTest):
     """Test suite for analyzing videos using ProgramOrganizer class"""
@@ -621,28 +622,10 @@ class TestProgramOrganizerWithVideo(CellectsUnitTest):
 
     def tearDown(self):
         """Remove all written files."""
-        if os.path.isfile(self.path_experiment + '/' + f"ind_1.mp4"):
-            os.remove(self.path_experiment + '/' + f"ind_1.mp4")
-        if os.path.isfile(self.path_experiment + '/' + f"ind_1.h5"):
-            os.remove(self.path_experiment + '/' + f"ind_1.h5")
-        if os.path.isfile(self.path_experiment + '/' + f"cellects_data.h5"):
-            os.remove(self.path_experiment + '/' + f"cellects_data.h5")
-        if os.path.isfile(self.path_experiment + '/' + f"one_row_per_frame.csv"):
-            os.remove(self.path_experiment + '/' + f"one_row_per_frame.csv")
-        if os.path.isfile(self.path_experiment + '/' + f"one_row_per_arena.csv"):
-            os.remove(self.path_experiment + '/' + f"one_row_per_arena.csv")
-        if os.path.isfile(self.path_experiment + '/' + f"Analysis efficiency, 3th image.JPG"):
-            os.remove(self.path_experiment + '/' + f"Analysis efficiency, 3th image.JPG")
-        if os.path.isfile(self.path_experiment + '/' + f"Analysis efficiency, last image.JPG"):
-            os.remove(self.path_experiment + '/' + f"Analysis efficiency, last image.JPG")
-        if os.path.isfile(self.path_experiment + '/' + f"coord_network1_t25_y244_x300.h5"):
-            os.remove(self.path_experiment + '/' + f"coord_network1_t25_y244_x300.h5")
-        if os.path.isfile(self.path_experiment + '/' + f"coord_pseudopods1_t25_y244_x300.h5"):
-            os.remove(self.path_experiment + '/' + f"coord_pseudopods1_t25_y244_x300.h5")
-        if os.path.isfile(self.path_experiment + '/' + f"vertex_table1_t25_y244_x300.csv"):
-            os.remove(self.path_experiment + '/' + f"vertex_table1_t25_y244_x300.csv")
-        if os.path.isfile(self.path_experiment + '/' + f"edge_table1_t25_y244_x300.csv"):
-            os.remove(self.path_experiment + '/' + f"edge_table1_t25_y244_x300.csv")
+        files_to_remove = insensitive_glob('*.h5') + insensitive_glob('Analysis efficiency*') + insensitive_glob('*.csv') + insensitive_glob('ind_*')
+        for file in files_to_remove:
+            if os.path.isfile(file):
+                os.remove(file)
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,10 +8,10 @@ on:
         required: true
       py_build:
         type: string
-        default: "3.12"
+        default: "3.14"
       py_test:
         type: string
-        default: '["3.12","3.13"]'
+        default: '["3.14"]'
       coverage:
         type: boolean
         default: false
@@ -41,12 +41,13 @@ jobs:
           path: dist/*
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: build
     strategy:
       fail-fast: false
       matrix:
         python: ${{ fromJson(inputs.py_test) }}
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,6 +67,7 @@ jobs:
           else
             pytest
           fi
+        shell: bash
       - uses: actions/upload-artifact@v4
         if: ${{ inputs.coverage && matrix.python == inputs.py_build }}
         with:

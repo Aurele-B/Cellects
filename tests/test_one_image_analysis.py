@@ -2,13 +2,10 @@
 """
 This script contains all unit tests of the one_image_analysis script
 """
-import unittest
 
-import cv2
-
-from cellects.core.one_image_analysis import *
-from cellects.image_analysis.image_segmentation import get_color_spaces, combine_color_spaces
-from cellects.image_analysis.morphological_operations import image_borders
+from cellects.image.one_image_analysis import *
+from cellects.image.image_segmentation import get_color_spaces
+from cellects.image.morphological_operations import image_borders
 from tests._base import *
 import numpy as np
 

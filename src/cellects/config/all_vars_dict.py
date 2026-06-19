@@ -8,10 +8,11 @@ These parameters are stored in a dictionary with keys corresponding to the param
 """
 
 import os
-from cellects.image_analysis.shape_descriptors import descriptors_categories, descriptors
+from cellects.image.shape_descriptors import descriptors_categories, descriptors
 import numpy as np
 from cellects.core.cellects_paths import ALL_VARS_JSON_FILE
-from cellects.utils.load_display_save import write_json, read_json
+from cellects.io.save import write_json
+from cellects.io.load import read_json
 from cellects.core.cellects_paths import EXPERIMENTS_DIR
 
 
@@ -50,6 +51,7 @@ class DefaultDicts:
             'image_horizontal_size_in_mm': 700,
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
+            'free_hand': False,
             'initial_bio_mask': None,
             'initial_back_mask': None,
             'keep_cell_and_back_for_all_folders': False,
@@ -90,7 +92,7 @@ class DefaultDicts:
             'maximal_growth_factor': 0.05,
             'repeat_video_smoothing': 1,
 
-            # Post-processing params
+            # Post-processing (full detect) params
             'specimen_activity': 'grow',
             'sliding_window_segmentation': False,
             'morphological_opening': True,

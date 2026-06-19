@@ -31,16 +31,17 @@ import cv2
 from numba.typed import Dict as TDict
 import numpy as np
 from PySide6 import QtCore
-
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.image_analysis.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours
-from cellects.image_analysis.image_segmentation import convert_subtract_and_filter_video
-from cellects.utils.formulas import scale_coordinates, bracket_to_uint8_image_contrast, get_contour_width_from_im_shape
-from cellects.utils.load_display_save import (read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image,
-                                              create_empty_videos, write_video, read_h5, remove_h5_key,
-                                              video_writing_decision, write_h5)
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len
-from cellects.core.motion_analysis import MotionAnalysis
+from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours, keep_one_connected_component, cc, CompareNeighborsWithValue, box_counting_dimension, prepare_box_counting
+from cellects.image.image_segmentation import convert_subtract_and_filter_video
+from cellects.io.save import video_writing_decision, write_video, remove_h5_key, write_h5
+from cellects.io.load import create_empty_videos, read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image, read_h5
+from cellects.utils.formulas import bracket_to_uint8_image_contrast, get_contour_width_from_im_shape, scale_coordinates
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, smallest_memory_array
+from cellects.video.graph_tracking import GraphTracking
+from cellects.video.motion_analysis import MotionAnalysis
+from cellects.video.network_tracking import NetworkTracking
+from cellects.video.oscillations_tracking import OscillationsTracking
 
 class PrecompileNJITThread(QtCore.QThread):
     """
@@ -318,8 +319,10 @@ class UpdateImageThread(QtCore.QThread):
             if len(idx) < 2:
                 user_input = False
             else:
+                idx = np.asarray(idx)
                 # Convert coordinates:
-                idx, min_y, max_y, min_x, max_x = scale_coordinates(coord=idx, scale=self.po.image_scaling_factors, dims=dims)
+                max_y, max_x = idx.max(0)
+                min_y, min_x = idx.min(0)
                 minmax = min_y, max_y, min_x, max_x
 
         if len(self.po.temporary_mask_coord) == 0:
@@ -353,17 +356,25 @@ class UpdateImageThread(QtCore.QThread):
                     # Color the segmentation mask in pink
                     self.po.drawn_image[binary_idx[0], binary_idx[1], :] = np.array((94, 0, 213), dtype=np.uint8)
             if user_input:# save
-                if self.po.arena0_back1_bio2 == 0:
-                    mask_shape = self.po.vars['arena_shape']
-                elif self.po.arena0_back1_bio2 == 1:
-                    mask_shape = "rectangle"
+                if self.po.drawing_mode == "free_hand":
+                    mask = np.zeros(dims, dtype=np.uint8)
+                    pts = np.array(self.po.free_hand_points, dtype=np.int32)
+                    pts = pts[:, ::-1]
+                    pts = pts.reshape((-1, 1, 2))
+                    cv2.fillPoly(mask, [pts], 1)
+                    mask = np.nonzero(mask)
                 else:
-                    mask_shape = self.po.all['starting_blob_shape']
-                    if mask_shape is None:
-                        mask_shape = 'circle'
-                # Save the user drawn mask
-                mask = create_mask(dims, minmax, mask_shape)
-                mask = np.nonzero(mask)
+                    if self.po.arena0_back1_bio2 == 0:
+                        mask_shape = self.po.vars['arena_shape']
+                    elif self.po.arena0_back1_bio2 == 1:
+                        mask_shape = "rectangle"
+                    else:
+                        mask_shape = self.po.all['starting_blob_shape']
+                        if mask_shape is None:
+                            mask_shape = 'circle'
+                    # Save the user drawn mask
+                    mask = create_mask(dims, minmax, mask_shape)
+                    mask = np.nonzero(mask)
 
                 if self.po.arena0_back1_bio2 == 1:
                     self.po.back_masks_number += 1
@@ -412,16 +423,23 @@ class UpdateImageThread(QtCore.QThread):
                 image = self.po.drawn_image.copy()
                 if self.po.arena0_back1_bio2 == 2:
                     color = (17, 160, 212)
-                    mask_shape = self.po.all['starting_blob_shape']
-                    if mask_shape is None:
-                        mask_shape = 'circle'
                 elif self.po.arena0_back1_bio2 == 1:
                     color = (224, 160, 81)
-                    mask_shape = "rectangle"
                 else:
                     color = (0, 0, 0)
-                    mask_shape = self.po.vars['arena_shape']
-                image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
+                if self.po.drawing_mode == "free_hand":
+                    mask = np.array(self.po.free_hand_points, dtype=np.int32)
+                    image[mask[:, 0], mask[:, 1], :] = color
+                else:
+                    if self.po.arena0_back1_bio2 == 2:
+                        mask_shape = self.po.all['starting_blob_shape']
+                        if mask_shape is None:
+                            mask_shape = 'circle'
+                    elif self.po.arena0_back1_bio2 == 1:
+                        mask_shape = "rectangle"
+                    else:
+                        mask_shape = self.po.vars['arena_shape']
+                    image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.image_from_thread.emit({"current_image": image})
         self.message_when_thread_finished.emit(True)
 
@@ -913,6 +931,16 @@ class VideoTrackingThread(QtCore.QThread):
         elif self.po.video_task == 'change_one_arena_result':
             self.change_one_arena_result()
 
+    def update_status(self, cont: bool=None, mess: str=None):
+        if cont is not None:
+            self.status['continue'] = cont
+        if mess is not None:
+            self.status['message'] = mess
+
+    def check_interruption(self):
+        if self.isInterruptionRequested():
+            self.update_status(False, f"Was waiting for thread interruption")
+
     def run_all(self):
         """
         Run the analysis process for video writing and motion analysis.
@@ -942,16 +970,13 @@ class VideoTrackingThread(QtCore.QThread):
             self.message_from_thread.emit(f"{self.status['folder']}, Writing videos")
             if not self.po.vars['several_blob_per_arena'] and self.po.sample_number != len(
                     self.po.bot):
-                self.status["continue"] = False
-                self.status["message"] = f"Wrong specimen number: restart the image analysis."
+                self.update_status(False, f"Wrong specimen number: restart the image analysis.")
             else:
                 self.run_video_writing()
                 if self.status['continue']:
                     self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                     self.run_motion_analysis()
-                    if self.isInterruptionRequested():
-                        self.status['message'] = f"Was waiting for thread interruption"
-                        self.status['continue'] = False
+                    self.check_interruption()
                 if self.status['continue']:
                     if self.po.all['folder_number'] > 1:
                         starting_folder_id += 1
@@ -984,9 +1009,7 @@ class VideoTrackingThread(QtCore.QThread):
                         if self.status['continue']:
                             self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                             self.run_motion_analysis()
-                            if self.isInterruptionRequested():
-                                self.status['message'] = f"Was waiting for thread interruption"
-                                self.status['continue'] = False
+                            self.check_interruption()
                 if not self.status['continue']:
                     break
         if self.status['continue']:
@@ -1031,9 +1054,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.message_from_thread.emit(f"{self.status['folder']}, Video loading, wait...")
         #Need a look for data when cellects_settings.json and 1 folder selected amon several
         self.pre_processing()
-        if self.isInterruptionRequested():
-            self.status['message'] = f"Was waiting for thread interruption"
-            self.status['continue'] = False
+        self.check_interruption()
         if self.status['continue']:
             memory_diff = self.po.update_available_core_nb()
             if self.po.cores == 0:
@@ -1043,18 +1064,14 @@ class VideoTrackingThread(QtCore.QThread):
                 if self.po.motion is None or self.po.load_quick_full == 0:
                     self.load_one_arena()
                 if self.status['continue'] and self.po.load_quick_full > 0:
-                    if self.po.motion.start is not None:
-                        logging.info("One arena detection has started")
-                        self.one_detection()
-                        if self.status['continue']:
-                            if self.po.load_quick_full > 1:
-                                logging.info("One arena post-processing has started")
-                                self.post_processing()
-                            else:
-                                self.when_detection_finished.emit("Detection done, read to see the result")
-                    else:
-                        self.status['message'] = f"The current parameters failed to detect the cell(s) motion"
-                        self.status['continue'] = False
+                    logging.info("One arena detection has started")
+                    self.one_detection()
+                    if self.status['continue']:
+                        if self.po.load_quick_full > 1:
+                            logging.info("One arena post-processing has started")
+                            self.post_processing()
+                        else:
+                            self.when_detection_finished.emit("Detection done, read to see the result")
 
         if not self.status['continue']:
             self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
@@ -1076,7 +1093,7 @@ class VideoTrackingThread(QtCore.QThread):
                                               self.po.all['folder_list'][exp_i])
         else:
             self.status["folder"] = reduce_path_len(self.po.all['global_pathway'], 6, 10)
-            logging.info(f"Use {self.status["folder"]} folder")
+            logging.info(f"Use {self.status['folder']} folder")
             self.po.update_folder_id(self.po.all['first_folder_sample_number'])
 
     def pre_processing(self):
@@ -1092,6 +1109,8 @@ class VideoTrackingThread(QtCore.QThread):
         bool
             Returns True if pre-processing completed successfully; False otherwise.
         """
+        if len(self.po.data_list) == 0:
+            self.po.look_for_data()
         self.po.load_data_to_run_cellects_quickly()
         if not self.po.first_exp_ready_to_run:
             logging.info("Pre-processing has started")
@@ -1129,6 +1148,9 @@ class VideoTrackingThread(QtCore.QThread):
             else:
                 self.status['message'] = f"Wrong folder or parameters"
                 self.status['continue'] = False
+        else:
+            if len(self.po.vars['analyzed_individuals']) != self.po.sample_number:
+                self.po.set_analyzed_individuals()
 
     def run_video_writing(self):
         """
@@ -1202,9 +1224,7 @@ class VideoTrackingThread(QtCore.QThread):
                                         "message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
                                     self.status['continue'] = False
                                     logging.info(f"Reset all settings in advanced parameters")
-                                if self.isInterruptionRequested():
-                                    self.status['message'] = f"Was waiting for thread interruption"
-                                    self.status['continue'] = False
+                                self.check_interruption()
                                 if not self.status['continue']:
                                     return
                         if self.status['continue']:
@@ -1223,18 +1243,16 @@ class VideoTrackingThread(QtCore.QThread):
                                 except OSError:
                                     self.status['message'] = f"Full disk memory: clear space and retry"
                                     self.status['continue'] = False
-                                if self.isInterruptionRequested():
-                                    self.status['message'] = f"Was waiting for thread interruption"
-                                    self.status['continue'] = False
+                                self.check_interruption()
                                 if not self.status['continue']:
                                     return
+                            self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved")
+                            logging.info(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved.")
+                            logging.info("When they exist, do not overwrite unaltered video")
+                            self.po.all['overwrite_unaltered_videos'] = False
+                            self.po.save_variable_dict()
+                            self.po.save_data_to_run_cellects_quickly()
                         del video_bunch
-                        self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved")
-                        logging.info(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved.")
-                    logging.info("When they exist, do not overwrite unaltered video")
-                    self.po.all['overwrite_unaltered_videos'] = False
-                    self.po.save_variable_dict()
-                    self.po.save_data_to_run_cellects_quickly()
                 else:
                     self.status['continue'] = False
                     ram_message = ''
@@ -1280,7 +1298,7 @@ class VideoTrackingThread(QtCore.QThread):
         try:
             memory_diff = self.po.update_available_core_nb()
             if self.po.cores > 0:  # i.e. enough memory
-                if not self.po.all['do_multiprocessing'] or self.po.cores == 1:
+                if not self.po.all['do_multiprocessing']:
                     arena_nb = len(self.po.vars['analyzed_individuals'])
                     self.status['message'] = f"Starting sequential analysis of {arena_nb} arena(s)"
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
@@ -1290,57 +1308,54 @@ class VideoTrackingThread(QtCore.QThread):
                     for i, arena in enumerate(self.po.vars['analyzed_individuals']):
                         l = [i, arena, self.po.vars, False, False, False, None]
                         self.po.motion = MotionAnalysis(l)
-                        if self.isInterruptionRequested():
-                            return
-                        self.po.motion.assess_motion_detection()
-                        if self.isInterruptionRequested():
-                            return
-                        if self.po.motion.start is not None:
-                            self.po.motion.detection()
-                            if self.isInterruptionRequested():
-                                return
-                            self.po.motion.initialize_post_processing()
-                            if self.isInterruptionRequested():
-                                return
-                            self.po.motion.t = self.po.motion.start
-                            current_percentage, eta = pat_tracker.get_progress()
-                            while not self.isInterruptionRequested() and self.po.motion.t < self.po.motion.dims[0]:  #200:
-                                self.po.motion.update_shape(False)
-                                t = self.po.motion.t - 1
-                                contours = np.nonzero(get_contours(self.po.motion.binary[t, ...]))
-                                if self.po.motion.visu is not None:
-                                    im_to_display = self.po.motion.visu[t, ...].copy()
-                                    im_to_display[contours[0], contours[1], ...] = self.po.vars['contour_color']
-                                else:
-                                    im_to_display = self.po.motion.binary[t, :, :] * 255
-                                self.image_from_thread.emit({"current_image": im_to_display,
-                                                             "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
-                            if self.isInterruptionRequested():
-                                return
-                            do_continue = self.analyze_post_processing_results()
-                            if do_continue:
-                                self.message_from_thread.emit(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
-                                logging.info(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
-                                self.po.motion.save_results()
-                                if not self.po.vars['several_blob_per_arena']:
-                                    # Save basic statistics
-                                    self.po.update_one_row_per_arena(i, self.po.motion.one_descriptor_per_arena)
+                        if not self.isInterruptionRequested():
+                            self.po.motion.assess_motion_detection()
+                            if not self.isInterruptionRequested():
+                                self.po.motion.detection()
+                                if not self.isInterruptionRequested():
+                                    self.po.motion.initialize_post_processing()
+                                    if not self.isInterruptionRequested():
+                                        self.po.motion.t = self.po.motion.start
+                                        current_percentage, eta = pat_tracker.get_progress()
+                                        while not self.isInterruptionRequested() and self.po.motion.t < self.po.motion.dims[0]:  #200:
+                                            self.po.motion.update_shape(False)
+                                            t = self.po.motion.t - 1
+                                            contours = np.nonzero(get_contours(self.po.motion.binary[t, ...]))
+                                            if self.po.motion.visu is not None:
+                                                im_to_display = self.po.motion.visu[t, ...].copy()
+                                                im_to_display[contours[0], contours[1], ...] = self.po.vars['contour_color']
+                                            else:
+                                                im_to_display = self.po.motion.binary[t, :, :] * 255
+                                            self.image_from_thread.emit({"current_image": im_to_display,
+                                                                         "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
+                                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%{eta})"
+                                        if not self.isInterruptionRequested():
+                                            do_continue = self.analyze_post_processing_results()
+                                            if do_continue:
+                                                self.message_from_thread.emit(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                                logging.info(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                                self.po.motion.save_results()
+                                                if not self.po.vars['several_blob_per_arena']:
+                                                    # Save basic statistics
+                                                    self.po.update_one_row_per_arena(i, self.po.motion.one_descriptor_per_arena)
 
-                                    # Save descriptors in long_format
-                                    self.po.update_one_row_per_frame(i * self.po.vars['img_number'],
-                                                                              arena * self.po.vars['img_number'],
-                                                                              self.po.motion.one_row_per_frame)
+                                                    # Save descriptors in long_format
+                                                    self.po.update_one_row_per_frame(i * self.po.vars['img_number'],
+                                                                                              arena * self.po.vars['img_number'],
+                                                                                              self.po.motion.one_row_per_frame)
 
-                                # Save efficiency visualization
-                                self.po.add_analysis_visualization_to_first_and_last_images(i,
-                                                                                                     self.po.motion.efficiency_test_1,
-                                                                                                     self.po.motion.efficiency_test_2)
-                                # Emit message to the interface
-                                if self.isInterruptionRequested():
-                                    return
-                                self.image_from_thread.emit({"current_image": self.po.last_image.bgr,
-                                                             "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
-                        self.po.motion = None
+                                                # Save efficiency visualization
+                                                self.po.add_analysis_visualization_to_first_and_last_images(i,
+                                                                                                                     self.po.motion.efficiency_test_1,
+                                                                                                                     self.po.motion.efficiency_test_2)
+                                                # Emit message to the interface
+                                                if not self.isInterruptionRequested():
+                                                    self.image_from_thread.emit({"current_image": self.po.last_image.bgr,
+                                                                                 "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
+                                            self.po.motion = None
+                        self.check_interruption()
+                        if not self.status['continue']:
+                            return
                     duration = np.round((default_timer() - tii) / 60, 2)
                     self.status['message'] = f"Sequential analysis lasted {duration} minutes"
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
@@ -1379,14 +1394,13 @@ class VideoTrackingThread(QtCore.QThread):
 
                         finished_processes: int = 0
                         while finished_processes < started_processes:
+                            self.check_interruption()
                             if self.isInterruptionRequested():
                                 for p in PROCESSES:
                                     if p.is_alive():
                                         p.terminate()
                                 for p in PROCESSES:
                                     p.join(timeout=1)
-                                self.status['message'] = f"Was waiting for thread interruption"
-                                self.status['continue'] = False
                                 return
 
                             for p in PROCESSES:
@@ -1424,16 +1438,13 @@ class VideoTrackingThread(QtCore.QThread):
                              "message": f"{self.status['folder']}, Analyzed {len(self.po.vars['analyzed_individuals'])}/{len(self.po.vars['analyzed_individuals'])} arenas (100%), Parallel analysis took {duration} minutes"})
                         logging.info(f"Parallel analysis lasted {duration} minutes")
                     except MemoryError:
-                        self.status['continue'] = False
-                        self.status['message'] = f"Not enough memory, reduce the core number for parallel analysis"
-                        return
-                self.po.save_tables()
+                        self.update_status(False, f"Not enough memory, reduce the core number for parallel analysis")
+                if self.status['continue']:
+                    self.po.save_tables()
             else:
-                self.status['continue'] = False
-                self.status['message'] = f"Requires an additional {memory_diff}GB of RAM to run"
+                self.update_status(False, f"Requires an additional {memory_diff}GB of RAM to run")
         except MemoryError:
-            self.status['continue'] = False
-            self.status['message'] = f"Requires additional memory to run"
+            self.update_status(False, f"Requires additional memory to run")
 
     def load_one_arena(self):
         """
@@ -1486,9 +1497,8 @@ class VideoTrackingThread(QtCore.QThread):
                         self.po.converted_video[image_i, ...] = img
                     else:
                         self.po.visu[image_i, ...] = img
-                    if self.isInterruptionRequested():
-                        self.status['message'] = f"Was waiting for thread interruption"
-                        self.status['continue'] = False
+                    self.check_interruption()
+                    if not self.status['continue']:
                         return
                 if not self.po.vars['already_greyscale']:
                     msg = "Starting: video conversion"
@@ -1524,9 +1534,8 @@ class VideoTrackingThread(QtCore.QThread):
                 self.po.converted_video = self.po.motion.converted_video.copy()
                 if self.po.vars['convert_for_motion']['logical'] != 'None':
                     self.po.converted_video2 = self.po.motion.converted_video2.copy()
-            if self.isInterruptionRequested():
-                self.status['message'] = f"Was waiting for thread interruption"
-                self.status['continue'] = False
+            self.check_interruption()
+            if not self.status['continue']:
                 return
             self.po.motion.assess_motion_detection()
             self.when_loading_finished.emit(save_loaded_video)
@@ -1628,74 +1637,75 @@ class VideoTrackingThread(QtCore.QThread):
                 False, False, False, self.videos_in_ram]
         mask = [[], [], []]
         for seg_i in analyses_to_compute:
-            analysis_i = MotionAnalysis(args)
-            analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
-            if self.po.all['compute_all_options']:
-                if seg_i == 0:
-                    analysis_i.segmented = self.po.motion.segmented
-                else:
-                    if seg_i == 1:
-                        mask = self.po.motion.luminosity_segmentation
-                    elif seg_i == 2:
-                        mask = self.po.motion.gradient_segmentation
-                    elif seg_i == 3:
-                        mask = self.po.motion.logical_and
-                    elif seg_i == 4:
-                        mask = self.po.motion.logical_or
-                    analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
-            else:
-                if self.po.computed_video_options[self.po.all['video_option']]:
-                    if self.po.motion is None:
-                        self.load_one_arena()
-                    if self.status['continue']:
-                        if self.po.motion.segmented is None:
-                            self.one_detection()
-                        if self.status['continue']:
-                            analysis_i.segmented = self.po.motion.segmented
             if self.status['continue']:
-                analysis_i.start = time_parameters[0]
-                analysis_i.step = time_parameters[1]
-                analysis_i.lost_frames = time_parameters[2]
-                analysis_i.substantial_growth = time_parameters[3]
-                analysis_i.origin_idx = self.po.motion.origin_idx
-                analysis_i.initialize_post_processing()
-                analysis_i.t = analysis_i.start
-
-                while not self.isInterruptionRequested() and analysis_i.t < analysis_i.binary.shape[0]:
-                    analysis_i.update_shape(False)
-                    contours = np.nonzero(get_contours(analysis_i.binary[analysis_i.t - 1, :, :]))
-                    current_image = self.po.motion.visu[analysis_i.t - 1, :, :, :].copy()
-                    current_image[contours[0], contours[1], :] = self.po.vars['contour_color']
-                    self.image_from_thread.emit(
-                        {"message": f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Option n°{seg_i + 1}, Frame n°{analysis_i.t}/{analysis_i.binary.shape[0]}",
-                         "current_image": current_image})
-                if self.isInterruptionRequested():
-                    self.status['message'] = f"Was waiting for thread interruption"
-                    self.status['continue'] = False
-                    break
-                if analysis_i.start is None:
-                    analysis_i.binary = np.repeat(np.expand_dims(analysis_i.origin, 0),
-                                               analysis_i.converted_video.shape[0], axis=0)
-                    if self.po.vars['color_number'] > 2:
-                        self.message_from_thread.emit(
-                            f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Failed to detect motion. Redo image analysis (with only 2 colors?)")
-                    else:
-                        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Option n°{seg_i + 1} failed to detect motion")
-
+                analysis_i = MotionAnalysis(args)
+                analysis_i.segmented = np.zeros(analysis_i.converted_video.shape[:3], dtype=np.uint8)
                 if self.po.all['compute_all_options']:
                     if seg_i == 0:
-                        self.po.motion.segmented = analysis_i.binary
-                    elif seg_i == 1:
-                        self.po.motion.luminosity_segmentation = np.nonzero(analysis_i.binary)
-                    elif seg_i == 2:
-                        self.po.motion.gradient_segmentation = np.nonzero(analysis_i.binary)
-                    elif seg_i == 3:
-                        self.po.motion.logical_and = np.nonzero(analysis_i.binary)
-                    elif seg_i == 4:
-                        self.po.motion.logical_or = np.nonzero(analysis_i.binary)
+                        analysis_i.segmented = self.po.motion.segmented
+                    else:
+                        if seg_i == 1:
+                            mask = self.po.motion.luminosity_segmentation
+                        elif seg_i == 2:
+                            mask = self.po.motion.gradient_segmentation
+                        elif seg_i == 3:
+                            mask = self.po.motion.logical_and
+                        elif seg_i == 4:
+                            mask = self.po.motion.logical_or
+                        if mask is not None:
+                            analysis_i.segmented[mask[0], mask[1], mask[2]] = 1
                 else:
-                    self.po.motion.segmented = analysis_i.binary
-        self.when_detection_finished.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Post processing done: read, save or run all arenas")
+                    if self.po.computed_video_options[self.po.all['video_option']]:
+                        if self.po.motion is None:
+                            self.load_one_arena()
+                        if self.status['continue']:
+                            if self.po.motion.segmented is None:
+                                self.one_detection()
+                            if self.status['continue']:
+                                analysis_i.segmented = self.po.motion.segmented
+                if self.status['continue']:
+                    analysis_i.start = time_parameters[0]
+                    analysis_i.step = time_parameters[1]
+                    analysis_i.lost_frames = time_parameters[2]
+                    analysis_i.substantial_growth = time_parameters[3]
+                    analysis_i.origin_idx = self.po.motion.origin_idx
+                    analysis_i.initialize_post_processing()
+                    analysis_i.t = analysis_i.start
+
+                    while not self.isInterruptionRequested() and analysis_i.t < analysis_i.binary.shape[0]:
+                        analysis_i.update_shape(False)
+                        contours = np.nonzero(get_contours(analysis_i.binary[analysis_i.t - 1, :, :]))
+                        current_image = self.po.motion.visu[analysis_i.t - 1, :, :, :].copy()
+                        current_image[contours[0], contours[1], :] = self.po.vars['contour_color']
+                        self.image_from_thread.emit(
+                            {"message": f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Option n°{seg_i + 1}, Frame n°{analysis_i.t}/{analysis_i.binary.shape[0]}",
+                             "current_image": current_image})
+                    self.check_interruption()
+                    if self.status['continue']:
+                        if analysis_i.start is None:
+                            analysis_i.binary = np.repeat(np.expand_dims(analysis_i.origin, 0),
+                                                       analysis_i.converted_video.shape[0], axis=0)
+                            if self.po.vars['color_number'] > 2:
+                                self.message_from_thread.emit(
+                                    f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Failed to detect motion. Redo image analysis (with only 2 colors?)")
+                            else:
+                                self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Option n°{seg_i + 1} failed to detect motion")
+
+                        if self.po.all['compute_all_options']:
+                            if seg_i == 0:
+                                self.po.motion.segmented = analysis_i.binary
+                            elif seg_i == 1:
+                                self.po.motion.luminosity_segmentation = np.nonzero(analysis_i.binary)
+                            elif seg_i == 2:
+                                self.po.motion.gradient_segmentation = np.nonzero(analysis_i.binary)
+                            elif seg_i == 3:
+                                self.po.motion.logical_and = np.nonzero(analysis_i.binary)
+                            elif seg_i == 4:
+                                self.po.motion.logical_or = np.nonzero(analysis_i.binary)
+                        else:
+                            self.po.motion.segmented = analysis_i.binary
+        if self.status['continue']:
+            self.when_detection_finished.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Post processing done: read, save or run all arenas")
 
     def change_one_arena_result(self):
         """
@@ -1708,7 +1718,8 @@ class VideoTrackingThread(QtCore.QThread):
         detection. It also handles optional computations like fading effects and
         segmentation based on different video options.
         """
-        self.message_from_thread.emit(f"{self.status['folder']}, Starting modifying Arena n°{self.po.all['arena']} results")
+        self.status['message'] = f"Analyze and save Arena n°{self.po.all['arena']}"
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
         if self.po.motion.start is None:
             self.po.motion.binary = np.repeat(np.expand_dims(self.po.motion.origin, 0),
                                                      self.po.motion.converted_video.shape[0], axis=0).astype(np.uint8)
@@ -1727,7 +1738,8 @@ class VideoTrackingThread(QtCore.QThread):
                     elif self.po.all['video_option'] == 4:
                         mask = self.po.motion.logical_or
                     self.po.motion.binary = np.zeros(self.po.motion.dims, dtype=np.uint8)
-                    self.po.motion.binary[mask[0], mask[1], mask[2]] = 1
+                    if mask is not None:
+                        self.po.motion.binary[mask[0], mask[1], mask[2]] = 1
             else:
                 self.po.motion.binary = np.zeros(self.po.motion.dims[:3], dtype=np.uint8)
                 if self.po.computed_video_options[self.po.all['video_option']]:
@@ -1736,10 +1748,11 @@ class VideoTrackingThread(QtCore.QThread):
         if not do_continue:
             self.status['message'] = "Was waiting for thread interruption"
             return
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.all['arena']}: Saving results")
+        self.status['message'] = f"Arena n°{self.po.all['arena']}: (Over)writing results"
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
         self.po.motion.change_results_of_one_arena()
         self.po.motion = None
-        self.status['message'] = f"Arena n°{self.po.all['arena']}: analysis finished"
+        self.status['message'] = f"Arena n°{self.po.all['arena']}: analysis done and saved"
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
     def analyze_post_processing_results(self) -> bool:
@@ -1752,31 +1765,191 @@ class VideoTrackingThread(QtCore.QThread):
         growth transition detection, network analysis, Oscillation study, fractal descriptions, and updating results.
         Each step is conditional on the absence of an interruption request.
         """
+        self.po.motion.dict_signal = self.image_from_thread.emit
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing descriptors")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing descriptors")
         self.po.motion.get_descriptors_from_binary(release_memory=False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting growth transitions")
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting growth transitions")
         self.po.motion.detect_growth_transitions()
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting network and graph")
-        self.po.motion.networks_analysis(False)
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network")
+        self.detect_network_dynamics()
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Detecting oscillatory patterns")
-        self.po.motion.study_cytoscillations(False)
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Extracting graph")
+        self.extract_graph_dynamics()
+        # self.po.motion.networks_analysis(False)
         if self.isInterruptionRequested():
             return False
-        self.message_from_thread.emit(f"{self.status['folder']}, Arena n°{self.po.motion.one_descriptor_per_arena['arena']}: Computing fractal dimension")
-        self.po.motion.fractal_descriptions()
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting oscillatory patterns")
+        self.detect_oscillations_dynamics()
+        # self.po.motion.study_cytoscillations(False)
+        if self.isInterruptionRequested():
+            return False
+        self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing fractal dimension")
+        self.fractal_descriptions()
+        # self.po.motion.fractal_descriptions()
         if self.isInterruptionRequested():
             return False
         else:
             return True
 
+    def detect_network_dynamics(self):
+        """
+        Detects and tracks dynamic features (e.g., pseudopods) in a biological network over time from video data.
+
+        Analyzes spatiotemporal dynamics of a network structure using binary masks and grayscale video data. Processes each frame to detect network components, optionally identifies pseudopods, applies temporal smoothing, and generates visualization overlays. Saves coordinate data for detected networks if enabled.
+
+        Notes
+        -----
+        - Memory-intensive operations on large arrays may require system resources.
+        - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
+        - Pseudopod detection requires sufficient contrast with the background in grayscale images.
+        """
+        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+            net_track = NetworkTracking(self.po.motion)
+            net_track.init_tracking()
+            for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
+                if self.isInterruptionRequested():
+                    return False
+                complete_network = net_track.segment_frame(t)
+                self.image_from_thread.emit({
+                                    'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 1/2: rough detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                    'current_image': complete_network})
+            if net_track.dims[0] == 1:
+                net_track.network_dynamics = complete_network
+            else:
+                for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
+                    if self.isInterruptionRequested():
+                        return False
+                    imtoshow = net_track.post_process(t)
+                    self.image_from_thread.emit({
+                                        'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
+                                        'current_image': imtoshow})
+            self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
+            del net_track
+
+    def extract_graph_dynamics(self):
+        """
+        Extracts dynamic graph data from video frames based on network dynamics.
+
+        This function processes time-series binary network structures to extract evolving vertices and edges over time. It computes spatial relationships between networks and an origin point through image processing steps including contour detection, padding for alignment, skeleton extraction, and morphological analysis. Vertex and edge attributes like position, connectivity, width, intensity, and betweenness are compiled into tables saved as CSV files.
+
+        Notes
+        ---
+        Output CSVs use NumPy arrays converted to pandas DataFrames with columns:
+        - Vertex table includes timestamps (t), coordinates (y,x), and connectivity flags.
+        - Edge table contains betweenness centrality calculated during skeleton processing.
+        Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
+        """
+        if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_graph']:
+            if self.po.motion.coord_network is None:
+                self.po.motion.coord_network = np.array(np.nonzero(self.po.motion.binary))
+            graph_track = GraphTracking(self.po.motion.converted_video, self.po.motion.coord_network,
+                                        self.po.motion.one_descriptor_per_arena['arena'],
+                                        self.po.motion.origin, self.po.motion.pseudopod_coord)
+            for t in np.arange(graph_track.starting_time, graph_track.dims[0]):  # t=35 t=15  Y, X = 866, 733
+                graph = graph_track.extract_graph(t)
+                if self.isInterruptionRequested():
+                    return False
+                self.image_from_thread.emit(
+                    {'message': f"{self.status['folder']}, {self.status['message']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
+                     'current_image': graph})
+            graph_track.save_graph()
+            del graph_track
+
+    def detect_oscillations_dynamics(self):
+        """
+        Detects oscillatory dynamics in a labeled arena from processed video data
+
+        Notes
+        -----
+        - Processes video data by calculating intensity gradients to detect directional oscillations
+        - Memory-intensive operations use float16 when available RAM would otherwise be exceeded
+        - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
+        """
+        if (self.po.vars['save_coord_thickening_slimming'] or self.po.vars['oscilacyto_analysis']) and self.po.motion.converted_video.shape[0] > 1:
+
+            osci_track = OscillationsTracking(self.po.motion)
+            osci_track.init_tracking()
+            for t in np.arange(osci_track.starting_time, osci_track.dims[0]):
+                if self.isInterruptionRequested():
+                    return False
+                oscillations_image = osci_track.find_oscillations_in_frame(t)
+                self.image_from_thread.emit(
+                    {'message': f"{self.status['folder']}, {self.status['message']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
+                     'current_image': oscillations_image})
+            osci_track.save_oscillations()
+            del osci_track
+
+
+    def fractal_descriptions(self):
+        """
+        Method for analyzing fractal patterns in binary data.
+
+        Fractal analysis is performed on the binary representation of the data,
+        optionally considering network dynamics if specified. The results
+        include fractal dimensions, R-values, and box counts for the data.
+
+        If network analysis is enabled, additional fractal dimensions,
+        R-values, and box counts are calculated for the inner network.
+        If 'output_in_mm' is True, then values in mm can be obtained.
+        """
+        if self.po.vars['fractal_analysis']:
+            logging.info(f"{self.status['message']}. Starting fractal analysis.")
+
+            if self.po.vars['save_coord_network']:
+                box_counting_dimensions = np.zeros((self.po.motion.dims[0], 7), dtype=np.float64)
+            else:
+                box_counting_dimensions = np.zeros((self.po.motion.dims[0], 3), dtype=np.float64)
+
+            for t in np.arange(self.po.motion.dims[0]):
+                if self.isInterruptionRequested():
+                    return False
+                if self.po.vars['save_coord_network']:
+                    current_network = np.zeros(self.po.motion.dims[1:], dtype=np.uint8)
+                    net_t = self.po.motion.coord_network[1:, self.po.motion.coord_network[0, :] == t]
+                    current_network[net_t[0], net_t[1]] = 1
+                    box_counting_dimensions[t, 0] = current_network.sum()
+                    zoomed_binary, side_lengths = prepare_box_counting(self.po.motion.binary[t, ...], min_mesh_side=self.po.vars[
+                        'fractal_box_side_threshold'], zoom_step=self.po.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, 1], box_counting_dimensions[t, 2], box_counting_dimensions[
+                        t, 3] = box_counting_dimension(zoomed_binary, side_lengths)
+                    zoomed_binary, side_lengths = prepare_box_counting(current_network,
+                                                                       min_mesh_side=self.po.vars[
+                                                                           'fractal_box_side_threshold'],
+                                                                       zoom_step=self.po.vars['fractal_zoom_step'],
+                                                                       contours=False)
+                    box_counting_dimensions[t, 4], box_counting_dimensions[t, 5], box_counting_dimensions[
+                        t, 6] = box_counting_dimension(zoomed_binary, side_lengths)
+                else:
+                    zoomed_binary, side_lengths = prepare_box_counting(self.po.motion.binary[t, ...],
+                                                                       min_mesh_side=self.po.vars['fractal_box_side_threshold'],
+                                                                       zoom_step=self.po.vars['fractal_zoom_step'], contours=True)
+                    box_counting_dimensions[t, :] = box_counting_dimension(zoomed_binary, side_lengths)
+
+                self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing box-counting dimension, {round(t / self.po.motion.dims[0] * 100, 2)}%")
+
+            if self.po.vars['save_coord_network']:
+                self.po.motion.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
+                self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
+                self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+                self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 3]
+                self.po.motion.one_row_per_frame["inner_network_fractal_dimension"] = box_counting_dimensions[:, 4]
+                self.po.motion.one_row_per_frame["inner_network_fractal_r_value"] = box_counting_dimensions[:, 5]
+                self.po.motion.one_row_per_frame["inner_network_fractal_box_nb"] = box_counting_dimensions[:, 6]
+                if self.po.vars['output_in_mm']:
+                    self.po.motion.one_row_per_frame["inner_network_size"] *= self.po.vars['average_pixel_size']
+            else:
+                self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
+                self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
+                self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+            if self.po.vars['save_coord_network']:
+                del self.po.motion.coord_network
 
 class VideoReaderThread(QtCore.QThread):
     """
@@ -1850,6 +2023,8 @@ class VideoReaderThread(QtCore.QThread):
         frame_delay = (8 + np.log10(self.po.motion.dims[0])) / self.po.motion.dims[0]
         current_image = video_analysis[0, ...]
         for t in np.arange(self.po.motion.dims[0]):
+            if self.isInterruptionRequested():
+                break
             mask = cv2.morphologyEx(video_mask[t, ...], cv2.MORPH_GRADIENT, cross_33)
             mask = np.stack((mask, mask, mask), axis=2)
             current_image = video_analysis[t, ...].copy()
@@ -1857,8 +2032,6 @@ class VideoReaderThread(QtCore.QThread):
             self.message_from_thread.emit(
                 {"current_image": current_image, "message": f"Reading in progress... Image number: {t}"}) #, "time": timings[t]
             time.sleep(frame_delay)
-            if self.isInterruptionRequested():
-                break
         self.message_from_thread.emit({"current_image": current_image, "message": ""})#, "time": timings[t]
 
 

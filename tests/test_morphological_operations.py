@@ -6,7 +6,7 @@ Unit tests for morphological operations.
 import unittest
 import numpy as np
 from tests._base import CellectsUnitTest, several_arenas_bin_img
-from cellects.image_analysis.morphological_operations import *
+from cellects.image.morphological_operations import *
 
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):
@@ -1762,7 +1762,7 @@ class TestCreateMask(CellectsUnitTest):
         minmax = (1, -1, 2, 4)  # Invalid coordinates
         shape = 'circle'
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(IndexError):
             create_mask(dims, minmax, shape)
 
     def test_create_mask_negative_coordinates(self):

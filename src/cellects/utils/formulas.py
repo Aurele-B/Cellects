@@ -27,11 +27,13 @@ Notes:
 - All Numba-accelerated functions require congruent NumPy arrays as inputs
 - Image processing functions expect binary (boolean/int8) input matrices
 """
+import math
 import pandas as pd
+from numpy import floating
 from cellects.utils.decorators import njit
 import numpy as np
 from numpy.typing import NDArray
-from typing import Tuple
+from typing import Tuple, Any
 
 
 @njit()
@@ -505,15 +507,15 @@ def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     return cx, cy, major_axis_len, minor_axis_len, axes_orientation
 
 
-def eudist(v1, v2) -> float:
+def eudist(v1, v2) -> np.float64:
     """
     Calculate the Euclidean distance between two points in n-dimensional space.
 
     Parameters
     ----------
-    v1 : iterable of float
+    v1 : iterable
         The coordinates of the first point.
-    v2 : iterable of float
+    v2 : iterable
         The coordinates of the second point.
 
     Returns
@@ -521,31 +523,19 @@ def eudist(v1, v2) -> float:
     float
         The Euclidean distance between `v1` and `v2`.
 
-    Raises
-    ------
-    ValueError
-        If `v1` and `v2` do not have the same length.
-
-    Notes
-    -----
-    The Euclidean distance is calculated using the standard formula:
-    √((x2 − x1)^2 + (y2 − y1)^2 + ...).
-
     Examples
     --------
-    >>> v1 = [1.0, 2.0]
+    >>> v1 = np.array((1.0, 2.0))
     >>> v2 = [4.0, 6.0]
     >>> eudist(v1, v2)
     5.0
 
     >>> v1 = [1.0, 2.0, 3.0]
-    >>> v2 = [4.0, 6.0, 8.0]
+    >>> v2 = (4.0, 6.0, 8.0)
     >>> eudist(v1, v2)
     7.0710678118654755
     """
-    dist = [(a - b)**2 for a, b in zip(v1, v2)]
-    dist = np.sqrt(np.sum(dist))
-    return dist
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(v1, v2)))
 
 
 def moving_average(vector: NDArray, step: int) -> NDArray[float]:
@@ -595,12 +585,12 @@ def moving_average(vector: NDArray, step: int) -> NDArray[float]:
     true_numbers = np.logical_not(np.isnan(vector))
     vector[np.logical_not(true_numbers)] = 0
     for step_i in np.arange(substep[1] + 1):
-        sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[(2 * step_i):]
-        n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[(2 * step_i):]
+        end = int(sums.size - step_i)
+        sums[step_i: end] = sums[step_i: end] + vector[(2 * step_i):]
+        n_okays[step_i: end] = n_okays[step_i: end] + true_numbers[(2 * step_i):]
         if np.logical_and(step_i > 0, step_i < np.absolute(substep[0])):
-            sums[step_i: (sums.size - step_i)] = sums[step_i: (sums.size - step_i)] + vector[:(sums.size - (2 * step_i)):]
-            n_okays[step_i: (sums.size - step_i)] = n_okays[step_i: (sums.size - step_i)] + true_numbers[:(
-                        true_numbers.size - (2 * step_i))]
+            sums[step_i: end] = sums[step_i: end] + vector[:int(sums.size - (2 * step_i)):]
+            n_okays[step_i: end] = n_okays[step_i: end] + true_numbers[:int(true_numbers.size - (2 * step_i))]
     vector = sums / n_okays
     return vector
 

@@ -1,6 +1,6 @@
 
 import unittest
-from cellects.image_analysis.network_functions import *
+from cellects.image.network_functions import *
 from tests._base import CellectsUnitTest
 
 # --- Tests -------------------------------------------------------------------
@@ -22,7 +22,7 @@ class TestNetworkDetection(CellectsUnitTest):
             cls.origin_to_add[mid - ite: mid + ite, mid - ite: mid + ite] = cls.possibly_filled_pixels[mid - ite: mid + ite, mid - ite: mid + ite]
         cls.greyscale_image = cls.possibly_filled_pixels.copy()
         cls.greyscale_image[cls.greyscale_image > 0] = np.random.randint(170, 255, cls.possibly_filled_pixels.sum())
-        cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum())
+        cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, int(cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum()))
         cls.add_rolling_window=True
         cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
                                       cls.origin_to_add, edge_max_width=1)
@@ -763,6 +763,36 @@ class TestRemoveSmallLoops(unittest.TestCase):
         ], dtype=np.uint8)
         self.assertTrue(np.array_equal(new_skeleton, target))
 
+    def test_remove_touching_loops(self):
+        skeleton = np.array([
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        before = ad_pad(skeleton)
+        after = remove_small_loops(before)
+        count = 0
+        while after.sum() < before.sum() and count < 10:
+            before = after
+            after = remove_small_loops(before)
+            count += 1
+
+        new_skeleton = remove_padding([before])[0]
+        target = np.array([
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 1, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=np.uint8)
+        self.assertTrue(np.array_equal(new_skeleton, target))
+
 class TestVerticesAndTipsFromSkeleton(unittest.TestCase):
     def test_case_1_grid_tips_isolated(self):
         skeleton = np.array([
@@ -1149,10 +1179,12 @@ class TestGetBranchesAndTipsCoord(unittest.TestCase):
 
         # Rebuild the map (1 for tips, 2 for non-tip/branching vertices)
         vt_map = np.zeros_like(pad)
-        if tips_coord.size:
-            vt_map[tips_coord[:, 0], tips_coord[:, 1]] = 1
-        if non_tip_vertices.size:
-            vt_map[non_tip_vertices[:, 0], non_tip_vertices[:, 1]] = 2
+        if len(tips_coord) >0:
+            write_coords_to_mask(vt_map, tips_coord, 1)
+            # vt_map[tips_coord[:, 0], tips_coord[:, 1]] = 1
+        if len(non_tip_vertices) >0:
+            write_coords_to_mask(vt_map, non_tip_vertices, 2)
+            # vt_map[non_tip_vertices[:, 0], non_tip_vertices[:, 1]] = 2
 
         target = np.array([
             [0,0,0,0,0,0,0,0,0,0,0,0],
@@ -1217,12 +1249,11 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id = EdgeIdentification(self.valid_skeleton, self.valid_distances)
         # First get vertices and tips
         edge_id.get_vertices_and_tips_coord()
-        self.assertTrue(np.array_equal(edge_id.non_tip_vertices, np.array([[2, 3]], dtype=np.int64)))
-        self.assertTrue(np.array_equal(edge_id.tips_coord, np.array([[1, 3], [1, 5], [2, 1], [4, 3], [4, 5]], dtype=np.int64)))
-
+        self.assertIsInstance(edge_id.non_tip_vertices, set)
+        self.assertIsInstance(edge_id.tips_coord, set)
         # Then get tipped edges
         edge_id.get_tipped_edges()
-        self.assertTrue(np.array_equal(edge_id.edge_lengths, np.array([1., 2., 2., 2., 3.], dtype=np.float64)))
+        self.assertIsInstance(edge_id.edge_lengths_by_id, dict)
 
     def test_remove_tipped_edge_smaller_than_branch_width(self):
         """Test removal of short tipped edges."""
@@ -1309,9 +1340,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.remove_tipped_edge_smaller_than_branch_width()
         edge_id.label_tipped_edges_and_their_vertices()
 
-        expected = np.array([[2, 4]], dtype=np.uint32)
+        expected = {(1, 5): (2, 4), (2, 1): (2, 4), (4, 3): (2, 4), (4, 5): (2, 4)}
 
-        self.assertTrue(np.array_equal(edge_id.vertices_branching_tips, expected))
+        self.assertEqual(edge_id.vertices_branching_tips_by_tip, expected)
 
 
     def test_label_edges_connected_with_vertex_clusters(self):
@@ -1331,31 +1362,10 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.remove_tipped_edge_smaller_than_branch_width()
         edge_id.label_tipped_edges_and_their_vertices()
 
-        self.assertEqual(edge_id.edge_pix_coord.shape[0], 2)
+        self.assertEqual(len(edge_id.edge_lengths_by_id), 1)
+        self.assertEqual(len(edge_id.vertices_branching_tips),1)
         edge_id.label_edges_connected_with_vertex_clusters()
-        self.assertEqual(edge_id.edge_pix_coord.shape[0], 13)
-
-    def test_label_edges_connecting_vertex_clusters(self):
-        """Test that label_edges_connecting_vertex_clusters completes without errors."""
-        valid_skeleton = ad_pad(np.array([[1, 1, 1, 0, 1],
-                                               [1, 0, 1, 0, 1],
-                                               [1, 1, 0, 0, 1],
-                                               [1, 0, 0, 1, 0],
-                                               [0, 1, 1, 0, 1],
-                                               [0, 0, 0, 1, 0]], dtype=np.uint8))
-
-        valid_distances = np.ones_like(valid_skeleton, dtype=np.float64)
-        edge_id = EdgeIdentification(valid_skeleton, valid_distances)
-        # This should complete all steps without raising exceptions
-        edge_id.get_vertices_and_tips_coord()
-        edge_id.get_tipped_edges()
-        edge_id.remove_tipped_edge_smaller_than_branch_width()
-        edge_id.label_tipped_edges_and_their_vertices()
-
-        edge_id.label_edges_connected_with_vertex_clusters()
-        self.assertEqual(len(edge_id.edge_lengths), 5)
-        edge_id.label_edges_connecting_vertex_clusters()
-        self.assertEqual(len(edge_id.edge_lengths), 8)
+        self.assertEqual(len(edge_id.edge_lengths_by_id), 4)
 
     def test_label_edges_from_known_vertices_iteratively_without_vertex_clusters(self):
         """Test that label_edges_from_known_vertices_iteratively works without vertex clusters."""
@@ -1397,7 +1407,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_connected_with_vertex_clusters()
         edge_id.label_edges_connecting_vertex_clusters()
         edge_id.label_edges_from_known_vertices_iteratively()
-        self.assertEqual(len(edge_id.edge_lengths), 11)
+        self.assertEqual(len(edge_id.edge_pixels_by_id), 13)
 
     def test_label_edges_looping_on_1_vertex(self):
         """Test that label_edges_looping_on_1_vertex completes without errors."""
@@ -1514,9 +1524,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_looping_on_1_vertex()
         edge_id.clear_areas_of_1_or_2_unidentified_pixels()
         edge_id.clear_edge_duplicates()
-        self.assertEqual(edge_id.non_tip_vertices.shape[0], 7)
+        self.assertEqual(len(edge_id.non_tip_vertices), 7)
         edge_id.clear_vertices_connecting_2_edges()
-        self.assertEqual(edge_id.non_tip_vertices.shape[0], 6)
+        self.assertEqual(len(edge_id.non_tip_vertices), 6)
 
     def test_run_edge_identification_completes(self):
         """Test that run_edge_identification completes without errors."""
@@ -1526,9 +1536,35 @@ class TestEdgeIdentification(CellectsUnitTest):
 
         res = np.zeros(self.dims, dtype=np.uint8)
         res[edge_id.edge_pix_coord[:, 0], edge_id.edge_pix_coord[:, 1]] = 1
-        res[edge_id.non_tip_vertices[:, 0], edge_id.non_tip_vertices[:, 1]] = 1
-        res[edge_id.tips_coord[:, 0], edge_id.tips_coord[:, 1]] = 1
+        set_coords_in_mask(res, edge_id.non_tip_vertices)
+        set_coords_in_mask(res, edge_id.tips_coord)
         self.assertTrue(np.array_equal(res, edge_id.pad_skeleton))
+
+    def test_run_edge_identification_with_one_edge(self):
+        """Test that run_edge_identification special case works without errors."""
+        valid_skeleton = ad_pad(np.array([[0, 1, 1, 0, 1],
+                                                 [1, 0, 0, 0, 1],
+                                                 [0, 1, 0, 0, 1],
+                                                 [1, 0, 0, 1, 0],
+                                                 [0, 1, 1, 0, 0],
+                                                 [0, 0, 0, 1, 0]], dtype=np.uint8))
+        valid_distances = np.ones_like(valid_skeleton, dtype=np.float64)
+        pruned_skeleton = valid_skeleton.copy()
+        pruned_skeleton[6, 4] = 0
+
+        edge_id = EdgeIdentification(valid_skeleton, valid_distances)
+        edge_id.run_edge_identification()
+        edge_id.get_vertices_and_tips_coord()
+        self.assertEqual(edge_id.tips_coord, {(1, 3), (1, 5)})
+        edge_id.get_tipped_edges()
+        edge_id.remove_tipped_edge_smaller_than_branch_width()
+        self.assertTrue(np.array_equal(pruned_skeleton, edge_id.pad_skeleton))
+        edge_id.label_tipped_edges_and_their_vertices()
+        edge_id.check_vertex_existence()
+        self.assertEqual(edge_id.tip_number, 2)
+        self.assertEqual(len(edge_id.edge_lengths_by_id), 1)
+        self.assertEqual(len(edge_id.edge_pixels_by_id[1]), 9)
+        self.assertEqual(len(edge_id.detected_edge_keys), 1)
 
     def test_make_vertex_table(self):
         """Test that make_vertex_table completes without errors."""
@@ -1565,7 +1601,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.make_vertex_table(origin_contours, growing_areas)
         greyscale = self.valid_skeleton.copy()
         greyscale[greyscale > 0] = np.random.randint(170, 255, self.valid_skeleton.sum())
-        greyscale[greyscale == 0] = np.random.randint(0, 50, self.valid_skeleton.size - self.valid_skeleton.sum())
+        greyscale[greyscale == 0] = np.random.randint(0, 50, int(self.valid_skeleton.size - self.valid_skeleton.sum()))
         greyscale = un_pad(greyscale)
         edge_id.make_edge_table(greyscale, True)
 

@@ -27,10 +27,10 @@ from cellects.core.cellects_threads import (
     LastImageAnalysisThread, SaveManualDelineationThread, PrepareVideoAnalysisThread)
 from cellects.gui.ui_strings import IAW
 from cellects.gui.custom_widgets import (
-    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, PButton, Spinbox,
     Combobox, Checkbox, FixedText)
-from cellects.core.one_image_analysis import OneImageAnalysis
-from cellects.image_analysis.image_segmentation import filter_dict
+from cellects.image.one_image_analysis import OneImageAnalysis
+from cellects.image.image_segmentation import filter_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 
 
@@ -71,6 +71,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.setParent(parent)
         self.po = po
         self.csc_dict = self.po.vars['convert_for_origin'] # To change
+        self.popup_img = None
 
     def true_init(self):
         """
@@ -109,10 +110,10 @@ class ImageAnalysisWindow(MainTabsType):
         self.po.available_back_names = np.arange(1, 1000, dtype=np.uint16)
         self.po.current_combination_id = 0
 
-        self.display_image = InsertImage(np.zeros((self.parent().im_max_width, self.parent().im_max_width, 3), np.uint8), self.parent().im_max_height, self.parent().im_max_width)
-        self.display_image.mousePressEvent = self.get_click_coordinates
-        self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
-        self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
+        self.display_image = InsertImage(self, track_mouse=True)
+        # self.display_image.mousePressEvent = self.get_click_coordinates
+        # self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
+        # self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
 
         ## Title
         self.image_number_label = FixedText(IAW["Image_number"]["label"],
@@ -190,6 +191,7 @@ class ImageAnalysisWindow(MainTabsType):
                                                 night_mode=self.po.all['night_mode'])
         self.user_drawn_lines_label.setAlignment(QtCore.Qt.AlignHCenter)
         self.user_drawn_lines_layout.addWidget(self.user_drawn_lines_label)
+
         self.pbuttons_widget = QtWidgets.QWidget()
         self.pbuttons_layout = QtWidgets.QHBoxLayout()
         self.cell = PButton("Cell", False, tip=IAW["Draw_buttons"]["tips"],
@@ -210,11 +212,11 @@ class ImageAnalysisWindow(MainTabsType):
         self.pbuttons_tables_layout.setAlignment(QtCore.Qt.AlignHCenter)
         self.bio_pbuttons_table = QtWidgets.QScrollArea()#QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.bio_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.bio_pbuttons_table.setMinimumHeight(self.parent().im_max_height // 2)
+        self.bio_pbuttons_table.setMinimumHeight(133)
         self.bio_pbuttons_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.bio_pbuttons_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.back_pbuttons_table = QtWidgets.QScrollArea()#QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
-        self.back_pbuttons_table.setMinimumHeight(self.parent().im_max_height // 2)
+        self.back_pbuttons_table.setMinimumHeight(133)
         self.back_pbuttons_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.back_pbuttons_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
         self.back_pbuttons_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -239,6 +241,20 @@ class ImageAnalysisWindow(MainTabsType):
         self.bio_lines = {}
         self.back_lines = {}
         self.arena_lines = {}
+
+        self.freehand_widget = QtWidgets.QWidget()
+        self.freehand_layout = QtWidgets.QHBoxLayout()
+        self.freehand_label = FixedText(IAW["Free_hand"]["label"],
+                                                tip=IAW["Free_hand"]["tips"],
+                                                night_mode=self.po.all['night_mode'])
+        self.freehand_cb = Checkbox(self.po.all['free_hand'])
+        self.freehand_cb.clicked.connect(self.freehand_is_clicked)
+        self.freehand_is_clicked()
+        self.freehand_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
+        self.freehand_layout.addWidget(self.freehand_label)
+        self.freehand_layout.addWidget(self.freehand_cb)
+        self.freehand_widget.setLayout(self.freehand_layout)
+        self.user_drawn_lines_layout.addWidget(self.freehand_widget)
 
         self.user_drawn_lines_widget.setLayout(self.user_drawn_lines_layout)
         self.user_drawn_lines_widget.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
@@ -513,7 +529,7 @@ class ImageAnalysisWindow(MainTabsType):
             if self.is_image_analysis_running:
                 self.message.setText("Wait for the analysis to end, or restart Cellects")
             else:
-                self.parent().last_tab = "image_analysis"
+                self.parent().last_tab = "image"
                 self.parent().change_widget(3)
 
     def read_is_clicked(self):
@@ -670,6 +686,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.current_image = image.copy()
         self.po.drawn_image = self.po.current_image.copy()
         self.display_image.update_image(self.po.current_image)
+        if self.popup_img is not None and not self.popup_img.closed:
+            self.popup_img.update_image(self.po.current_image)
         self.po.arena_mask = None
         self.po.bio_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
         self.po.back_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
@@ -778,6 +796,17 @@ class ImageAnalysisWindow(MainTabsType):
             self.row21[4].setVisible(False)
             self.row22[4].setVisible(False)
 
+    def freehand_is_clicked(self):
+        """
+        Handles the logic for when freehand is checked
+        allowing the user to draw any shape on the image.
+        """
+        self.po.all['free_hand'] = self.freehand_cb.isChecked()
+        if self.freehand_cb.isChecked():
+            self.po.drawing_mode = "free_hand"
+        else:
+            self.po.drawing_mode = "none"
+
     def cell_is_clicked(self):
         """
         Handles the logic for when a "cell" button is clicked in the interface,
@@ -806,7 +835,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.po.arena0_back1_bio2 = 1
         self.po.user_saved_coord = []
 
-    def get_click_coordinates(self, event):
+    def mouse_clicks(self, image_object, event):
         """
         Handle mouse click events to capture coordinate data or display an image.
 
@@ -822,12 +851,18 @@ class ImageAnalysisWindow(MainTabsType):
         if self.po.arena0_back1_bio2 > 0 or self.po.manual_delineation_flag:
             if not self.is_image_analysis_display_running and not self.thread_dict['UpdateImage'].isRunning():
                 self.hold_click_flag = True
-                self.po.user_saved_coord.append([event.pos().y(), event.pos().x()])
+                true_coord = image_object.image_coordinates(event.position().toPoint())
+                if self.po.drawing_mode == "free_hand":
+                    self.po.free_hand_points = [true_coord]
+                self.po.user_saved_coord.append(true_coord)
         else:
-            self.popup_img = FullScreenImage(self.po.drawn_image, self.parent().screen_width, self.parent().screen_height)
-            self.popup_img.show()
+            #self.popup_img = FullScreenImage(self.po.drawn_image, self.parent().screen_width, self.parent().screen_height)
+            if self.popup_img is None or self.popup_img.closed:
+                self.popup_img = InsertImage(self, track_mouse=True)
+                self.popup_img.update_image(self.po.drawn_image)
+                self.popup_img.show()
 
-    def get_mouse_move_coordinates(self, event):
+    def mouse_moves(self, image_object, event):
         """
         Handles mouse movement events to update the temporary mask coordinate.
 
@@ -838,12 +873,15 @@ class ImageAnalysisWindow(MainTabsType):
         """
         if self.hold_click_flag:
             if not self.thread_dict['UpdateImage'].isRunning():
-                if self.po.user_saved_coord[0][0] != event.pos().y() and self.po.user_saved_coord[0][1] != event.pos().x():
-                    self.po.temporary_mask_coord = [self.po.user_saved_coord[0], [event.pos().y(), event.pos().x()]]
-                    self.po.image_scaling_factors = self.display_image.get_image_scaling_factors()
+                true_coord = image_object.image_coordinates(event.position().toPoint())
+                if true_coord:
+                    if self.po.drawing_mode == "free_hand":
+                        self.po.free_hand_points.append(true_coord)
+                    if self.po.user_saved_coord[0][0] != true_coord[0] and self.po.user_saved_coord[0][1] != true_coord[1]:
+                        self.po.temporary_mask_coord = [self.po.user_saved_coord[0], [true_coord[0], true_coord[1]]]
                     self.thread_dict['UpdateImage'].start()
 
-    def get_mouse_release_coordinates(self, event):
+    def mouse_releases(self, image_object, event):
         """
         Process mouse release event to save coordinates and manage image update thread.
 
@@ -870,10 +908,11 @@ class ImageAnalysisWindow(MainTabsType):
                 self.message.setText(f"The total number of arenas are already drawn ({self.po.sample_number})")
                 self.po.user_saved_coord = []
             else:
-                self.po.user_saved_coord.append([event.pos().y(), event.pos().x()])
-                self.po.image_scaling_factors = self.display_image.get_image_scaling_factors()
-                self.thread_dict['UpdateImage'].start()
-                self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.user_defined_shape_displayed)
+                true_coord = image_object.image_coordinates(event.position().toPoint())
+                if true_coord:
+                    self.po.user_saved_coord.append([true_coord[0], true_coord[1]])
+                    self.thread_dict['UpdateImage'].start()
+                    self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.user_defined_shape_displayed)
             self.hold_click_flag = False
 
     def user_defined_shape_displayed(self, when_finished: bool):
@@ -1338,7 +1377,7 @@ class ImageAnalysisWindow(MainTabsType):
 
         self.csc_scroll_table = QtWidgets.QScrollArea()  # QTableWidget()  # Scroll Area which contains the widgets, set as the centralWidget
         self.csc_scroll_table.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.MinimumExpanding)
-        self.csc_scroll_table.setMinimumHeight(self.parent().im_max_height - 100)
+        self.csc_scroll_table.setMinimumHeight(166)
         self.csc_scroll_table.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.csc_scroll_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.csc_scroll_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -2039,6 +2078,8 @@ class ImageAnalysisWindow(MainTabsType):
             self.no.setVisible(False)
             self.reinitialize_bio_and_back_legend()
             self.user_drawn_lines_label.setVisible(False)
+            self.freehand_label.setVisible(False)
+            self.freehand_cb.setVisible(False)
             self.cell.setVisible(False)
             self.background.setVisible(False)
             self.one_blob_per_arena.setVisible(False)
@@ -2137,6 +2178,8 @@ class ImageAnalysisWindow(MainTabsType):
                 The current_image is the image data that will be displayed.
         """
         self.display_image.update_image(dictionary['current_image'])
+        if self.popup_img is not None and not self.popup_img.closed:
+            self.popup_img.update_image(dictionary['current_image'])
 
     def starting_differs_from_growing_check(self):
         """
@@ -2370,6 +2413,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.select_option_label.setVisible(False)
         self.user_drawn_lines_label.setText("Draw each arena")
         self.user_drawn_lines_label.setVisible(True)
+        self.freehand_label.setVisible(True)
+        self.freehand_cb.setVisible(True)
         self.decision_label.setText(
             f"Hold click to draw {self.po.sample_number} arena(s) on the image. Once done, click yes.")
         self.message.setText('An error? Hit one button on the left to remove any drawn arena.')
@@ -2425,6 +2470,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize_is_clicked()
         self.user_drawn_lines_label.setText('Select and draw')
         self.user_drawn_lines_label.setVisible(True)
+        self.freehand_label.setVisible(True)
+        self.freehand_cb.setVisible(True)
         self.cell.setVisible(True)
         self.background.setVisible(True)
         self.advanced_mode_cb.setVisible(True)
@@ -2473,7 +2520,7 @@ class ImageAnalysisWindow(MainTabsType):
 
 
             self.message.setText(f"Final checks, wait... ")
-            self.parent().last_tab = "image_analysis"
+            self.parent().last_tab = "image"
             self.thread_dict['PrepareVideoAnalysis'].start()
             if self.po.vars["color_number"] > 2:
                 self.parent().videoanalysiswindow.select_option.clear()
@@ -2485,7 +2532,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.message.setText(f"")
 
             self.video_tab.set_not_in_use()
-            self.parent().last_tab = "image_analysis"
+            self.parent().last_tab = "image"
             self.parent().change_widget(3)  # VideoAnalysisWindow
 
             # self.popup.close()

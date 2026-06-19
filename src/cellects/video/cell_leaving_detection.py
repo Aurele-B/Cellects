@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Contains the function: cell_leaving_detection
+
 This function considers the pixel intensity curve of each covered pixel and assesesed whether a covered pixel retrieved
 -partially at least- its initial intensity.
 """
@@ -7,7 +8,7 @@ import cv2
 import numpy as np
 from numpy.typing import NDArray
 from typing import Tuple
-from cellects.image_analysis.morphological_operations import cross_33
+from cellects.image.morphological_operations import cross_33
 
 
 def cell_leaving_detection(new_shape: NDArray[np.uint8], covering_intensity:NDArray, previous_binary: NDArray[np.uint8], greyscale_image: NDArray, fading_coefficient: float, lighter_background: bool, several_blob_per_arena: bool, erodila_disk: NDArray[np.uint8], protect_from_fading: NDArray=None, add_to_fading: NDArray=None) -> Tuple[NDArray[np.uint8], NDArray]:

@@ -17,7 +17,7 @@ from PySide6 import QtWidgets, QtCore
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetExifDataThread, VideoTrackingThread, LookForDataThreadInFirstW, LoadDataToRunCellectsQuicklyThread)
 from cellects.gui.custom_widgets import (
-    MainTabsType, InsertImage, FullScreenImage, PButton, Spinbox,
+    MainTabsType, InsertImage, PButton, Spinbox,
     Combobox, FixedText, EditText, LineWidget)
 from cellects.gui.ui_strings import FW
 
@@ -57,6 +57,7 @@ class FirstWindow(MainTabsType):
         logging.info("Initialize first window")
         self.setParent(parent)
         self.po = po
+        self.popup_img = None
         self.true_init()
 
     def true_init(self):
@@ -184,14 +185,12 @@ class FirstWindow(MainTabsType):
         self.fourth_row_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.fourth_row_widget.setLayout(self.fourth_row_layout)
         self.Vlayout.addWidget(self.fourth_row_widget)
-        self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
+        # self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
         # Add the central image display widget
-        self.display_image = np.zeros((self.parent().im_max_height, self.parent().im_max_width, 3), np.uint8)
-        self.display_image = InsertImage(self.display_image, self.parent().im_max_height, self.parent().im_max_width)
+        self.display_image = InsertImage(self, True)
         self.Vlayout.addWidget(self.display_image, alignment=QtCore.Qt.AlignCenter)
         self.display_image.setVisible(False)
-        self.display_image.mousePressEvent = self.full_screen_display
 
         # 4) Create the shortcuts row
         self.shortcuts_widget = QtWidgets.QWidget()
@@ -245,31 +244,29 @@ class FirstWindow(MainTabsType):
         # Check if there is data in the saved folder
         self.pathway_changed()
 
-    def full_screen_display(self, event):
+    def mouse_clicks(self, image_object, event):
         """
-        Display an image in full screen.
+        Independent display of an image.
 
-        Displays the current `image_to_display` of the parent window
-        in a separate full-screen window.
+        Displays the current `image_to_display` in a separate window.
 
         Parameters
         ----------
+        image_object : QtWidgets.QLabel
+            The object corresponding to the image to display.
         event : QEvent
-            The event that triggers the full-screen display.
-
-        Other Parameters
-        ----------------
-        popup_img : FullScreenImage
-            The instance of `FullScreenImage` created to display the image.
+            The event that triggers independent image display.
 
         Notes
         -----
-        The method creates a new instance of `FullScreenImage` and displays it.
+        The method creates a new instance of `InsertImage` and displays it.
         This is intended to provide a full-screen view of the image currently
         displayed in the parent window.
         """
-        self.popup_img = FullScreenImage(self.parent().image_to_display, self.parent().screen_width, self.parent().screen_height)
-        self.popup_img.show()
+        if self.popup_img is None or self.popup_img.closed:
+            self.popup_img = InsertImage(self, True)
+            self.popup_img.update_image(self.parent().image_to_display)
+            self.popup_img.show()
 
     def browse_is_clicked(self):
         """
@@ -330,6 +327,8 @@ class FirstWindow(MainTabsType):
         self.message.setText(dictionary['message'])
         self.parent().image_to_display = dictionary['current_image']
         self.display_image.update_image(dictionary['current_image'])
+        if self.popup_img is not None and not self.popup_img.closed:
+            self.popup_img.update_image(dictionary['current_image'])
 
     def next_is_clicked(self):
         """
@@ -493,31 +492,30 @@ class FirstWindow(MainTabsType):
         This method performs actions to prepare the application for loading data from a new pathway.
         It ensures that certain widgets are hidden and starts necessary background processes.
         """
-        if self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
-            self.thread_dict["LoadDataToRunCellectsQuickly"].wait()
-        if os.path.isdir(Path(self.global_pathway.text())):
-            self.po.all['global_pathway'] = self.global_pathway.text()
-            os.chdir(Path(self.po.all['global_pathway']))
-            # 1) Put invisible widgets
-            self.radical.setVisible(False)
-            self.extension.setVisible(False)
-            self.arena_number.setVisible(False)
-            self.im_or_vid.setVisible(False)
-            self.advanced_parameters.setVisible(False)
-            self.required_outputs.setVisible(False)
-            self.Run_all_directly.setVisible(False)
-            self.next.setVisible(False)
-            self.instantiate = True
-            self.video_tab.set_not_usable()
-            # 2) Load the dict
-            self.thread_dict["LoadDataToRunCellectsQuickly"].start()
-            self.thread_dict["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
-            # 3) go to another func to change, put visible and re_instantiate
-        else:
-            self.Run_all_directly.setVisible(False)
-            self.image_tab.set_not_usable()
-            self.video_tab.set_not_usable()
-            self.message.setText("Please, enter a valid path")
+        if not self.thread_dict["LoadDataToRunCellectsQuickly"].isRunning():
+            if os.path.isdir(Path(self.global_pathway.text())):
+                self.po.all['global_pathway'] = self.global_pathway.text()
+                os.chdir(Path(self.po.all['global_pathway']))
+                # 1) Put invisible widgets
+                self.radical.setVisible(False)
+                self.extension.setVisible(False)
+                self.arena_number.setVisible(False)
+                self.im_or_vid.setVisible(False)
+                self.advanced_parameters.setVisible(False)
+                self.required_outputs.setVisible(False)
+                self.Run_all_directly.setVisible(False)
+                self.next.setVisible(False)
+                self.instantiate = True
+                self.video_tab.set_not_usable()
+                # 2) Load the dict
+                self.thread_dict["LoadDataToRunCellectsQuickly"].start()
+                self.thread_dict["LoadDataToRunCellectsQuickly"].message_from_thread.connect(self.load_data_quickly_finished)
+                # 3) go to another func to change, put visible and re_instantiate
+            else:
+                self.Run_all_directly.setVisible(False)
+                self.image_tab.set_not_usable()
+                self.video_tab.set_not_usable()
+                self.message.setText("Please, enter a valid path")
 
     def load_data_quickly_finished(self, message: str):
         """

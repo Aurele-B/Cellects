@@ -3,8 +3,9 @@
 It is made to be easier to use and to be consistant in terms of colors and sizes."""
 import os
 from PySide6 import QtWidgets, QtCore
-from PySide6.QtGui import Qt, QImage, QPixmap, QPalette, QFont, QPen, QFontMetrics, QPainter, QPainterPath, QColor, QDoubleValidator
+from PySide6.QtGui import Qt, QImage, QPixmap, QFont,QFontMetrics, QPainter, QDoubleValidator
 import numpy as np
+from numpy.typing import NDArray
 import cv2
 
 """
@@ -60,33 +61,17 @@ class WindowType(QtWidgets.QWidget):
         self.thread_dict = {}
         self.setVisible(False)
         self.setParent(parent)
+
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
         self.frame = QtWidgets.QFrame(self)
-        self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().screen_width, self.parent().screen_height))
+        self.frame.setGeometry(QtCore.QRect(0, 0, self.parent().win_width, self.parent().win_height))
+        self.frame.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+
         self.display_image = None
         self.setFont(QFont(textfont, textsize, QFont.Medium))
         self.night_mode = night_mode
         self.night_mode_switch(night_mode)
-
-    def resizeEvent(self, event):
-        '''
-        # Use this signal to detect a resize event and call center window function
-        :param event:
-        :return:
-        '''
-        self.resized.emit()
-        self.night_mode_switch(self.night_mode)
-        if self.display_image is not None:
-            win_width, win_height = self.size().width(), self.size().height()
-            self.display_image.max_width = win_width - self.parent().image_window_width_diff
-            self.display_image.max_height = win_height - self.parent().image_window_height_diff
-            if self.display_image.max_width * self.display_image.height_width_ratio < self.display_image.max_height:
-                self.display_image.scaled_shape = [round(self.display_image.max_width * self.display_image.height_width_ratio), self.display_image.max_width]
-            else:
-                self.display_image.scaled_shape = [self.display_image.max_height, np.round(self.display_image.max_height / self.display_image.height_width_ratio)]
-
-            self.display_image.setMaximumHeight(self.display_image.scaled_shape[0])
-            self.display_image.setMaximumWidth(self.display_image.scaled_shape[1])
-        return super(WindowType, self).resizeEvent(event)
 
     def center_window(self):
         self.parent().center()
@@ -102,6 +87,15 @@ class WindowType(QtWidgets.QWidget):
                 "background-color: %s; color: %s; font: %s; selection-color: %s; selection-background-color: %s" % (
                 backgroundcolor, textColor, f"{textsize}pt {textfont};", selectioncolor,
                 selectionbackgroundcolor))
+
+    def mouse_clicks(self, image_object, event):
+        pass
+
+    def mouse_moves(self, image_object, event):
+        pass
+
+    def mouse_releases(self, image_object, event):
+        pass
 
 
 class MainTabsType(WindowType):
@@ -125,72 +119,164 @@ class MainTabsType(WindowType):
         self.Vlayout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding))
 
 
-class FullScreenImage(QtWidgets.QLabel):
-    def __init__(self, image, screen_height, screen_width):
-        super().__init__()
-        self.true_shape = image.shape
-        self.max_height = screen_height
-        self.max_width = screen_width
-        self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
-                                                    QtWidgets.QSizePolicy.MinimumExpanding)
-        self.setSizePolicy(self.im_size_policy)
-
-        self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-        image = QPixmap(image)
-        self.setScaledContents(True)
-        if self.max_width * self.height_width_ratio < self.max_height:
-            self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
-        else:
-            self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
-        self.setMinimumSize(self.scaled_shape[1], self.scaled_shape[0])
-        self.setPixmap(QPixmap(image))
-        self.adjustSize()
-
-
 class InsertImage(QtWidgets.QLabel):
-    def __init__(self, image, max_height, max_width):
+    def __init__(self, parent, track_mouse: bool=False):
         super().__init__()
-        self.true_shape = image.shape
-        self.max_height = max_height
-        self.max_width = max_width
-        self.im_size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
-                                                    QtWidgets.QSizePolicy.MinimumExpanding)
-        self.setSizePolicy(self.im_size_policy)
+        self.parent = parent
+        self.image = None
+        self.panning = False
+        self.last_mouse = None
+        self.track_mouse = track_mouse
+        self.closed = False
+        self.zoom = 1.0
+        self.base_scale = 1.0
+        self.pan_x = 0
+        self.pan_y = 0
 
-        self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-        image = QPixmap(image)
-        self.setScaledContents(True)
-        if self.max_width * self.height_width_ratio < self.max_height:
-            self.scaled_shape = [round(self.max_width * self.height_width_ratio), self.max_width]
+        self.setMinimumWidth(200)
+        self.setMinimumHeight(200)
+
+        self.timer = QtCore.QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self._update_scaled)
+
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Expanding
+        )
+
+    def update_image(self, image: NDArray[np.uint8]):
+        dims = image.shape
+        if not isinstance(image, np.uint8):
+            image = image.astype(np.uint8)
+        img_max_int = image.max()
+        if img_max_int < 10:
+            image *= 255 // img_max_int
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            img_format = QImage.Format_RGB888
         else:
-            self.scaled_shape = [self.max_height, np.round(self.max_height / self.height_width_ratio)]
-        self.setMaximumHeight(self.scaled_shape[0])
-        self.setMaximumWidth(self.scaled_shape[1])
-        self.setPixmap(QPixmap(image))
-        self.adjustSize()
+            img_format = QImage.Format_Grayscale8
+        self.image = QImage(image.data, dims[1], dims[0], image.strides[0], img_format)
+        self.pixmap = QPixmap.fromImage(self.image)
+        self._schedule_update()
 
+    def update_screen_limits(self):
+        screen = self.screen()
+        if not screen:
+            return
 
-    def update_image(self, image, text=None, color=255):
-        self.true_shape = image.shape
-        self.height_width_ratio = image.shape[0] / image.shape[1]
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = QImage(image.data, image.shape[1], image.shape[0], 3 * image.shape[1], QImage.Format_RGB888)
-        image = QPixmap(image)
-        self.setScaledContents(True)
-        if self.max_width * self.height_width_ratio < self.max_height:
-            self.scaled_shape = [int(np.round(self.max_width * self.height_width_ratio)), self.max_width]
-        else:
-            self.scaled_shape = [self.max_height, int(np.round(self.max_height / self.height_width_ratio))]
-        self.setMaximumHeight(self.scaled_shape[0])
-        self.setMaximumWidth(self.scaled_shape[1])
-        self.setPixmap(QPixmap(image))
+        geom = screen.availableGeometry()
 
-    def get_image_scaling_factors(self):
-        return (self.true_shape[0] / self.scaled_shape[0]), (self.true_shape[1] / self.scaled_shape[1])
+        # Use a fraction of screen size for image cap
+        self.max_size = (int(geom.width() * 0.8), int(geom.height() * 0.8))
+        self._schedule_update()
+
+    def _schedule_update(self):
+        self.timer.start(20)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._schedule_update()
+
+    def _update_scaled(self):
+        if not self.image:
+            return
+        sx = self.width() / self.image.width()
+        sy = self.height() / self.image.height()
+        self.base_scale = min(sx, sy)
+        self.update()
+
+    def paintEvent(self, event):
+        if not self.image:
+            return
+
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), Qt.GlobalColor.black)
+
+        painter.setRenderHint(
+            QPainter.RenderHint.SmoothPixmapTransform,
+            True
+        )
+
+        scale = self.base_scale * self.zoom
+        draw_w = self.image.width() * scale
+        draw_h = self.image.height() * scale
+
+        x = (self.width() - draw_w) / 2
+        y = (self.height() - draw_h) / 2
+        painter.translate(x + self.pan_x, y + self.pan_y)
+        painter.scale(scale, scale)
+        painter.drawPixmap(0, 0, self.pixmap)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.update_screen_limits()
+
+    def image_coordinates(self, pos):
+        if self.image is None:
+            return None
+
+        scale = self.base_scale * self.zoom
+
+        x0 = self.width() / 2 + self.pan_x - (self.image.width() * scale) / 2
+        y0 = self.height() / 2 + self.pan_y - (self.image.height() * scale) / 2
+
+        ix = (pos.x() - x0) / scale
+        iy = (pos.y() - y0) / scale
+
+        ix = int(np.clip(ix, 0, self.image.width() - 1))
+        iy = int(np.clip(iy, 0, self.image.height() - 1))
+
+        return iy, ix
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MiddleButton:
+            self.panning = True
+            self.last_mouse = event.position()
+        elif self.track_mouse:
+            self.parent.mouse_clicks(self, event)
+
+    def mouseMoveEvent(self, event):
+        if self.panning:
+            delta = event.position() - self.last_mouse
+            self.pan_x += delta.x()
+            self.pan_y += delta.y()
+            self.last_mouse = event.position()
+            self.update()
+        elif self.track_mouse:
+            self.parent.mouse_moves(self, event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.MiddleButton:
+            self.panning = False
+        elif self.track_mouse:
+            self.parent.mouse_releases(self, event)
+
+    def wheelEvent(self, event):
+        old_zoom = self.zoom
+
+        factor = 1.15 if event.angleDelta().y() > 0 else 1 / 1.15
+        self.zoom = np.clip(self.zoom * factor, 0.05, 50.0)
+
+        mouse = event.position()
+
+        scale_old = self.base_scale * old_zoom
+        scale_new = self.base_scale * self.zoom
+
+        # convert mouse to image space BEFORE zoom
+        ix = (mouse.x() - self.width() / 2 - self.pan_x) / scale_old
+        iy = (mouse.y() - self.height() / 2 - self.pan_y) / scale_old
+
+        # recompute pan so point stays fixed
+        self.pan_x = mouse.x() - self.width() / 2 - ix * scale_new
+        self.pan_y = mouse.y() - self.height() / 2 - iy * scale_new
+
+        self.update()
+
+    def closeEvent(self, event):
+        self.closed = True
+        super().closeEvent(event)
 
 
 class PButton(QtWidgets.QPushButton):
@@ -322,8 +408,6 @@ class Spinbox(QtWidgets.QWidget):
             self.setDecimals(0)
         self.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
         self.setFont(QFont(textfont, textsize, QFont.Medium))
-        self.night_mode_switch(night_mode)
-
         self.setStyleSheet("""
             QPushButton {
                 font-size: 8px;
@@ -336,6 +420,8 @@ class Spinbox(QtWidgets.QWidget):
                 background-color: #e0e0e0;
             }
         """)
+        self.night_mode_switch(night_mode)
+
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
 
     def sizeHint(self):

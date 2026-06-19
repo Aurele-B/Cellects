@@ -16,14 +16,14 @@ ConnectedComponentsTracking : Tracks connected components in 3D binary video arr
 Notes
 -----
 - Uses OpenCV's connected components detection with statistical properties (area, position)
-- Relies on external shape descriptor computation from `cellects.image_analysis.shape_descriptors`
+- Relies on external shape descriptor computation from `cellects.image.shape_descriptors`
 - Requires numpy for array operations and pandas for result organization
 """
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
-from cellects.image_analysis.shape_descriptors import initialize_descriptor_computation, scale_descriptors, ShapeDescriptors
+from cellects.image.shape_descriptors import initialize_descriptor_computation, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import get_newly_explored_area
 
 
@@ -90,7 +90,7 @@ class ConnectedComponentsTracking:
             
     def compute_one_descriptor_per_cc(self, arena_label: int, timings: NDArray,
                                       descriptors_dict: dict, output_in_mm: bool, pixel_size: float,
-                                      do_fading: bool, save_coord_specimen: bool):
+                                      do_fading: bool):
         """
         Compute and store shape descriptors for each tracked connected component.
 
@@ -108,8 +108,6 @@ class ConnectedComponentsTracking:
             Conversion factor from pixels to millimeters (if `output_in_mm` is True).
         do_fading : bool
             Whether to compute newly explored area as a growth metric.
-        save_coord_specimen : bool
-            Whether to save component coordinates in CSV format.
 
         Returns
         -------
@@ -124,8 +122,7 @@ class ConnectedComponentsTracking:
         ...                                                 descriptors_dict=descriptor_dict,
         ...                                                 output_in_mm=True,
         ...                                                 pixel_size=2.5,
-        ...                                                 do_fading=False,
-        ...                                                 save_coord_specimen=True)
+        ...                                                 do_fading=False)
         """
         self.descriptors_dict = descriptors_dict
         self.init_descriptors_table()
@@ -137,9 +134,9 @@ class ConnectedComponentsTracking:
                 self.get_cc_centroid()
                 self.get_cc_descriptors(output_in_mm, pixel_size)
             self.update_cc_id_matrix()
-        one_row_per_frame = self.format_and_save_results(arena_label, timings, output_in_mm, pixel_size,
-                                      do_fading, save_coord_specimen)
-        return one_row_per_frame
+        one_row_per_frame = self.format_results(arena_label, timings, output_in_mm, pixel_size,
+                                      do_fading)
+        return one_row_per_frame, self.cc_centroids, self.cc_coord, self.cc_final_number
         
     def init_descriptors_table(self):
         """
@@ -281,8 +278,8 @@ class ConnectedComponentsTracking:
         # Reset self.cc_id_matrix for the next frame
         self.cc_id_matrix *= self.binary_vid[self.t, :, :]
             
-    def format_and_save_results(self, arena_label:int, timings: NDArray, output_in_mm: bool, pixel_size: float,
-                                      do_fading: bool, save_coord_specimen: bool):
+    def format_results(self, arena_label:int, timings: NDArray, output_in_mm: bool, pixel_size: float,
+                                      do_fading: bool):
         """
         Format and export tracking results to structured data files.
 
@@ -298,8 +295,6 @@ class ConnectedComponentsTracking:
             Conversion factor from pixels to millimeters (if `output_in_mm` is True).
         do_fading : bool
             Whether to compute newly explored area as a growth metric.
-        save_coord_specimen : bool
-            Whether to save component coordinates in CSV format.
 
         Returns
         -------
@@ -317,16 +312,6 @@ class ConnectedComponentsTracking:
         self.descriptors_table = self.descriptors_table[:, :(self.cc_final_number * len(self.to_compute_from_sd))]
         if len(self.cc_coord) > 0:
             self.cc_coord = np.vstack(self.cc_coord)
-            if save_coord_specimen:
-                self.cc_coord = pd.DataFrame(self.cc_coord, columns=["time", "colony", "y", "x"])
-                self.cc_coord.to_csv(
-                    f"self.cc_coord{arena_label}_{self.cc_final_number}col_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
-                    sep=';', index=False, lineterminator='\n')
-
-        self.cc_centroids = pd.DataFrame(self.cc_centroids, columns=["time", "colony", "y", "x"])
-        self.cc_centroids.to_csv(
-            f"colony_centroids{arena_label}_{self.cc_final_number}col_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
-            sep=';', index=False, lineterminator='\n')
 
         # Format the final dataframe to have one row per time frame, and one column per descriptor_colony_name
         one_row_per_frame = pd.DataFrame({'arena': arena_label, 'time': timings,

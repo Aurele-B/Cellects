@@ -1,7 +1,7 @@
 # Data localisation in the first window
 
 Before diving into detailed analysis workflows, Cellects requires initial setup (Fig. 1) to define the scope and format of the data being processed. This first window serves as the gateway to configuring foundational parameters that underpin all subsequent steps: from basic image/video tracking to advanced video analytics. 
-Users will specify whether their input consists of an image stack or a single video file, establish naming conventions for targeted files (e.g., prefixes like "exp_" and extensions like ".jpg"), and define the root folder(s) containing experimental data. Additionally, this interface allows users to declare how many independent arenas are present in each datasetâ€”a critical step for ensuring accurate analysis. 
+Users will specify whether their input consists of an image stack or a single video file, establish naming conventions for targeted files (e.g., prefixes like "exp_" and extensions like ".jpg"), and define the root folder(s) containing experimental data. Additionally, this interface allows users to declare how many independent arenas are present in each dataset—a critical step for ensuring accurate analysis. 
 These configurations directly inform later stages (e.g., image analysis, video tracking) and enable automation across multiple folders if required (See Fig. 11).
 
 # Detailed description
