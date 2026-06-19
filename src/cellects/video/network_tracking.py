@@ -234,7 +234,7 @@ class NetworkTracking:
         if current_network.sum() < minimal_network_size:
             mising_pieces = (1 - current_network) * self.network_dynamics[t - 1]
             nb, sh, stats, centroids = cv2.connectedComponentsWithStats(mising_pieces)
-            largest_accepted_disappearance = minimal_network_size * .1
+            largest_accepted_disappearance = 50 #  minimal_network_size * .1
             large_shapes = stats[1:, 4] > largest_accepted_disappearance
             if large_shapes.any():
                 large_shapes = np.nonzero(large_shapes)[0] + 1
