@@ -759,7 +759,7 @@ AP["Spatio_temporal_scaling"]["label"] = "Spatio-temporal scaling"
 AP["Spatio_temporal_scaling"]["tips"] = \
 f"""Defines the spatiotemporal scale of the dataset:
 - Time between images or frames (minutes).
-- An option to convert areas and distances from pixels to mm² and mm.
+- An option to convert areas and distances from pixels to mm^2 and mm.
 """
 # END_TIP
 
