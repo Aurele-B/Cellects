@@ -40,6 +40,7 @@ from gc import collect
 import numpy as np
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
+from psutil._common import bytes2human
 from cellects.image.one_image_analysis import OneImageAnalysis
 from cellects.video.cell_leaving_detection import cell_leaving_detection
 from cellects.video.connected_components_tracking import ConnectedComponentsTracking
@@ -790,7 +791,7 @@ class MotionAnalysis:
         do_increase_contrast = np.mean(converted_video[0, oridx[0], oridx[1]]) * 10 > np.mean(
                 converted_video[0, notoridx[0], notoridx[1]])
         necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 2 * 1.16415e-10
-        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
         if self.vars['lose_accuracy_to_save_memory']:
             derive = converted_video.astype(np.float32)
         else:
@@ -803,7 +804,7 @@ class MotionAnalysis:
 
         # 3) Get the gradient
         necessary_memory = derive.size * 64 * 4 * 1.16415e-10
-        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
         if necessary_memory > available_memory:
             for cy in np.arange(self.dims[1]):
                 for cx in np.arange(self.dims[2]):

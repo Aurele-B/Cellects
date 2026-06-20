@@ -3,7 +3,8 @@
 This script contains all unit tests of the one_video_per_blob script
 """
 import unittest
-import psutil
+from psutil import virtual_memory
+from psutil._common import bytes2human
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.video.motion_analysis import MotionAnalysis
 from cellects.config.all_vars_dict import DefaultDicts
@@ -553,7 +554,7 @@ class TestProgramOrganizerArenaDelineation(CellectsUnitTest):
 
     def test_prepare_video_writing_using_too_much_memory(self):
         """Test prepare_video_writing when writing all videos at the same time is not possible with current memory"""
-        min_ram_free = (psutil.virtual_memory().available >> 30) - 5
+        min_ram_free = bytes2human(virtual_memory().available) - 5
         if min_ram_free > 0:
             img_list = [np.zeros((1000, 1000), dtype=np.uint8) for i in range(5000)]
             self.po.top=np.array([0, 500])

@@ -11,13 +11,13 @@
 import sys
 import os
 import logging
-import psutil
 import cv2
 from numba.typed import Dict as TDict
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
 from psutil import virtual_memory
+from psutil._common import bytes2human
 from pathlib import Path
 import natsort
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
@@ -1513,7 +1513,7 @@ class ProgramOrganizer:
         use_list_of_vid = True
         if np.all(sizes[0, :] == sizes):
             use_list_of_vid = False
-        available_memory = (psutil.virtual_memory().available >> 30) - min_ram_free
+        available_memory = bytes2human(virtual_memory().available) - min_ram_free
         if available_memory == 0:
             analysis_status = {"continue": False, "message": "There are not enough RAM available"}
             bunch_nb = 1
@@ -1636,7 +1636,7 @@ class ProgramOrganizer:
                                         (self.right - self.left).astype(np.uint64)).max()
         one_video_memory = self.vars['img_number'] * one_image_memory
         necessary_memory = (one_image_memory * image_bit_number + one_video_memory * video_bit_number) * 1.16415e-10
-        available_memory = (virtual_memory().available >> 30) - self.vars['min_ram_free']
+        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
         max_repeat_in_memory = int(available_memory // necessary_memory)
         if max_repeat_in_memory > 1:
             max_repeat_in_memory = max(int(available_memory // (2 * necessary_memory)), 1)
