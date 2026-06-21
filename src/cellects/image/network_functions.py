@@ -136,7 +136,7 @@ class  NetworkDetection:
                 'method': f'f_{sigmas}_thresh',
                 'binary': binary_otsu,
                 'quality': quality_otsu,
-                'filtered': frangi_result,
+                # 'filtered': frangi_result,
                 'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
@@ -149,7 +149,6 @@ class  NetworkDetection:
                     'method': f'f_{sigmas}_roll',
                     'binary': binary_rolling,
                     'quality': quality_rolling,
-                    'filtered': frangi_result,
                     'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
@@ -210,7 +209,6 @@ class  NetworkDetection:
                 'method': f's_{sigmas}_thresh',
                 'binary': binary_otsu,
                 'quality': quality_otsu,
-                'filtered': sato_result,
                 'filter': f'Sato',
                 'rolling_window': False,
                 'sigmas': sigmas
@@ -225,7 +223,7 @@ class  NetworkDetection:
                     'method': f's_{sigmas}_roll',
                     'binary': binary_rolling,
                     'quality': quality_rolling,
-                    'filtered': sato_result,
+                    # 'filtered': sato_result,
                     'filter': f'Sato',
                     'rolling_window': True,
                     'sigmas': sigmas
@@ -360,51 +358,45 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
-        if self.possibly_filled_pixels.all():
-            dist_trans = self.possibly_filled_pixels
-        else:
-            closed_im = close_holes(self.possibly_filled_pixels)
-            dist_trans = distance_transform_edt(closed_im)
-            dist_trans = dist_trans.max() - dist_trans
+        scored_im = self.possibly_filled_pixels
+        if not self.possibly_filled_pixels.all():
+            scored_im = close_holes(self.possibly_filled_pixels)
+            scored_im = distance_transform_edt(scored_im)
+            scored_im = scored_im.max() - scored_im
         # Add dilatation of bracket of distances from medial_axis to the multiplication
+        grey = self.greyscale_image
         if lighter_background:
             grey = self.greyscale_image.max() - self.greyscale_image
-        else:
-            grey = self.greyscale_image
         if self.origin_to_add is not None:
-            dist_trans_ori = distance_transform_edt(1 - self.origin_to_add)
-            scored_im = dist_trans * dist_trans_ori * grey
+            scored_im = scored_im * distance_transform_edt(1 - self.origin_to_add) * grey
         else:
-            scored_im = (dist_trans**2) * grey
+            scored_im = (scored_im**2) * grey
         scored_im = bracket_to_uint8_image_contrast(scored_im)
         thresh = threshold_otsu(scored_im)
         thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=thresh)
-        high_int_in_periphery = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
+        high_score_mask = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
 
-        _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
-        bin_im = pseudopod_widths >= self.edge_max_width
-        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
-        bin_im = high_int_in_periphery * dil_bin_im
-        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
-        true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-        true_pseudopods = np.isin(shapes, true_pseudopods)
+        _, pseudopod_widths = morphology.medial_axis(high_score_mask, return_distance=True, rng=0)
+        high_score_mask = high_score_mask * cv2.dilate((pseudopod_widths >= self.edge_max_width).astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
+        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(high_score_mask)
+        self.pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        self.pseudopods = np.isin(shapes, self.pseudopods)
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
-        complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
+        self.complete_network = np.logical_or(self.pseudopods, self.incomplete_network).astype(np.uint8)
         if self.morphological_closing:
-            complete_network = cv2.morphologyEx(complete_network.astype(np.uint8), cv2.MORPH_CLOSE, kernel=self.kernel)
+            self.complete_network = cv2.morphologyEx(self.complete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
         if only_one_connected_component:
-            complete_network = keep_one_connected_component(complete_network)
-            without_pseudopods = complete_network.copy()
-            true_pseudopods = cv2.dilate(true_pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
-            without_pseudopods[true_pseudopods > 0] = 0
+            self.complete_network = keep_one_connected_component(self.complete_network)
+            without_pseudopods = self.complete_network.copy()
+            self.pseudopods = cv2.dilate(self.pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
+            without_pseudopods[self.pseudopods > 0] = 0
             only_connected_network = keep_one_connected_component(without_pseudopods)
-            self.pseudopods = (1 - only_connected_network) * complete_network
+            self.pseudopods = (1 - only_connected_network) * self.complete_network
             # Merge the connected network with pseudopods to get the complete network
             self.complete_network = np.logical_or(only_connected_network, self.pseudopods).astype(np.uint8)
         else:
-            self.pseudopods = true_pseudopods.astype(np.uint8)
-            self.complete_network = complete_network
+            self.pseudopods = self.pseudopods.astype(np.uint8)
         self.incomplete_network *= (1 - self.pseudopods)
 
 
