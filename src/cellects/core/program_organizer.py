@@ -16,8 +16,7 @@ from numba.typed import Dict as TDict
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
-from psutil import virtual_memory
-from psutil._common import bytes2human
+from psutil import virtual_memory, disk_usage
 from pathlib import Path
 import natsort
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
@@ -468,7 +467,7 @@ class ProgramOrganizer:
                                 logging.info("Crop last image")
                                 self.last_image.automatically_crop(self.first_image.crop_coord)
                             shapes_coord = read_h5('cellects_data.h5','validated_shapes')
-                            if shapes_coord is not None:
+                            if shapes_coord is not None and shapes_coord[0].max() < self.first_image.image.shape[0] and shapes_coord[1].max() < self.first_image.image.shape[1]:
                                 self.first_image.validated_shapes = np.zeros(self.first_image.image.shape[:2], np.uint8)
                                 self.first_image.validated_shapes[shapes_coord[0], shapes_coord[1]] = 1
                                 self.first_image.im_combinations = []
@@ -1513,7 +1512,7 @@ class ProgramOrganizer:
         use_list_of_vid = True
         if np.all(sizes[0, :] == sizes):
             use_list_of_vid = False
-        available_memory = bytes2human(virtual_memory().available) - min_ram_free
+        available_memory = virtual_memory().available / (1024 ** 3) - min_ram_free
         if available_memory == 0:
             analysis_status = {"continue": False, "message": "There are not enough RAM available"}
             bunch_nb = 1
@@ -1535,7 +1534,7 @@ class ProgramOrganizer:
             analysis_status = {"continue": False, "message": "Probably failed to detect the right cell(s) number, do the first image analysis manually."}
             logging.error(f"{analysis_status['message']} error is: {v_err}")
         # Check for available ROM memory
-        if (psutil.disk_usage('/')[2] >> 30) < (necessary_memory + 2):
+        if disk_usage('/')[2] / (1024 ** 3) < (necessary_memory + 2):
             rom_memory_required = necessary_memory + 2
         else:
             rom_memory_required = None
@@ -1577,7 +1576,7 @@ class ProgramOrganizer:
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
         self.vars['descriptors']['newly_explored_area'] = self.vars['specimen_activity'] == 'move' or self.vars['specimen_activity'] == 'move and grow'
 
-    def update_available_core_nb(self, image_bit_number=256, video_bit_number=140):# video_bit_number=176
+    def update_available_core_nb(self, image_bit_number=300, video_bit_number=130):# video_bit_number=176
         """
         Update available computation resources based on memory and processing constraints.
 
@@ -1621,12 +1620,7 @@ class ProgramOrganizer:
                 video_bit_number -= 56
         if self.vars['already_greyscale']:
             video_bit_number -= 64
-        # if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
-        #     video_bit_number += 16
-        #     image_bit_number += 128
-        # if self.vars['save_coord_network']:
-        #     video_bit_number += 8
-        #     image_bit_number += 64
+
 
         if isinstance(self.bot, list):
             one_image_memory = np.multiply((self.bot[0] - self.top[0]),
@@ -1635,8 +1629,20 @@ class ProgramOrganizer:
             one_image_memory = np.multiply((self.bot - self.top).astype(np.uint64),
                                         (self.right - self.left).astype(np.uint64)).max()
         one_video_memory = self.vars['img_number'] * one_image_memory
-        necessary_memory = (one_image_memory * image_bit_number + one_video_memory * video_bit_number) * 1.16415e-10
-        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
+        initial_bit_number = one_image_memory * image_bit_number + one_video_memory * video_bit_number
+        bit_number = initial_bit_number
+        if self.vars['save_coord_network']:
+            bit_number = max(bit_number, initial_bit_number + 2 * one_video_memory + 180 * one_image_memory)
+        if self.vars['save_graph']:
+            bit_number = max(bit_number, initial_bit_number - 2 * one_video_memory - 4 * one_image_memory)
+        if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
+            bit_number = max(bit_number, initial_bit_number + 16 * one_video_memory + 88 * one_image_memory)
+
+        logging.info(f"Video size: {one_video_memory}")
+        logging.info(f"Image size: {one_image_memory}")
+        necessary_memory = bit_number * 1.16415e-10
+        logging.info(f"Total memory expected usage: {necessary_memory}")
+        available_memory = virtual_memory().available / (1024 ** 3) - self.vars['min_ram_free']
         max_repeat_in_memory = int(available_memory // necessary_memory)
         if max_repeat_in_memory > 1:
             max_repeat_in_memory = max(int(available_memory // (2 * necessary_memory)), 1)

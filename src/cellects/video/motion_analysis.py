@@ -40,7 +40,6 @@ from gc import collect
 import numpy as np
 from numba.typed import Dict as TDict
 from psutil import virtual_memory
-from psutil._common import bytes2human
 from cellects.image.one_image_analysis import OneImageAnalysis
 from cellects.video.cell_leaving_detection import cell_leaving_detection
 from cellects.video.connected_components_tracking import ConnectedComponentsTracking
@@ -120,6 +119,7 @@ class MotionAnalysis:
             save_results(): Saves the results of the analysis.
 
         """
+        self.init_avail_mem =virtual_memory().available / (1024 ** 3)
         self.one_descriptor_per_arena = {}
         self.one_descriptor_per_arena['arena'] = l[1]
         vars = l[2]
@@ -140,19 +140,23 @@ class MotionAnalysis:
         self.rays = None
         self.sun = None
         self.holes = None
+        self.near_periphery = None
         self.coord_network = None
         self.luminosity_segmentation = None
         self.gradient_segmentation = None
         self.logical_and = None
         self.logical_or = None
+        self.bit_usage = {'images': 0, 'videos': 0}
         self.vars = vars
         if not 'contour_color' in self.vars:
             self.vars['contour_color']: np.uint8 = 0
         self.load_images_and_videos(videos_already_in_ram, l[0])
 
         self.segmented = np.zeros(self.dims, dtype=np.uint8)
+        self.bit_usage['videos'] += 8
 
         self.covering_intensity = np.zeros(self.dims[1:], dtype=np.float64)
+        self.bit_usage['images'] += 64
         self.mean_intensity_per_frame = np.mean(self.converted_video, (1, 2))
 
         self.borders = image_borders(self.dims[1:], shape=self.vars['arena_shape'])
@@ -218,10 +222,13 @@ class MotionAnalysis:
             vid_name = self.vars['video_list'][i]
         self.background = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'background')
         self.background2 = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'background2')
+        self.bit_usage['images'] += 2*8*3
         vids = read_one_arena(self.one_descriptor_per_arena['arena'], self.vars['already_greyscale'],
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
+        self.bit_usage['videos'] += 2 * 8 * 3
+        self.bit_usage['videos'] += 2 * 8 * 2
 
         if self.visu is not None:
             self.dims = self.visu.shape[:3]
@@ -249,6 +256,7 @@ class MotionAnalysis:
         self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
         self.origin_idx = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'origin_coord')
         self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
+        self.bit_usage['images'] += 8
 
     def assess_motion_detection(self):
         """
@@ -399,6 +407,7 @@ class MotionAnalysis:
             self.substantial_image = cv2.erode(growth_vision.binary_image, cross_33, iterations=2)
         else:
             self.substantial_image = growth_vision.binary_image
+        self.bit_usage['images'] += 8
 
         if np.any(self.substantial_image):
             natural_noise = np.nonzero(intensity_extent == np.min(intensity_extent))
@@ -456,6 +465,7 @@ class MotionAnalysis:
         the instance variables accordingly.
 
         """
+        self.bit_usage['videos'] += 32
         if self.start is None:
             self.start = 1
             logging.info("Failed to detect growth using the available frame number, use the default frame-by-frame segmentation algorithm")
@@ -791,7 +801,7 @@ class MotionAnalysis:
         do_increase_contrast = np.mean(converted_video[0, oridx[0], oridx[1]]) * 10 > np.mean(
                 converted_video[0, notoridx[0], notoridx[1]])
         necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 2 * 1.16415e-10
-        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
+        available_memory = virtual_memory().available / (1024 ** 3) - self.vars['min_ram_free']
         if self.vars['lose_accuracy_to_save_memory']:
             derive = converted_video.astype(np.float32)
         else:
@@ -804,7 +814,7 @@ class MotionAnalysis:
 
         # 3) Get the gradient
         necessary_memory = derive.size * 64 * 4 * 1.16415e-10
-        available_memory = bytes2human(virtual_memory().available) - self.vars['min_ram_free']
+        available_memory = virtual_memory().available / (1024 ** 3) - self.vars['min_ram_free']
         if necessary_memory > available_memory:
             for cy in np.arange(self.dims[1]):
                 for cx in np.arange(self.dims[2]):
@@ -917,6 +927,7 @@ class MotionAnalysis:
         ## Initialization
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Starting Post_processing. Specimen activity: {self.vars['specimen_activity']}. Fading coef: {self.vars['fading']}, Subtract background: {self.vars['subtract_background']}, Correct errors around initial shape: {self.vars['correct_errors_around_initial']}, Connect distant shapes: {self.vars['detection_range_factor'] > 0}, How to select appearing cell(s): {self.vars['appearance_detection_method']}")
         self.binary = np.zeros(self.dims[:3], dtype=np.uint8)
+        self.bit_usage['videos'] += 8
         if self.origin.shape[0] != self.binary[self.start - 1, :, :].shape[0] or self.origin.shape[1] != self.binary[self.start - 1, :, :].shape[1]:
             logging.error("Unaltered videos deprecated, they have been created with different settings.\nDelete .h5 videos and cellects_settings.json and re-run")
 
@@ -950,11 +961,14 @@ class MotionAnalysis:
         self.surfarea[:self.start] = np.sum(self.binary[:self.start, :, :], (1, 2))
         self.gravity_field = inverted_distance_transform(self.binary[(self.start - 1), :, :],
                                            np.sqrt(np.sum(self.binary[(self.start - 1), :, :])))
+        self.bit_usage['images'] += 32
         if self.vars['correct_errors_around_initial']:
             self.rays, self.sun = draw_me_a_sun(self.binary[(self.start - 1), :, :], ray_length_coef=1)  # plt.imshow(sun)
             self.holes = np.zeros(self.dims[1:], dtype=np.uint8)
             self.pixel_ring_depth += 2
             self.update_ring_width()
+        self.bit_usage['images'] += 32
+        self.bit_usage['images'] += 8
 
         if self.vars['prevent_fast_growth_near_periphery']:
             self.near_periphery = np.zeros(self.dims[1:])
@@ -976,6 +990,7 @@ class MotionAnalysis:
                 self.near_periphery[:, :self.vars['periphery_width']] = 1
                 self.near_periphery[:, -self.vars['periphery_width']:] = 1
             self.near_periphery = np.nonzero(self.near_periphery)
+        self.bit_usage['images'] += 8
 
     def update_shape(self, show_seg: bool):
         """
@@ -1227,6 +1242,9 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
+        logging.debug(f"Update shape expected bit usage: Images={self.bit_usage['images'] + 8 * 8 + 3 * 8}, Videos={self.bit_usage['videos']}")
+        current_avail_mem = virtual_memory().available / (1024 ** 3)
+        logging.debug(f"Update shape memory usage: {self.init_avail_mem - current_avail_mem}")
         if release_memory:
             del self.substantial_image
             del self.covering_intensity
@@ -1235,7 +1253,11 @@ class MotionAnalysis:
             del self.sun
             del self.rays
             del self.holes
+            del self.near_periphery
             collect()
+        self.bit_usage['images'] -= (5 * 8 + 64 + 32 + 32 + 8)
+        self.bit_usage['videos'] -= 8
+
         self.surfarea = self.binary.sum((1, 2))
         timings = np.array(self.vars['exif'])
         if len(timings) < self.dims[0]:
@@ -1328,7 +1350,9 @@ class MotionAnalysis:
                     self.one_descriptor_per_arena['is_growth_isotropic'] = 0
             else:
                 self.one_descriptor_per_arena['is_growth_isotropic'] = pd.NA
-                
+        logging.debug(f"Growth transitions expected bit usage: Images={self.bit_usage['images'] + 2 * 8}, Videos={self.bit_usage['videos']}")
+        current_avail_mem = virtual_memory().available / (1024 ** 3)
+        logging.debug(f"Growth transitions memory usage: {self.init_avail_mem - current_avail_mem}")
 
     def check_converted_video_type(self):
         """

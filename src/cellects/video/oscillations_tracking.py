@@ -29,7 +29,6 @@ from cellects.image.morphological_operations import cc, CompareNeighborsWithValu
 from cellects.io.save import write_h5
 from cellects.utils.utilitarian import smallest_memory_array
 from psutil import virtual_memory
-from psutil._common import bytes2human
 
 
 class OscillationsTracking:
@@ -124,7 +123,7 @@ class OscillationsTracking:
             if period_in_frame_nb < 2:
                 period_in_frame_nb = 2
             necessary_memory = self.dims[0] * self.dims[1] * self.dims[2] * 64 * 4 * 1.16415e-10
-            available_memory = (bytes2human(virtual_memory().available)) - self.motion.vars['min_ram_free']
+            available_memory = virtual_memory().available / (1024 ** 3) - self.motion.vars['min_ram_free']
             if len(self.dims) == 4:
                 self.motion.converted_video = self.motion.converted_video[:, :, :, 0]
             average_intensities = np.mean(self.motion.converted_video, (1, 2))
