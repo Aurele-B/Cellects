@@ -1242,9 +1242,6 @@ class MotionAnalysis:
 
         """
         logging.info(f"Arena n°{self.one_descriptor_per_arena['arena']}. Computing and saving specimen(s) coordinates and required descriptors")
-        logging.debug(f"Update shape expected bit usage: Images={self.bit_usage['images'] + 8 * 8 + 3 * 8}, Videos={self.bit_usage['videos']}")
-        current_avail_mem = virtual_memory().available / (1024 ** 3)
-        logging.debug(f"Update shape memory usage: {self.init_avail_mem - current_avail_mem}")
         if release_memory:
             del self.substantial_image
             del self.covering_intensity
@@ -1350,9 +1347,6 @@ class MotionAnalysis:
                     self.one_descriptor_per_arena['is_growth_isotropic'] = 0
             else:
                 self.one_descriptor_per_arena['is_growth_isotropic'] = pd.NA
-        logging.debug(f"Growth transitions expected bit usage: Images={self.bit_usage['images'] + 2 * 8}, Videos={self.bit_usage['videos']}")
-        current_avail_mem = virtual_memory().available / (1024 ** 3)
-        logging.debug(f"Growth transitions memory usage: {self.init_avail_mem - current_avail_mem}")
 
     def check_converted_video_type(self):
         """

@@ -1638,8 +1638,6 @@ class ProgramOrganizer:
         if self.vars['save_coord_thickening_slimming'] or self.vars['oscilacyto_analysis']:
             bit_number = max(bit_number, initial_bit_number + 16 * one_video_memory + 88 * one_image_memory)
 
-        logging.info(f"Video size: {one_video_memory}")
-        logging.info(f"Image size: {one_image_memory}")
         necessary_memory = bit_number * 1.16415e-10
         logging.info(f"Total memory expected usage: {necessary_memory}")
         available_memory = virtual_memory().available / (1024 ** 3) - self.vars['min_ram_free']

@@ -30,6 +30,7 @@ from timeit import default_timer
 import cv2
 from numba.typed import Dict as TDict
 import numpy as np
+from math import prod
 from PySide6 import QtCore
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours, keep_one_connected_component, cc, CompareNeighborsWithValue, box_counting_dimension, prepare_box_counting
@@ -1766,15 +1767,23 @@ class VideoTrackingThread(QtCore.QThread):
         growth transition detection, network analysis, Oscillation study, fractal descriptions, and updating results.
         Each step is conditional on the absence of an interruption request.
         """
+        true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+        expected_mem_use = ((self.po.motion.bit_usage['images'] + 8 * 8 + 3 * 8) * prod(self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 0) * prod(self.po.motion.dims)) * 1.16415e-10
+        logging.info(f"Post processing memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+
         self.po.motion.dict_signal = self.image_from_thread.emit
         if not self.can_continue():
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing descriptors")
-        self.po.motion.get_descriptors_from_binary(release_memory=False)
+        self.po.motion.get_descriptors_from_binary(release_memory=self.po.video_task != 'change_one_arena_result')
         if not self.can_continue():
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting growth transitions")
         self.po.motion.detect_growth_transitions()
+        true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+        expected_mem_use = ((self.po.motion.bit_usage['images'] +  2 * 8) * prod(self.po.motion.dims[1:]) + self.po.motion.bit_usage['videos'] * prod(self.po.motion.dims)) * 1.16415e-10
+        logging.info(f"Growth transitions memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+
         if not self.can_continue():
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network")
@@ -1783,17 +1792,14 @@ class VideoTrackingThread(QtCore.QThread):
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Extracting graph")
         self.extract_graph_dynamics()
-        # self.po.motion.networks_analysis(False)
         if not self.can_continue():
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting oscillatory patterns")
         self.detect_oscillations_dynamics()
-        # self.po.motion.study_cytoscillations(False)
         if not self.can_continue():
             return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing fractal dimension")
         self.fractal_descriptions()
-        # self.po.motion.fractal_descriptions()
 
     def detect_network_dynamics(self):
         """
@@ -1807,8 +1813,10 @@ class VideoTrackingThread(QtCore.QThread):
         - Temporal smoothing effectiveness depends on network dynamics consistency between frames.
         - Pseudopod detection requires sufficient contrast with the background in grayscale images.
         """
-        logging.debug(f"Network detection expected bit usage: Images={self.po.motion.bit_usage['images'] + (9+12)*8*2 + 14*8}, Videos={self.po.motion.bit_usage['videos'] + 2*2 + 8}")
         if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + (9 + 12) * 8 * 2 + 14 * 8) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 2 * 2 + 8) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             net_track = NetworkTracking(self.po.motion)
             net_track.init_tracking()
             for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
@@ -1829,8 +1837,8 @@ class VideoTrackingThread(QtCore.QThread):
                                         'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
                                         'current_image': imtoshow})
             self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
-            current_avail_mem = virtual_memory().available / (1024 ** 3)
-            logging.debug(f"Network detection memory usage: {self.po.motion.init_avail_mem - current_avail_mem}")
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Network detection memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del net_track
 
     def extract_graph_dynamics(self):
@@ -1847,7 +1855,9 @@ class VideoTrackingThread(QtCore.QThread):
         Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
         """
         if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_graph']:
-            logging.debug(f"Graph extraction expected bit usage: Images={self.po.motion.bit_usage['images'] + 5*8 + 64 + 3*32 + 3*8}, Videos={self.po.motion.bit_usage['videos'] + 8}")
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + 5*8 + 64 + 3*32 + 3*8) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 8) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             if self.po.motion.coord_network is None:
                 self.po.motion.coord_network = np.array(np.nonzero(self.po.motion.binary))
             graph_track = GraphTracking(self.po.motion.converted_video, self.po.motion.coord_network,
@@ -1861,8 +1871,8 @@ class VideoTrackingThread(QtCore.QThread):
                     {'message': f"{self.status['folder']}, {self.status['message']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
                      'current_image': graph})
             graph_track.save_graph()
-            current_avail_mem = virtual_memory().available / (1024 ** 3)
-            logging.debug(f"Network detection memory usage: {self.po.motion.init_avail_mem - current_avail_mem}")
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Graph tracking memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del graph_track
 
     def detect_oscillations_dynamics(self):
@@ -1876,8 +1886,9 @@ class VideoTrackingThread(QtCore.QThread):
         - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
         """
         if (self.po.vars['save_coord_thickening_slimming'] or self.po.vars['oscilacyto_analysis']) and self.po.motion.converted_video.shape[0] > 1:
-            logging.debug(
-                f"Graph extraction expected bit usage: Images={self.po.motion.bit_usage['images'] + 3*8 + 2*32}, Videos={self.po.motion.bit_usage['videos'] + 16}")
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + 3*8 + 2*32) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 16) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             osci_track = OscillationsTracking(self.po.motion)
             osci_track.init_tracking()
             for t in np.arange(osci_track.starting_time, osci_track.dims[0]):
@@ -1888,8 +1899,8 @@ class VideoTrackingThread(QtCore.QThread):
                     {'message': f"{self.status['folder']}, {self.status['message']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
                      'current_image': oscillations_image})
             osci_track.save_oscillations()
-            current_avail_mem = virtual_memory().available / (1024 ** 3)
-            logging.debug(f"Graph extraction memory usage: {self.po.motion.init_avail_mem - current_avail_mem}")
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Oscillations analysis memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del osci_track
 
 
@@ -1954,8 +1965,7 @@ class VideoTrackingThread(QtCore.QThread):
                 self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
-            current_avail_mem = virtual_memory().available / (1024 ** 3)
-            logging.debug(f"Fractal estimation memory usage: {self.po.motion.init_avail_mem - current_avail_mem}")
+            logging.info(f"Fractal estimation memory usage: {self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)}")
             if self.po.vars['save_coord_network']:
                 del self.po.motion.coord_network
 
