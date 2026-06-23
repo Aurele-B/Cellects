@@ -1535,7 +1535,7 @@ class ProgramOrganizer:
             logging.error(f"{analysis_status['message']} error is: {v_err}")
         # Check for available ROM memory
         if disk_usage('/')[2] / (1024 ** 3) < (necessary_memory + 2):
-            rom_memory_required = necessary_memory + 2
+            rom_memory_required = round(necessary_memory + 2, 3)
         else:
             rom_memory_required = None
         remaining = self.first_image.shape_number % bunch_nb
