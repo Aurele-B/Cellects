@@ -332,7 +332,7 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
+    def detect_pseudopods(self, lighter_background: bool=None, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
         Detect pseudopods in a binary image.
 
