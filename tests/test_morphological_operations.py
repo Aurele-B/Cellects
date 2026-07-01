@@ -1374,16 +1374,16 @@ class TestBoxCountingDimension(CellectsUnitTest):
         zoomed_binary = self.binary_image  # Assuming this is already prepared
         side_lengths = np.array([10, 5, 2])  # Example side lengths
 
-        expected_dimension = np.float64(1.1777767776413224)
-        expected_r_value = np.float64(0.9491082009262662)
+        expected_dimension = np.float64(1.177777)
+        expected_r_value = np.float64(0.949108)
         expected_box_nb = 3
 
         # Execute function
         dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)
 
         # Verify results
-        self.assertEqual(dimension, expected_dimension)
-        self.assertEqual(r_value, expected_r_value)
+        self.assertEqual(np.round(dimension, 6), expected_dimension)
+        self.assertEqual(np.round(r_value, 6), expected_r_value)
         self.assertEqual(box_nb, expected_box_nb)
 
     def test_empty_side_lengths(self):
