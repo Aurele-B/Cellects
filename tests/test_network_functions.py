@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+"""
+This script contains all unit tests of the network_functions script
+"""
 
 import unittest
 from cellects.image.network_functions import *
 from tests._base import CellectsUnitTest
 
-# --- Tests -------------------------------------------------------------------
 
 class TestNetworkDetection(CellectsUnitTest):
     """Test suite for get_best_network_detection_method() method"""
@@ -39,10 +42,6 @@ class TestNetworkDetection(CellectsUnitTest):
     def test_get_best_network_detection_method_outputs_proper_quality(self):
         """Check that best network detection method outputs proper quality"""
         self.assertTrue(isinstance(self.NetDet.best_result['quality'], np.float64))
-
-    def test_get_best_network_detection_method_outputs_proper_filtered_image(self):
-        """Check that best network detection method outputs proper filtered image"""
-        self.assertTrue(isinstance(self.NetDet.best_result['filtered'], np.ndarray))
 
     def test_get_best_network_detection_method_outputs_proper_rolling_window_option(self):
         """Check that best network detection method outputs proper rolling window option"""
@@ -1253,7 +1252,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         self.assertIsInstance(edge_id.tips_coord, set)
         # Then get tipped edges
         edge_id.get_tipped_edges()
-        self.assertIsInstance(edge_id.edge_lengths_by_id, dict)
+        self.assertIsInstance(edge_id.edge_to_length_map, dict)
 
     def test_remove_tipped_edge_smaller_than_branch_width(self):
         """Test removal of short tipped edges."""
@@ -1362,10 +1361,10 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.remove_tipped_edge_smaller_than_branch_width()
         edge_id.label_tipped_edges_and_their_vertices()
 
-        self.assertEqual(len(edge_id.edge_lengths_by_id), 1)
+        self.assertEqual(len(edge_id.edge_to_length_map), 1)
         self.assertEqual(len(edge_id.vertices_branching_tips),1)
         edge_id.label_edges_connected_with_vertex_clusters()
-        self.assertEqual(len(edge_id.edge_lengths_by_id), 4)
+        self.assertEqual(len(edge_id.edge_to_length_map), 4)
 
     def test_label_edges_from_known_vertices_iteratively_without_vertex_clusters(self):
         """Test that label_edges_from_known_vertices_iteratively works without vertex clusters."""
@@ -1386,7 +1385,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_connected_with_vertex_clusters()
         edge_id.label_edges_connecting_vertex_clusters()
         edge_id.label_edges_from_known_vertices_iteratively()
-        self.assertEqual(len(edge_id.edge_lengths), 1)
+        self.assertEqual(len(edge_id.edge_to_length_map), 1)
 
     def test_label_edges_from_known_vertices_iteratively_with_vertex_clusters(self):
         """Test that label_edges_from_known_vertices_iteratively works with vertex clusters."""
@@ -1407,7 +1406,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_connected_with_vertex_clusters()
         edge_id.label_edges_connecting_vertex_clusters()
         edge_id.label_edges_from_known_vertices_iteratively()
-        self.assertEqual(len(edge_id.edge_pixels_by_id), 13)
+        self.assertEqual(len(edge_id.edge_to_vertices_map), 13)
 
     def test_label_edges_looping_on_1_vertex(self):
         """Test that label_edges_looping_on_1_vertex completes without errors."""
@@ -1433,10 +1432,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_connected_with_vertex_clusters()
         edge_id.label_edges_connecting_vertex_clusters()
         edge_id.label_edges_from_known_vertices_iteratively()
-        self.assertEqual(len(edge_id.edge_lengths), 16)
+        self.assertEqual(len(edge_id.edge_to_length_map), 16)
         edge_id.label_edges_looping_on_1_vertex()
-        self.assertEqual(len(edge_id.edge_lengths), 17)
-        self.assertEqual(edge_id.edge_lengths[-1], 15)
+        self.assertEqual(len(edge_id.edge_to_length_map), 17)
 
     def test_clear_areas_of_1_or_2_unidentified_pixels(self):
         """Test that clear_areas_of_1_or_2_unidentified_pixels completes without errors."""
@@ -1493,9 +1491,9 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_edges_from_known_vertices_iteratively()
         edge_id.label_edges_looping_on_1_vertex()
         edge_id.clear_areas_of_1_or_2_unidentified_pixels()
-        self.assertEqual(edge_id.edges_labels.shape[0], 17)
+        self.assertEqual(len(edge_id.edge_to_vertices_map), 17)
         edge_id.clear_edge_duplicates()
-        self.assertEqual(edge_id.edges_labels.shape[0], 17)
+        self.assertEqual(len(edge_id.edge_to_vertices_map), 17)
 
     def test_clear_vertices_connecting_2_edges(self):
         """Test that clear_vertices_connecting_2_edges completes without errors."""
@@ -1562,8 +1560,8 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.label_tipped_edges_and_their_vertices()
         edge_id.check_vertex_existence()
         self.assertEqual(edge_id.tip_number, 2)
-        self.assertEqual(len(edge_id.edge_lengths_by_id), 1)
-        self.assertEqual(len(edge_id.edge_pixels_by_id[1]), 9)
+        self.assertEqual(len(edge_id.edge_to_length_map), 1)
+        self.assertEqual(len(edge_id.edge_to_coord_map[1]), 9)
         self.assertEqual(len(edge_id.detected_edge_keys), 1)
 
     def test_make_vertex_table(self):

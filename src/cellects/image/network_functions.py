@@ -88,7 +88,7 @@ class  NetworkDetection:
         self.frangi_gamma = 1.
         self.black_ridges = True
 
-    def apply_frangi_variations(self) -> list:
+    def apply_frangi_variations(self, include_images: bool=False) -> list:
         """
         Applies various Frangi filter variations with different sigma values and thresholding methods.
 
@@ -134,31 +134,33 @@ class  NetworkDetection:
             # Store results
             results.append({
                 'method': f'f_{sigmas}_thresh',
-                'binary': binary_otsu,
                 'quality': quality_otsu,
-                'filtered': frangi_result,
                 'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
+            if include_images:
+                results[-1]['binary'] = binary_otsu
+                results[-1]['filtered'] = frangi_result
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(frangi_result, self.possibly_filled_pixels, patch_size=(10, 10))
                 quality_rolling = binary_quality_index(binary_rolling)
                 results.append({
                     'method': f'f_{sigmas}_roll',
-                    'binary': binary_rolling,
                     'quality': quality_rolling,
-                    'filtered': frangi_result,
                     'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
+                if include_images:
+                    results[-1]['binary'] = binary_rolling
+                    results[-1]['filtered'] = frangi_result
 
         return results
 
 
-    def apply_sato_variations(self) -> list:
+    def apply_sato_variations(self, include_images: bool=False) -> list:
         """
         Apply various Sato filter variations to an image and store the results.
 
@@ -210,11 +212,13 @@ class  NetworkDetection:
                 'method': f's_{sigmas}_thresh',
                 'binary': binary_otsu,
                 'quality': quality_otsu,
-                'filtered': sato_result,
                 'filter': f'Sato',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
+            if include_images:
+                results[-1]['binary'] = binary_otsu
+                results[-1]['filtered'] = sato_result
 
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
@@ -225,15 +229,17 @@ class  NetworkDetection:
                     'method': f's_{sigmas}_roll',
                     'binary': binary_rolling,
                     'quality': quality_rolling,
-                    'filtered': sato_result,
                     'filter': f'Sato',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
+                if include_images:
+                    results[-1]['binary'] = binary_rolling
+                    results[-1]['filtered'] = sato_result
 
         return results
 
-    def get_best_network_detection_method(self):
+    def get_best_network_detection_method(self, include_images: bool=True):
         """
         Get the best network detection method based on quality metrics.
 
@@ -277,15 +283,16 @@ class  NetworkDetection:
         >>> print(NetDet.best_result['sigmas'])
         bgr_image = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
         """
-        frangi_res = self.apply_frangi_variations()
-        sato_res = self.apply_sato_variations()
+        frangi_res = self.apply_frangi_variations(include_images)
+        sato_res = self.apply_sato_variations(include_images)
         self.all_results = frangi_res + sato_res
         self.quality_metrics = np.array([result['quality'] for result in self.all_results])
         self.best_idx = np.argmax(self.quality_metrics)
         self.best_result = self.all_results[self.best_idx]
-        self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
-        if self.morphological_closing:
-            self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
+        if include_images:
+            self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
+            if self.morphological_closing:
+                self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
 
 
     def detect_network(self):
@@ -325,7 +332,7 @@ class  NetworkDetection:
         """
         self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
 
-    def detect_pseudopods(self, lighter_background: bool, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
+    def detect_pseudopods(self, lighter_background: bool=None, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
         Detect pseudopods in a binary image.
 
@@ -360,51 +367,50 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
-        if self.possibly_filled_pixels.all():
-            dist_trans = self.possibly_filled_pixels
-        else:
-            closed_im = close_holes(self.possibly_filled_pixels)
-            dist_trans = distance_transform_edt(closed_im)
-            dist_trans = dist_trans.max() - dist_trans
+        if lighter_background is None:
+            if self.possibly_filled_pixels.all():
+                lighter_background = self.greyscale_image.mean() < np.median(self.greyscale_image)
+            else:
+                lighter_background = self.greyscale_image[self.possibly_filled_pixels > 0].mean() < self.greyscale_image[self.possibly_filled_pixels == 0].mean()
+        scored_im = self.possibly_filled_pixels
+        if not self.possibly_filled_pixels.all():
+            scored_im = close_holes(self.possibly_filled_pixels)
+            scored_im = distance_transform_edt(scored_im)
+            scored_im = scored_im.max() - scored_im
         # Add dilatation of bracket of distances from medial_axis to the multiplication
+        grey = self.greyscale_image
         if lighter_background:
             grey = self.greyscale_image.max() - self.greyscale_image
-        else:
-            grey = self.greyscale_image
         if self.origin_to_add is not None:
-            dist_trans_ori = distance_transform_edt(1 - self.origin_to_add)
-            scored_im = dist_trans * dist_trans_ori * grey
+            scored_im = scored_im * distance_transform_edt(1 - self.origin_to_add) * grey
         else:
-            scored_im = (dist_trans**2) * grey
+            scored_im = (scored_im**2) * grey
         scored_im = bracket_to_uint8_image_contrast(scored_im)
         thresh = threshold_otsu(scored_im)
         thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=thresh)
-        high_int_in_periphery = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
+        high_score_mask = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
 
-        _, pseudopod_widths = morphology.medial_axis(high_int_in_periphery, return_distance=True, rng=0)
-        bin_im = pseudopod_widths >= self.edge_max_width
-        dil_bin_im = cv2.dilate(bin_im.astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
-        bin_im = high_int_in_periphery * dil_bin_im
-        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(bin_im)
-        true_pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-        true_pseudopods = np.isin(shapes, true_pseudopods)
+        _, pseudopod_widths = morphology.medial_axis(high_score_mask, return_distance=True, rng=0)
+        high_score_mask = high_score_mask * cv2.dilate((pseudopod_widths >= self.edge_max_width).astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
+        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(high_score_mask)
+        self.pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        self.pseudopods = np.isin(shapes, self.pseudopods)
 
         # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
-        complete_network = np.logical_or(true_pseudopods, self.incomplete_network).astype(np.uint8)
+        self.complete_network = np.logical_or(self.pseudopods, self.incomplete_network).astype(np.uint8)
         if self.morphological_closing:
-            complete_network = cv2.morphologyEx(complete_network.astype(np.uint8), cv2.MORPH_CLOSE, kernel=self.kernel)
+            self.complete_network = cv2.morphologyEx(self.complete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
         if only_one_connected_component:
-            complete_network = keep_one_connected_component(complete_network)
-            without_pseudopods = complete_network.copy()
-            true_pseudopods = cv2.dilate(true_pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
-            without_pseudopods[true_pseudopods > 0] = 0
+            self.complete_network = keep_one_connected_component(self.complete_network)
+            without_pseudopods = self.complete_network.copy()
+            self.pseudopods = cv2.dilate(self.pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
+            without_pseudopods[self.pseudopods > 0] = 0
             only_connected_network = keep_one_connected_component(without_pseudopods)
-            self.pseudopods = (1 - only_connected_network) * complete_network
+            self.pseudopods = (1 - only_connected_network) * self.complete_network
             # Merge the connected network with pseudopods to get the complete network
             self.complete_network = np.logical_or(only_connected_network, self.pseudopods).astype(np.uint8)
         else:
-            self.pseudopods = true_pseudopods.astype(np.uint8)
-            self.complete_network = complete_network
+            self.pseudopods = self.pseudopods.astype(np.uint8)
         self.incomplete_network *= (1 - self.pseudopods)
 
 
@@ -453,22 +459,6 @@ def edge_pixels_dict_to_array(edge_pixels: dict[int, CoordSet], dtype=np.int32) 
     return np.array(rows, dtype=dtype)
 
 
-def edges_dict_to_labels_array(edges_by_id: dict[int, tuple[int, int]]) -> NDArray[np.uint32]:
-    rows = [(edge_id, v1, v2) for edge_id, (v1, v2) in sorted(edges_by_id.items())]
-    if not rows:
-        return np.zeros((0, 3), dtype=np.uint32)
-    return np.array(rows, dtype=np.uint32)
-
-
-def edge_lengths_dict_by_id_to_array(edge_lengths_by_id: dict[int, float]) -> NDArray[np.float64]:
-    if not edge_lengths_by_id:
-        return np.zeros(0, dtype=np.float64)
-    return np.array(
-        [edge_lengths_by_id[edge_id] for edge_id in sorted(edge_lengths_by_id)],
-        dtype=np.float64,
-    )
-
-
 def clear_coords_from_mask(mask: NDArray, coords: CoordSet) -> None:
     """Set coordinates to 0 in a 2D mask."""
     if coords:
@@ -493,11 +483,11 @@ def unpad_coord_dict_values(coord_map: dict[int, Coord]) -> dict[int, Coord]:
     return {idx: (y - 1, x - 1) for idx, (y, x) in coord_map.items()}
 
 
-def unpad_edge_pixels_by_id(edge_pixels_by_id: dict[int, CoordSet]) -> dict[int, CoordSet]:
+def unpad_edge_to_coord_map(edge_to_coord_map: dict[int, CoordSet]) -> dict[int, CoordSet]:
     """Subtract 1 from y and x for every edge pixel coordinate."""
     return {
         edge_id: {(y - 1, x - 1) for y, x in coords}
-        for edge_id, coords in edge_pixels_by_id.items()
+        for edge_id, coords in edge_to_coord_map.items()
     }
 
 
@@ -935,22 +925,22 @@ class EdgeIdentification:
         self.im_shape = pad_skeleton.shape
         self.padding_removed: bool = False
 
-        self.edges_by_id: dict[int, tuple[int, int]] = {}
-        self.edge_lengths_by_id: dict[int, float] = {}
-        self.edge_pixels_by_id: dict[int, CoordSet] = {}
+        self.edge_to_vertices_map: dict[int, tuple[int, int]] = {}
+        self.edge_to_length_map: dict[int, float] = {}
+        self.edge_to_coord_map: dict[int, CoordSet] = {}
         # Create a set allowing two edges to connect the same two vertices only if they do not use the same pixel path
         self.detected_edge_keys: set[tuple[frozenset[int], frozenset[Coord]]] = set()
 
-        self.edges_labels = np.zeros((0, 3), dtype=np.uint32)
-        self.edge_lengths = np.zeros(0, dtype=np.float64)
+        # self.edges_labels = np.zeros((0, 3), dtype=np.uint32)
+        # self.edge_lengths = np.zeros(0, dtype=np.float64)
         self.edge_pix_coord = np.zeros((0, 3), dtype=np.int32)
 
-    def _refresh_edge_arrays_from_dicts(self) -> None:
-        """Build NumPy edge arrays from the dictionary storage."""
-        self.edges_labels = edges_dict_to_labels_array(self.edges_by_id)
-        self.edge_lengths = edge_lengths_dict_by_id_to_array(self.edge_lengths_by_id)
-        self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_pixels_by_id)
-
+    #def _refresh_edge_arrays_from_dicts(self) -> None:
+    #    """Build NumPy edge arrays from the dictionary storage."""
+    #    self.edges_labels = edges_dict_to_labels_array(self.edge_to_vertices_map)
+    #    self.edge_lengths = edge_lengths_dict_by_id_to_array(self.edge_to_length_map)
+    #    self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_to_coord_map)
+    #
     def run_edge_identification(self):
         """
         Run the edge identification process.
@@ -977,13 +967,14 @@ class EdgeIdentification:
         self.remove_tipped_edge_smaller_than_branch_width()
         self.label_tipped_edges_and_their_vertices()
         self.check_vertex_existence()
-        self.label_edges_connected_with_vertex_clusters()
-        self.label_edges_connecting_vertex_clusters()
-        self.label_edges_from_known_vertices_iteratively()
-        self.label_edges_looping_on_1_vertex()
-        self.clear_areas_of_1_or_2_unidentified_pixels()
-        self.clear_edge_duplicates()
-        self.clear_vertices_connecting_2_edges()
+        if len(self.vertex_to_coord_map) > 2:
+            self.label_edges_connected_with_vertex_clusters()
+            self.label_edges_connecting_vertex_clusters()
+            self.label_edges_from_known_vertices_iteratively()
+            self.label_edges_looping_on_1_vertex()
+            self.clear_areas_of_1_or_2_unidentified_pixels()
+            self.clear_edge_duplicates()
+            self.clear_vertices_connecting_2_edges()
 
     def get_vertices_and_tips_coord(self):
         """Process skeleton data to extract non-tip vertices and tip coordinates.
@@ -1023,7 +1014,7 @@ class EdgeIdentification:
         """
         self.pad_skeleton = keep_one_connected_component(self.pad_skeleton)
 
-        self.vertices_branching_tips_by_tip, self.edge_lengths_by_tip, self.initial_edge_pixels_by_id = _find_closest_vertices(
+        self.vertices_branching_tips_by_tip, self.edge_lengths_by_tip, self.initial_edge_to_coord_map = _find_closest_vertices(
             self.pad_skeleton,
             self.non_tip_vertices,
             self.tips_coord,
@@ -1032,9 +1023,9 @@ class EdgeIdentification:
         self.vertices_branching_tips = set(self.vertices_branching_tips_by_tip.values())
 
         # Clear dicts to restart cleanly
-        self.edges_by_id.clear()
-        self.edge_lengths_by_id.clear()
-        self.edge_pixels_by_id.clear()
+        self.edge_to_vertices_map.clear()
+        self.edge_to_length_map.clear()
+        self.edge_to_coord_map.clear()
         self.detected_edge_keys.clear()
 
         self.tip_to_initial_edge_id = {}
@@ -1064,7 +1055,7 @@ class EdgeIdentification:
             if branch is None:
                 continue
             Y, X = branch
-            edge_pixels = self.initial_edge_pixels_by_id.get(edge_id, set())
+            edge_pixels = self.initial_edge_to_coord_map.get(edge_id, set())
             edge_length = self.edge_lengths_by_tip.get(tip, np.nan)
             if np.isnan(edge_length):
                 continue
@@ -1143,55 +1134,55 @@ class EdgeIdentification:
 
         # Create arrays to store edges and vertices labels
         self.numbered_vertices = np.zeros(self.im_shape, dtype=np.uint32)
-        self.vertex_coord_to_label: dict[Coord, int] = {}
-        self.vertex_index_map: dict[int, Coord] = {}
+        self.coord_to_vertex_map: dict[Coord, int] = {}
+        self.vertex_to_coord_map: dict[int, Coord] = {}
 
         for idx, coord in enumerate(ordered_v_coord, start=1):
             y, x = coord
             self.numbered_vertices[y, x] = idx
-            self.vertex_coord_to_label[coord] = idx
-            self.vertex_index_map[idx] = coord
+            self.coord_to_vertex_map[coord] = idx
+            self.vertex_to_coord_map[idx] = coord
 
         self.vertices = None
-        self.edges_by_id.clear()
+        self.edge_to_vertices_map.clear()
         new_edge_lengths_by_id = {}
-        new_edge_pixels_by_id = {}
+        new_edge_to_coord_map = {}
 
         # Name edges from 1 to the number of edges connecting tips and set the vertices labels from all tips to their connected vertices:
         edge_id = 1
         unique_branching_tips = set()
 
         for tip, branch in sorted(self.vertices_branching_tips_by_tip.items()):
-            if tip not in self.vertex_coord_to_label or branch not in self.vertex_coord_to_label:
+            if tip not in self.coord_to_vertex_map or branch not in self.coord_to_vertex_map:
                 continue
 
             length = self.edge_lengths_by_tip.get(tip, np.nan)
             if np.isnan(length) or length == 0:
                 continue
 
-            edge_pixels = self.initial_edge_pixels_by_id.get(edge_id, set())
+            edge_pixels = self.initial_edge_to_coord_map.get(edge_id, set())
             edge_key = (
-                frozenset((self.vertex_coord_to_label[tip], self.vertex_coord_to_label[branch])),
+                frozenset((self.coord_to_vertex_map[tip], self.coord_to_vertex_map[branch])),
                 frozenset(edge_pixels),
             )
             if edge_key in self.detected_edge_keys:
                 continue
 
-            self.edges_by_id[edge_id] = (
-                self.vertex_coord_to_label[tip],
-                self.vertex_coord_to_label[branch],
+            self.edge_to_vertices_map[edge_id] = (
+                self.coord_to_vertex_map[tip],
+                self.coord_to_vertex_map[branch],
             )
             new_edge_lengths_by_id[edge_id] = float(length)
-            new_edge_pixels_by_id[edge_id] = self.initial_edge_pixels_by_id.get(edge_id, set())
+            new_edge_to_coord_map[edge_id] = self.initial_edge_to_coord_map.get(edge_id, set())
 
             unique_branching_tips.add(branch)
             edge_id += 1
 
-        self.edge_lengths_by_id = new_edge_lengths_by_id
-        self.edge_pixels_by_id = new_edge_pixels_by_id
+        self.edge_to_length_map = new_edge_lengths_by_id
+        self.edge_to_coord_map = new_edge_to_coord_map
         self.vertices_branching_tips = unique_branching_tips
 
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
 
     def check_vertex_existence(self):
         if len(self.tips_coord) == 0 and len(self.non_tip_vertices) == 0:
@@ -1200,24 +1191,24 @@ class EdgeIdentification:
             end = 1
             vertex_coord = loop_coord[0][0], loop_coord[1][0]
             self.numbered_vertices[vertex_coord[0], vertex_coord[1]] = 1
-            self.vertex_index_map[1] = vertex_coord
-            self.vertex_coord_to_label[vertex_coord] = 1
+            self.vertex_to_coord_map[1] = vertex_coord
+            self.coord_to_vertex_map[vertex_coord] = 1
             self.non_tip_vertices = {vertex_coord}
             new_edge_length = float(len(loop_coord[0]) - 1)
             new_edge_pixels = set(zip(loop_coord[0][1:], loop_coord[1][1:]))
 
             self._update_edge_data(start, end, new_edge_length, new_edge_pixels)
-        elif len(self.tips_coord) == 2 and len(self.non_tip_vertices) == 0 and not self.edges_by_id:
+        elif len(self.tips_coord) == 2 and len(self.non_tip_vertices) == 0 and not self.edge_to_vertices_map:
             # Handle single edge case (two tips, no branches)
             tip_coords = sorted(self.tips_coord)
             v1, v2 = tip_coords[0], tip_coords[1]
 
             self.numbered_vertices[v1[0], v1[1]] = 1
             self.numbered_vertices[v2[0], v2[1]] = 2
-            self.vertex_coord_to_label[v1] = 1
-            self.vertex_coord_to_label[v2] = 2
-            self.vertex_index_map[1] = v1
-            self.vertex_index_map[2] = v2
+            self.coord_to_vertex_map[v1] = 1
+            self.coord_to_vertex_map[v2] = 2
+            self.vertex_to_coord_map[1] = v1
+            self.vertex_to_coord_map[2] = v2
 
             edge_pixels = nonzero_to_set(self.pad_skeleton)
             edge_pixels.discard(v1)
@@ -1235,7 +1226,8 @@ class EdgeIdentification:
         by removing already detected edges and their tips, then iterates through vertex
         clusters to explore and identify nearby edges.
         """
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
+        self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_to_coord_map)
         # I.1. Identify edges connected to touching vertices:
         # First, create another version of these arrays, where we remove every already detected edge and their tips
         cropped_skeleton = self.pad_skeleton.copy()
@@ -1307,7 +1299,8 @@ class EdgeIdentification:
         known vertices. It handles the removal of detected edges and
         updates the skeleton accordingly, to avoid detecting edges twice.
         """
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
+        self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_to_coord_map)
         # II/ Identify all remaining edges
         if self.new_level_vertices is not None:
             starting_vertices_coord = self.new_level_vertices | self.vertices_branching_tips
@@ -1345,8 +1338,8 @@ class EdgeIdentification:
         This method processes the skeleton image to find looping edges and updates
         the edge data structure accordingly.
         """
-        self._refresh_edge_arrays_from_dicts()
-
+        # self._refresh_edge_arrays_from_dicts()
+        self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_to_coord_map)
         self.identified = np.zeros_like(self.pad_skeleton)
         if self.edge_pix_coord.shape[0] > 0:
             self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
@@ -1396,7 +1389,8 @@ class EdgeIdentification:
             else:
                 logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
 
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
+        self.edge_pix_coord = edge_pixels_dict_to_array(self.edge_to_coord_map)
         if self.edge_pix_coord.shape[0] > 0:
             self.identified[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = 1
 
@@ -1459,7 +1453,7 @@ class EdgeIdentification:
 
             explored_connexions_per_vertex += 1
             # 1. Find the ith closest vertex to each focal vertex
-            ending_vertices, new_edge_lengths_by_start, new_edge_pixels_by_id = _find_closest_vertices(
+            ending_vertices, new_edge_lengths_by_start, new_edge_to_coord_map = _find_closest_vertices(
                 cropped_skeleton, cropped_non_tip_vertices, starting_vertices_coord)
 
             # In new_edge_lengths, zeros are duplicates and nan are lone vertices (from starting_vertices_coord)
@@ -1500,7 +1494,7 @@ class EdgeIdentification:
                 start_labels.append(self.numbered_vertices[start[0], start[1]])
                 end_labels.append(self.numbered_vertices[end[0], end[1]])
                 new_edge_lengths.append(new_edge_lengths_by_start[start])
-            new_edge_pix_coord = edge_pixels_dict_to_array(new_edge_pixels_by_id)
+            new_edge_pix_coord = edge_pixels_dict_to_array(new_edge_to_coord_map)
             self._update_edge_data(
                 np.array(start_labels, dtype=np.uint32),
                 np.array(end_labels, dtype=np.uint32),
@@ -1584,7 +1578,7 @@ class EdgeIdentification:
         else:
             edge_pixels_by_local_id = {1: set(new_edge_pixels)}
 
-        first_new_edge_id = max(self.edges_by_id.keys(), default=0) + 1
+        first_new_edge_id = max(self.edge_to_vertices_map.keys(), default=0) + 1
         next_edge_id = first_new_edge_id
 
         for offset, (s, e, length) in enumerate(zip(starts, ends, lengths), start=0):
@@ -1599,9 +1593,9 @@ class EdgeIdentification:
             if edge_key in self.detected_edge_keys:
                 continue
 
-            self.edges_by_id[next_edge_id] = (int(s), int(e))
-            self.edge_lengths_by_id[next_edge_id] = float(length)
-            self.edge_pixels_by_id[next_edge_id] = edge_pixels
+            self.edge_to_vertices_map[next_edge_id] = (int(s), int(e))
+            self.edge_to_length_map[next_edge_id] = float(length)
+            self.edge_to_coord_map[next_edge_id] = edge_pixels
             self.detected_edge_keys.add(edge_key)
 
             next_edge_id += 1
@@ -1615,72 +1609,92 @@ class EdgeIdentification:
         and removes duplicates if they are found.
         It catches anything introduced by legacy array surgery or unexpected paths.
         """
-        self._refresh_edge_arrays_from_dicts()
-
+        # 1. Find all edges linking two identical vertices
+        # 2. Clear them when their coordinates are identical
+        vertices_to_edges_map = {}
         edges_to_remove = []
-        duplicates = find_duplicates_coord(np.vstack((self.edges_labels[:, 1:], self.edges_labels[:, :0:-1])))
-        duplicates = np.logical_or(duplicates[:len(duplicates) // 2], duplicates[len(duplicates) // 2:])
-
-        for v in self.edges_labels[duplicates, 1:]:
-            edges_bool = np.logical_or(
-                np.all(self.edges_labels[:, 1:] == v, axis=1),
-                np.all(self.edges_labels[:, 1:] == v[::-1], axis=1),
-            )
-            edge_labs = self.edges_labels[edges_bool, 0]
-
-            for edge_i in range(0, len(edge_labs) - 1):
-                edge_i_id = int(edge_labs[edge_i])
-                edge_i_coord = self.edge_pixels_by_id.get(edge_i_id, set())
-
-                for edge_j in range(edge_i + 1, len(edge_labs)):
-                    edge_j_id = int(edge_labs[edge_j])
-                    edge_j_coord = self.edge_pixels_by_id.get(edge_j_id, set())
-
+        for edge_id, v_names in self.edge_to_vertices_map.items():
+            v_names_set = tuple(set(v_names))
+            # If the (pair of) vertex is already mapped to one or several edge
+            if v_names_set in vertices_to_edges_map:
+                # Compare the edge coordinates with the coordinates of every edge associated with this vertex
+                edge_i_coord = self.edge_to_coord_map.get(edge_id, set())
+                for edge_j in vertices_to_edges_map[v_names_set]:
+                    edge_j_coord = self.edge_to_coord_map.get(edge_j, set())
                     if edge_i_coord == edge_j_coord:
-                        edges_to_remove.append(edge_j_id)
+                        # Set them as removed when the coordinates match
+                        edges_to_remove.append(edge_id)
+                # Always add the current edge to the vertices_to_edges_map to not miss any comparison
+                vertices_to_edges_map[v_names_set].append(edge_id)
+            else:
+                vertices_to_edges_map[v_names_set] = [edge_id]
+                
+        # self._refresh_edge_arrays_from_dicts()
+        # vertices_pairs = np.array(list(self.edge_to_vertices_map.values()))
+        # edges_to_remove = []
+        # duplicates = find_duplicates_coord(np.vstack((vertices_pairs, vertices_pairs[:, ::-1])))
+        # duplicates = np.logical_or(duplicates[:len(duplicates) // 2], duplicates[len(duplicates) // 2:])
+# 
+        # for v in self.edges_labels[duplicates, 1:]:
+        #     edges_bool = np.logical_or(
+        #         np.all(self.edges_labels[:, 1:] == v, axis=1),
+        #         np.all(self.edges_labels[:, 1:] == v[::-1], axis=1),
+        #     )
+        #     edge_labs = self.edges_labels[edges_bool, 0]
+# 
+        #     for edge_i in range(0, len(edge_labs) - 1):
+        #         edge_i_id = int(edge_labs[edge_i])
+        #         edge_i_coord = self.edge_to_coord_map.get(edge_i_id, set())
+# 
+        #         for edge_j in range(edge_i + 1, len(edge_labs)):
+        #             edge_j_id = int(edge_labs[edge_j])
+        #             edge_j_coord = self.edge_to_coord_map.get(edge_j_id, set())
+# 
+        #             if edge_i_coord == edge_j_coord:
+        #                 edges_to_remove.append(edge_j_id)
 
         for edge_id in set(edges_to_remove):
-            self.edges_by_id.pop(edge_id, None)
-            self.edge_lengths_by_id.pop(edge_id, None)
-            self.edge_pixels_by_id.pop(edge_id, None)
+            self.edge_to_vertices_map.pop(edge_id, None)
+            self.edge_to_length_map.pop(edge_id, None)
+            self.edge_to_coord_map.pop(edge_id, None)
 
         # Rebuild detected_edge_keys
         self.detected_edge_keys = {
             (
-                frozenset(self.edges_by_id[edge_id]),
-                frozenset(self.edge_pixels_by_id.get(edge_id, set())),
+                frozenset(self.edge_to_vertices_map[edge_id]),
+                frozenset(self.edge_to_coord_map.get(edge_id, set())),
             )
-            for edge_id in self.edges_by_id
+            for edge_id in self.edge_to_vertices_map
         }
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
 
-
-    def _refresh_edge_dicts_from_arrays(self) -> None:
-        """Rebuild dictionary edge storage from current NumPy edge arrays."""
-        self.edges_by_id = {
-            int(edge_id): (int(v1), int(v2))
-            for edge_id, v1, v2 in self.edges_labels
-        }
-
-        self.edge_lengths_by_id = {
-            int(edge_id): float(length)
-            for edge_id, length in zip(self.edges_labels[:, 0], self.edge_lengths)
-        }
-
-        self.edge_pixels_by_id = {}
-        for edge_id in self.edges_labels[:, 0]:
-            edge_id = int(edge_id)
-            edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_id, :2]
-            self.edge_pixels_by_id[edge_id] = coord_array_to_set(edge_coord)
-
-        self.detected_edge_keys = {
-            (
-                frozenset(self.edges_by_id[edge_id]),
-                frozenset(self.edge_pixels_by_id.get(edge_id, set())),
-            )
-            for edge_id in self.edges_by_id
-        }
-
+#
+    # def _refresh_edge_dicts_from_arrays(self) -> None:
+    #     """Rebuild dictionary edge storage from current NumPy edge arrays."""
+    #     self.edge_to_vertices_map = {
+    #         int(edge_id): (int(v1), int(v2))
+    #         for edge_id, v1, v2 in self.edges_labels
+    #     }
+#
+    #     self.edge_to_length_map = {
+    #         int(edge_id): float(length)
+    #         for edge_id, length in zip(self.edges_labels[:, 0], self.edge_lengths)
+    #     }
+#
+    #     self.edge_to_coord_map = {}
+    #     for edge_id in self.edges_labels[:, 0]:
+    #         edge_id = int(edge_id)
+    #         edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_id, :2]
+    #         self.edge_to_coord_map[edge_id] = coord_array_to_set(edge_coord)
+#
+    #     self.detected_edge_keys = {
+    #         (
+    #             frozenset(self.edge_to_vertices_map[edge_id]),
+    #             frozenset(self.edge_to_coord_map.get(edge_id, set())),
+    #         )
+    #         for edge_id in self.edge_to_vertices_map
+    #     }
+#
 
     def clear_vertices_connecting_2_edges(self):
         """
@@ -1690,31 +1704,71 @@ class EdgeIdentification:
         renames edges, updates edge lengths and vertex coordinates accordingly.
         It also removes the corresponding vertices from non-tip vertices list.
         """
-        self._refresh_edge_arrays_from_dicts()
-        v_labels, v_counts = np.unique(self.edges_labels[:, 1:], return_counts=True)
-        vertices2 = v_labels[v_counts == 2]
-        for vertex2 in vertices2:  # vertex2 = vertices2[0]
-            edge_indices = np.unique(np.nonzero(self.edges_labels[:, 1:] == vertex2)[0])
-            if edge_indices.shape[0] != 2:
-                continue
-            edge_names = [self.edges_labels[edge_indices[0], 0], self.edges_labels[edge_indices[1], 0]]
-            v_names = np.concatenate((self.edges_labels[edge_indices[0], 1:], self.edges_labels[edge_indices[1], 1:]))
+        # What do we need:
+        # Count how many times each vertex connect one edge
+        # Get the vertex id of those appearing twice
+        # Discard cases where vertices link normal edges and loop
+        # Update edge_to_vertices_map, edge_to_coords_map, edge_to_length_map
+        vertex_to_edges_map = {}
+        for edge_id, v_names in self.edge_to_vertices_map.items():
+            for v_name in v_names:
+                if v_name in vertex_to_edges_map:
+                    vertex_to_edges_map[v_name].append(edge_id)
+                else:
+                    vertex_to_edges_map[v_name] = [edge_id]
+        vertices = []
+        for k,v in vertex_to_edges_map.items():
+            if len(v)==2:
+                vertices.append(k)
+
+        for vertex2 in vertices:  # vertex2 = vertices2[0]
+            edges = vertex_to_edges_map[vertex2]
+            v_names = np.array(self.edge_to_vertices_map[edges[0]] + self.edge_to_vertices_map[edges[1]])
             v_names = v_names[v_names != vertex2]
-            if len(v_names) > 0: # Otherwise it's a vertex between a normal edge and a loop
-                kept_edge = int(self.edge_lengths[edge_indices[1]] >= self.edge_lengths[edge_indices[0]])
-                # Rename the removed edge by the kept edge name in pix_coord:
-                self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_names[1 - kept_edge], 2] = edge_names[kept_edge]
-                # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
-                self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]] - 1
-                # Remove the corresponding edge length from the list
-                self.edge_lengths = self.edge_lengths[self.edges_labels[:, 0] != edge_names[1 - kept_edge]]
-                # Rename the vertex of the kept edge in edges_labels
-                self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
-                # Remove the removed edge from the edges_labels array
-                self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
-                vY, vX = self.vertex_index_map[vertex2]
-                self.non_tip_vertices.discard((int(vY), int(vX)))
-        self._refresh_edge_dicts_from_arrays()
+
+            is_longer_edge = self.edge_to_length_map[edges[0]] >= self.edge_to_length_map[edges[1]]
+            kept_edge = edges[is_longer_edge]
+            lost_edge = edges[1 - is_longer_edge]
+
+            # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
+            self.edge_to_length_map[kept_edge] += self.edge_to_length_map[lost_edge]
+            # Remove the corresponding edge length from the map
+            self.edge_to_length_map.pop(lost_edge)
+            # Rename the vertex of the kept edge in edge_to_vertices_map
+            self.edge_to_vertices_map[kept_edge] = v_names[0], v_names[1]
+            # Remove the removed edge from the edge_to_vertices_map
+            self.edge_to_vertices_map.pop(lost_edge)
+            # Remove the useless vertex from non_tip_vertices set
+            vY, vX = self.vertex_to_coord_map[vertex2]
+            self.non_tip_vertices.discard((int(vY), int(vX)))
+            # Remove the useless vertex from vertex_to_coord_map
+            self.vertex_to_coord_map.pop(vertex2)
+
+        # self._refresh_edge_arrays_from_dicts()
+        # v_labels, v_counts = np.unique(self.edges_labels[:, 1:], return_counts=True)
+        # vertices2 = v_labels[v_counts == 2]
+        # for vertex2 in vertices2:  # vertex2 = vertices2[0]
+        #     edge_indices = np.unique(np.nonzero(self.edges_labels[:, 1:] == vertex2)[0])
+        #     if edge_indices.shape[0] != 2:
+        #         continue
+        #     edge_names = [self.edges_labels[edge_indices[0], 0], self.edges_labels[edge_indices[1], 0]]
+        #     v_names = np.concatenate((self.edges_labels[edge_indices[0], 1:], self.edges_labels[edge_indices[1], 1:]))
+        #     v_names = v_names[v_names != vertex2]
+        #     if len(v_names) > 0: # Otherwise it's a vertex between a normal edge and a loop
+        #         kept_edge = int(self.edge_lengths[edge_indices[1]] >= self.edge_lengths[edge_indices[0]])
+        #         # Rename the removed edge by the kept edge name in pix_coord:
+        #         self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_names[1 - kept_edge], 2] = edge_names[kept_edge]
+        #         # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
+        #         self.edge_lengths[self.edges_labels[:, 0] == edge_names[kept_edge]] += self.edge_lengths[self.edges_labels[:, 0] == edge_names[1 - kept_edge]] - 1
+        #         # Remove the corresponding edge length from the list
+        #         self.edge_lengths = self.edge_lengths[self.edges_labels[:, 0] != edge_names[1 - kept_edge]]
+        #         # Rename the vertex of the kept edge in edges_labels
+        #         self.edges_labels[self.edges_labels[:, 0] == edge_names[kept_edge], 1:] = v_names[1 - kept_edge], v_names[kept_edge]
+        #         # Remove the removed edge from the edges_labels array
+        #         self.edges_labels = self.edges_labels[self.edges_labels[:, 0] != edge_names[1 - kept_edge], :]
+        #         vY, vX = self.vertex_to_coord_map[vertex2]
+        #         self.non_tip_vertices.discard((int(vY), int(vX)))
+        # self._refresh_edge_dicts_from_arrays()
         # Sometimes, clearing vertices connecting 2 edges can create edge duplicates, so:
         self.clear_edge_duplicates()
 
@@ -1734,12 +1788,11 @@ class EdgeIdentification:
             if self.edge_pix_coord.shape[0] > 0:
                 self.edge_pix_coord[:, :2] -= 1
 
-            if hasattr(self, "edge_pixels_by_id"):
-                self.edge_pixels_by_id = unpad_edge_pixels_by_id(self.edge_pixels_by_id)
+            self.edge_to_coord_map = unpad_edge_to_coord_map(self.edge_to_coord_map)
 
             self.tips_coord = unpad_coord_set(self.tips_coord)
             self.non_tip_vertices = unpad_coord_set(self.non_tip_vertices)
-            self.vertex_index_map = unpad_coord_dict_values(self.vertex_index_map)
+            self.vertex_to_coord_map = unpad_coord_dict_values(self.vertex_to_coord_map)
 
             self.skeleton, self.distances, self.vertices = remove_padding(
             	[self.pad_skeleton, self.pad_distances, self.numbered_vertices])
@@ -1761,10 +1814,10 @@ class EdgeIdentification:
             if bad:
                 raise ValueError(f"{name} contains out-of-bounds unpadded coordinates: {bad[:5]}")
 
-        for edge_id, coords in self.edge_pixels_by_id.items():
+        for edge_id, coords in self.edge_to_coord_map.items():
             bad = [(y, x) for y, x in coords if y < 0 or x < 0 or y >= h or x >= w]
             if bad:
-                raise ValueError(f"edge_pixels_by_id[{edge_id}] contains out-of-bounds coordinates: {bad[:5]}")
+                raise ValueError(f"edge_to_coord_map[{edge_id}] contains out-of-bounds coordinates: {bad[:5]}")
 
 
     def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
@@ -1853,68 +1906,98 @@ class EdgeIdentification:
         self._validate_unpadded_coordinates() # DEBUG
         if not hasattr(self, "vertex_label_to_coord"):
             raise RuntimeError("make_vertex_table() must be called before make_edge_table().")
-        self._refresh_edge_arrays_from_dicts()
+        # self._refresh_edge_arrays_from_dicts()
 
-        self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
-        self.edge_table[:, :3] = self.edges_labels[:, :]
-        self.edge_table[:, 3] = self.edge_lengths
+        # self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
+        # self.edge_table[:, :3] = self.edges_labels[:, :]
+        # self.edge_table[:, 3] = self.edge_lengths
 
-        for idx, edge_id in enumerate(sorted(self.edges_by_id)):
-                v1_id, v2_id = self.edges_by_id[edge_id]
-                edge_pixels = self.edge_pixels_by_id.get(edge_id, set())
+        self.edge_table = np.zeros((len(self.edge_to_vertices_map), 7), float)  # edge_id, vertex1, vertex2, length, average_width, int, BC
 
-                edge_coord = coord_set_to_array(edge_pixels)
-                if edge_coord.shape[0] > 0:
-                    pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
-                    pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
-                else:
-                    pix_widths = np.zeros(0, dtype=np.float64)
-                    pix_ints = np.zeros(0, dtype=greyscale.dtype)
+        for idx, (edge_id, vertices) in enumerate(self.edge_to_vertices_map.items()):
+            self.edge_table[idx, 0] = edge_id
+            self.edge_table[idx, 1:3] = vertices
+            v1_id, v2_id = vertices
+            edge_pixels = self.edge_to_coord_map.get(edge_id, set())
 
-                v1_coord = self.vertex_label_to_coord[v1_id]
-                v2_coord = self.vertex_label_to_coord[v2_id]
+            edge_coord = coord_set_to_array(edge_pixels)
+            if edge_coord.shape[0] > 0:
+                pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
+                pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
+            else:
+                pix_widths = np.zeros(0, dtype=np.float64)
+                pix_ints = np.zeros(0, dtype=greyscale.dtype)
 
-                v1_width = self.distances[v1_coord[0], v1_coord[1]]
-                v2_width = self.distances[v2_coord[0], v2_coord[1]]
+            v1_coord = self.vertex_label_to_coord[v1_id]
+            v2_coord = self.vertex_label_to_coord[v2_id]
 
-                if not np.isnan(v1_width):
-                    pix_widths = np.append(pix_widths, v1_width)
-                if not np.isnan(v2_width):
-                    pix_widths = np.append(pix_widths, v2_width)
+            v1_width = self.distances[v1_coord[0], v1_coord[1]]
+            v2_width = self.distances[v2_coord[0], v2_coord[1]]
 
-                self.edge_table[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
+            if not np.isnan(v1_width):
+                pix_widths = np.append(pix_widths, v1_width)
+            if not np.isnan(v2_width):
+                pix_widths = np.append(pix_widths, v2_width)
 
-                v1_int = greyscale[v1_coord[0], v1_coord[1]]
-                v2_int = greyscale[v2_coord[0], v2_coord[1]]
-                pix_ints = np.append(pix_ints, (v1_int, v2_int))
-                self.edge_table[idx, 5] = pix_ints.mean()
+            self.edge_table[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
+
+            v1_int = greyscale[v1_coord[0], v1_coord[1]]
+            v2_int = greyscale[v2_coord[0], v2_coord[1]]
+            pix_ints = np.append(pix_ints, (v1_int, v2_int))
+            self.edge_table[idx, 5] = pix_ints.mean()
 
         if compute_BC:
-            G = nx.from_edgelist(self.edges_labels[:, 1:])
-            e_BC = nx.edge_betweenness_centrality(G, seed=0)
-            self.BC_net = np.zeros_like(self.distances)
-            for v, k in e_BC.items(): # v=(81, 80)
-                v_bool = np.logical_or(self.vertex_table[:, 2] == v[0], self.vertex_table[:, 2] == v[1])
-                full_coord = self.vertex_table[v_bool, :2]
-                edges_bool = np.logical_or(np.all(self.edges_labels[:, 1:] == v[::-1], axis=1),
-                                           np.all(self.edges_labels[:, 1:] == v, axis=1))
-                edge_labs = self.edges_labels[edges_bool, 0]
-                if len(edge_labs) == 1:
-                    edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs, :2]
-                    full_coord = np.concatenate((full_coord, edge_coord))
-                    self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                    self.edge_table[self.edge_table[:, 0] == edge_labs, 6] = k
-                elif len(edge_labs) > 1:
-                    edge_coord0 = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[0], :2]
-                    for edge_i in range(len(edge_labs)): #  edge_i=1
-                        edge_coord = self.edge_pix_coord[self.edge_pix_coord[:, 2] == edge_labs[edge_i], :2]
-                        self.edge_table[self.edge_table[:, 0] == edge_labs[edge_i], 6] = k
-                        full_coord = np.concatenate((full_coord, edge_coord))
-                        self.BC_net[full_coord[:, 0], full_coord[:, 1]] = k
-                        if edge_i > 0 and np.array_equal(edge_coord0, edge_coord):
-                            logging.error(f"There still is two identical edges: {edge_labs} of len: {len(edge_coord)} linking vertices {v}")
-                            break
+            G = nx.Graph()
+            G.add_edges_from(self.edge_to_vertices_map.values())
+            e_bc = nx.edge_betweenness_centrality(G, seed=0)
+            # Map unordered edge -> list of labels
+            edge_to_labels = {}
+            for label, (u, v) in self.edge_to_vertices_map.items():
+                key = frozenset((u, v))  # undirected edge
+                edge_to_labels.setdefault(key, []).append(label)
 
+            # Update self.edge_table
+            for (u, v), bc in e_bc.items():
+                labels = edge_to_labels.get(frozenset((u, v)), [])
+
+                for label in labels:
+                    self.edge_table[self.edge_table[:, 0] == label, 6] = bc
+
+    def test_graph_extraction(self):
+
+        vertex_connectivity_message = f"Good vertex connectivity: no vertex is connected to 2 edges"
+        if len(self.edge_to_vertices_map) > 2:
+            v_labels, v_counts = np.unique(list(self.edge_to_vertices_map.values()), return_counts=True)
+            vertices2 = v_labels[v_counts == 2]
+            if vertices2.any():
+                vertex_connectivity_message = f"Wrong vertex connectivity: at time={self.t}, vertices={vertices2} are connected to 2 edges"
+        print(vertex_connectivity_message)
+
+        vertices_to_edges_map = {}
+        edges_to_remove = []
+        for edge_id, v_names in self.edge_to_vertices_map.items():
+            v_names_set = tuple(set(v_names))
+            # If the (pair of) vertex is already mapped to one or several edge
+            if v_names_set in vertices_to_edges_map:
+                # Compare the edge coordinates with the coordinates of every edge associated with this vertex
+                edge_i_coord = self.edge_to_coord_map.get(edge_id, set())
+                for edge_j in vertices_to_edges_map[v_names_set]:
+                    edge_j_coord = self.edge_to_coord_map.get(edge_j, set())
+                    if edge_i_coord == edge_j_coord:
+                        # Set them as removed when the coordinates match
+                        edges_to_remove.append(edge_id)
+                # Always add the current edge to the vertices_to_edges_map to not miss any comparison
+                vertices_to_edges_map[v_names_set].append(edge_id)
+            else:
+                vertices_to_edges_map[v_names_set] = [edge_id]
+        same_vertices_different_paths = {}
+        for vertices, edges in vertices_to_edges_map.items():
+            if len(edges) > 1:
+                same_vertices_different_paths[vertices] = edges
+        edges_duplicates_message = f"Good edge mapping: none of them are true duplicates, {len(same_vertices_different_paths)} are false duplicate (different paths). False duplicate edges to vertex pair: {same_vertices_different_paths}"
+        if len(edges_to_remove) > 0:
+            edges_duplicates_message = f"Wrong edge mapping: {len(edges_to_remove)} are true duplicates, {len(same_vertices_different_paths)} are false duplicate (different paths). \nTrue duplicates: {edges_to_remove} \nFalse duplicate edges to vertex pair: {same_vertices_different_paths}"
+        print(edges_duplicates_message)
 
 def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: CoordSet, starting_vertices_coord: CoordSet) -> Tuple[dict[Coord, Coord], dict[Coord, float], dict[int, CoordSet]]:
     """

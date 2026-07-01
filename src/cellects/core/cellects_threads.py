@@ -30,6 +30,7 @@ from timeit import default_timer
 import cv2
 from numba.typed import Dict as TDict
 import numpy as np
+from math import prod
 from PySide6 import QtCore
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours, keep_one_connected_component, cc, CompareNeighborsWithValue, box_counting_dimension, prepare_box_counting
@@ -42,6 +43,7 @@ from cellects.video.graph_tracking import GraphTracking
 from cellects.video.motion_analysis import MotionAnalysis
 from cellects.video.network_tracking import NetworkTracking
 from cellects.video.oscillations_tracking import OscillationsTracking
+from psutil import virtual_memory
 
 class PrecompileNJITThread(QtCore.QThread):
     """
@@ -937,9 +939,13 @@ class VideoTrackingThread(QtCore.QThread):
         if mess is not None:
             self.status['message'] = mess
 
-    def check_interruption(self):
+    def can_continue(self):
+        current_avail_mem = virtual_memory().available / (1024 ** 3)
+        if current_avail_mem < .1:
+            self.update_status(False, f"Interruption: High RAM usage, close other tasks and restart.")
         if self.isInterruptionRequested():
-            self.update_status(False, f"Was waiting for thread interruption")
+            self.update_status(False, f"Was waiting for thread interruption.")
+        return self.status['continue']
 
     def run_all(self):
         """
@@ -972,12 +978,12 @@ class VideoTrackingThread(QtCore.QThread):
                     self.po.bot):
                 self.update_status(False, f"Wrong specimen number: restart the image analysis.")
             else:
+                self.init_avail_mem = virtual_memory().available / (1024 ** 3)
                 self.run_video_writing()
                 if self.status['continue']:
                     self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                     self.run_motion_analysis()
-                    self.check_interruption()
-                if self.status['continue']:
+                if self.can_continue():
                     if self.po.all['folder_number'] > 1:
                         starting_folder_id += 1
         else:
@@ -1009,8 +1015,7 @@ class VideoTrackingThread(QtCore.QThread):
                         if self.status['continue']:
                             self.message_from_thread.emit(f"{self.status['folder']}, Analysing all videos")
                             self.run_motion_analysis()
-                            self.check_interruption()
-                if not self.status['continue']:
+                if not self.can_continue():
                     break
         if self.status['continue']:
             if self.po.all['folder_number'] > 1:
@@ -1054,8 +1059,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.message_from_thread.emit(f"{self.status['folder']}, Video loading, wait...")
         #Need a look for data when cellects_settings.json and 1 folder selected amon several
         self.pre_processing()
-        self.check_interruption()
-        if self.status['continue']:
+        if self.can_continue():
             memory_diff = self.po.update_available_core_nb()
             if self.po.cores == 0:
                 self.status['message'] = f"Analyzing one arena requires {memory_diff}GB of additional RAM to run"
@@ -1224,8 +1228,7 @@ class VideoTrackingThread(QtCore.QThread):
                                         "message"] = f"Some images have incorrect size, reset all settings in advanced parameters"
                                     self.status['continue'] = False
                                     logging.info(f"Reset all settings in advanced parameters")
-                                self.check_interruption()
-                                if not self.status['continue']:
+                                if not self.can_continue():
                                     return
                         if self.status['continue']:
                             pat_tracker2 = PercentAndTimeTracker(len(arena))
@@ -1243,8 +1246,7 @@ class VideoTrackingThread(QtCore.QThread):
                                 except OSError:
                                     self.status['message'] = f"Full disk memory: clear space and retry"
                                     self.status['continue'] = False
-                                self.check_interruption()
-                                if not self.status['continue']:
+                                if not self.can_continue():
                                     return
                             self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved")
                             logging.info(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved.")
@@ -1308,53 +1310,56 @@ class VideoTrackingThread(QtCore.QThread):
                     for i, arena in enumerate(self.po.vars['analyzed_individuals']):
                         l = [i, arena, self.po.vars, False, False, False, None]
                         self.po.motion = MotionAnalysis(l)
-                        if not self.isInterruptionRequested():
-                            self.po.motion.assess_motion_detection()
-                            if not self.isInterruptionRequested():
-                                self.po.motion.detection()
+                        if not self.can_continue():
+                            return
+                        self.po.motion.assess_motion_detection()
+                        if not self.can_continue():
+                            return
+                        self.po.motion.detection()
+                        if not self.can_continue():
+                            return
+                        self.po.motion.initialize_post_processing()
+                        if not self.can_continue():
+                            return
+                        self.po.motion.t = self.po.motion.start
+                        current_percentage, eta = pat_tracker.get_progress()
+                        while self.can_continue() and self.po.motion.t < self.po.motion.dims[0]:  #200:
+                            self.po.motion.update_shape(False)
+                            t = self.po.motion.t - 1
+                            contours = np.nonzero(get_contours(self.po.motion.binary[t, ...]))
+                            if self.po.motion.visu is not None:
+                                im_to_display = self.po.motion.visu[t, ...].copy()
+                                im_to_display[contours[0], contours[1], ...] = self.po.vars['contour_color']
+                            else:
+                                im_to_display = self.po.motion.binary[t, :, :] * 255
+                            self.image_from_thread.emit({"current_image": im_to_display,
+                                                         "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
+                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%{eta})"
+                        if self.can_continue():
+                            self.analyze_post_processing_results()
+                            if self.can_continue():
+                                self.message_from_thread.emit(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                logging.info(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
+                                self.po.motion.save_results()
+                                if not self.po.vars['several_blob_per_arena']:
+                                    # Save basic statistics
+                                    self.po.update_one_row_per_arena(i, self.po.motion.one_descriptor_per_arena)
+
+                                    # Save descriptors in long_format
+                                    self.po.update_one_row_per_frame(i * self.po.vars['img_number'],
+                                                                              arena * self.po.vars['img_number'],
+                                                                              self.po.motion.one_row_per_frame)
+
+                                # Save efficiency visualization
+                                self.po.add_analysis_visualization_to_first_and_last_images(i,
+                                                                                                     self.po.motion.efficiency_test_1,
+                                                                                                     self.po.motion.efficiency_test_2)
+                                # Emit message to the interface
                                 if not self.isInterruptionRequested():
-                                    self.po.motion.initialize_post_processing()
-                                    if not self.isInterruptionRequested():
-                                        self.po.motion.t = self.po.motion.start
-                                        current_percentage, eta = pat_tracker.get_progress()
-                                        while not self.isInterruptionRequested() and self.po.motion.t < self.po.motion.dims[0]:  #200:
-                                            self.po.motion.update_shape(False)
-                                            t = self.po.motion.t - 1
-                                            contours = np.nonzero(get_contours(self.po.motion.binary[t, ...]))
-                                            if self.po.motion.visu is not None:
-                                                im_to_display = self.po.motion.visu[t, ...].copy()
-                                                im_to_display[contours[0], contours[1], ...] = self.po.vars['contour_color']
-                                            else:
-                                                im_to_display = self.po.motion.binary[t, :, :] * 255
-                                            self.image_from_thread.emit({"current_image": im_to_display,
-                                                                         "message": f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), frame: {self.po.motion.t}/{self.po.motion.dims[0]}"})
-                                        self.status['message'] = f"Arena n°{arena}/{arena_nb} ({current_percentage}%{eta})"
-                                        if not self.isInterruptionRequested():
-                                            do_continue = self.analyze_post_processing_results()
-                                            if do_continue:
-                                                self.message_from_thread.emit(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
-                                                logging.info(f"{self.status['folder']}, Analyzing arena n°{arena}/{arena_nb} ({current_percentage}%, {eta}), Saving results")
-                                                self.po.motion.save_results()
-                                                if not self.po.vars['several_blob_per_arena']:
-                                                    # Save basic statistics
-                                                    self.po.update_one_row_per_arena(i, self.po.motion.one_descriptor_per_arena)
-
-                                                    # Save descriptors in long_format
-                                                    self.po.update_one_row_per_frame(i * self.po.vars['img_number'],
-                                                                                              arena * self.po.vars['img_number'],
-                                                                                              self.po.motion.one_row_per_frame)
-
-                                                # Save efficiency visualization
-                                                self.po.add_analysis_visualization_to_first_and_last_images(i,
-                                                                                                                     self.po.motion.efficiency_test_1,
-                                                                                                                     self.po.motion.efficiency_test_2)
-                                                # Emit message to the interface
-                                                if not self.isInterruptionRequested():
-                                                    self.image_from_thread.emit({"current_image": self.po.last_image.bgr,
-                                                                                 "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
-                                            self.po.motion = None
-                        self.check_interruption()
-                        if not self.status['continue']:
+                                    self.image_from_thread.emit({"current_image": self.po.last_image.bgr,
+                                                                 "message": f"{self.status['folder']}, Analyzed {arena}/{len(self.po.vars['analyzed_individuals'])} arenas ({current_percentage}%){eta}"})
+                            self.po.motion = None
+                        if not self.can_continue():
                             return
                     duration = np.round((default_timer() - tii) / 60, 2)
                     self.status['message'] = f"Sequential analysis lasted {duration} minutes"
@@ -1394,8 +1399,8 @@ class VideoTrackingThread(QtCore.QThread):
 
                         finished_processes: int = 0
                         while finished_processes < started_processes:
-                            self.check_interruption()
-                            if self.isInterruptionRequested():
+                            do_proceed = self.can_continue()
+                            if not do_proceed:
                                 for p in PROCESSES:
                                     if p.is_alive():
                                         p.terminate()
@@ -1497,8 +1502,8 @@ class VideoTrackingThread(QtCore.QThread):
                         self.po.converted_video[image_i, ...] = img
                     else:
                         self.po.visu[image_i, ...] = img
-                    self.check_interruption()
-                    if not self.status['continue']:
+
+                    if not self.can_continue():
                         return
                 if not self.po.vars['already_greyscale']:
                     msg = "Starting: video conversion"
@@ -1534,8 +1539,7 @@ class VideoTrackingThread(QtCore.QThread):
                 self.po.converted_video = self.po.motion.converted_video.copy()
                 if self.po.vars['convert_for_motion']['logical'] != 'None':
                     self.po.converted_video2 = self.po.motion.converted_video2.copy()
-            self.check_interruption()
-            if not self.status['continue']:
+            if not self.can_continue():
                 return
             self.po.motion.assess_motion_detection()
             self.when_loading_finished.emit(save_loaded_video)
@@ -1680,8 +1684,7 @@ class VideoTrackingThread(QtCore.QThread):
                         self.image_from_thread.emit(
                             {"message": f"{self.status['folder']}, Arena n°{self.po.all['arena']}, Option n°{seg_i + 1}, Frame n°{analysis_i.t}/{analysis_i.binary.shape[0]}",
                              "current_image": current_image})
-                    self.check_interruption()
-                    if self.status['continue']:
+                    if self.can_continue():
                         if analysis_i.start is None:
                             analysis_i.binary = np.repeat(np.expand_dims(analysis_i.origin, 0),
                                                        analysis_i.converted_video.shape[0], axis=0)
@@ -1744,9 +1747,8 @@ class VideoTrackingThread(QtCore.QThread):
                 self.po.motion.binary = np.zeros(self.po.motion.dims[:3], dtype=np.uint8)
                 if self.po.computed_video_options[self.po.all['video_option']]:
                     self.po.motion.binary = self.po.motion.segmented
-        do_continue = self.analyze_post_processing_results()
-        if not do_continue:
-            self.status['message'] = "Was waiting for thread interruption"
+        self.analyze_post_processing_results()
+        if not self.can_continue():
             return
         self.status['message'] = f"Arena n°{self.po.all['arena']}: (Over)writing results"
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
@@ -1755,7 +1757,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.status['message'] = f"Arena n°{self.po.all['arena']}: analysis done and saved"
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
-    def analyze_post_processing_results(self) -> bool:
+    def analyze_post_processing_results(self):
         """
         Analyze post-processing results for motion data by performing a sequence of operations if no interruption is requested.
 
@@ -1765,38 +1767,39 @@ class VideoTrackingThread(QtCore.QThread):
         growth transition detection, network analysis, Oscillation study, fractal descriptions, and updating results.
         Each step is conditional on the absence of an interruption request.
         """
+        true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+        expected_mem_use = ((self.po.motion.bit_usage['images'] + 8 * 8 + 3 * 8) * prod(self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 0) * prod(self.po.motion.dims)) * 1.16415e-10
+        logging.info(f"Post processing memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+
         self.po.motion.dict_signal = self.image_from_thread.emit
-        if self.isInterruptionRequested():
-            return False
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing descriptors")
-        self.po.motion.get_descriptors_from_binary(release_memory=False)
-        if self.isInterruptionRequested():
-            return False
+        self.po.motion.get_descriptors_from_binary(release_memory=self.po.video_task != 'change_one_arena_result')
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting growth transitions")
         self.po.motion.detect_growth_transitions()
-        if self.isInterruptionRequested():
-            return False
+        true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+        expected_mem_use = ((self.po.motion.bit_usage['images'] +  2 * 8) * prod(self.po.motion.dims[1:]) + self.po.motion.bit_usage['videos'] * prod(self.po.motion.dims)) * 1.16415e-10
+        logging.info(f"Growth transitions memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting network")
         self.detect_network_dynamics()
-        if self.isInterruptionRequested():
-            return False
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Extracting graph")
         self.extract_graph_dynamics()
-        # self.po.motion.networks_analysis(False)
-        if self.isInterruptionRequested():
-            return False
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Detecting oscillatory patterns")
         self.detect_oscillations_dynamics()
-        # self.po.motion.study_cytoscillations(False)
-        if self.isInterruptionRequested():
-            return False
+        if not self.can_continue():
+            return
         self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing fractal dimension")
         self.fractal_descriptions()
-        # self.po.motion.fractal_descriptions()
-        if self.isInterruptionRequested():
-            return False
-        else:
-            return True
 
     def detect_network_dynamics(self):
         """
@@ -1811,6 +1814,9 @@ class VideoTrackingThread(QtCore.QThread):
         - Pseudopod detection requires sufficient contrast with the background in grayscale images.
         """
         if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_coord_network']:
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + (9 + 12) * 8 * 2 + 14 * 8) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 2 * 2 + 8) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             net_track = NetworkTracking(self.po.motion)
             net_track.init_tracking()
             for t in np.arange(net_track.starting_time, net_track.dims[0]):  # 20):#
@@ -1831,6 +1837,8 @@ class VideoTrackingThread(QtCore.QThread):
                                         'message': f"{self.status['folder']}, {self.status['message']}: Detecting network, step 2/2: final detection, {round(t / net_track.dims[0] * 100, 2)}%",
                                         'current_image': imtoshow})
             self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Network detection memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del net_track
 
     def extract_graph_dynamics(self):
@@ -1847,6 +1855,9 @@ class VideoTrackingThread(QtCore.QThread):
         Origin contours are spatially aligned through padding operations to maintain coordinate consistency across time points.
         """
         if not self.po.vars['several_blob_per_arena'] and self.po.vars['save_graph']:
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + 5*8 + 64 + 3*32 + 3*8) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 8) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             if self.po.motion.coord_network is None:
                 self.po.motion.coord_network = np.array(np.nonzero(self.po.motion.binary))
             graph_track = GraphTracking(self.po.motion.converted_video, self.po.motion.coord_network,
@@ -1860,6 +1871,8 @@ class VideoTrackingThread(QtCore.QThread):
                     {'message': f"{self.status['folder']}, {self.status['message']}: Detecting graph, {round(t / graph_track.dims[0] * 100, 2)}%",
                      'current_image': graph})
             graph_track.save_graph()
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Graph tracking memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del graph_track
 
     def detect_oscillations_dynamics(self):
@@ -1873,7 +1886,9 @@ class VideoTrackingThread(QtCore.QThread):
         - Saves coordinate arrays if requested, which may consume significant disk space for large datasets
         """
         if (self.po.vars['save_coord_thickening_slimming'] or self.po.vars['oscilacyto_analysis']) and self.po.motion.converted_video.shape[0] > 1:
-
+            expected_mem_use = ((self.po.motion.bit_usage['images'] + 3*8 + 2*32) * prod(
+                self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 16) * prod(
+                self.po.motion.dims)) * 1.16415e-10
             osci_track = OscillationsTracking(self.po.motion)
             osci_track.init_tracking()
             for t in np.arange(osci_track.starting_time, osci_track.dims[0]):
@@ -1884,6 +1899,8 @@ class VideoTrackingThread(QtCore.QThread):
                     {'message': f"{self.status['folder']}, {self.status['message']}: Detecting oscillating areas, {round(t / osci_track.dims[0] * 100, 2)}%",
                      'current_image': oscillations_image})
             osci_track.save_oscillations()
+            true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
+            logging.info(f"Oscillations analysis memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
             del osci_track
 
 
@@ -1948,6 +1965,7 @@ class VideoTrackingThread(QtCore.QThread):
                 self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 0]
                 self.po.motion.one_row_per_frame["fractal_box_nb"] = box_counting_dimensions[:, 1]
                 self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]
+            logging.info(f"Fractal estimation memory usage: {self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)}")
             if self.po.vars['save_coord_network']:
                 del self.po.motion.coord_network
 
