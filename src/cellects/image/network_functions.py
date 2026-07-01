@@ -32,7 +32,7 @@ from cellects.image.morphological_operations import square_33, cross_33, rhombus
 from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
 from cellects.utils.formulas import *
 from cellects.io.save import *
-from cellects.display.image import zoom_on_nonzero
+from cellects.utils.utilitarian import zoom_on_nonzero
 from cellects.image.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
 from numba.typed import Dict as TDict
 from skimage import morphology
