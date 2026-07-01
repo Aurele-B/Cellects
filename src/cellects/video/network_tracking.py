@@ -73,7 +73,7 @@ class NetworkTracking:
 
         self.NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.motion.binary[-1, ...],
                                   origin_to_add=self.origin, morphological_closing=self.motion.vars['morphological_closing'])
-        self.NetDet.get_best_network_detection_method()
+        self.NetDet.get_best_network_detection_method(include_images=False)
         if self.do_convert:
             self.NetDet.greyscale_image = self.motion.converted_video[-1, ...]
         self.lighter_background = self.NetDet.greyscale_image[self.motion.binary[-1, ...] > 0].mean() < self.NetDet.greyscale_image[

@@ -88,7 +88,7 @@ class  NetworkDetection:
         self.frangi_gamma = 1.
         self.black_ridges = True
 
-    def apply_frangi_variations(self) -> list:
+    def apply_frangi_variations(self, include_images: bool=False) -> list:
         """
         Applies various Frangi filter variations with different sigma values and thresholding methods.
 
@@ -134,30 +134,33 @@ class  NetworkDetection:
             # Store results
             results.append({
                 'method': f'f_{sigmas}_thresh',
-                'binary': binary_otsu,
                 'quality': quality_otsu,
-                # 'filtered': frangi_result,
                 'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
             })
+            if include_images:
+                results[-1]['binary'] = binary_otsu
+                results[-1]['filtered'] = frangi_result
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(frangi_result, self.possibly_filled_pixels, patch_size=(10, 10))
                 quality_rolling = binary_quality_index(binary_rolling)
                 results.append({
                     'method': f'f_{sigmas}_roll',
-                    'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
+                if include_images:
+                    results[-1]['binary'] = binary_rolling
+                    results[-1]['filtered'] = frangi_result
 
         return results
 
 
-    def apply_sato_variations(self) -> list:
+    def apply_sato_variations(self, include_images: bool=False) -> list:
         """
         Apply various Sato filter variations to an image and store the results.
 
@@ -213,6 +216,9 @@ class  NetworkDetection:
                 'rolling_window': False,
                 'sigmas': sigmas
             })
+            if include_images:
+                results[-1]['binary'] = binary_otsu
+                results[-1]['filtered'] = sato_result
 
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
@@ -223,15 +229,17 @@ class  NetworkDetection:
                     'method': f's_{sigmas}_roll',
                     'binary': binary_rolling,
                     'quality': quality_rolling,
-                    # 'filtered': sato_result,
                     'filter': f'Sato',
                     'rolling_window': True,
                     'sigmas': sigmas
                 })
+                if include_images:
+                    results[-1]['binary'] = binary_rolling
+                    results[-1]['filtered'] = sato_result
 
         return results
 
-    def get_best_network_detection_method(self):
+    def get_best_network_detection_method(self, include_images: bool=True):
         """
         Get the best network detection method based on quality metrics.
 
@@ -275,15 +283,16 @@ class  NetworkDetection:
         >>> print(NetDet.best_result['sigmas'])
         bgr_image = np.random.randint(0, 256, (100, 100, 3), dtype=np.uint8)
         """
-        frangi_res = self.apply_frangi_variations()
-        sato_res = self.apply_sato_variations()
+        frangi_res = self.apply_frangi_variations(include_images)
+        sato_res = self.apply_sato_variations(include_images)
         self.all_results = frangi_res + sato_res
         self.quality_metrics = np.array([result['quality'] for result in self.all_results])
         self.best_idx = np.argmax(self.quality_metrics)
         self.best_result = self.all_results[self.best_idx]
-        self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
-        if self.morphological_closing:
-            self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
+        if include_images:
+            self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
+            if self.morphological_closing:
+                self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
 
 
     def detect_network(self):
