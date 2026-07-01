@@ -367,6 +367,11 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
+        if lighter_background is None:
+            if self.possibly_filled_pixels.all():
+                lighter_background = self.greyscale_image.mean() < np.median(self.greyscale_image)
+            else:
+                lighter_background = self.greyscale_image[self.possibly_filled_pixels > 0].mean() < self.greyscale_image[self.possibly_filled_pixels == 0].mean()
         scored_im = self.possibly_filled_pixels
         if not self.possibly_filled_pixels.all():
             scored_im = close_holes(self.possibly_filled_pixels)
