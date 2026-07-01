@@ -329,7 +329,7 @@ def write_video_from_images(path_to_images='', vid_name: str='timelapse.mp4', fp
                                                                 raw_images=is_raw, is_landscape=is_landscape)
     write_video(video, vid_name=vid_name, is_color=is_color, fps=fps)
 
-def save_im(img: NDArray, full_path: str=None, cmap=None):
+def save_im(img: NDArray, full_path: str=None, cmap=None, dpi=500):
     """
     Save an image figure to a file with specified options.
 
@@ -347,6 +347,8 @@ def save_im(img: NDArray, full_path: str=None, cmap=None):
     cmap : str or None, optional
         Colormap to be applied if the image should be displayed with a specific
         color map. If `None`, no colormap is applied.
+    dpi : int, optional
+        Image resolution.
 
     Returns
     -------
@@ -383,7 +385,7 @@ def save_im(img: NDArray, full_path: str=None, cmap=None):
     if full_path is None:
         plt.show()
     else:
-        fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=500)
+        fig.savefig(full_path, bbox_inches='tight', pad_inches=0., transparent=True, dpi=dpi)
         plt.close(fig)
 
 def tear_down_temp_files():
