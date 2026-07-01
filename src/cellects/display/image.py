@@ -239,50 +239,65 @@ def rgb_gradient(value:int, min_val: int=0, max_val: int=None):
 
     return int(red), int(green), int(blue)
 
-def draw_graph(img: NDArray[np.uint8], vertices, edges, cell_contours=None):
-    graph = np.full((img.shape[0], img.shape[1], 3), 255, dtype=np.uint8)
+def draw_graph(img: NDArray[np.uint8], vertices_coord, edges_coord=None, edges_to_vertices=None, cell_contours=None, use_int_or_width: str = 'intensity'):
     if cell_contours is not None:
         # i) Draw the cell contour on the graph:
+        graph = np.full((img.shape[0], img.shape[1], 3), 255, dtype=np.uint8)
         graph[cell_contours > 0] = 200
-    # ii) Draw the shortest path of every edge on the graph
-    edge_names = np.unique(edges['edge_id'])
-    min_width, max_width = edges['average_width'].min(), edges['average_width'].max()
-    for edge_id in edge_names:
-        edge = edges.loc[edges['edge_id'] == edge_id, :]
-        v1 = vertices.loc[vertices['vertex_id'] == int(edge['vertex1'].values[0]), :]
-        v2 = vertices.loc[vertices['vertex_id'] == int(edge['vertex2'].values[0]), :]
-        v1_coord = v1['y'].values[0], v1['x'].values[0]
-        v2_coord = v2['y'].values[0], v2['x'].values[0]
-        shortest_path = get_line_points(v1_coord, v2_coord)
+    else:
+        graph = img.copy()
 
-        if np.isnan(edge['average_width'].values[0]):
-            graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
-        else:
-            graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge['average_width'].values[0],
-                                                                              min_width)
+    if edges_to_vertices is not None:
+        edge_names = np.unique(edges_to_vertices['edge_id'])
+        min_width, max_width = edges_to_vertices[use_int_or_width].min(), edges_to_vertices[use_int_or_width].max()
+
+    if edges_coord is not None:
+        if edges_to_vertices is not None:
+            for edge_id in edge_names:
+                edge_i_coord = edges_coord.loc[edges_coord['edge_id'] == edge_id, :]
+                edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
+                if np.isnan(edge[use_int_or_width].values[0]):
+                    graph[edge_i_coord['y'], edge_i_coord['x'], :] = crimson_rgb
+                else:
+                    graph[edge_i_coord['y'], edge_i_coord['x'], :] = rgb_gradient(edge[use_int_or_width].values[0], min_width, max_width)[::-1]
+
+    elif edges_to_vertices is not None:
+        # ii) Draw the shortest path of every edge on the graph
+        for edge_id in edge_names:
+            edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
+            v1 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex1'].values[0]), :]
+            v2 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex2'].values[0]), :]
+            v1_coord = v1['y'].values[0], v1['x'].values[0]
+            v2_coord = v2['y'].values[0], v2['x'].values[0]
+            shortest_path = get_line_points(v1_coord, v2_coord)
+            if np.isnan(edge[use_int_or_width].values[0]):
+                graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
+            else:
+                graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge[use_int_or_width].values[0],
+                                                                                  min_width)[::-1]
 
     # Draw a green cross on branching vertices
     vertex_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    branching_vertices = vertices.loc[vertices['is_tip'] == 0, :]
+    branching_vertices = vertices_coord.loc[vertices_coord['is_tip'] == 0, :]
     vertex_img[branching_vertices['y'], branching_vertices['x']] = 1
     dil_v_coord = np.nonzero(cv2.dilate(vertex_img, cross_33))
     graph[dil_v_coord[0], dil_v_coord[1], :] = lightgreen_rgb  # 255, 165, 0
 
     # Draw a red cross on food vertices
     origin_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    origin_vertices = vertices.loc[vertices['origin'] == 1, :]
+    origin_vertices = vertices_coord.loc[vertices_coord['origin'] == 1, :]
     origin_img[origin_vertices['y'], origin_vertices['x']] = 1
     dil_o_coord = np.nonzero(cv2.dilate(origin_img, cross_33))
     graph[dil_o_coord[0], dil_o_coord[1], :] = yellow_rgb
 
     # Draw a blue cross on tips
     tips_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    tips = vertices.loc[vertices['is_tip'] == 1, :]
+    tips = vertices_coord.loc[vertices_coord['is_tip'] == 1, :]
     tips_img[tips['y'], tips['x']] = 1
     dil_tips_coord = np.nonzero(cv2.dilate(tips_img, cross_33))
-    graph[dil_tips_coord[0], dil_tips_coord[1], :] = dark_grey_rgb
+    graph[dil_tips_coord[0], dil_tips_coord[1], :] = blue_rgb
 
     # Draw a black dot on all vertices
-    graph[vertices['y'], vertices['x'], :] = 20, 20, 20
+    graph[vertices_coord['y'], vertices_coord['x'], :] = 20, 20, 20
 
     return graph
