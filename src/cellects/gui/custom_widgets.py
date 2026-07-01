@@ -120,7 +120,7 @@ class MainTabsType(WindowType):
 
 
 class InsertImage(QtWidgets.QLabel):
-    def __init__(self, parent, track_mouse: bool=False):
+    def __init__(self, parent=None, track_mouse: bool=False):
         super().__init__()
         self.parent = parent
         self.image = None
