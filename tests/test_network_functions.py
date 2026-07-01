@@ -1,9 +1,12 @@
+#!/usr/bin/env python3
+"""
+This script contains all unit tests of the network_functions script
+"""
 
 import unittest
 from cellects.image.network_functions import *
 from tests._base import CellectsUnitTest
 
-# --- Tests -------------------------------------------------------------------
 
 class TestNetworkDetection(CellectsUnitTest):
     """Test suite for get_best_network_detection_method() method"""
