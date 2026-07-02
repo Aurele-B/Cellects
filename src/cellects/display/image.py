@@ -206,30 +206,29 @@ def draw_graph(img: NDArray[np.uint8], vertices_coord, edges_coord=None, edges_t
         edge_names = np.unique(edges_to_vertices['edge_id'])
         min_width, max_width = edges_to_vertices[use_int_or_width].min(), edges_to_vertices[use_int_or_width].max()
 
-    if edges_coord is not None:
-        if edges_to_vertices is not None:
+        if edges_coord is not None:
             for edge_id in edge_names:
                 edge_i_coord = edges_coord.loc[edges_coord['edge_id'] == edge_id, :]
                 edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
-                if np.isnan(edge[use_int_or_width].values[0]):
+                if np.isnan(edge[use_int_or_width].values[0]) or max_width - min_width == 0:
                     graph[edge_i_coord['y'], edge_i_coord['x'], :] = crimson_rgb
                 else:
                     graph[edge_i_coord['y'], edge_i_coord['x'], :] = rgb_gradient(edge[use_int_or_width].values[0], min_width, max_width)[::-1]
 
-    elif edges_to_vertices is not None:
-        # ii) Draw the shortest path of every edge on the graph
-        for edge_id in edge_names:
-            edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
-            v1 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex1'].values[0]), :]
-            v2 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex2'].values[0]), :]
-            v1_coord = v1['y'].values[0], v1['x'].values[0]
-            v2_coord = v2['y'].values[0], v2['x'].values[0]
-            shortest_path = get_line_points(v1_coord, v2_coord)
-            if np.isnan(edge[use_int_or_width].values[0]):
-                graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
-            else:
-                graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge[use_int_or_width].values[0],
-                                                                                  min_width)[::-1]
+        else:
+            # ii) Draw the shortest path of every edge on the graph
+            for edge_id in edge_names:
+                edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
+                v1 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex1'].values[0]), :]
+                v2 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex2'].values[0]), :]
+                v1_coord = v1['y'].values[0], v1['x'].values[0]
+                v2_coord = v2['y'].values[0], v2['x'].values[0]
+                shortest_path = get_line_points(v1_coord, v2_coord)
+                if np.isnan(edge[use_int_or_width].values[0]) or max_width - min_width == 0:
+                    graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
+                else:
+                    graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge[use_int_or_width].values[0],
+                                                                                      min_width)[::-1]
 
     # Draw a green cross on branching vertices
     vertex_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
