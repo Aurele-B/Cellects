@@ -3143,7 +3143,7 @@ Default is "data".</p>
 
 
 <h2 id="cellects.io.save.save_im" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">save_im</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">full_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">save_im</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">full_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span></code>
 
 </h2>
 
@@ -3215,6 +3215,22 @@ color map. If <code>None</code>, no colormap is applied.</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>dpi</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Image resolution.</p>
+              </div>
+            </td>
+            <td>
+                  <code>500</code>
             </td>
           </tr>
       </tbody>
@@ -3336,7 +3352,9 @@ at the specified location.</p>
 <span class="normal"><a href="#__codelineno-0-384">384</a></span>
 <span class="normal"><a href="#__codelineno-0-385">385</a></span>
 <span class="normal"><a href="#__codelineno-0-386">386</a></span>
-<span class="normal"><a href="#__codelineno-0-387">387</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="k">def</span><span class="w"> </span><span class="nf">save_im</span><span class="p">(</span><span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">full_path</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-387">387</a></span>
+<span class="normal"><a href="#__codelineno-0-388">388</a></span>
+<span class="normal"><a href="#__codelineno-0-389">389</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-332" name="__codelineno-0-332"></a><span class="k">def</span><span class="w"> </span><span class="nf">save_im</span><span class="p">(</span><span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">full_path</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">500</span><span class="p">):</span>
 <a id="__codelineno-0-333" name="__codelineno-0-333"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <a id="__codelineno-0-334" name="__codelineno-0-334"></a><span class="sd">    Save an image figure to a file with specified options.</span>
 <a id="__codelineno-0-335" name="__codelineno-0-335"></a>
@@ -3354,44 +3372,46 @@ at the specified location.</p>
 <a id="__codelineno-0-347" name="__codelineno-0-347"></a><span class="sd">    cmap : str or None, optional</span>
 <a id="__codelineno-0-348" name="__codelineno-0-348"></a><span class="sd">        Colormap to be applied if the image should be displayed with a specific</span>
 <a id="__codelineno-0-349" name="__codelineno-0-349"></a><span class="sd">        color map. If `None`, no colormap is applied.</span>
-<a id="__codelineno-0-350" name="__codelineno-0-350"></a>
-<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">    Returns</span>
-<a id="__codelineno-0-352" name="__codelineno-0-352"></a><span class="sd">    -------</span>
-<a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">    None</span>
-<a id="__codelineno-0-354" name="__codelineno-0-354"></a>
-<a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="sd">        This function does not return any value. It saves the figure to disk</span>
-<a id="__codelineno-0-356" name="__codelineno-0-356"></a><span class="sd">        at the specified location.</span>
-<a id="__codelineno-0-357" name="__codelineno-0-357"></a>
-<a id="__codelineno-0-358" name="__codelineno-0-358"></a><span class="sd">    Raises</span>
-<a id="__codelineno-0-359" name="__codelineno-0-359"></a><span class="sd">    ------</span>
-<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">    FileNotFoundError</span>
-<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">        If the directory in `full_path` does not exist.</span>
-<a id="__codelineno-0-362" name="__codelineno-0-362"></a>
-<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">    Examples</span>
-<a id="__codelineno-0-364" name="__codelineno-0-364"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    &gt;&gt;&gt; img = np.random.rand(100, 100, 3) * 255</span>
-<a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="sd">    &gt;&gt;&gt; save_im(img, &#39;test.png&#39;)</span>
-<a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="sd">    Creates and saves a figure from the random image to &#39;test.png&#39;.</span>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a>
-<a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="sd">    &gt;&gt;&gt; save_im(img, &#39;colored_test.png&#39;, cmap=&#39;viridis&#39;)</span>
-<a id="__codelineno-0-370" name="__codelineno-0-370"></a><span class="sd">    Creates and saves a figure from the random image with &#39;viridis&#39; colormap</span>
-<a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">    to &#39;colored_test.png&#39;.</span>
-<a id="__codelineno-0-372" name="__codelineno-0-372"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-373" name="__codelineno-0-373"></a>    <span class="n">sizes</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">100</span><span class="p">,</span>  <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">100</span>
-<a id="__codelineno-0-374" name="__codelineno-0-374"></a>    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">sizes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sizes</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-<a id="__codelineno-0-375" name="__codelineno-0-375"></a>    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
-<a id="__codelineno-0-376" name="__codelineno-0-376"></a>    <span class="k">if</span> <span class="n">cmap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-377" name="__codelineno-0-377"></a>        <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-378" name="__codelineno-0-378"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-379" name="__codelineno-0-379"></a>        <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-380" name="__codelineno-0-380"></a>    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-381" name="__codelineno-0-381"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">:</span>
-<a id="__codelineno-0-382" name="__codelineno-0-382"></a>        <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-<a id="__codelineno-0-383" name="__codelineno-0-383"></a>    <span class="k">if</span> <span class="n">full_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-384" name="__codelineno-0-384"></a>        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-<a id="__codelineno-0-385" name="__codelineno-0-385"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-386" name="__codelineno-0-386"></a>        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">,</span> <span class="n">pad_inches</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
-<a id="__codelineno-0-387" name="__codelineno-0-387"></a>        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a><span class="sd">    dpi : int, optional</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a><span class="sd">        Image resolution.</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a><span class="sd">    None</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a><span class="sd">        This function does not return any value. It saves the figure to disk</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a><span class="sd">        at the specified location.</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a><span class="sd">    Raises</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a><span class="sd">    ------</span>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a><span class="sd">    FileNotFoundError</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a><span class="sd">        If the directory in `full_path` does not exist.</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a>
+<a id="__codelineno-0-365" name="__codelineno-0-365"></a><span class="sd">    Examples</span>
+<a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="sd">    --------</span>
+<a id="__codelineno-0-367" name="__codelineno-0-367"></a><span class="sd">    &gt;&gt;&gt; img = np.random.rand(100, 100, 3) * 255</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="sd">    &gt;&gt;&gt; save_im(img, &#39;test.png&#39;)</span>
+<a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="sd">    Creates and saves a figure from the random image to &#39;test.png&#39;.</span>
+<a id="__codelineno-0-370" name="__codelineno-0-370"></a>
+<a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">    &gt;&gt;&gt; save_im(img, &#39;colored_test.png&#39;, cmap=&#39;viridis&#39;)</span>
+<a id="__codelineno-0-372" name="__codelineno-0-372"></a><span class="sd">    Creates and saves a figure from the random image with &#39;viridis&#39; colormap</span>
+<a id="__codelineno-0-373" name="__codelineno-0-373"></a><span class="sd">    to &#39;colored_test.png&#39;.</span>
+<a id="__codelineno-0-374" name="__codelineno-0-374"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-375" name="__codelineno-0-375"></a>    <span class="n">sizes</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">100</span><span class="p">,</span>  <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">100</span>
+<a id="__codelineno-0-376" name="__codelineno-0-376"></a>    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">sizes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sizes</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+<a id="__codelineno-0-377" name="__codelineno-0-377"></a>    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+<a id="__codelineno-0-378" name="__codelineno-0-378"></a>    <span class="k">if</span> <span class="n">cmap</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-379" name="__codelineno-0-379"></a>        <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-380" name="__codelineno-0-380"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-381" name="__codelineno-0-381"></a>        <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s2">&quot;none&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-382" name="__codelineno-0-382"></a>    <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-383" name="__codelineno-0-383"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">50</span><span class="p">:</span>
+<a id="__codelineno-0-384" name="__codelineno-0-384"></a>        <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<a id="__codelineno-0-385" name="__codelineno-0-385"></a>    <span class="k">if</span> <span class="n">full_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-386" name="__codelineno-0-386"></a>        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<a id="__codelineno-0-387" name="__codelineno-0-387"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-388" name="__codelineno-0-388"></a>        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">full_path</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">,</span> <span class="n">pad_inches</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">transparent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">dpi</span><span class="p">)</span>
+<a id="__codelineno-0-389" name="__codelineno-0-389"></a>        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3414,9 +3434,7 @@ at the specified location.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/io/save.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-389">389</a></span>
-<span class="normal"><a href="#__codelineno-0-390">390</a></span>
-<span class="normal"><a href="#__codelineno-0-391">391</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-391">391</a></span>
 <span class="normal"><a href="#__codelineno-0-392">392</a></span>
 <span class="normal"><a href="#__codelineno-0-393">393</a></span>
 <span class="normal"><a href="#__codelineno-0-394">394</a></span>
@@ -3425,18 +3443,20 @@ at the specified location.</p>
 <span class="normal"><a href="#__codelineno-0-397">397</a></span>
 <span class="normal"><a href="#__codelineno-0-398">398</a></span>
 <span class="normal"><a href="#__codelineno-0-399">399</a></span>
-<span class="normal"><a href="#__codelineno-0-400">400</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-389" name="__codelineno-0-389"></a><span class="k">def</span><span class="w"> </span><span class="nf">tear_down_temp_files</span><span class="p">():</span>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="sd">    Delete temporary experiment files created during tests or documentation creation.</span>
-<a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-393" name="__codelineno-0-393"></a>    <span class="n">dir_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">&quot;single_experiment&quot;</span><span class="p">]</span>
-<a id="__codelineno-0-394" name="__codelineno-0-394"></a>    <span class="k">for</span> <span class="n">dir_i</span> <span class="ow">in</span> <span class="n">dir_list</span><span class="p">:</span>
-<a id="__codelineno-0-395" name="__codelineno-0-395"></a>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dir_i</span><span class="p">):</span>
-<a id="__codelineno-0-396" name="__codelineno-0-396"></a>            <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">dir_i</span><span class="p">)</span>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a>            <span class="n">temp_files</span> <span class="o">=</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.json&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.h5&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.csv&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;ind_*&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;Analysis e*&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-398" name="__codelineno-0-398"></a>            <span class="k">for</span> <span class="n">temp_file</span> <span class="ow">in</span> <span class="n">temp_files</span><span class="p">:</span>
-<a id="__codelineno-0-399" name="__codelineno-0-399"></a>                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">temp_file</span><span class="p">):</span>
-<a id="__codelineno-0-400" name="__codelineno-0-400"></a>                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_file</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-400">400</a></span>
+<span class="normal"><a href="#__codelineno-0-401">401</a></span>
+<span class="normal"><a href="#__codelineno-0-402">402</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="k">def</span><span class="w"> </span><span class="nf">tear_down_temp_files</span><span class="p">():</span>
+<a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-393" name="__codelineno-0-393"></a><span class="sd">    Delete temporary experiment files created during tests or documentation creation.</span>
+<a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-395" name="__codelineno-0-395"></a>    <span class="n">dir_list</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">DATA_DIR</span><span class="p">,</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">&quot;single_experiment&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-396" name="__codelineno-0-396"></a>    <span class="k">for</span> <span class="n">dir_i</span> <span class="ow">in</span> <span class="n">dir_list</span><span class="p">:</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a>        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dir_i</span><span class="p">):</span>
+<a id="__codelineno-0-398" name="__codelineno-0-398"></a>            <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">dir_i</span><span class="p">)</span>
+<a id="__codelineno-0-399" name="__codelineno-0-399"></a>            <span class="n">temp_files</span> <span class="o">=</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.json&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.h5&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;*.csv&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;ind_*&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">insensitive_glob</span><span class="p">(</span><span class="s1">&#39;Analysis e*&#39;</span><span class="p">)</span>
+<a id="__codelineno-0-400" name="__codelineno-0-400"></a>            <span class="k">for</span> <span class="n">temp_file</span> <span class="ow">in</span> <span class="n">temp_files</span><span class="p">:</span>
+<a id="__codelineno-0-401" name="__codelineno-0-401"></a>                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">temp_file</span><span class="p">):</span>
+<a id="__codelineno-0-402" name="__codelineno-0-402"></a>                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">temp_file</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

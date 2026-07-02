@@ -2965,27 +2965,7 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-663">663</a></span>
-<span class="normal"><a href="#__codelineno-0-664">664</a></span>
-<span class="normal"><a href="#__codelineno-0-665">665</a></span>
-<span class="normal"><a href="#__codelineno-0-666">666</a></span>
-<span class="normal"><a href="#__codelineno-0-667">667</a></span>
-<span class="normal"><a href="#__codelineno-0-668">668</a></span>
-<span class="normal"><a href="#__codelineno-0-669">669</a></span>
-<span class="normal"><a href="#__codelineno-0-670">670</a></span>
-<span class="normal"><a href="#__codelineno-0-671">671</a></span>
-<span class="normal"><a href="#__codelineno-0-672">672</a></span>
-<span class="normal"><a href="#__codelineno-0-673">673</a></span>
-<span class="normal"><a href="#__codelineno-0-674">674</a></span>
-<span class="normal"><a href="#__codelineno-0-675">675</a></span>
-<span class="normal"><a href="#__codelineno-0-676">676</a></span>
-<span class="normal"><a href="#__codelineno-0-677">677</a></span>
-<span class="normal"><a href="#__codelineno-0-678">678</a></span>
-<span class="normal"><a href="#__codelineno-0-679">679</a></span>
-<span class="normal"><a href="#__codelineno-0-680">680</a></span>
-<span class="normal"><a href="#__codelineno-0-681">681</a></span>
-<span class="normal"><a href="#__codelineno-0-682">682</a></span>
-<span class="normal"><a href="#__codelineno-0-683">683</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-683">683</a></span>
 <span class="normal"><a href="#__codelineno-0-684">684</a></span>
 <span class="normal"><a href="#__codelineno-0-685">685</a></span>
 <span class="normal"><a href="#__codelineno-0-686">686</a></span>
@@ -3065,107 +3045,127 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 <span class="normal"><a href="#__codelineno-0-760">760</a></span>
 <span class="normal"><a href="#__codelineno-0-761">761</a></span>
 <span class="normal"><a href="#__codelineno-0-762">762</a></span>
-<span class="normal"><a href="#__codelineno-0-763">763</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-663" name="__codelineno-0-663"></a><span class="k">class</span><span class="w"> </span><span class="nc">MainTabsWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">):</span>
-<a id="__codelineno-0-664" name="__codelineno-0-664"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-665" name="__codelineno-0-665"></a><span class="sd">    A custom QPushButton that mimics an explorer tab appearance.</span>
-<a id="__codelineno-0-666" name="__codelineno-0-666"></a>
-<a id="__codelineno-0-667" name="__codelineno-0-667"></a><span class="sd">    Features:</span>
-<a id="__codelineno-0-668" name="__codelineno-0-668"></a><span class="sd">    - Customizable text</span>
-<a id="__codelineno-0-669" name="__codelineno-0-669"></a><span class="sd">    - Night mode support</span>
-<a id="__codelineno-0-670" name="__codelineno-0-670"></a><span class="sd">    - Three states: not_in_use (grey border), in_use (black border), not_usable (grey text)</span>
-<a id="__codelineno-0-671" name="__codelineno-0-671"></a><span class="sd">    - Tooltip support for not_usable state</span>
-<a id="__codelineno-0-672" name="__codelineno-0-672"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-673" name="__codelineno-0-673"></a>
-<a id="__codelineno-0-674" name="__codelineno-0-674"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<a id="__codelineno-0-675" name="__codelineno-0-675"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-<a id="__codelineno-0-676" name="__codelineno-0-676"></a>
-<a id="__codelineno-0-677" name="__codelineno-0-677"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-0-678" name="__codelineno-0-678"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>  <span class="c1"># States: &quot;not_in_use&quot;, &quot;in_use&quot;, &quot;not_usable&quot;</span>
-<a id="__codelineno-0-679" name="__codelineno-0-679"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
-<a id="__codelineno-0-680" name="__codelineno-0-680"></a>
-<a id="__codelineno-0-681" name="__codelineno-0-681"></a>        <span class="c1"># Set basic properties</span>
-<a id="__codelineno-0-682" name="__codelineno-0-682"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Minimum</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
-<a id="__codelineno-0-683" name="__codelineno-0-683"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedHeight</span><span class="p">(</span><span class="mi">35</span><span class="p">)</span>
-<a id="__codelineno-0-684" name="__codelineno-0-684"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
-<a id="__codelineno-0-685" name="__codelineno-0-685"></a>
-<a id="__codelineno-0-686" name="__codelineno-0-686"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
-<a id="__codelineno-0-687" name="__codelineno-0-687"></a>
-<a id="__codelineno-0-688" name="__codelineno-0-688"></a>
-<a id="__codelineno-0-689" name="__codelineno-0-689"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">night_mode_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="p">):</span>
-<a id="__codelineno-0-690" name="__codelineno-0-690"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span> <span class="o">=</span> <span class="n">night_mode</span>
-<a id="__codelineno-0-691" name="__codelineno-0-691"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-692" name="__codelineno-0-692"></a>
-<a id="__codelineno-0-693" name="__codelineno-0-693"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-694" name="__codelineno-0-694"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the widget&#39;s stylesheetµ&quot;&quot;&quot;</span>
-<a id="__codelineno-0-695" name="__codelineno-0-695"></a>
-<a id="__codelineno-0-696" name="__codelineno-0-696"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_usable&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-697" name="__codelineno-0-697"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="s2">&quot;#888888&quot;</span>
-<a id="__codelineno-0-698" name="__codelineno-0-698"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">ForbiddenCursor</span><span class="p">)</span>
-<a id="__codelineno-0-699" name="__codelineno-0-699"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-700" name="__codelineno-0-700"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-701" name="__codelineno-0-701"></a>                <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">night_text_Color</span>
-<a id="__codelineno-0-702" name="__codelineno-0-702"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-703" name="__codelineno-0-703"></a>                <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">textColor</span>
-<a id="__codelineno-0-704" name="__codelineno-0-704"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_in_use&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-705" name="__codelineno-0-705"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
-<a id="__codelineno-0-706" name="__codelineno-0-706"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;in_use&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-707" name="__codelineno-0-707"></a>            <span class="n">border_width</span> <span class="o">=</span> <span class="mi">2</span>
-<a id="__codelineno-0-708" name="__codelineno-0-708"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-709" name="__codelineno-0-709"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
-<a id="__codelineno-0-710" name="__codelineno-0-710"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-711" name="__codelineno-0-711"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
-<a id="__codelineno-0-712" name="__codelineno-0-712"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-713" name="__codelineno-0-713"></a>            <span class="n">border_width</span> <span class="o">=</span> <span class="mi">1</span>
-<a id="__codelineno-0-714" name="__codelineno-0-714"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-715" name="__codelineno-0-715"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
-<a id="__codelineno-0-716" name="__codelineno-0-716"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-717" name="__codelineno-0-717"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
-<a id="__codelineno-0-718" name="__codelineno-0-718"></a>
-<a id="__codelineno-0-719" name="__codelineno-0-719"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-720" name="__codelineno-0-720"></a>            <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
-<a id="__codelineno-0-721" name="__codelineno-0-721"></a>                     <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
-<a id="__codelineno-0-722" name="__codelineno-0-722"></a>                     <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
-<a id="__codelineno-0-723" name="__codelineno-0-723"></a>                     <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
-<a id="__codelineno-0-724" name="__codelineno-0-724"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-725" name="__codelineno-0-725"></a>            <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
-<a id="__codelineno-0-726" name="__codelineno-0-726"></a>                     <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
-<a id="__codelineno-0-727" name="__codelineno-0-727"></a>                     <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
-<a id="__codelineno-0-728" name="__codelineno-0-728"></a>                     <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
-<a id="__codelineno-0-729" name="__codelineno-0-729"></a>                     <span class="p">}</span>
-<a id="__codelineno-0-730" name="__codelineno-0-730"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
-<a id="__codelineno-0-731" name="__codelineno-0-731"></a>            <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; font-family: </span><span class="si">%s</span><span class="s2">; font-size: </span><span class="si">%s</span><span class="s2">;  border-top-color: </span><span class="si">%s</span><span class="s2">; border-right-color: </span><span class="si">%s</span><span class="s2">; border-top-left-radius: </span><span class="si">%s</span><span class="s2">; border-bottom-left-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
-<a id="__codelineno-0-732" name="__codelineno-0-732"></a>
-<a id="__codelineno-0-733" name="__codelineno-0-733"></a>
-<a id="__codelineno-0-734" name="__codelineno-0-734"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;in_use&#39; state with black border.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-736" name="__codelineno-0-736"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;in_use&quot;</span>
-<a id="__codelineno-0-737" name="__codelineno-0-737"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
-<a id="__codelineno-0-738" name="__codelineno-0-738"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-739" name="__codelineno-0-739"></a>
-<a id="__codelineno-0-740" name="__codelineno-0-740"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_not_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;not_in_use&#39; state with grey border.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-742" name="__codelineno-0-742"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>
-<a id="__codelineno-0-743" name="__codelineno-0-743"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
-<a id="__codelineno-0-744" name="__codelineno-0-744"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-745" name="__codelineno-0-745"></a>
-<a id="__codelineno-0-746" name="__codelineno-0-746"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_not_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tooltip_text</span><span class="o">=</span><span class="s2">&quot;This tab is not usable&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">        Set the tab to &#39;not_usable&#39; state with grey text.</span>
-<a id="__codelineno-0-749" name="__codelineno-0-749"></a>
-<a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">        Args:</span>
-<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">            tooltip_text (str): Custom tooltip text to show when hovering</span>
-<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-753" name="__codelineno-0-753"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_usable&quot;</span>
-<a id="__codelineno-0-754" name="__codelineno-0-754"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tooltip_text</span><span class="p">)</span>
-<a id="__codelineno-0-755" name="__codelineno-0-755"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-756" name="__codelineno-0-756"></a>
-<a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current state of the tab.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-759" name="__codelineno-0-759"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
-<a id="__codelineno-0-760" name="__codelineno-0-760"></a>
-<a id="__codelineno-0-761" name="__codelineno-0-761"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_night_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if night mode is enabled.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-763" name="__codelineno-0-763"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span>
+<span class="normal"><a href="#__codelineno-0-763">763</a></span>
+<span class="normal"><a href="#__codelineno-0-764">764</a></span>
+<span class="normal"><a href="#__codelineno-0-765">765</a></span>
+<span class="normal"><a href="#__codelineno-0-766">766</a></span>
+<span class="normal"><a href="#__codelineno-0-767">767</a></span>
+<span class="normal"><a href="#__codelineno-0-768">768</a></span>
+<span class="normal"><a href="#__codelineno-0-769">769</a></span>
+<span class="normal"><a href="#__codelineno-0-770">770</a></span>
+<span class="normal"><a href="#__codelineno-0-771">771</a></span>
+<span class="normal"><a href="#__codelineno-0-772">772</a></span>
+<span class="normal"><a href="#__codelineno-0-773">773</a></span>
+<span class="normal"><a href="#__codelineno-0-774">774</a></span>
+<span class="normal"><a href="#__codelineno-0-775">775</a></span>
+<span class="normal"><a href="#__codelineno-0-776">776</a></span>
+<span class="normal"><a href="#__codelineno-0-777">777</a></span>
+<span class="normal"><a href="#__codelineno-0-778">778</a></span>
+<span class="normal"><a href="#__codelineno-0-779">779</a></span>
+<span class="normal"><a href="#__codelineno-0-780">780</a></span>
+<span class="normal"><a href="#__codelineno-0-781">781</a></span>
+<span class="normal"><a href="#__codelineno-0-782">782</a></span>
+<span class="normal"><a href="#__codelineno-0-783">783</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-683" name="__codelineno-0-683"></a><span class="k">class</span><span class="w"> </span><span class="nc">MainTabsWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">):</span>
+<a id="__codelineno-0-684" name="__codelineno-0-684"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-685" name="__codelineno-0-685"></a><span class="sd">    A custom QPushButton that mimics an explorer tab appearance.</span>
+<a id="__codelineno-0-686" name="__codelineno-0-686"></a>
+<a id="__codelineno-0-687" name="__codelineno-0-687"></a><span class="sd">    Features:</span>
+<a id="__codelineno-0-688" name="__codelineno-0-688"></a><span class="sd">    - Customizable text</span>
+<a id="__codelineno-0-689" name="__codelineno-0-689"></a><span class="sd">    - Night mode support</span>
+<a id="__codelineno-0-690" name="__codelineno-0-690"></a><span class="sd">    - Three states: not_in_use (grey border), in_use (black border), not_usable (grey text)</span>
+<a id="__codelineno-0-691" name="__codelineno-0-691"></a><span class="sd">    - Tooltip support for not_usable state</span>
+<a id="__codelineno-0-692" name="__codelineno-0-692"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-693" name="__codelineno-0-693"></a>
+<a id="__codelineno-0-694" name="__codelineno-0-694"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<a id="__codelineno-0-695" name="__codelineno-0-695"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<a id="__codelineno-0-696" name="__codelineno-0-696"></a>
+<a id="__codelineno-0-697" name="__codelineno-0-697"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-0-698" name="__codelineno-0-698"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>  <span class="c1"># States: &quot;not_in_use&quot;, &quot;in_use&quot;, &quot;not_usable&quot;</span>
+<a id="__codelineno-0-699" name="__codelineno-0-699"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
+<a id="__codelineno-0-700" name="__codelineno-0-700"></a>
+<a id="__codelineno-0-701" name="__codelineno-0-701"></a>        <span class="c1"># Set basic properties</span>
+<a id="__codelineno-0-702" name="__codelineno-0-702"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Minimum</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
+<a id="__codelineno-0-703" name="__codelineno-0-703"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedHeight</span><span class="p">(</span><span class="mi">35</span><span class="p">)</span>
+<a id="__codelineno-0-704" name="__codelineno-0-704"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
+<a id="__codelineno-0-705" name="__codelineno-0-705"></a>
+<a id="__codelineno-0-706" name="__codelineno-0-706"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
+<a id="__codelineno-0-707" name="__codelineno-0-707"></a>
+<a id="__codelineno-0-708" name="__codelineno-0-708"></a>
+<a id="__codelineno-0-709" name="__codelineno-0-709"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">night_mode_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="p">):</span>
+<a id="__codelineno-0-710" name="__codelineno-0-710"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span> <span class="o">=</span> <span class="n">night_mode</span>
+<a id="__codelineno-0-711" name="__codelineno-0-711"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-712" name="__codelineno-0-712"></a>
+<a id="__codelineno-0-713" name="__codelineno-0-713"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-714" name="__codelineno-0-714"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the widget&#39;s stylesheetµ&quot;&quot;&quot;</span>
+<a id="__codelineno-0-715" name="__codelineno-0-715"></a>
+<a id="__codelineno-0-716" name="__codelineno-0-716"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_usable&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-717" name="__codelineno-0-717"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="s2">&quot;#888888&quot;</span>
+<a id="__codelineno-0-718" name="__codelineno-0-718"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">ForbiddenCursor</span><span class="p">)</span>
+<a id="__codelineno-0-719" name="__codelineno-0-719"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-720" name="__codelineno-0-720"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-721" name="__codelineno-0-721"></a>                <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">night_text_Color</span>
+<a id="__codelineno-0-722" name="__codelineno-0-722"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-723" name="__codelineno-0-723"></a>                <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">textColor</span>
+<a id="__codelineno-0-724" name="__codelineno-0-724"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_in_use&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-725" name="__codelineno-0-725"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
+<a id="__codelineno-0-726" name="__codelineno-0-726"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;in_use&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-727" name="__codelineno-0-727"></a>            <span class="n">border_width</span> <span class="o">=</span> <span class="mi">2</span>
+<a id="__codelineno-0-728" name="__codelineno-0-728"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-729" name="__codelineno-0-729"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
+<a id="__codelineno-0-730" name="__codelineno-0-730"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-731" name="__codelineno-0-731"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
+<a id="__codelineno-0-732" name="__codelineno-0-732"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-733" name="__codelineno-0-733"></a>            <span class="n">border_width</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="__codelineno-0-734" name="__codelineno-0-734"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-735" name="__codelineno-0-735"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
+<a id="__codelineno-0-736" name="__codelineno-0-736"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-737" name="__codelineno-0-737"></a>                <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
+<a id="__codelineno-0-738" name="__codelineno-0-738"></a>
+<a id="__codelineno-0-739" name="__codelineno-0-739"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-740" name="__codelineno-0-740"></a>            <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
+<a id="__codelineno-0-741" name="__codelineno-0-741"></a>                     <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
+<a id="__codelineno-0-742" name="__codelineno-0-742"></a>                     <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
+<a id="__codelineno-0-743" name="__codelineno-0-743"></a>                     <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
+<a id="__codelineno-0-744" name="__codelineno-0-744"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-745" name="__codelineno-0-745"></a>            <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
+<a id="__codelineno-0-746" name="__codelineno-0-746"></a>                     <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
+<a id="__codelineno-0-747" name="__codelineno-0-747"></a>                     <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
+<a id="__codelineno-0-748" name="__codelineno-0-748"></a>                     <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
+<a id="__codelineno-0-749" name="__codelineno-0-749"></a>                     <span class="p">}</span>
+<a id="__codelineno-0-750" name="__codelineno-0-750"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
+<a id="__codelineno-0-751" name="__codelineno-0-751"></a>            <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; font-family: </span><span class="si">%s</span><span class="s2">; font-size: </span><span class="si">%s</span><span class="s2">;  border-top-color: </span><span class="si">%s</span><span class="s2">; border-right-color: </span><span class="si">%s</span><span class="s2">; border-top-left-radius: </span><span class="si">%s</span><span class="s2">; border-bottom-left-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<a id="__codelineno-0-752" name="__codelineno-0-752"></a>
+<a id="__codelineno-0-753" name="__codelineno-0-753"></a>
+<a id="__codelineno-0-754" name="__codelineno-0-754"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;in_use&#39; state with black border.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-756" name="__codelineno-0-756"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;in_use&quot;</span>
+<a id="__codelineno-0-757" name="__codelineno-0-757"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
+<a id="__codelineno-0-758" name="__codelineno-0-758"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-759" name="__codelineno-0-759"></a>
+<a id="__codelineno-0-760" name="__codelineno-0-760"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_not_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;not_in_use&#39; state with grey border.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-762" name="__codelineno-0-762"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>
+<a id="__codelineno-0-763" name="__codelineno-0-763"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
+<a id="__codelineno-0-764" name="__codelineno-0-764"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-765" name="__codelineno-0-765"></a>
+<a id="__codelineno-0-766" name="__codelineno-0-766"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">set_not_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tooltip_text</span><span class="o">=</span><span class="s2">&quot;This tab is not usable&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">        Set the tab to &#39;not_usable&#39; state with grey text.</span>
+<a id="__codelineno-0-769" name="__codelineno-0-769"></a>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">        Args:</span>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">            tooltip_text (str): Custom tooltip text to show when hovering</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_usable&quot;</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tooltip_text</span><span class="p">)</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a>
+<a id="__codelineno-0-777" name="__codelineno-0-777"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the current state of the tab.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
+<a id="__codelineno-0-780" name="__codelineno-0-780"></a>
+<a id="__codelineno-0-781" name="__codelineno-0-781"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_night_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if night mode is enabled.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -3198,11 +3198,11 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-757">757</a></span>
-<span class="normal"><a href="#__codelineno-0-758">758</a></span>
-<span class="normal"><a href="#__codelineno-0-759">759</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-757" name="__codelineno-0-757"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-758" name="__codelineno-0-758"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the current state of the tab.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-759" name="__codelineno-0-759"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-777">777</a></span>
+<span class="normal"><a href="#__codelineno-0-778">778</a></span>
+<span class="normal"><a href="#__codelineno-0-779">779</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-777" name="__codelineno-0-777"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_state</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-778" name="__codelineno-0-778"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the current state of the tab.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-779" name="__codelineno-0-779"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3225,11 +3225,11 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-761">761</a></span>
-<span class="normal"><a href="#__codelineno-0-762">762</a></span>
-<span class="normal"><a href="#__codelineno-0-763">763</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_night_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-762" name="__codelineno-0-762"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if night mode is enabled.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-763" name="__codelineno-0-763"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-781">781</a></span>
+<span class="normal"><a href="#__codelineno-0-782">782</a></span>
+<span class="normal"><a href="#__codelineno-0-783">783</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-781" name="__codelineno-0-781"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_night_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-782" name="__codelineno-0-782"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if night mode is enabled.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-783" name="__codelineno-0-783"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3252,15 +3252,15 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-734">734</a></span>
-<span class="normal"><a href="#__codelineno-0-735">735</a></span>
-<span class="normal"><a href="#__codelineno-0-736">736</a></span>
-<span class="normal"><a href="#__codelineno-0-737">737</a></span>
-<span class="normal"><a href="#__codelineno-0-738">738</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-734" name="__codelineno-0-734"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-735" name="__codelineno-0-735"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;in_use&#39; state with black border.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-736" name="__codelineno-0-736"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;in_use&quot;</span>
-<a id="__codelineno-0-737" name="__codelineno-0-737"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
-<a id="__codelineno-0-738" name="__codelineno-0-738"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-754">754</a></span>
+<span class="normal"><a href="#__codelineno-0-755">755</a></span>
+<span class="normal"><a href="#__codelineno-0-756">756</a></span>
+<span class="normal"><a href="#__codelineno-0-757">757</a></span>
+<span class="normal"><a href="#__codelineno-0-758">758</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-754" name="__codelineno-0-754"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-755" name="__codelineno-0-755"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;in_use&#39; state with black border.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-756" name="__codelineno-0-756"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;in_use&quot;</span>
+<a id="__codelineno-0-757" name="__codelineno-0-757"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
+<a id="__codelineno-0-758" name="__codelineno-0-758"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3283,15 +3283,15 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-740">740</a></span>
-<span class="normal"><a href="#__codelineno-0-741">741</a></span>
-<span class="normal"><a href="#__codelineno-0-742">742</a></span>
-<span class="normal"><a href="#__codelineno-0-743">743</a></span>
-<span class="normal"><a href="#__codelineno-0-744">744</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-740" name="__codelineno-0-740"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_not_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-741" name="__codelineno-0-741"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;not_in_use&#39; state with grey border.&quot;&quot;&quot;</span>
-<a id="__codelineno-0-742" name="__codelineno-0-742"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>
-<a id="__codelineno-0-743" name="__codelineno-0-743"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
-<a id="__codelineno-0-744" name="__codelineno-0-744"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-760">760</a></span>
+<span class="normal"><a href="#__codelineno-0-761">761</a></span>
+<span class="normal"><a href="#__codelineno-0-762">762</a></span>
+<span class="normal"><a href="#__codelineno-0-763">763</a></span>
+<span class="normal"><a href="#__codelineno-0-764">764</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-760" name="__codelineno-0-760"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_not_in_use</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-761" name="__codelineno-0-761"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Set the tab to &#39;not_in_use&#39; state with grey border.&quot;&quot;&quot;</span>
+<a id="__codelineno-0-762" name="__codelineno-0-762"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_in_use&quot;</span>
+<a id="__codelineno-0-763" name="__codelineno-0-763"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># Clear any tooltip</span>
+<a id="__codelineno-0-764" name="__codelineno-0-764"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3316,25 +3316,25 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-746">746</a></span>
-<span class="normal"><a href="#__codelineno-0-747">747</a></span>
-<span class="normal"><a href="#__codelineno-0-748">748</a></span>
-<span class="normal"><a href="#__codelineno-0-749">749</a></span>
-<span class="normal"><a href="#__codelineno-0-750">750</a></span>
-<span class="normal"><a href="#__codelineno-0-751">751</a></span>
-<span class="normal"><a href="#__codelineno-0-752">752</a></span>
-<span class="normal"><a href="#__codelineno-0-753">753</a></span>
-<span class="normal"><a href="#__codelineno-0-754">754</a></span>
-<span class="normal"><a href="#__codelineno-0-755">755</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-746" name="__codelineno-0-746"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_not_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tooltip_text</span><span class="o">=</span><span class="s2">&quot;This tab is not usable&quot;</span><span class="p">):</span>
-<a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="sd">    Set the tab to &#39;not_usable&#39; state with grey text.</span>
-<a id="__codelineno-0-749" name="__codelineno-0-749"></a>
-<a id="__codelineno-0-750" name="__codelineno-0-750"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">        tooltip_text (str): Custom tooltip text to show when hovering</span>
-<a id="__codelineno-0-752" name="__codelineno-0-752"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-753" name="__codelineno-0-753"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_usable&quot;</span>
-<a id="__codelineno-0-754" name="__codelineno-0-754"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tooltip_text</span><span class="p">)</span>
-<a id="__codelineno-0-755" name="__codelineno-0-755"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-766">766</a></span>
+<span class="normal"><a href="#__codelineno-0-767">767</a></span>
+<span class="normal"><a href="#__codelineno-0-768">768</a></span>
+<span class="normal"><a href="#__codelineno-0-769">769</a></span>
+<span class="normal"><a href="#__codelineno-0-770">770</a></span>
+<span class="normal"><a href="#__codelineno-0-771">771</a></span>
+<span class="normal"><a href="#__codelineno-0-772">772</a></span>
+<span class="normal"><a href="#__codelineno-0-773">773</a></span>
+<span class="normal"><a href="#__codelineno-0-774">774</a></span>
+<span class="normal"><a href="#__codelineno-0-775">775</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-766" name="__codelineno-0-766"></a><span class="k">def</span><span class="w"> </span><span class="nf">set_not_usable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tooltip_text</span><span class="o">=</span><span class="s2">&quot;This tab is not usable&quot;</span><span class="p">):</span>
+<a id="__codelineno-0-767" name="__codelineno-0-767"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-768" name="__codelineno-0-768"></a><span class="sd">    Set the tab to &#39;not_usable&#39; state with grey text.</span>
+<a id="__codelineno-0-769" name="__codelineno-0-769"></a>
+<a id="__codelineno-0-770" name="__codelineno-0-770"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-771" name="__codelineno-0-771"></a><span class="sd">        tooltip_text (str): Custom tooltip text to show when hovering</span>
+<a id="__codelineno-0-772" name="__codelineno-0-772"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-773" name="__codelineno-0-773"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;not_usable&quot;</span>
+<a id="__codelineno-0-774" name="__codelineno-0-774"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tooltip_text</span><span class="p">)</span>
+<a id="__codelineno-0-775" name="__codelineno-0-775"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3357,27 +3357,7 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-693">693</a></span>
-<span class="normal"><a href="#__codelineno-0-694">694</a></span>
-<span class="normal"><a href="#__codelineno-0-695">695</a></span>
-<span class="normal"><a href="#__codelineno-0-696">696</a></span>
-<span class="normal"><a href="#__codelineno-0-697">697</a></span>
-<span class="normal"><a href="#__codelineno-0-698">698</a></span>
-<span class="normal"><a href="#__codelineno-0-699">699</a></span>
-<span class="normal"><a href="#__codelineno-0-700">700</a></span>
-<span class="normal"><a href="#__codelineno-0-701">701</a></span>
-<span class="normal"><a href="#__codelineno-0-702">702</a></span>
-<span class="normal"><a href="#__codelineno-0-703">703</a></span>
-<span class="normal"><a href="#__codelineno-0-704">704</a></span>
-<span class="normal"><a href="#__codelineno-0-705">705</a></span>
-<span class="normal"><a href="#__codelineno-0-706">706</a></span>
-<span class="normal"><a href="#__codelineno-0-707">707</a></span>
-<span class="normal"><a href="#__codelineno-0-708">708</a></span>
-<span class="normal"><a href="#__codelineno-0-709">709</a></span>
-<span class="normal"><a href="#__codelineno-0-710">710</a></span>
-<span class="normal"><a href="#__codelineno-0-711">711</a></span>
-<span class="normal"><a href="#__codelineno-0-712">712</a></span>
-<span class="normal"><a href="#__codelineno-0-713">713</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-713">713</a></span>
 <span class="normal"><a href="#__codelineno-0-714">714</a></span>
 <span class="normal"><a href="#__codelineno-0-715">715</a></span>
 <span class="normal"><a href="#__codelineno-0-716">716</a></span>
@@ -3395,45 +3375,65 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 <span class="normal"><a href="#__codelineno-0-728">728</a></span>
 <span class="normal"><a href="#__codelineno-0-729">729</a></span>
 <span class="normal"><a href="#__codelineno-0-730">730</a></span>
-<span class="normal"><a href="#__codelineno-0-731">731</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-693" name="__codelineno-0-693"></a><span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-694" name="__codelineno-0-694"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Update the widget&#39;s stylesheetµ&quot;&quot;&quot;</span>
-<a id="__codelineno-0-695" name="__codelineno-0-695"></a>
-<a id="__codelineno-0-696" name="__codelineno-0-696"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_usable&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-697" name="__codelineno-0-697"></a>        <span class="n">tab_text_color</span> <span class="o">=</span> <span class="s2">&quot;#888888&quot;</span>
-<a id="__codelineno-0-698" name="__codelineno-0-698"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">ForbiddenCursor</span><span class="p">)</span>
-<a id="__codelineno-0-699" name="__codelineno-0-699"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-700" name="__codelineno-0-700"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-701" name="__codelineno-0-701"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">night_text_Color</span>
-<a id="__codelineno-0-702" name="__codelineno-0-702"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-703" name="__codelineno-0-703"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">textColor</span>
-<a id="__codelineno-0-704" name="__codelineno-0-704"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_in_use&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-705" name="__codelineno-0-705"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
-<a id="__codelineno-0-706" name="__codelineno-0-706"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;in_use&quot;</span><span class="p">:</span>
-<a id="__codelineno-0-707" name="__codelineno-0-707"></a>        <span class="n">border_width</span> <span class="o">=</span> <span class="mi">2</span>
-<a id="__codelineno-0-708" name="__codelineno-0-708"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-709" name="__codelineno-0-709"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
-<a id="__codelineno-0-710" name="__codelineno-0-710"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-711" name="__codelineno-0-711"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
-<a id="__codelineno-0-712" name="__codelineno-0-712"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-713" name="__codelineno-0-713"></a>        <span class="n">border_width</span> <span class="o">=</span> <span class="mi">1</span>
-<a id="__codelineno-0-714" name="__codelineno-0-714"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-715" name="__codelineno-0-715"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
-<a id="__codelineno-0-716" name="__codelineno-0-716"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-717" name="__codelineno-0-717"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
-<a id="__codelineno-0-718" name="__codelineno-0-718"></a>
-<a id="__codelineno-0-719" name="__codelineno-0-719"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-720" name="__codelineno-0-720"></a>        <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
-<a id="__codelineno-0-721" name="__codelineno-0-721"></a>                 <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
-<a id="__codelineno-0-722" name="__codelineno-0-722"></a>                 <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
-<a id="__codelineno-0-723" name="__codelineno-0-723"></a>                 <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
-<a id="__codelineno-0-724" name="__codelineno-0-724"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-725" name="__codelineno-0-725"></a>        <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
-<a id="__codelineno-0-726" name="__codelineno-0-726"></a>                 <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
-<a id="__codelineno-0-727" name="__codelineno-0-727"></a>                 <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
-<a id="__codelineno-0-728" name="__codelineno-0-728"></a>                 <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
-<a id="__codelineno-0-729" name="__codelineno-0-729"></a>                 <span class="p">}</span>
-<a id="__codelineno-0-730" name="__codelineno-0-730"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
-<a id="__codelineno-0-731" name="__codelineno-0-731"></a>        <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; font-family: </span><span class="si">%s</span><span class="s2">; font-size: </span><span class="si">%s</span><span class="s2">;  border-top-color: </span><span class="si">%s</span><span class="s2">; border-right-color: </span><span class="si">%s</span><span class="s2">; border-top-left-radius: </span><span class="si">%s</span><span class="s2">; border-bottom-left-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<span class="normal"><a href="#__codelineno-0-731">731</a></span>
+<span class="normal"><a href="#__codelineno-0-732">732</a></span>
+<span class="normal"><a href="#__codelineno-0-733">733</a></span>
+<span class="normal"><a href="#__codelineno-0-734">734</a></span>
+<span class="normal"><a href="#__codelineno-0-735">735</a></span>
+<span class="normal"><a href="#__codelineno-0-736">736</a></span>
+<span class="normal"><a href="#__codelineno-0-737">737</a></span>
+<span class="normal"><a href="#__codelineno-0-738">738</a></span>
+<span class="normal"><a href="#__codelineno-0-739">739</a></span>
+<span class="normal"><a href="#__codelineno-0-740">740</a></span>
+<span class="normal"><a href="#__codelineno-0-741">741</a></span>
+<span class="normal"><a href="#__codelineno-0-742">742</a></span>
+<span class="normal"><a href="#__codelineno-0-743">743</a></span>
+<span class="normal"><a href="#__codelineno-0-744">744</a></span>
+<span class="normal"><a href="#__codelineno-0-745">745</a></span>
+<span class="normal"><a href="#__codelineno-0-746">746</a></span>
+<span class="normal"><a href="#__codelineno-0-747">747</a></span>
+<span class="normal"><a href="#__codelineno-0-748">748</a></span>
+<span class="normal"><a href="#__codelineno-0-749">749</a></span>
+<span class="normal"><a href="#__codelineno-0-750">750</a></span>
+<span class="normal"><a href="#__codelineno-0-751">751</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-713" name="__codelineno-0-713"></a><span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-714" name="__codelineno-0-714"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Update the widget&#39;s stylesheetµ&quot;&quot;&quot;</span>
+<a id="__codelineno-0-715" name="__codelineno-0-715"></a>
+<a id="__codelineno-0-716" name="__codelineno-0-716"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_usable&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-717" name="__codelineno-0-717"></a>        <span class="n">tab_text_color</span> <span class="o">=</span> <span class="s2">&quot;#888888&quot;</span>
+<a id="__codelineno-0-718" name="__codelineno-0-718"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">ForbiddenCursor</span><span class="p">)</span>
+<a id="__codelineno-0-719" name="__codelineno-0-719"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-720" name="__codelineno-0-720"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-721" name="__codelineno-0-721"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">night_text_Color</span>
+<a id="__codelineno-0-722" name="__codelineno-0-722"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-723" name="__codelineno-0-723"></a>            <span class="n">tab_text_color</span> <span class="o">=</span> <span class="n">textColor</span>
+<a id="__codelineno-0-724" name="__codelineno-0-724"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;not_in_use&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-725" name="__codelineno-0-725"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
+<a id="__codelineno-0-726" name="__codelineno-0-726"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;in_use&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-727" name="__codelineno-0-727"></a>        <span class="n">border_width</span> <span class="o">=</span> <span class="mi">2</span>
+<a id="__codelineno-0-728" name="__codelineno-0-728"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-729" name="__codelineno-0-729"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
+<a id="__codelineno-0-730" name="__codelineno-0-730"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-731" name="__codelineno-0-731"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
+<a id="__codelineno-0-732" name="__codelineno-0-732"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-733" name="__codelineno-0-733"></a>        <span class="n">border_width</span> <span class="o">=</span> <span class="mi">1</span>
+<a id="__codelineno-0-734" name="__codelineno-0-734"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-735" name="__codelineno-0-735"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #323241&quot;</span>
+<a id="__codelineno-0-736" name="__codelineno-0-736"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-737" name="__codelineno-0-737"></a>            <span class="n">tab_border</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">border_width</span><span class="si">}</span><span class="s2">px solid #adadad&quot;</span>
+<a id="__codelineno-0-738" name="__codelineno-0-738"></a>
+<a id="__codelineno-0-739" name="__codelineno-0-739"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-740" name="__codelineno-0-740"></a>        <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
+<a id="__codelineno-0-741" name="__codelineno-0-741"></a>                 <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
+<a id="__codelineno-0-742" name="__codelineno-0-742"></a>                 <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#323241&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
+<a id="__codelineno-0-743" name="__codelineno-0-743"></a>                 <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">}</span>
+<a id="__codelineno-0-744" name="__codelineno-0-744"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-745" name="__codelineno-0-745"></a>        <span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">tab_text_color</span><span class="p">,</span> <span class="s2">&quot;border&quot;</span><span class="p">:</span> <span class="n">tab_border</span><span class="p">,</span>
+<a id="__codelineno-0-746" name="__codelineno-0-746"></a>                 <span class="s2">&quot;font_family&quot;</span><span class="p">:</span> <span class="n">tabfont</span><span class="p">,</span> <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="s2">&quot;22pt&quot;</span><span class="p">,</span> <span class="c1">#&quot;font_weight&quot;: &quot;bold&quot;,</span>
+<a id="__codelineno-0-747" name="__codelineno-0-747"></a>                 <span class="s2">&quot;border-top-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="s2">&quot;border-right-color&quot;</span><span class="p">:</span> <span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span> <span class="c1"># invisible</span>
+<a id="__codelineno-0-748" name="__codelineno-0-748"></a>                 <span class="s2">&quot;border-top-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;10&quot;</span><span class="p">,</span> <span class="s2">&quot;border-bottom-left-radius&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span>
+<a id="__codelineno-0-749" name="__codelineno-0-749"></a>                 <span class="p">}</span>
+<a id="__codelineno-0-750" name="__codelineno-0-750"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
+<a id="__codelineno-0-751" name="__codelineno-0-751"></a>        <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; font-family: </span><span class="si">%s</span><span class="s2">; font-size: </span><span class="si">%s</span><span class="s2">;  border-top-color: </span><span class="si">%s</span><span class="s2">; border-right-color: </span><span class="si">%s</span><span class="s2">; border-top-left-radius: </span><span class="si">%s</span><span class="s2">; border-bottom-left-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -3474,27 +3474,7 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-282">282</a></span>
-<span class="normal"><a href="#__codelineno-0-283">283</a></span>
-<span class="normal"><a href="#__codelineno-0-284">284</a></span>
-<span class="normal"><a href="#__codelineno-0-285">285</a></span>
-<span class="normal"><a href="#__codelineno-0-286">286</a></span>
-<span class="normal"><a href="#__codelineno-0-287">287</a></span>
-<span class="normal"><a href="#__codelineno-0-288">288</a></span>
-<span class="normal"><a href="#__codelineno-0-289">289</a></span>
-<span class="normal"><a href="#__codelineno-0-290">290</a></span>
-<span class="normal"><a href="#__codelineno-0-291">291</a></span>
-<span class="normal"><a href="#__codelineno-0-292">292</a></span>
-<span class="normal"><a href="#__codelineno-0-293">293</a></span>
-<span class="normal"><a href="#__codelineno-0-294">294</a></span>
-<span class="normal"><a href="#__codelineno-0-295">295</a></span>
-<span class="normal"><a href="#__codelineno-0-296">296</a></span>
-<span class="normal"><a href="#__codelineno-0-297">297</a></span>
-<span class="normal"><a href="#__codelineno-0-298">298</a></span>
-<span class="normal"><a href="#__codelineno-0-299">299</a></span>
-<span class="normal"><a href="#__codelineno-0-300">300</a></span>
-<span class="normal"><a href="#__codelineno-0-301">301</a></span>
-<span class="normal"><a href="#__codelineno-0-302">302</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-302">302</a></span>
 <span class="normal"><a href="#__codelineno-0-303">303</a></span>
 <span class="normal"><a href="#__codelineno-0-304">304</a></span>
 <span class="normal"><a href="#__codelineno-0-305">305</a></span>
@@ -3536,69 +3516,89 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 <span class="normal"><a href="#__codelineno-0-341">341</a></span>
 <span class="normal"><a href="#__codelineno-0-342">342</a></span>
 <span class="normal"><a href="#__codelineno-0-343">343</a></span>
-<span class="normal"><a href="#__codelineno-0-344">344</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="k">class</span><span class="w"> </span><span class="nc">PButton</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">):</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fade</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">        self.setStyleSheet(&quot;background-color: rgb(107, 145, 202);\n&quot;</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">                                &quot;border-color: rgb(255, 255, 255);\n&quot;</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                                &quot;color: rgb(0, 0, 0);\n&quot;</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">                                &quot;font: 17pt \&quot;Britannic Bold\&quot;;&quot;)</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">        :param text:</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">        &quot;&quot;&quot;</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tip</span><span class="p">)</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">25</span><span class="p">)</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
-<a id="__codelineno-0-300" name="__codelineno-0-300"></a>
-<a id="__codelineno-0-301" name="__codelineno-0-301"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">night_mode_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="p">):</span>
-<a id="__codelineno-0-302" name="__codelineno-0-302"></a>        <span class="k">if</span> <span class="n">night_mode</span><span class="p">:</span>
-<a id="__codelineno-0-303" name="__codelineno-0-303"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">night_text_Color</span><span class="p">,</span> <span class="s2">&quot;buttonborder&quot;</span><span class="p">:</span> <span class="n">night_button_border</span><span class="p">,</span>
-<a id="__codelineno-0-304" name="__codelineno-0-304"></a>                          <span class="s2">&quot;buttonangles&quot;</span><span class="p">:</span> <span class="n">buttonangles</span><span class="p">}</span>
-<a id="__codelineno-0-305" name="__codelineno-0-305"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-306" name="__codelineno-0-306"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">textColor</span><span class="p">,</span> <span class="s2">&quot;buttonborder&quot;</span><span class="p">:</span> <span class="n">buttonborder</span><span class="p">,</span>
-<a id="__codelineno-0-307" name="__codelineno-0-307"></a>                          <span class="s2">&quot;buttonangles&quot;</span><span class="p">:</span> <span class="n">buttonangles</span><span class="p">}</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-309" name="__codelineno-0-309"></a>
-<a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
-<a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QEvent</span><span class="o">.</span><span class="n">MouseMove</span><span class="p">:</span>
-<a id="__codelineno-0-312" name="__codelineno-0-312"></a>            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">buttons</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoButton</span><span class="p">:</span>
-<a id="__codelineno-0-313" name="__codelineno-0-313"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">fade</span><span class="p">()</span>
-<a id="__codelineno-0-314" name="__codelineno-0-314"></a>            <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-315" name="__codelineno-0-315"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">unfade</span><span class="p">()</span>
-<a id="__codelineno-0-316" name="__codelineno-0-316"></a>
-<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-318" name="__codelineno-0-318"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
-<a id="__codelineno-0-319" name="__codelineno-0-319"></a>            <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<span class="normal"><a href="#__codelineno-0-344">344</a></span>
+<span class="normal"><a href="#__codelineno-0-345">345</a></span>
+<span class="normal"><a href="#__codelineno-0-346">346</a></span>
+<span class="normal"><a href="#__codelineno-0-347">347</a></span>
+<span class="normal"><a href="#__codelineno-0-348">348</a></span>
+<span class="normal"><a href="#__codelineno-0-349">349</a></span>
+<span class="normal"><a href="#__codelineno-0-350">350</a></span>
+<span class="normal"><a href="#__codelineno-0-351">351</a></span>
+<span class="normal"><a href="#__codelineno-0-352">352</a></span>
+<span class="normal"><a href="#__codelineno-0-353">353</a></span>
+<span class="normal"><a href="#__codelineno-0-354">354</a></span>
+<span class="normal"><a href="#__codelineno-0-355">355</a></span>
+<span class="normal"><a href="#__codelineno-0-356">356</a></span>
+<span class="normal"><a href="#__codelineno-0-357">357</a></span>
+<span class="normal"><a href="#__codelineno-0-358">358</a></span>
+<span class="normal"><a href="#__codelineno-0-359">359</a></span>
+<span class="normal"><a href="#__codelineno-0-360">360</a></span>
+<span class="normal"><a href="#__codelineno-0-361">361</a></span>
+<span class="normal"><a href="#__codelineno-0-362">362</a></span>
+<span class="normal"><a href="#__codelineno-0-363">363</a></span>
+<span class="normal"><a href="#__codelineno-0-364">364</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="k">class</span><span class="w"> </span><span class="nc">PButton</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">):</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fade</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">        self.setStyleSheet(&quot;background-color: rgb(107, 145, 202);\n&quot;</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">                                &quot;border-color: rgb(255, 255, 255);\n&quot;</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">                                &quot;color: rgb(0, 0, 0);\n&quot;</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">                                &quot;font: 17pt \&quot;Britannic Bold\&quot;;&quot;)</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">        :param text:</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tip</span><span class="p">)</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">25</span><span class="p">)</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
 <a id="__codelineno-0-320" name="__codelineno-0-320"></a>
-<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
-<a id="__codelineno-0-322" name="__codelineno-0-322"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
-<a id="__codelineno-0-323" name="__codelineno-0-323"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-324" name="__codelineno-0-324"></a>
-<a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">textcolor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">textcolor</span><span class="p">):</span>
-<a id="__codelineno-0-326" name="__codelineno-0-326"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttontextColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">textcolor</span>
-<a id="__codelineno-0-327" name="__codelineno-0-327"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-328" name="__codelineno-0-328"></a>
-<a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">border</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">border</span><span class="p">):</span>
-<a id="__codelineno-0-330" name="__codelineno-0-330"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttonborder&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">border</span>
-<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
-<a id="__codelineno-0-332" name="__codelineno-0-332"></a>
-<a id="__codelineno-0-333" name="__codelineno-0-333"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">angles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
-<a id="__codelineno-0-334" name="__codelineno-0-334"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttonangles&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">angles</span>
-<a id="__codelineno-0-335" name="__codelineno-0-335"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">night_mode_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">night_mode</span><span class="p">):</span>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>        <span class="k">if</span> <span class="n">night_mode</span><span class="p">:</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">night_button_color</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">night_text_Color</span><span class="p">,</span> <span class="s2">&quot;buttonborder&quot;</span><span class="p">:</span> <span class="n">night_button_border</span><span class="p">,</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>                          <span class="s2">&quot;buttonangles&quot;</span><span class="p">:</span> <span class="n">buttonangles</span><span class="p">}</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">style</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">:</span> <span class="n">buttoncolor</span><span class="p">,</span> <span class="s2">&quot;buttontextColor&quot;</span><span class="p">:</span> <span class="n">textColor</span><span class="p">,</span> <span class="s2">&quot;buttonborder&quot;</span><span class="p">:</span> <span class="n">buttonborder</span><span class="p">,</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>                          <span class="s2">&quot;buttonangles&quot;</span><span class="p">:</span> <span class="n">buttonangles</span><span class="p">}</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">type</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">QEvent</span><span class="o">.</span><span class="n">MouseMove</span><span class="p">:</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">buttons</span><span class="p">()</span> <span class="o">==</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">NoButton</span><span class="p">:</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">fade</span><span class="p">()</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>            <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">unfade</span><span class="p">()</span>
 <a id="__codelineno-0-336" name="__codelineno-0-336"></a>
-<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowOpacity</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
-<a id="__codelineno-0-339" name="__codelineno-0-339"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">buttonclickedcolor</span><span class="p">,</span> <span class="n">textColor</span><span class="p">,</span> <span class="n">buttonborder</span><span class="p">,</span> <span class="n">buttonangles</span><span class="p">))</span>
-<a id="__codelineno-0-340" name="__codelineno-0-340"></a>        <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="o">.</span><span class="n">singleShot</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unfade</span><span class="p">)</span>
-<a id="__codelineno-0-341" name="__codelineno-0-341"></a>
-<a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">unfade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-<a id="__codelineno-0-344" name="__codelineno-0-344"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">buttoncolor</span><span class="p">,</span> <span class="n">textColor</span><span class="p">,</span> <span class="n">buttonborder</span><span class="p">,</span> <span class="n">buttonangles</span><span class="p">))</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">update_style</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>            <span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">color</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color</span><span class="p">):</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttoncolor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">color</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">textcolor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">textcolor</span><span class="p">):</span>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttontextColor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">textcolor</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">border</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">border</span><span class="p">):</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttonborder&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">border</span>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">angles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angles</span><span class="p">):</span>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">style</span><span class="p">[</span><span class="s2">&quot;buttonangles&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">angles</span>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">update_style</span><span class="p">()</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">fade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowOpacity</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">buttonclickedcolor</span><span class="p">,</span> <span class="n">textColor</span><span class="p">,</span> <span class="n">buttonborder</span><span class="p">,</span> <span class="n">buttonangles</span><span class="p">))</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a>        <span class="n">QtCore</span><span class="o">.</span><span class="n">QTimer</span><span class="o">.</span><span class="n">singleShot</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unfade</span><span class="p">)</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">unfade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-363" name="__codelineno-0-363"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowOpacity</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-364" name="__codelineno-0-364"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">&quot;background-color: </span><span class="si">%s</span><span class="s2">; color: </span><span class="si">%s</span><span class="s2">; border: </span><span class="si">%s</span><span class="s2">; border-radius: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">buttoncolor</span><span class="p">,</span> <span class="n">textColor</span><span class="p">,</span> <span class="n">buttonborder</span><span class="p">,</span> <span class="n">buttonangles</span><span class="p">))</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -3639,7 +3639,125 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-283">283</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-303">303</a></span>
+<span class="normal"><a href="#__codelineno-0-304">304</a></span>
+<span class="normal"><a href="#__codelineno-0-305">305</a></span>
+<span class="normal"><a href="#__codelineno-0-306">306</a></span>
+<span class="normal"><a href="#__codelineno-0-307">307</a></span>
+<span class="normal"><a href="#__codelineno-0-308">308</a></span>
+<span class="normal"><a href="#__codelineno-0-309">309</a></span>
+<span class="normal"><a href="#__codelineno-0-310">310</a></span>
+<span class="normal"><a href="#__codelineno-0-311">311</a></span>
+<span class="normal"><a href="#__codelineno-0-312">312</a></span>
+<span class="normal"><a href="#__codelineno-0-313">313</a></span>
+<span class="normal"><a href="#__codelineno-0-314">314</a></span>
+<span class="normal"><a href="#__codelineno-0-315">315</a></span>
+<span class="normal"><a href="#__codelineno-0-316">316</a></span>
+<span class="normal"><a href="#__codelineno-0-317">317</a></span>
+<span class="normal"><a href="#__codelineno-0-318">318</a></span>
+<span class="normal"><a href="#__codelineno-0-319">319</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fade</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">    self.setStyleSheet(&quot;background-color: rgb(107, 145, 202);\n&quot;</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">                            &quot;border-color: rgb(255, 255, 255);\n&quot;</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">                            &quot;color: rgb(0, 0, 0);\n&quot;</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a><span class="sd">                            &quot;font: 17pt \&quot;Britannic Bold\&quot;;&quot;)</span>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a><span class="sd">    :param text:</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tip</span><span class="p">)</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">25</span><span class="p">)</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="cellects.gui.custom_widgets.show" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">show</span><span class="p">(</span><span class="n">img</span><span class="p">)</span></code>
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Display a 2D image using Matplotlib.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>img</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>NumPy array</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="fig">fig</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Qlabel containing the image.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/cellects/gui/custom_widgets.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-282">282</a></span>
+<span class="normal"><a href="#__codelineno-0-283">283</a></span>
 <span class="normal"><a href="#__codelineno-0-284">284</a></span>
 <span class="normal"><a href="#__codelineno-0-285">285</a></span>
 <span class="normal"><a href="#__codelineno-0-286">286</a></span>
@@ -3655,37 +3773,29 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 <span class="normal"><a href="#__codelineno-0-296">296</a></span>
 <span class="normal"><a href="#__codelineno-0-297">297</a></span>
 <span class="normal"><a href="#__codelineno-0-298">298</a></span>
-<span class="normal"><a href="#__codelineno-0-299">299</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">fade</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tip</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">night_mode</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-299">299</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="k">def</span><span class="w"> </span><span class="nf">show</span><span class="p">(</span><span class="n">img</span><span class="p">):</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">    Display a 2D image using Matplotlib.</span>
 <a id="__codelineno-0-285" name="__codelineno-0-285"></a>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">    self.setStyleSheet(&quot;background-color: rgb(107, 145, 202);\n&quot;</span>
-<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">                            &quot;border-color: rgb(255, 255, 255);\n&quot;</span>
-<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">                            &quot;color: rgb(0, 0, 0);\n&quot;</span>
-<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">                            &quot;font: 17pt \&quot;Britannic Bold\&quot;;&quot;)</span>
-<a id="__codelineno-0-290" name="__codelineno-0-290"></a><span class="sd">    :param text:</span>
-<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-<a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-<a id="__codelineno-0-294" name="__codelineno-0-294"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="n">tip</span><span class="p">)</span>
-<a id="__codelineno-0-295" name="__codelineno-0-295"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">night_mode_switch</span><span class="p">(</span><span class="n">night_mode</span><span class="p">)</span>
-<a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setFont</span><span class="p">(</span><span class="n">buttonfont</span><span class="p">)</span>
-<a id="__codelineno-0-297" name="__codelineno-0-297"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setSizePolicy</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">,</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QSizePolicy</span><span class="o">.</span><span class="n">Fixed</span><span class="p">)</span>
-<a id="__codelineno-0-298" name="__codelineno-0-298"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setFixedWidth</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="o">*</span><span class="mi">15</span> <span class="o">+</span> <span class="mi">25</span><span class="p">)</span>
-<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">setCursor</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">CursorShape</span><span class="o">.</span><span class="n">PointingHandCursor</span><span class="p">)</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a><span class="sd">    img</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a><span class="sd">        NumPy array</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a><span class="sd">    fig</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a><span class="sd">        The Qlabel containing the image.</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="n">gui</span> <span class="o">=</span> <span class="n">InsertImage</span><span class="p">()</span>
+<a id="__codelineno-0-297" name="__codelineno-0-297"></a>    <span class="n">gui</span><span class="o">.</span><span class="n">update_image</span><span class="p">(</span><span class="n">img</span><span class="p">)</span>
+<a id="__codelineno-0-298" name="__codelineno-0-298"></a>    <span class="n">gui</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a>    <span class="k">return</span> <span class="n">gui</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
 
 </div>
-
-
-
-  </div>
-
-    </div>
-
-</div>
-
 
 
 
