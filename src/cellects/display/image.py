@@ -7,11 +7,10 @@ import numpy as np
 from numpy.typing import NDArray
 from matplotlib import pyplot as plt
 from cellects.image.morphological_operations import get_line_points, cross_33
-from cellects.gui.custom_widgets import InsertImage
 from cellects.display.param import blue_rgb, crimson_rgb, lightgreen_rgb, yellow_rgb
 
 
-def show(img, method: str='matplotlib', interactive: bool=True, cmap=None, axes: bool=True, show: bool=True):
+def show(img, interactive: bool=True, cmap=None, axes: bool=True, show: bool=True):
     """
     Display a 2D image using Matplotlib.
 
@@ -23,9 +22,6 @@ def show(img, method: str='matplotlib', interactive: bool=True, cmap=None, axes:
     interactive
         If ``True``, enable Matplotlib's interactive mode (``ion``);
         otherwise disable it (``ioff``).  Default is ``True``.
-    method
-        Library to use to display the image, options are ``matplotlib``, ``pyside``, and ``opencv``.
-        Default is ``matplotlib``.
     cmap
         Colormap to apply when displaying the image.  If ``None`` the
         default image colors are used.  Default is ``None``.
@@ -50,33 +46,23 @@ def show(img, method: str='matplotlib', interactive: bool=True, cmap=None, axes:
     creating figures programmatically to avoid unintended side effects.
     """
     sizes = img.shape[0] / 100,  img.shape[1] / 100
-    if method == 'matplotlib':
-        if interactive:
-            plt.ion()
-        else:
-            plt.ioff()
-        fig = plt.figure(figsize=(sizes[1], sizes[0]))
-        ax = fig.gca()
-        if cmap is None:
-            ax.imshow(img, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
-        else:
-            ax.imshow(img, cmap=cmap, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
-        if not axes:
-            ax.axis('off')
-        if show:
-            fig.tight_layout()
-            fig.show()
+    if interactive:
+        plt.ion()
+    else:
+        plt.ioff()
+    fig = plt.figure(figsize=(sizes[1], sizes[0]))
+    ax = fig.gca()
+    if cmap is None:
+        ax.imshow(img, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
+    else:
+        ax.imshow(img, cmap=cmap, interpolation="none", extent=(0, sizes[1], 0, sizes[0]))
+    if not axes:
+        ax.axis('off')
+    if show:
+        fig.tight_layout()
+        fig.show()
 
-        return fig, ax
-    elif method == 'pyside':
-        gui = InsertImage()
-        gui.update_image(img)
-        gui.show()
-        return gui
-    elif method == 'opencv':
-        cv2.imshow("image", cv2.resize(img, (1000, 1000)))
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+    return fig, ax
 
 
 def display_boxes(binary_image: NDArray, box_diameter: int, show: bool = True):

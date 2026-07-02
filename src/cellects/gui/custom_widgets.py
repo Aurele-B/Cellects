@@ -279,6 +279,26 @@ class InsertImage(QtWidgets.QLabel):
         super().closeEvent(event)
 
 
+def show(img):
+    """
+    Display a 2D image using Matplotlib.
+
+    Parameters
+    ----------
+    img
+        NumPy array
+
+    Returns
+    -------
+    fig
+        The Qlabel containing the image.
+    """
+    gui = InsertImage()
+    gui.update_image(img)
+    gui.show()
+    return gui
+
+
 class PButton(QtWidgets.QPushButton):
     def __init__(self, text, fade=True, tip=None, night_mode=False):
         """
