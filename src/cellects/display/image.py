@@ -79,51 +79,6 @@ def show(img, method: str='matplotlib', interactive: bool=True, cmap=None, axes:
         cv2.destroyAllWindows()
 
 
-
-def zoom_on_nonzero(binary_image:NDArray, padding: int = 2, return_coord: bool=True):
-    """
-    Crops a binary image around non-zero elements with optional padding and returns either coordinates or cropped region.
-
-    Parameters
-    ----------
-    binary_image : NDArray
-        2D NumPy array containing binary values (0/1)
-    padding : int, default=2
-        Amount of zero-padding to add around the minimum bounding box
-    return_coord : bool, default=True
-        If True, return slice coordinates instead of cropped image
-
-    Returns
-    -------
-        If `return_coord` is True: [y_min, y_max, x_min, x_max] as 4-element Tuple.
-        If False: 2D binary array representing the cropped region defined by non-zero elements plus padding.
-
-    Examples
-    --------
-    >>> img = np.zeros((10,10))
-    >>> img[3:7,4:6] = 1
-    >>> result = zoom_on_nonzero(img)
-    >>> print(result)
-    [1 8 2 7]
-    >>> cropped = zoom_on_nonzero(img, return_coord=False)
-    >>> print(cropped.shape)
-    (6, 5)
-
-    Notes
-    -----
-    - Returns empty slice coordinates if input contains no non-zero elements.
-    - Coordinate indices are 0-based and compatible with NumPy array slicing syntax.
-    """
-    y, x = np.nonzero(binary_image)
-    cy_min = np.max((0, y.min() - padding))
-    cy_max = np.min((binary_image.shape[0], y.max() + padding + 1))
-    cx_min = np.max((0, x.min() - padding))
-    cx_max = np.min((binary_image.shape[1], x.max() + padding + 1))
-    if return_coord:
-        return cy_min, cy_max, cx_min, cx_max
-    else:
-        return binary_image[cy_min:cy_max, cx_min:cx_max]
-
 def display_boxes(binary_image: NDArray, box_diameter: int, show: bool = True):
     """
     Display grid lines on a binary image at specified box diameter intervals.
@@ -251,30 +206,29 @@ def draw_graph(img: NDArray[np.uint8], vertices_coord, edges_coord=None, edges_t
         edge_names = np.unique(edges_to_vertices['edge_id'])
         min_width, max_width = edges_to_vertices[use_int_or_width].min(), edges_to_vertices[use_int_or_width].max()
 
-    if edges_coord is not None:
-        if edges_to_vertices is not None:
+        if edges_coord is not None:
             for edge_id in edge_names:
                 edge_i_coord = edges_coord.loc[edges_coord['edge_id'] == edge_id, :]
                 edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
-                if np.isnan(edge[use_int_or_width].values[0]):
+                if np.isnan(edge[use_int_or_width].values[0]) or max_width - min_width == 0:
                     graph[edge_i_coord['y'], edge_i_coord['x'], :] = crimson_rgb
                 else:
                     graph[edge_i_coord['y'], edge_i_coord['x'], :] = rgb_gradient(edge[use_int_or_width].values[0], min_width, max_width)[::-1]
 
-    elif edges_to_vertices is not None:
-        # ii) Draw the shortest path of every edge on the graph
-        for edge_id in edge_names:
-            edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
-            v1 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex1'].values[0]), :]
-            v2 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex2'].values[0]), :]
-            v1_coord = v1['y'].values[0], v1['x'].values[0]
-            v2_coord = v2['y'].values[0], v2['x'].values[0]
-            shortest_path = get_line_points(v1_coord, v2_coord)
-            if np.isnan(edge[use_int_or_width].values[0]):
-                graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
-            else:
-                graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge[use_int_or_width].values[0],
-                                                                                  min_width)[::-1]
+        else:
+            # ii) Draw the shortest path of every edge on the graph
+            for edge_id in edge_names:
+                edge = edges_to_vertices.loc[edges_to_vertices['edge_id'] == edge_id, :]
+                v1 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex1'].values[0]), :]
+                v2 = vertices_coord.loc[vertices_coord['vertex_id'] == int(edge['vertex2'].values[0]), :]
+                v1_coord = v1['y'].values[0], v1['x'].values[0]
+                v2_coord = v2['y'].values[0], v2['x'].values[0]
+                shortest_path = get_line_points(v1_coord, v2_coord)
+                if np.isnan(edge[use_int_or_width].values[0]) or max_width - min_width == 0:
+                    graph[shortest_path[:, 0], shortest_path[:, 1], :] = crimson_rgb
+                else:
+                    graph[shortest_path[:, 0], shortest_path[:, 1], :] = rgb_gradient(edge[use_int_or_width].values[0],
+                                                                                      min_width)[::-1]
 
     # Draw a green cross on branching vertices
     vertex_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
