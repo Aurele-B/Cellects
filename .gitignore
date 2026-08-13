@@ -14,7 +14,7 @@ data/single_experiment/edge*
 data/single_experiment/vert*
 src/cellects/config/cellects_settings.json
 src/cellects/config/masks.h5
-src/cellects/analyses/
+src/cellects/temp/
 src/cellects/paper_illustrations/
 src/cellects/__main__.spec
 setup.py
