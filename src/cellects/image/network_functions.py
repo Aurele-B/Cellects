@@ -1907,21 +1907,23 @@ class EdgeIdentification:
             raise RuntimeError("make_vertex_table() must be called before make_edge_table().")
         # self._refresh_edge_arrays_from_dicts()
 
-        # self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
-        # self.edge_table[:, :3] = self.edges_labels[:, :]
-        # self.edge_table[:, 3] = self.edge_lengths
-
-        self.edge_table = np.zeros((len(self.edge_to_vertices_map), 7), float)  # edge_id, vertex1, vertex2, length, average_width, int, BC
+        # self.edges_to_vertices = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
+        # self.edges_to_vertices[:, :3] = self.edges_labels[:, :]
+        # self.edges_to_vertices[:, 3] = self.edge_lengths
+        col_nb = 6
+        if compute_BC:
+            col_nb += 1
+        self.edges_to_vertices = np.zeros((len(self.edge_to_vertices_map), col_nb), float)  # edge_id, vertex1, vertex2, length, average_width, int, BC
 
         for idx, (edge_id, vertices) in enumerate(self.edge_to_vertices_map.items()):
-            self.edge_table[idx, 0] = edge_id
-            self.edge_table[idx, 1:3] = vertices
+            self.edges_to_vertices[idx, 0] = edge_id
+            self.edges_to_vertices[idx, 1:3] = vertices
             v1_id, v2_id = vertices
             edge_pixels = self.edge_to_coord_map.get(edge_id, set())
 
             edge_coord = coord_set_to_array(edge_pixels)
             edge_length = edge_coord.shape[0]
-            self.edge_table[idx, 3] = edge_length
+            self.edges_to_vertices[idx, 3] = edge_length
             if edge_length > 0:
                 pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
                 pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
@@ -1940,12 +1942,12 @@ class EdgeIdentification:
             if not np.isnan(v2_width):
                 pix_widths = np.append(pix_widths, v2_width)
 
-            self.edge_table[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
+            self.edges_to_vertices[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
 
             v1_int = greyscale[v1_coord[0], v1_coord[1]]
             v2_int = greyscale[v2_coord[0], v2_coord[1]]
             pix_ints = np.append(pix_ints, (v1_int, v2_int))
-            self.edge_table[idx, 5] = pix_ints.mean()
+            self.edges_to_vertices[idx, 5] = pix_ints.mean()
 
         if compute_BC:
             G = nx.Graph()
@@ -1957,12 +1959,12 @@ class EdgeIdentification:
                 key = frozenset((u, v))  # undirected edge
                 edge_to_labels.setdefault(key, []).append(label)
 
-            # Update self.edge_table
+            # Update self.edges_to_vertices
             for (u, v), bc in e_bc.items():
                 labels = edge_to_labels.get(frozenset((u, v)), [])
 
                 for label in labels:
-                    self.edge_table[self.edge_table[:, 0] == label, 6] = bc
+                    self.edges_to_vertices[self.edges_to_vertices[:, 0] == label, 6] = bc
 
     def test_graph_extraction(self):
 

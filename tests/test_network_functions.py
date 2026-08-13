@@ -1604,7 +1604,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.make_edge_table(greyscale, True)
 
         # Check 5 edges are documented
-        self.assertEqual(edge_id.edge_table.shape[0], 4)
+        self.assertEqual(edge_id.edges_to_vertices.shape[0], 4)
 
         res = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         res[edge_id.edge_pix_coord[:, 0], edge_id.edge_pix_coord[:, 1]] = 1
