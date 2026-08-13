@@ -1921,7 +1921,9 @@ class EdgeIdentification:
             edge_pixels = self.edge_to_coord_map.get(edge_id, set())
 
             edge_coord = coord_set_to_array(edge_pixels)
-            if edge_coord.shape[0] > 0:
+            edge_length = edge_coord.shape[0]
+            self.edge_table[idx, 3] = edge_length
+            if edge_length > 0:
                 pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
                 pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
             else:
