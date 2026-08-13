@@ -441,7 +441,6 @@ def nonzero_to_set(mask: NDArray) -> CoordSet:
     """Convert non-zero pixels of a 2D mask to a set of (y, x) coordinates."""
     return set(zip(*np.nonzero(mask)))
 
-@njit()
 def write_coords_to_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
     """Write a coordinate set into an existing 2D mask."""
     if coords:
@@ -1839,7 +1838,7 @@ class EdgeIdentification:
 
         Notes
         -----
-            The method updates the instance attribute `self.vertex_table` with
+            The method updates the instance attribute `self.vertices_coord` with
             the generated vertex information.
         """
         self._remove_padding()
@@ -1847,44 +1846,44 @@ class EdgeIdentification:
         tips_arr = coord_set_to_array(self.tips_coord, dtype=np.int64)
         non_tip_arr = coord_set_to_array(self.non_tip_vertices, dtype=np.int64)
 
-        # self.vertex_table = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
-        # self.vertex_table[:self.tips_coord.shape[0], :2] = self.tips_coord
-        # self.vertex_table[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
-        # self.vertex_table[:self.tips_coord.shape[0], 2] = self.vertices[self.tips_coord[:, 0], self.tips_coord[:, 1]]
-        # self.vertex_table[self.tips_coord.shape[0]:, 2] = self.vertices[self.non_tip_vertices[:, 0], self.non_tip_vertices[:, 1]]
-        # self.vertex_table[:self.tips_coord.shape[0], 3] = 1
-        self.vertex_table = np.zeros((tips_arr.shape[0] + non_tip_arr.shape[0], 6), dtype=np.int64)
+        # self.vertices_coord = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
+        # self.vertices_coord[:self.tips_coord.shape[0], :2] = self.tips_coord
+        # self.vertices_coord[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
+        # self.vertices_coord[:self.tips_coord.shape[0], 2] = self.vertices[self.tips_coord[:, 0], self.tips_coord[:, 1]]
+        # self.vertices_coord[self.tips_coord.shape[0]:, 2] = self.vertices[self.non_tip_vertices[:, 0], self.non_tip_vertices[:, 1]]
+        # self.vertices_coord[:self.tips_coord.shape[0], 3] = 1
+        self.vertices_coord = np.zeros((tips_arr.shape[0] + non_tip_arr.shape[0], 6), dtype=np.int64)
         if tips_arr.shape[0] > 0:
-            self.vertex_table[:tips_arr.shape[0], :2] = tips_arr
-            self.vertex_table[:tips_arr.shape[0], 2] = self.vertices[tips_arr[:, 0], tips_arr[:, 1]]
-            self.vertex_table[:tips_arr.shape[0], 3] = 1
+            self.vertices_coord[:tips_arr.shape[0], :2] = tips_arr
+            self.vertices_coord[:tips_arr.shape[0], 2] = self.vertices[tips_arr[:, 0], tips_arr[:, 1]]
+            self.vertices_coord[:tips_arr.shape[0], 3] = 1
         if non_tip_arr.shape[0] > 0:
-            self.vertex_table[tips_arr.shape[0]:, :2] = non_tip_arr
-            self.vertex_table[tips_arr.shape[0]:, 2] = self.vertices[non_tip_arr[:, 0], non_tip_arr[:, 1]]
+            self.vertices_coord[tips_arr.shape[0]:, :2] = non_tip_arr
+            self.vertices_coord[tips_arr.shape[0]:, 2] = self.vertices[non_tip_arr[:, 0], non_tip_arr[:, 1]]
 
         if origin_contours is not None:
             food_vertices = self.vertices[origin_contours > 0]
             food_vertices = food_vertices[food_vertices > 0]
-            self.vertex_table[np.isin(self.vertex_table[:, 2], food_vertices), 4] = 1
+            self.vertices_coord[np.isin(self.vertices_coord[:, 2], food_vertices), 4] = 1
 
         if growing_areas is not None and growing_areas.shape[1] > 0:
             # growing = np.unique(self.vertices * growing_areas)[1:]
             growing = np.unique(self.vertices[growing_areas[0], growing_areas[1]])
             growing = growing[growing > 0]
             if len(growing) > 0:
-                growing = np.isin(self.vertex_table[:, 2], growing)
-                self.vertex_table[growing, 4] = 2
+                growing = np.isin(self.vertices_coord[:, 2], growing)
+                self.vertices_coord[growing, 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.vertices > 0).astype(np.uint8))
         for i, v_i in enumerate(np.nonzero(stats[:, 4] > 1)[0][1:]):
             v_labs = self.vertices[sh == v_i]
             for v_lab in v_labs: # v_lab = v_labs[0]
-                self.vertex_table[self.vertex_table[:, 2] == v_lab, 5] = 1
+                self.vertices_coord[self.vertices_coord[:, 2] == v_lab, 5] = 1
 
         # Create a a label-to-coordinate mapping
         self.vertex_label_to_coord = {
             int(label): (int(y), int(x))
-            for y, x, label in self.vertex_table[:, :3]
+            for y, x, label in self.vertices_coord[:, :3]
             if label > 0
         }
 
@@ -1908,20 +1907,24 @@ class EdgeIdentification:
             raise RuntimeError("make_vertex_table() must be called before make_edge_table().")
         # self._refresh_edge_arrays_from_dicts()
 
-        # self.edge_table = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
-        # self.edge_table[:, :3] = self.edges_labels[:, :]
-        # self.edge_table[:, 3] = self.edge_lengths
-
-        self.edge_table = np.zeros((len(self.edge_to_vertices_map), 7), float)  # edge_id, vertex1, vertex2, length, average_width, int, BC
+        # self.edges_to_vertices = np.zeros((self.edges_labels.shape[0], 7), float) # edge_id, vertex1, vertex2, length, average_width, int, BC
+        # self.edges_to_vertices[:, :3] = self.edges_labels[:, :]
+        # self.edges_to_vertices[:, 3] = self.edge_lengths
+        col_nb = 6
+        if compute_BC:
+            col_nb += 1
+        self.edges_to_vertices = np.zeros((len(self.edge_to_vertices_map), col_nb), float)  # edge_id, vertex1, vertex2, length, average_width, int, BC
 
         for idx, (edge_id, vertices) in enumerate(self.edge_to_vertices_map.items()):
-            self.edge_table[idx, 0] = edge_id
-            self.edge_table[idx, 1:3] = vertices
+            self.edges_to_vertices[idx, 0] = edge_id
+            self.edges_to_vertices[idx, 1:3] = vertices
             v1_id, v2_id = vertices
             edge_pixels = self.edge_to_coord_map.get(edge_id, set())
 
             edge_coord = coord_set_to_array(edge_pixels)
-            if edge_coord.shape[0] > 0:
+            edge_length = edge_coord.shape[0]
+            self.edges_to_vertices[idx, 3] = edge_length
+            if edge_length > 0:
                 pix_widths = self.distances[edge_coord[:, 0], edge_coord[:, 1]]
                 pix_ints = greyscale[edge_coord[:, 0], edge_coord[:, 1]]
             else:
@@ -1939,12 +1942,12 @@ class EdgeIdentification:
             if not np.isnan(v2_width):
                 pix_widths = np.append(pix_widths, v2_width)
 
-            self.edge_table[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
+            self.edges_to_vertices[idx, 4] = pix_widths.mean() if pix_widths.size > 0 else np.nan
 
             v1_int = greyscale[v1_coord[0], v1_coord[1]]
             v2_int = greyscale[v2_coord[0], v2_coord[1]]
             pix_ints = np.append(pix_ints, (v1_int, v2_int))
-            self.edge_table[idx, 5] = pix_ints.mean()
+            self.edges_to_vertices[idx, 5] = pix_ints.mean()
 
         if compute_BC:
             G = nx.Graph()
@@ -1956,12 +1959,12 @@ class EdgeIdentification:
                 key = frozenset((u, v))  # undirected edge
                 edge_to_labels.setdefault(key, []).append(label)
 
-            # Update self.edge_table
+            # Update self.edges_to_vertices
             for (u, v), bc in e_bc.items():
                 labels = edge_to_labels.get(frozenset((u, v)), [])
 
                 for label in labels:
-                    self.edge_table[self.edge_table[:, 0] == label, 6] = bc
+                    self.edges_to_vertices[self.edges_to_vertices[:, 0] == label, 6] = bc
 
     def test_graph_extraction(self):
 

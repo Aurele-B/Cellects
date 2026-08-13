@@ -51,7 +51,7 @@ class GraphTracking:
         Contours extracted from ``origin`` (or ``None`` if no origin).
     vertex_table : np.ndarray or None
         Accumulated vertex data; populated after tracking.
-    edge_table : np.ndarray or None
+    edges_to_vertices : np.ndarray or None
         Accumulated edge data; populated after tracking.
     edge_pix_coord : np.ndarray or None
         Pixel coordinates belonging to each edge; populated after tracking.
@@ -106,7 +106,7 @@ class GraphTracking:
             Padded version of ``origin`` when provided; otherwise ``None``.
         vertex_table : None
             Placeholder for the vertex table populated after graph extraction.
-        edge_table : None
+        edges_to_vertices : None
             Placeholder for the edge table populated after graph extraction.
 
         """
@@ -127,8 +127,8 @@ class GraphTracking:
             self.pad_origin_centroid = None
             self.pad_origin = None
             self.origin_contours = None
-        self.vertex_table = None
-        self.edge_table = None
+        self.vertices_coord = None
+        self.edges_to_vertices = None
         self.edge_pix_coord = None
         logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
 
@@ -150,7 +150,7 @@ class GraphTracking:
         """
         if self.coord_network.shape[1] == 0:
             self.vertex_table = np.empty((0, 7))
-            self.edge_table = np.empty((0, 8))
+            self.edges_to_vertices = np.empty((0, 7))
             self.edge_pix_coord = np.empty((0, 4))
         else:
             for t in np.arange(self.starting_time, self.dims[0]):
@@ -181,7 +181,7 @@ class GraphTracking:
         * Padding is added before skeletonisation and removed before the
           result is returned.
         * Vertex and edge tables are accumulated in the instance attributes
-          ``vertex_table``, ``edge_table`` and ``edge_pix_coord``.
+          ``vertex_table``, ``edges_to_vertices`` and ``edge_pix_coord``.
         * When ``self.coord_pseudopods`` is provided, its coordinates are used
           as growing areas during vertex identification.
         """
@@ -208,21 +208,21 @@ class GraphTracking:
                     growing_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
                 edge_id.make_vertex_table(self.origin_contours, growing_areas)
                 edge_id.make_edge_table(self.converted_video[t, ...])
-                pad_skeleton[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 2
+                pad_skeleton[edge_id.vertices_coord[:, 0], edge_id.vertices_coord[:, 1]] = 2
 
                 edge_id.edge_pix_coord = np.hstack(
                     (np.repeat(t, edge_id.edge_pix_coord.shape[0])[:, None], edge_id.edge_pix_coord))
-                edge_id.vertex_table = np.hstack(
-                    (np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
-                edge_id.edge_table = np.hstack(
-                    (np.repeat(t, edge_id.edge_table.shape[0])[:, None], edge_id.edge_table))
-                if self.vertex_table is None:
-                    self.vertex_table = edge_id.vertex_table.copy()
-                    self.edge_table = edge_id.edge_table.copy()
+                edge_id.vertices_coord = np.hstack(
+                    (np.repeat(t, edge_id.vertices_coord.shape[0])[:, None], edge_id.vertices_coord))
+                edge_id.edges_to_vertices = np.hstack(
+                    (np.repeat(t, edge_id.edges_to_vertices.shape[0])[:, None], edge_id.edges_to_vertices))
+                if self.vertices_coord is None:
+                    self.vertices_coord = edge_id.vertices_coord.copy()
+                    self.edges_to_vertices = edge_id.edges_to_vertices.copy()
                     self.edge_pix_coord = edge_id.edge_pix_coord.copy()
                 else:
-                    self.vertex_table = np.vstack((self.vertex_table, edge_id.vertex_table))
-                    self.edge_table = np.vstack((self.edge_table, edge_id.edge_table))
+                    self.vertices_coord = np.vstack((self.vertices_coord, edge_id.vertices_coord))
+                    self.edges_to_vertices = np.vstack((self.edges_to_vertices, edge_id.edges_to_vertices))
                     self.edge_pix_coord = np.vstack((self.edge_pix_coord, edge_id.edge_pix_coord))
             return un_pad(pad_skeleton)
         else:
@@ -239,7 +239,7 @@ class GraphTracking:
             following attributes:
 
             - ``vertex_table``: iterable of vertex records.
-            - ``edge_table``: iterable of edge records.
+            - ``edges_to_vertices``: iterable of edge records.
             - ``edge_pix_coord``: iterable of edge‑pixel coordinate records.
             - ``arena_label``: label used in the output filenames.
             - ``dims``: video dimensions (t, y, x) saved in the filenames to ease video reconstruction.
@@ -259,17 +259,16 @@ class GraphTracking:
         - ``edges_to_vertices{arena_label}_t{t}_y{y}_x{x}.csv``
         - ``edges_coord{arena_label}_t{t}_y{y}_x{x}.csv``
         """
-        if self.vertex_table is not None:
-            self.vertex_table = pd.DataFrame(self.vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
+        if self.vertices_coord is not None:
+            self.vertices_coord = pd.DataFrame(self.vertices_coord, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                                "vertex_connected"])
-            self.vertex_table.to_csv(
+            self.vertices_coord.to_csv(
                 f"vertices_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
                 index=False)
-        if self.edge_table is not None:
-            self.edge_table = pd.DataFrame(self.edge_table,
-                                      columns=["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity",
-                                               "betweenness_centrality"])
-            self.edge_table.to_csv(
+        if self.edges_to_vertices is not None:
+            col_names = ["t", "edge_id", "vertex1", "vertex2", "length", "average_width", "intensity", "betweenness_centrality"]
+            self.edges_to_vertices = pd.DataFrame(self.edges_to_vertices, columns=col_names[:self.edges_to_vertices.shape[1]])
+            self.edges_to_vertices.to_csv(
                 f"edges_to_vertices{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
                 index=False)
         if self.edge_pix_coord is not None:
