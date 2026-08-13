@@ -212,14 +212,14 @@ jobs:
           makensis installer.nsi
       
       - name: Upload ZIP to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Cellects-${{ steps.get_version.outputs.version }}-windows.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Upload installer to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Cellects-${{ steps.get_version.outputs.version }}-setup.exe
         env:
@@ -291,7 +291,7 @@ jobs:
           ls -lh Cellects-${{ steps.get_version.outputs.version }}.dmg
 
       - name: Upload DMG to Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Cellects-${{ steps.get_version.outputs.version }}.dmg
         env:
