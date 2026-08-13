@@ -1838,7 +1838,7 @@ class EdgeIdentification:
 
         Notes
         -----
-            The method updates the instance attribute `self.vertex_table` with
+            The method updates the instance attribute `self.vertices_coord` with
             the generated vertex information.
         """
         self._remove_padding()
@@ -1846,44 +1846,44 @@ class EdgeIdentification:
         tips_arr = coord_set_to_array(self.tips_coord, dtype=np.int64)
         non_tip_arr = coord_set_to_array(self.non_tip_vertices, dtype=np.int64)
 
-        # self.vertex_table = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
-        # self.vertex_table[:self.tips_coord.shape[0], :2] = self.tips_coord
-        # self.vertex_table[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
-        # self.vertex_table[:self.tips_coord.shape[0], 2] = self.vertices[self.tips_coord[:, 0], self.tips_coord[:, 1]]
-        # self.vertex_table[self.tips_coord.shape[0]:, 2] = self.vertices[self.non_tip_vertices[:, 0], self.non_tip_vertices[:, 1]]
-        # self.vertex_table[:self.tips_coord.shape[0], 3] = 1
-        self.vertex_table = np.zeros((tips_arr.shape[0] + non_tip_arr.shape[0], 6), dtype=np.int64)
+        # self.vertices_coord = np.zeros((self.tips_coord.shape[0] + self.non_tip_vertices.shape[0], 6), dtype=np.int64)
+        # self.vertices_coord[:self.tips_coord.shape[0], :2] = self.tips_coord
+        # self.vertices_coord[self.tips_coord.shape[0]:, :2] = self.non_tip_vertices
+        # self.vertices_coord[:self.tips_coord.shape[0], 2] = self.vertices[self.tips_coord[:, 0], self.tips_coord[:, 1]]
+        # self.vertices_coord[self.tips_coord.shape[0]:, 2] = self.vertices[self.non_tip_vertices[:, 0], self.non_tip_vertices[:, 1]]
+        # self.vertices_coord[:self.tips_coord.shape[0], 3] = 1
+        self.vertices_coord = np.zeros((tips_arr.shape[0] + non_tip_arr.shape[0], 6), dtype=np.int64)
         if tips_arr.shape[0] > 0:
-            self.vertex_table[:tips_arr.shape[0], :2] = tips_arr
-            self.vertex_table[:tips_arr.shape[0], 2] = self.vertices[tips_arr[:, 0], tips_arr[:, 1]]
-            self.vertex_table[:tips_arr.shape[0], 3] = 1
+            self.vertices_coord[:tips_arr.shape[0], :2] = tips_arr
+            self.vertices_coord[:tips_arr.shape[0], 2] = self.vertices[tips_arr[:, 0], tips_arr[:, 1]]
+            self.vertices_coord[:tips_arr.shape[0], 3] = 1
         if non_tip_arr.shape[0] > 0:
-            self.vertex_table[tips_arr.shape[0]:, :2] = non_tip_arr
-            self.vertex_table[tips_arr.shape[0]:, 2] = self.vertices[non_tip_arr[:, 0], non_tip_arr[:, 1]]
+            self.vertices_coord[tips_arr.shape[0]:, :2] = non_tip_arr
+            self.vertices_coord[tips_arr.shape[0]:, 2] = self.vertices[non_tip_arr[:, 0], non_tip_arr[:, 1]]
 
         if origin_contours is not None:
             food_vertices = self.vertices[origin_contours > 0]
             food_vertices = food_vertices[food_vertices > 0]
-            self.vertex_table[np.isin(self.vertex_table[:, 2], food_vertices), 4] = 1
+            self.vertices_coord[np.isin(self.vertices_coord[:, 2], food_vertices), 4] = 1
 
         if growing_areas is not None and growing_areas.shape[1] > 0:
             # growing = np.unique(self.vertices * growing_areas)[1:]
             growing = np.unique(self.vertices[growing_areas[0], growing_areas[1]])
             growing = growing[growing > 0]
             if len(growing) > 0:
-                growing = np.isin(self.vertex_table[:, 2], growing)
-                self.vertex_table[growing, 4] = 2
+                growing = np.isin(self.vertices_coord[:, 2], growing)
+                self.vertices_coord[growing, 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.vertices > 0).astype(np.uint8))
         for i, v_i in enumerate(np.nonzero(stats[:, 4] > 1)[0][1:]):
             v_labs = self.vertices[sh == v_i]
             for v_lab in v_labs: # v_lab = v_labs[0]
-                self.vertex_table[self.vertex_table[:, 2] == v_lab, 5] = 1
+                self.vertices_coord[self.vertices_coord[:, 2] == v_lab, 5] = 1
 
         # Create a a label-to-coordinate mapping
         self.vertex_label_to_coord = {
             int(label): (int(y), int(x))
-            for y, x, label in self.vertex_table[:, :3]
+            for y, x, label in self.vertices_coord[:, :3]
             if label > 0
         }
 

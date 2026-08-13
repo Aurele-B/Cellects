@@ -1576,16 +1576,16 @@ class TestEdgeIdentification(CellectsUnitTest):
         edge_id.make_vertex_table(origin_contours, growing_areas)
 
         # Check that there are 4 tips
-        self.assertEqual(edge_id.vertex_table[:, 3].sum(), 4)
+        self.assertEqual(edge_id.vertices_coord[:, 3].sum(), 4)
 
         # Check that the origin region is well located
-        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 4] == 1, :2], np.array([[y_ori, x_ori]], dtype=np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 4] == 1, :2], np.array([[y_ori, x_ori]], dtype=np.uint32)))
 
         # Check that the growing region is well located
-        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 4] == 2, :2], np.transpose(growing_areas).astype(np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 4] == 2, :2], np.transpose(growing_areas).astype(np.uint32)))
 
         # Check that the connected vertices are well located
-        self.assertTrue(np.array_equal(edge_id.vertex_table[edge_id.vertex_table[:, 5] == 1, :2], np.array([[0, 4], [1, 3]], dtype=np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 5] == 1, :2], np.array([[0, 4], [1, 3]], dtype=np.uint32)))
 
     def test_make_edge_table(self):
         """Test that make_edge_table completes without errors."""
@@ -1608,7 +1608,7 @@ class TestEdgeIdentification(CellectsUnitTest):
 
         res = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         res[edge_id.edge_pix_coord[:, 0], edge_id.edge_pix_coord[:, 1]] = 1
-        res[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 1
+        res[edge_id.vertices_coord[:, 0], edge_id.vertices_coord[:, 1]] = 1
 
         expected = un_pad(self.valid_skeleton)
         expected[0, 2] = 0

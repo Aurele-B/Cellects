@@ -127,7 +127,7 @@ class GraphTracking:
             self.pad_origin_centroid = None
             self.pad_origin = None
             self.origin_contours = None
-        self.vertex_table = None
+        self.vertices_coord = None
         self.edges_to_vertices = None
         self.edge_pix_coord = None
         logging.info(f"Arena n°{arena_label}. Starting graph extraction.")
@@ -208,20 +208,20 @@ class GraphTracking:
                     growing_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
                 edge_id.make_vertex_table(self.origin_contours, growing_areas)
                 edge_id.make_edge_table(self.converted_video[t, ...])
-                pad_skeleton[edge_id.vertex_table[:, 0], edge_id.vertex_table[:, 1]] = 2
+                pad_skeleton[edge_id.vertices_coord[:, 0], edge_id.vertices_coord[:, 1]] = 2
 
                 edge_id.edge_pix_coord = np.hstack(
                     (np.repeat(t, edge_id.edge_pix_coord.shape[0])[:, None], edge_id.edge_pix_coord))
-                edge_id.vertex_table = np.hstack(
-                    (np.repeat(t, edge_id.vertex_table.shape[0])[:, None], edge_id.vertex_table))
+                edge_id.vertices_coord = np.hstack(
+                    (np.repeat(t, edge_id.vertices_coord.shape[0])[:, None], edge_id.vertices_coord))
                 edge_id.edges_to_vertices = np.hstack(
                     (np.repeat(t, edge_id.edges_to_vertices.shape[0])[:, None], edge_id.edges_to_vertices))
-                if self.vertex_table is None:
-                    self.vertex_table = edge_id.vertex_table.copy()
+                if self.vertices_coord is None:
+                    self.vertices_coord = edge_id.vertices_coord.copy()
                     self.edges_to_vertices = edge_id.edges_to_vertices.copy()
                     self.edge_pix_coord = edge_id.edge_pix_coord.copy()
                 else:
-                    self.vertex_table = np.vstack((self.vertex_table, edge_id.vertex_table))
+                    self.vertices_coord = np.vstack((self.vertices_coord, edge_id.vertices_coord))
                     self.edges_to_vertices = np.vstack((self.edges_to_vertices, edge_id.edges_to_vertices))
                     self.edge_pix_coord = np.vstack((self.edge_pix_coord, edge_id.edge_pix_coord))
             return un_pad(pad_skeleton)
@@ -259,10 +259,10 @@ class GraphTracking:
         - ``edges_to_vertices{arena_label}_t{t}_y{y}_x{x}.csv``
         - ``edges_coord{arena_label}_t{t}_y{y}_x{x}.csv``
         """
-        if self.vertex_table is not None:
-            self.vertex_table = pd.DataFrame(self.vertex_table, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
+        if self.vertices_coord is not None:
+            self.vertices_coord = pd.DataFrame(self.vertices_coord, columns=["t", "y", "x", "vertex_id", "is_tip", "origin",
                                                                "vertex_connected"])
-            self.vertex_table.to_csv(
+            self.vertices_coord.to_csv(
                 f"vertices_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
                 index=False)
         if self.edges_to_vertices is not None:
