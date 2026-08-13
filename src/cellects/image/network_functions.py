@@ -441,7 +441,6 @@ def nonzero_to_set(mask: NDArray) -> CoordSet:
     """Convert non-zero pixels of a 2D mask to a set of (y, x) coordinates."""
     return set(zip(*np.nonzero(mask)))
 
-@njit()
 def write_coords_to_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
     """Write a coordinate set into an existing 2D mask."""
     if coords:
