@@ -106,15 +106,18 @@ class  NetworkDetection:
 
         # Parameter variations for Frangi filter
         frangi_sigmas = {
-            's_fine_vessels': [0.75],
-            'fine_vessels': [0.5, 1.0],  # Very fine capillaries, thin fibers
-            'small_vessels': [1.0, 2.0],  # Small vessels, fine structures
-            'multi_scale_medium': [1.0, 2.0, 3.0],  # Standard multi-scale
-            'ultra_fine': [0.3, 0.5, 0.8],  # Ultra-fine structures
-            'comprehensive': [0.5, 1.0, 2.0, 4.0],  # Multi-scale
-            'retinal_vessels': [1.0, 2.0, 4.0, 8.0],  # Optimized for retinal imaging
-            'microscopy': [0.5, 1.0, 1.5, 2.5],  # Microscopy applications
-            'broad_spectrum': [0.5, 1.5, 3.0, 6.0, 10.0]
+            'micro_structures': [0.25, 0.4, 0.6, 0.9], # Extremely small structures: micro-capillaries, tiny fibers, narrow filaments
+            's_fine_vessels': [0.75], # Single fine scale: thin vessels/fibers when the target width is fairly consistent
+            'fine_vessels': [0.5, 1.0], # Very fine capillaries, thin fibers, narrow elongated structures
+            'small_vessels': [1.0, 2.0], # Small vessels and fine tubular/linear structures
+            'multi_scale_medium': [1.0, 2.0, 3.0], # General-purpose detection of small-to-medium structures
+            'ultra_fine': [0.3, 0.5, 0.8], # Ultra-fine structures: tiny capillaries, microfibers, very narrow ridges
+            'medium_large_structures': [2.0, 4.0, 6.0, 8.0], # Medium-to-large vessels/tubular structures; useful when fine structures are not the target
+            'comprehensive': [0.5, 1.0, 2.0, 4.0], # General multi-scale coverage from fine to medium-sized structures
+            'retinal_vessels': [1.0, 2.0, 4.0, 8.0], # Retinal vasculature spanning thin capillaries to larger vessels
+            'microscopy': [0.5, 1.0, 1.5, 2.5], # Microscopy: fine cellular/tubular structures and small elongated objects
+            'broad_spectrum': [0.5, 1.5, 3.0, 6.0, 10.0], # Very broad scale coverage for structures with highly variable widths
+            'log_broad': [0.5, 1.0, 2.0, 4.0, 8.0, 16.0], # Log-spaced multi-scale detection for very wide variation in structure size
         }
 
         for i, (key, sigmas) in enumerate(frangi_sigmas.items()):
@@ -133,7 +136,6 @@ class  NetworkDetection:
 
             # Store results
             results.append({
-                'method': f'f_{sigmas}_thresh',
                 'quality': quality_otsu,
                 'filter': f'Frangi',
                 'rolling_window': False,
@@ -147,7 +149,6 @@ class  NetworkDetection:
                 binary_rolling = rolling_window_segmentation(frangi_result, self.possibly_filled_pixels, patch_size=(10, 10))
                 quality_rolling = binary_quality_index(binary_rolling)
                 results.append({
-                    'method': f'f_{sigmas}_roll',
                     'quality': quality_rolling,
                     'filter': f'Frangi',
                     'rolling_window': True,
@@ -209,7 +210,6 @@ class  NetworkDetection:
 
             # Store results
             results.append({
-                'method': f's_{sigmas}_thresh',
                 'binary': binary_otsu,
                 'quality': quality_otsu,
                 'filter': f'Sato',
@@ -226,7 +226,6 @@ class  NetworkDetection:
                 quality_rolling = binary_quality_index(binary_rolling)
 
                 results.append({
-                    'method': f's_{sigmas}_roll',
                     'binary': binary_rolling,
                     'quality': quality_rolling,
                     'filter': f'Sato',

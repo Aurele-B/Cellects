@@ -45,7 +45,7 @@ def show(img, interactive: bool=True, cmap=None, axes: bool=True, show: bool=Tru
     affect subsequent plotting commands.  Use ``interactive=False`` when
     creating figures programmatically to avoid unintended side effects.
     """
-    sizes = img.shape[0] / 100,  img.shape[1] / 100
+    sizes = 10 * img.shape[0] / img.shape[1],  10
     if interactive:
         plt.ion()
     else:
@@ -127,8 +127,8 @@ def display_network_methods(network_detection: object, save_path: str=None):
 
     """
     row_nb = 6
-    fig, axes = plt.subplots(int(np.ceil(len(network_detection.all_results) / row_nb)), row_nb, figsize=(100, 100))
-    fig.suptitle(f'Segmentation Comparison: Frangi + Sato Variations', fontsize=16)
+    fig, axes = plt.subplots(int(np.ceil(len(network_detection.all_results) / row_nb)), row_nb, figsize=(10, 8))
+    fig.suptitle(f'Segmentation result with 12 variants of Frangi and Sato filters', fontsize=16)
 
     # Plot all results
     for idx, result in enumerate(network_detection.all_results):
@@ -141,7 +141,7 @@ def display_network_methods(network_detection: object, save_path: str=None):
         ax.imshow(result['binary'], cmap='gray')
 
         # Create title with filter info and quality score
-        title = f"{result['method']}: {str(np.round(network_detection.quality_metrics[idx], 0))}"
+        title = f"{result['filter']}\ns={tuple(result['sigmas'])}"
 
         # Highlight the best result
         if idx == network_detection.best_idx:

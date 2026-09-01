@@ -72,7 +72,7 @@ def curve(y, x=None, y_label: str="", x_label: str="", color=None, save_path: st
     >>> curve(y, x=x, color='red', save_path='quadratic.png')
     # The plot is saved to ``quadratic.png`` without being shown.
     """
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(8, 10))
 
     # Plot the data using one of the specified colors
     if x is None:
@@ -143,7 +143,7 @@ def plot_growth_features(y: NDArray, time_step: float, growth_features: dict, sa
 
     """
     x = np.arange(0, y.shape[0] * time_step, time_step)
-    fig, ax = plt.subplots(figsize=(8, 5))
+    fig, ax = plt.subplots(figsize=(10, 6.25))
     ax.plot(x, y, color=dark_grey_hexa)
 
     # ----- linear fit ------------------------------------------------
@@ -575,7 +575,7 @@ def plot_spider_binned(colony_centroids, num_intervals: int = 12) -> None:
     counts_closed = np.concatenate([standardized_counts, [standardized_counts[0]]])
 
     # Plotting with improved visual layout
-    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'}, figsize=(10, 10))
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'}, figsize=(9, 9))
 
     color_peach = '#FFDAB9'
     line_color = '#E67E22'
