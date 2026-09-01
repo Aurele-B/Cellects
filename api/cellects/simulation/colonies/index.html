@@ -3036,7 +3036,7 @@ The video shows the growth and coloration of the colony over time.</p>
 <span class="normal"><a href="#__codelineno-0-46">46</a></span>
 <span class="normal"><a href="#__codelineno-0-47">47</a></span>
 <span class="normal"><a href="#__codelineno-0-48">48</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-21" name="__codelineno-0-21"></a><span class="k">def</span><span class="w"> </span><span class="nf">growing_colonies</span><span class="p">():</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-23" name="__codelineno-0-23"></a><span class="sd">    Generate a colony-like video by applying dilation operations and random color filling.</span>
 <a id="__codelineno-0-24" name="__codelineno-0-24"></a><span class="sd">    This function creates a binary video with randomized initial frames, dilates the</span>
 <a id="__codelineno-0-25" name="__codelineno-0-25"></a><span class="sd">    frames using a circular kernel to simulate colony growth over time, and then converts</span>
@@ -3053,7 +3053,7 @@ The video shows the growth and coloration of the colony over time.</p>
 <a id="__codelineno-0-36" name="__codelineno-0-36"></a><span class="sd">    &gt;&gt;&gt; colony_rgb_video = growing_colonies()</span>
 <a id="__codelineno-0-37" name="__codelineno-0-37"></a><span class="sd">    &gt;&gt;&gt; print(colony_rgb_video.shape)</span>
 <a id="__codelineno-0-38" name="__codelineno-0-38"></a><span class="sd">    (20, 1000, 1000, 3)</span>
-<a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">    """</span>
 <a id="__codelineno-0-40" name="__codelineno-0-40"></a>    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
 <a id="__codelineno-0-41" name="__codelineno-0-41"></a>    <span class="n">ellipse</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-42" name="__codelineno-0-42"></a>    <span class="n">binary_video</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">20</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>

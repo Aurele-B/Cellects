@@ -3344,16 +3344,16 @@ the connectivity parameter.</p>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span>
 <span class="normal"><a href="#__codelineno-0-275">275</a></span>
 <span class="normal"><a href="#__codelineno-0-276">276</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-50" name="__codelineno-0-50"></a><span class="k">class</span><span class="w"> </span><span class="nc">CompareNeighborsWithValue</span><span class="p">:</span>
-<a id="__codelineno-0-51" name="__codelineno-0-51"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-52" name="__codelineno-0-52"></a><span class="sd">    CompareNeighborsWithValue class to summarize each pixel by comparing its neighbors to a value.</span>
 <a id="__codelineno-0-53" name="__codelineno-0-53"></a>
-<a id="__codelineno-0-54" name="__codelineno-0-54"></a><span class="sd">    This class analyzes pixels in a 2D array, comparing each pixel&#39;s neighbors</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54"></a><span class="sd">    This class analyzes pixels in a 2D array, comparing each pixel's neighbors</span>
 <a id="__codelineno-0-55" name="__codelineno-0-55"></a><span class="sd">    to a specified value. The comparison can be equality, superiority,</span>
 <a id="__codelineno-0-56" name="__codelineno-0-56"></a><span class="sd">    or inferiority, and neighbors can be the 4 or 8 nearest pixels based on</span>
 <a id="__codelineno-0-57" name="__codelineno-0-57"></a><span class="sd">    the connectivity parameter.</span>
-<a id="__codelineno-0-58" name="__codelineno-0-58"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-58" name="__codelineno-0-58"></a><span class="sd">    """</span>
 <a id="__codelineno-0-59" name="__codelineno-0-59"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_type</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">):</span>
-<a id="__codelineno-0-60" name="__codelineno-0-60"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60"></a><span class="w">        </span><span class="sd">"""</span>
 <a id="__codelineno-0-61" name="__codelineno-0-61"></a><span class="sd">        Initialize a class for array connectivity processing.</span>
 <a id="__codelineno-0-62" name="__codelineno-0-62"></a>
 <a id="__codelineno-0-63" name="__codelineno-0-63"></a><span class="sd">        This class processes arrays based on given connectivities, creating</span>
@@ -3391,7 +3391,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="sd">            Array with shifted elements to the bottom left (for 2D arrays).</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="sd">        on_the_botright : ndarray, optional</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="sd">            Array with shifted elements to the bottom right (for 2D arrays).</span>
-<a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">        """</span>
 <a id="__codelineno-0-99" name="__codelineno-0-99"></a>        <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">data_type</span><span class="p">)</span>
 <a id="__codelineno-0-100" name="__codelineno-0-100"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
 <a id="__codelineno-0-101" name="__codelineno-0-101"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span>
@@ -3425,7 +3425,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-129" name="__codelineno-0-129"></a>                <span class="bp">self</span><span class="o">.</span><span class="n">on_the_botright</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_botright</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_the_botright</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
 <a id="__codelineno-0-130" name="__codelineno-0-130"></a>
 <a id="__codelineno-0-131" name="__codelineno-0-131"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">        </span><span class="sd">"""</span>
 <a id="__codelineno-0-133" name="__codelineno-0-133"></a><span class="sd">        Check equality of neighboring values in an array.</span>
 <a id="__codelineno-0-134" name="__codelineno-0-134"></a>
 <a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="sd">        This method compares the neighbors of each element in `self.array` to a given value.</span>
@@ -3458,7 +3458,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="sd">        [0 1 1 1]</span>
 <a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="sd">        [0 1 1 1]</span>
 <a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="sd">        [0 0 1 0]]</span>
-<a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">        """</span>
 <a id="__codelineno-0-166" name="__codelineno-0-166"></a>
 <a id="__codelineno-0-167" name="__codelineno-0-167"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-168" name="__codelineno-0-168"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">equal_neighbor_nb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span><span class="p">,</span> <span class="n">value</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -3482,7 +3482,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-186" name="__codelineno-0-186"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">equal_neighbor_nb</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">not_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
 <a id="__codelineno-0-187" name="__codelineno-0-187"></a>
 <a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_sup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="w">        </span><span class="sd">"""</span>
 <a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">        Determine if pixels have more neighbors with higher values than a given threshold.</span>
 <a id="__codelineno-0-191" name="__codelineno-0-191"></a>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="sd">        This method computes the number of neighboring pixels that have values greater</span>
@@ -3492,7 +3492,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">        Parameters</span>
 <a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">        ----------</span>
 <a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">        value : int</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">            The threshold value used to determine if a neighboring pixel&#39;s value is greater.</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">            The threshold value used to determine if a neighboring pixel's value is greater.</span>
 <a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">        and_itself : bool, optional</span>
 <a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">            If True, exclude the pixel itself if its value is less than or equal to `value`.</span>
 <a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">            Defaults to False.</span>
@@ -3507,7 +3507,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">         [4 2 3 3]</span>
 <a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">         [4 2 3 3]</span>
 <a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="sd">         [3 3 2 4]]</span>
-<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">        """</span>
 <a id="__codelineno-0-215" name="__codelineno-0-215"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-216" name="__codelineno-0-216"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">sup_neighbor_nb</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 <a id="__codelineno-0-217" name="__codelineno-0-217"></a>        <span class="k">else</span><span class="p">:</span>
@@ -3528,7 +3528,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-232" name="__codelineno-0-232"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">sup_neighbor_nb</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">less_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="p">,</span> <span class="n">value</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>
 <a id="__codelineno-0-233" name="__codelineno-0-233"></a>
 <a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">is_inf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="w">        </span><span class="sd">"""</span>
 <a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">        is_inf(value and_itself=False)</span>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">        Determine the number of neighbors that are infinitely small relative to a given value,</span>
@@ -3551,7 +3551,7 @@ the connectivity parameter.</p>
 <a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="sd">         [0 1 0 0]</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="sd">         [0 1 0 0]</span>
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="sd">         [1 1 1 0]]</span>
-<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="sd">        &quot;&quot;&quot;</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="sd">        """</span>
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">inf_neighbor_nb</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span> <span class="o">&lt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span> <span class="o">&lt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a>        <span class="k">else</span><span class="p">:</span>
@@ -3863,7 +3863,7 @@ the connectivity value (4 or 8), it creates different windows with borders.</p>
 <span class="normal"><a href="#__codelineno-0-127">127</a></span>
 <span class="normal"><a href="#__codelineno-0-128">128</a></span>
 <span class="normal"><a href="#__codelineno-0-129">129</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-59" name="__codelineno-0-59"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">connectivity</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_type</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int8</span><span class="p">):</span>
-<a id="__codelineno-0-60" name="__codelineno-0-60"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-61" name="__codelineno-0-61"></a><span class="sd">    Initialize a class for array connectivity processing.</span>
 <a id="__codelineno-0-62" name="__codelineno-0-62"></a>
 <a id="__codelineno-0-63" name="__codelineno-0-63"></a><span class="sd">    This class processes arrays based on given connectivities, creating</span>
@@ -3901,7 +3901,7 @@ the connectivity value (4 or 8), it creates different windows with borders.</p>
 <a id="__codelineno-0-95" name="__codelineno-0-95"></a><span class="sd">        Array with shifted elements to the bottom left (for 2D arrays).</span>
 <a id="__codelineno-0-96" name="__codelineno-0-96"></a><span class="sd">    on_the_botright : ndarray, optional</span>
 <a id="__codelineno-0-97" name="__codelineno-0-97"></a><span class="sd">        Array with shifted elements to the bottom right (for 2D arrays).</span>
-<a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-98" name="__codelineno-0-98"></a><span class="sd">    """</span>
 <a id="__codelineno-0-99" name="__codelineno-0-99"></a>    <span class="n">array</span> <span class="o">=</span> <span class="n">array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">data_type</span><span class="p">)</span>
 <a id="__codelineno-0-100" name="__codelineno-0-100"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">array</span> <span class="o">=</span> <span class="n">array</span>
 <a id="__codelineno-0-101" name="__codelineno-0-101"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">connectivity</span> <span class="o">=</span> <span class="n">connectivity</span>
@@ -4102,7 +4102,7 @@ elements.</p>
 <span class="normal"><a href="#__codelineno-0-184">184</a></span>
 <span class="normal"><a href="#__codelineno-0-185">185</a></span>
 <span class="normal"><a href="#__codelineno-0-186">186</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-131" name="__codelineno-0-131"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_equal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-133" name="__codelineno-0-133"></a><span class="sd">    Check equality of neighboring values in an array.</span>
 <a id="__codelineno-0-134" name="__codelineno-0-134"></a>
 <a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="sd">    This method compares the neighbors of each element in `self.array` to a given value.</span>
@@ -4135,7 +4135,7 @@ elements.</p>
 <a id="__codelineno-0-162" name="__codelineno-0-162"></a><span class="sd">    [0 1 1 1]</span>
 <a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="sd">    [0 1 1 1]</span>
 <a id="__codelineno-0-164" name="__codelineno-0-164"></a><span class="sd">    [0 0 1 0]]</span>
-<a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="sd">    """</span>
 <a id="__codelineno-0-166" name="__codelineno-0-166"></a>
 <a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-168" name="__codelineno-0-168"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">equal_neighbor_nb</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span><span class="p">,</span> <span class="n">value</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span><span class="p">,</span> <span class="n">value</span><span class="p">)),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -4283,7 +4283,7 @@ considering optional connectivity and exclusion of the element itself.</p>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span>
 <span class="normal"><a href="#__codelineno-0-275">275</a></span>
 <span class="normal"><a href="#__codelineno-0-276">276</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_inf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    is_inf(value and_itself=False)</span>
 <a id="__codelineno-0-237" name="__codelineno-0-237"></a>
 <a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">    Determine the number of neighbors that are infinitely small relative to a given value,</span>
@@ -4306,7 +4306,7 @@ considering optional connectivity and exclusion of the element itself.</p>
 <a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="sd">     [0 1 0 0]</span>
 <a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="sd">     [0 1 0 0]</span>
 <a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="sd">     [1 1 1 0]]</span>
-<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="sd">    """</span>
 <a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-260" name="__codelineno-0-260"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">inf_neighbor_nb</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span> <span class="o">&lt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span> <span class="o">&lt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 <a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="k">else</span><span class="p">:</span>
@@ -4455,7 +4455,7 @@ Defaults to False.</p>
 <span class="normal"><a href="#__codelineno-0-230">230</a></span>
 <span class="normal"><a href="#__codelineno-0-231">231</a></span>
 <span class="normal"><a href="#__codelineno-0-232">232</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_sup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">and_itself</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">    Determine if pixels have more neighbors with higher values than a given threshold.</span>
 <a id="__codelineno-0-191" name="__codelineno-0-191"></a>
 <a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="sd">    This method computes the number of neighboring pixels that have values greater</span>
@@ -4465,7 +4465,7 @@ Defaults to False.</p>
 <a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">    Parameters</span>
 <a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">    ----------</span>
 <a id="__codelineno-0-198" name="__codelineno-0-198"></a><span class="sd">    value : int</span>
-<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        The threshold value used to determine if a neighboring pixel&#39;s value is greater.</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="sd">        The threshold value used to determine if a neighboring pixel's value is greater.</span>
 <a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="sd">    and_itself : bool, optional</span>
 <a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="sd">        If True, exclude the pixel itself if its value is less than or equal to `value`.</span>
 <a id="__codelineno-0-202" name="__codelineno-0-202"></a><span class="sd">        Defaults to False.</span>
@@ -4480,7 +4480,7 @@ Defaults to False.</p>
 <a id="__codelineno-0-211" name="__codelineno-0-211"></a><span class="sd">     [4 2 3 3]</span>
 <a id="__codelineno-0-212" name="__codelineno-0-212"></a><span class="sd">     [4 2 3 3]</span>
 <a id="__codelineno-0-213" name="__codelineno-0-213"></a><span class="sd">     [3 3 2 4]]</span>
-<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a><span class="sd">    """</span>
 <a id="__codelineno-0-215" name="__codelineno-0-215"></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
 <a id="__codelineno-0-216" name="__codelineno-0-216"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">sup_neighbor_nb</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_right</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">on_the_left</span> <span class="o">&gt;</span> <span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">array</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
 <a id="__codelineno-0-217" name="__codelineno-0-217"></a>    <span class="k">else</span><span class="p">:</span>
@@ -4703,7 +4703,7 @@ color is chosen automatically: white for bright images (mean intensity</p>
 <span class="normal"><a href="#__codelineno-0-2207">2207</a></span>
 <span class="normal"><a href="#__codelineno-0-2208">2208</a></span>
 <span class="normal"><a href="#__codelineno-0-2209">2209</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-2161" name="__codelineno-0-2161"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_mask_contour</span><span class="p">(</span><span class="n">img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">mask</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dilate</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
-<a id="__codelineno-0-2162" name="__codelineno-0-2162"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-2162" name="__codelineno-0-2162"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-2163" name="__codelineno-0-2163"></a><span class="sd">    Add the contours of a binary mask onto an image.</span>
 <a id="__codelineno-0-2164" name="__codelineno-0-2164"></a>
 <a id="__codelineno-0-2165" name="__codelineno-0-2165"></a><span class="sd">    Parameters</span>
@@ -4738,7 +4738,7 @@ color is chosen automatically: white for bright images (mean intensity</p>
 <a id="__codelineno-0-2194" name="__codelineno-0-2194"></a><span class="sd">    &gt;&gt;&gt; result = add_mask_contour(img, mask, dilate=2)</span>
 <a id="__codelineno-0-2195" name="__codelineno-0-2195"></a><span class="sd">    &gt;&gt;&gt; result.shape</span>
 <a id="__codelineno-0-2196" name="__codelineno-0-2196"></a><span class="sd">    (480, 640, 3)</span>
-<a id="__codelineno-0-2197" name="__codelineno-0-2197"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-2197" name="__codelineno-0-2197"></a><span class="sd">    """</span>
 <a id="__codelineno-0-2198" name="__codelineno-0-2198"></a>    <span class="n">contoured_img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-2199" name="__codelineno-0-2199"></a>    <span class="n">contours</span> <span class="o">=</span> <span class="n">get_contours</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
 <a id="__codelineno-0-2200" name="__codelineno-0-2200"></a>    <span class="k">if</span> <span class="n">dilate</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -4946,7 +4946,7 @@ and the number of boxes used (<code>box_nb</code>).</p>
 <span class="normal"><a href="#__codelineno-0-1917">1917</a></span>
 <span class="normal"><a href="#__codelineno-0-1918">1918</a></span>
 <span class="normal"><a href="#__codelineno-0-1919">1919</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1850" name="__codelineno-0-1850"></a><span class="k">def</span><span class="w"> </span><span class="nf">box_counting_dimension</span><span class="p">(</span><span class="n">zoomed_binary</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">side_lengths</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">display</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-<a id="__codelineno-0-1851" name="__codelineno-0-1851"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1851" name="__codelineno-0-1851"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1852" name="__codelineno-0-1852"></a><span class="sd">    Box counting dimension calculation.</span>
 <a id="__codelineno-0-1853" name="__codelineno-0-1853"></a>
 <a id="__codelineno-0-1854" name="__codelineno-0-1854"></a><span class="sd">    This function calculates the box-counting dimension of a binary image by analyzing the number</span>
@@ -4979,7 +4979,7 @@ and the number of boxes used (<code>box_nb</code>).</p>
 <a id="__codelineno-0-1881" name="__codelineno-0-1881"></a><span class="sd">    &gt;&gt;&gt; dimension, r_value, box_nb = box_counting_dimension(zoomed_binary, side_lengths)</span>
 <a id="__codelineno-0-1882" name="__codelineno-0-1882"></a><span class="sd">    &gt;&gt;&gt; print(dimension, r_value, box_nb)</span>
 <a id="__codelineno-0-1883" name="__codelineno-0-1883"></a><span class="sd">    (np.float64(1.1699250014423126), np.float64(0.9999999999999998), 2)</span>
-<a id="__codelineno-0-1884" name="__codelineno-0-1884"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1884" name="__codelineno-0-1884"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1885" name="__codelineno-0-1885"></a>    <span class="n">dimension</span><span class="p">:</span><span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span>
 <a id="__codelineno-0-1886" name="__codelineno-0-1886"></a>    <span class="n">r_value</span><span class="p">:</span><span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span>
 <a id="__codelineno-0-1887" name="__codelineno-0-1887"></a>    <span class="n">box_nb</span><span class="p">:</span><span class="nb">float</span> <span class="o">=</span> <span class="mf">0.</span>
@@ -5003,14 +5003,14 @@ and the number of boxes used (<code>box_nb</code>).</p>
 <a id="__codelineno-0-1905" name="__codelineno-0-1905"></a>            <span class="n">dimension</span> <span class="o">=</span> <span class="n">slope</span>
 <a id="__codelineno-0-1906" name="__codelineno-0-1906"></a>            <span class="n">box_nb</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">side_lengths</span><span class="p">)</span>
 <a id="__codelineno-0-1907" name="__codelineno-0-1907"></a>            <span class="k">if</span> <span class="n">display</span><span class="p">:</span>
-<a id="__codelineno-0-1908" name="__codelineno-0-1908"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">log_reciprocal_lengths</span><span class="p">,</span> <span class="n">log_box_counts</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Box counting&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1909" name="__codelineno-0-1909"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">log_reciprocal_lengths</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="p">[</span><span class="n">intercept</span><span class="p">,</span> <span class="n">intercept</span> <span class="o">+</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">log_reciprocal_lengths</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Linear regression&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1910" name="__codelineno-0-1910"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;D = </span><span class="si">{</span><span class="n">slope</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1911" name="__codelineno-0-1911"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;R2 = </span><span class="si">{</span><span class="n">r_value</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1912" name="__codelineno-0-1912"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;p-value = </span><span class="si">{</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1913" name="__codelineno-0-1913"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">&#39;best&#39;</span><span class="p">)</span>
-<a id="__codelineno-0-1914" name="__codelineno-0-1914"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;log(1/Diameter) | Diameter ⊆ [</span><span class="si">{</span><span class="n">side_lengths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">side_lengths</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">] (n=</span><span class="si">{</span><span class="n">box_nb</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-1915" name="__codelineno-0-1915"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;log(Box number) | Box number ⊆ [</span><span class="si">{</span><span class="n">box_counts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">box_counts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">]&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1908" name="__codelineno-0-1908"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">log_reciprocal_lengths</span><span class="p">,</span> <span class="n">log_box_counts</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Box counting"</span><span class="p">)</span>
+<a id="__codelineno-0-1909" name="__codelineno-0-1909"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="n">log_reciprocal_lengths</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="p">[</span><span class="n">intercept</span><span class="p">,</span> <span class="n">intercept</span> <span class="o">+</span> <span class="n">slope</span> <span class="o">*</span> <span class="n">log_reciprocal_lengths</span><span class="o">.</span><span class="n">min</span><span class="p">()],</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Linear regression"</span><span class="p">)</span>
+<a id="__codelineno-0-1910" name="__codelineno-0-1910"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">' '</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"D = </span><span class="si">{</span><span class="n">slope</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-1911" name="__codelineno-0-1911"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">' '</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"R2 = </span><span class="si">{</span><span class="n">r_value</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-1912" name="__codelineno-0-1912"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">' '</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">"p-value = </span><span class="si">{</span><span class="n">p_value</span><span class="si">:</span><span class="s2">.2e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+<a id="__codelineno-0-1913" name="__codelineno-0-1913"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s1">'best'</span><span class="p">)</span>
+<a id="__codelineno-0-1914" name="__codelineno-0-1914"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">"log(1/Diameter) | Diameter ⊆ [</span><span class="si">{</span><span class="n">side_lengths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">side_lengths</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">] (n=</span><span class="si">{</span><span class="n">box_nb</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<a id="__codelineno-0-1915" name="__codelineno-0-1915"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="sa">f</span><span class="s2">"log(Box number) | Box number ⊆ [</span><span class="si">{</span><span class="n">box_counts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">box_counts</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">]"</span><span class="p">)</span>
 <a id="__codelineno-0-1916" name="__codelineno-0-1916"></a>                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <a id="__codelineno-0-1917" name="__codelineno-0-1917"></a>                <span class="c1"># plt.close()</span>
 <a id="__codelineno-0-1918" name="__codelineno-0-1918"></a>
@@ -5203,7 +5203,7 @@ and returns the new ordered labels along with their statistics and centers.</p>
 <span class="normal"><a href="#__codelineno-0-356">356</a></span>
 <span class="normal"><a href="#__codelineno-0-357">357</a></span>
 <span class="normal"><a href="#__codelineno-0-358">358</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-279" name="__codelineno-0-279"></a><span class="k">def</span><span class="w"> </span><span class="nf">cc</span><span class="p">(</span><span class="n">binary_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="sd">    Processes a binary image to reorder and label connected components.</span>
 <a id="__codelineno-0-282" name="__codelineno-0-282"></a>
 <a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">    This function takes a binary image, analyses the connected components,</span>
@@ -5231,7 +5231,7 @@ and returns the new ordered labels along with their statistics and centers.</p>
 <a id="__codelineno-0-305" name="__codelineno-0-305"></a><span class="sd">    &gt;&gt;&gt; print(stats)</span>
 <a id="__codelineno-0-306" name="__codelineno-0-306"></a><span class="sd">    array([[0, 0, 3, 2, 4],</span>
 <a id="__codelineno-0-307" name="__codelineno-0-307"></a><span class="sd">       [1, 0, 2, 2, 2]], dtype=int32)</span>
-<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a><span class="sd">    """</span>
 <a id="__codelineno-0-309" name="__codelineno-0-309"></a>    <span class="n">number</span><span class="p">,</span> <span class="n">img</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">centers</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponentsWithStats</span><span class="p">(</span><span class="n">binary_img</span><span class="p">,</span> <span class="n">ltype</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">CV_16U</span><span class="p">)</span>
 <a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="k">if</span> <span class="n">number</span> <span class="o">&gt;</span> <span class="mi">255</span><span class="p">:</span>
 <a id="__codelineno-0-311" name="__codelineno-0-311"></a>        <span class="n">img_dtype</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint16</span>
@@ -5418,7 +5418,7 @@ and returns the new ordered labels along with their statistics and centers.</p>
 <span class="normal"><a href="#__codelineno-0-1389">1389</a></span>
 <span class="normal"><a href="#__codelineno-0-1390">1390</a></span>
 <span class="normal"><a href="#__codelineno-0-1391">1391</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1352" name="__codelineno-0-1352"></a><span class="k">def</span><span class="w"> </span><span class="nf">close_holes</span><span class="p">(</span><span class="n">binary_img</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1353" name="__codelineno-0-1353"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1353" name="__codelineno-0-1353"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1354" name="__codelineno-0-1354"></a><span class="sd">    Close holes in a binary image using connected components analysis.</span>
 <a id="__codelineno-0-1355" name="__codelineno-0-1355"></a>
 <a id="__codelineno-0-1356" name="__codelineno-0-1356"></a><span class="sd">    This function identifies and closes small holes within the foreground objects of a binary image. It uses connected component analysis to find and fill holes that are smaller than the main object.</span>
@@ -5450,7 +5450,7 @@ and returns the new ordered labels along with their statistics and centers.</p>
 <a id="__codelineno-0-1382" name="__codelineno-0-1382"></a><span class="sd">     [0 0 1 1 1 1 1 1 0 0]</span>
 <a id="__codelineno-0-1383" name="__codelineno-0-1383"></a><span class="sd">     [0 0 0 0 0 0 0 0 0 0]</span>
 <a id="__codelineno-0-1384" name="__codelineno-0-1384"></a><span class="sd">     [0 0 0 0 0 0 0 0 0 0]]</span>
-<a id="__codelineno-0-1385" name="__codelineno-0-1385"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1385" name="__codelineno-0-1385"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1386" name="__codelineno-0-1386"></a>    <span class="k">if</span> <span class="n">binary_img</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
 <a id="__codelineno-0-1387" name="__codelineno-0-1387"></a>        <span class="n">binary_img</span> <span class="o">=</span> <span class="n">binary_img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-1388" name="__codelineno-0-1388"></a>    <span class="n">nb</span><span class="p">,</span> <span class="n">new_order</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponents</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">binary_img</span><span class="p">)</span>
@@ -5595,7 +5595,7 @@ the boundary of an ellipse centered at the image's center with radii determined 
 <span class="normal"><a href="#__codelineno-0-1493">1493</a></span>
 <span class="normal"><a href="#__codelineno-0-1494">1494</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1454" name="__codelineno-0-1454"></a><span class="nd">@njit</span><span class="p">()</span>
 <a id="__codelineno-0-1455" name="__codelineno-0-1455"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_ellipse</span><span class="p">(</span><span class="n">vsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">hsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">min_size</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1456" name="__codelineno-0-1456"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1456" name="__codelineno-0-1456"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1457" name="__codelineno-0-1457"></a><span class="sd">    Create a 2D array representing an ellipse with given vertical and horizontal sizes.</span>
 <a id="__codelineno-0-1458" name="__codelineno-0-1458"></a>
 <a id="__codelineno-0-1459" name="__codelineno-0-1459"></a><span class="sd">    This function generates a NumPy boolean array where each element is `True` if the point lies within or on</span>
@@ -5613,8 +5613,8 @@ the boundary of an ellipse centered at the image's center with radii determined 
 <a id="__codelineno-0-1471" name="__codelineno-0-1471"></a><span class="sd">    -------</span>
 <a id="__codelineno-0-1472" name="__codelineno-0-1472"></a><span class="sd">    NDArray[bool]</span>
 <a id="__codelineno-0-1473" name="__codelineno-0-1473"></a><span class="sd">        A boolean NumPy array of shape `(vsize, hsize)` where `True` indicates that a pixel lies within or on</span>
-<a id="__codelineno-0-1474" name="__codelineno-0-1474"></a><span class="sd">        the boundary of an ellipse centered at the image&#39;s center with radii determined by half of the dimensions.</span>
-<a id="__codelineno-0-1475" name="__codelineno-0-1475"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1474" name="__codelineno-0-1474"></a><span class="sd">        the boundary of an ellipse centered at the image's center with radii determined by half of the dimensions.</span>
+<a id="__codelineno-0-1475" name="__codelineno-0-1475"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1476" name="__codelineno-0-1476"></a>    <span class="c1"># Use default values if input sizes are zero</span>
 <a id="__codelineno-0-1477" name="__codelineno-0-1477"></a>    <span class="n">vsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">vsize</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">vsize</span>
 <a id="__codelineno-0-1478" name="__codelineno-0-1478"></a>    <span class="n">hsize</span> <span class="o">=</span> <span class="n">min_size</span> <span class="k">if</span> <span class="n">hsize</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">hsize</span>
@@ -5772,7 +5772,7 @@ creation method used may have specific performance considerations.</p>
 </details>
 
 <p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">mask</span> <span class="o">=</span> <span class="n">create_mask</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="s1">&#39;circle&#39;</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">mask</span> <span class="o">=</span> <span class="n">create_mask</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="s1">'circle'</span><span class="p">)</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="go">[[False False False  True False False]</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go"> [False False  True  True  True False]</span>
@@ -5832,7 +5832,7 @@ creation method used may have specific performance considerations.</p>
 <span class="normal"><a href="#__codelineno-0-2089">2089</a></span>
 <span class="normal"><a href="#__codelineno-0-2090">2090</a></span>
 <span class="normal"><a href="#__codelineno-0-2091">2091</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-2044" name="__codelineno-0-2044"></a><span class="k">def</span><span class="w"> </span><span class="nf">create_mask</span><span class="p">(</span><span class="n">dims</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">minmax</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-<a id="__codelineno-0-2045" name="__codelineno-0-2045"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-2045" name="__codelineno-0-2045"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-2046" name="__codelineno-0-2046"></a>
 <a id="__codelineno-0-2047" name="__codelineno-0-2047"></a><span class="sd">    Create a boolean mask based on given dimensions and min/max coordinates.</span>
 <a id="__codelineno-0-2048" name="__codelineno-0-2048"></a>
@@ -5844,7 +5844,7 @@ creation method used may have specific performance considerations.</p>
 <a id="__codelineno-0-2054" name="__codelineno-0-2054"></a><span class="sd">        The minimum and maximum coordinates for the mask (x_min, x_max,</span>
 <a id="__codelineno-0-2055" name="__codelineno-0-2055"></a><span class="sd">        y_min, y_max).</span>
 <a id="__codelineno-0-2056" name="__codelineno-0-2056"></a><span class="sd">    shape : str</span>
-<a id="__codelineno-0-2057" name="__codelineno-0-2057"></a><span class="sd">        The shape of the mask. Should be either &#39;circle&#39; or any other value for a rectangular mask.</span>
+<a id="__codelineno-0-2057" name="__codelineno-0-2057"></a><span class="sd">        The shape of the mask. Should be either 'circle' or any other value for a rectangular mask.</span>
 <a id="__codelineno-0-2058" name="__codelineno-0-2058"></a>
 <a id="__codelineno-0-2059" name="__codelineno-0-2059"></a><span class="sd">    Returns</span>
 <a id="__codelineno-0-2060" name="__codelineno-0-2060"></a><span class="sd">    -------</span>
@@ -5855,25 +5855,25 @@ creation method used may have specific performance considerations.</p>
 <a id="__codelineno-0-2065" name="__codelineno-0-2065"></a><span class="sd">    Raises</span>
 <a id="__codelineno-0-2066" name="__codelineno-0-2066"></a><span class="sd">    ------</span>
 <a id="__codelineno-0-2067" name="__codelineno-0-2067"></a><span class="sd">    ValueError</span>
-<a id="__codelineno-0-2068" name="__codelineno-0-2068"></a><span class="sd">        If the shape is &#39;circle&#39; and the ellipse creation fails.</span>
+<a id="__codelineno-0-2068" name="__codelineno-0-2068"></a><span class="sd">        If the shape is 'circle' and the ellipse creation fails.</span>
 <a id="__codelineno-0-2069" name="__codelineno-0-2069"></a>
 <a id="__codelineno-0-2070" name="__codelineno-0-2070"></a><span class="sd">    Notes</span>
 <a id="__codelineno-0-2071" name="__codelineno-0-2071"></a><span class="sd">    -----</span>
-<a id="__codelineno-0-2072" name="__codelineno-0-2072"></a><span class="sd">    If `shape` is not &#39;circle&#39;, a rectangular mask will be created. The ellipse</span>
+<a id="__codelineno-0-2072" name="__codelineno-0-2072"></a><span class="sd">    If `shape` is not 'circle', a rectangular mask will be created. The ellipse</span>
 <a id="__codelineno-0-2073" name="__codelineno-0-2073"></a><span class="sd">    creation method used may have specific performance considerations.</span>
 <a id="__codelineno-0-2074" name="__codelineno-0-2074"></a>
 <a id="__codelineno-0-2075" name="__codelineno-0-2075"></a><span class="sd">    Examples</span>
 <a id="__codelineno-0-2076" name="__codelineno-0-2076"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-2077" name="__codelineno-0-2077"></a><span class="sd">    &gt;&gt;&gt; mask = create_mask((5, 6), (0, 5, 1, 5), &#39;circle&#39;)</span>
+<a id="__codelineno-0-2077" name="__codelineno-0-2077"></a><span class="sd">    &gt;&gt;&gt; mask = create_mask((5, 6), (0, 5, 1, 5), 'circle')</span>
 <a id="__codelineno-0-2078" name="__codelineno-0-2078"></a><span class="sd">    &gt;&gt;&gt; print(mask)</span>
 <a id="__codelineno-0-2079" name="__codelineno-0-2079"></a><span class="sd">    [[False False False  True False False]</span>
 <a id="__codelineno-0-2080" name="__codelineno-0-2080"></a><span class="sd">     [False False  True  True  True False]</span>
 <a id="__codelineno-0-2081" name="__codelineno-0-2081"></a><span class="sd">     [False  True  True  True  True False]</span>
 <a id="__codelineno-0-2082" name="__codelineno-0-2082"></a><span class="sd">     [False False  True  True  True False]</span>
 <a id="__codelineno-0-2083" name="__codelineno-0-2083"></a><span class="sd">     [False False False  True False False]]</span>
-<a id="__codelineno-0-2084" name="__codelineno-0-2084"></a><span class="sd">     &quot;&quot;&quot;</span>
+<a id="__codelineno-0-2084" name="__codelineno-0-2084"></a><span class="sd">     """</span>
 <a id="__codelineno-0-2085" name="__codelineno-0-2085"></a>    <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dims</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">bool</span><span class="p">)</span>
-<a id="__codelineno-0-2086" name="__codelineno-0-2086"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">&#39;circle&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-2086" name="__codelineno-0-2086"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">'circle'</span><span class="p">:</span>
 <a id="__codelineno-0-2087" name="__codelineno-0-2087"></a>        <span class="n">ellipse</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="n">minmax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
 <a id="__codelineno-0-2088" name="__codelineno-0-2088"></a>        <span class="n">mask</span><span class="p">[</span><span class="n">minmax</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">minmax</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span><span class="n">minmax</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">ellipse</span>
 <a id="__codelineno-0-2089" name="__codelineno-0-2089"></a>    <span class="k">else</span><span class="p">:</span>
@@ -6060,7 +6060,7 @@ drawing (overlay) can be applied within the masked region.</p>
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">dim</span> <span class="o">=</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">draw_img_with_mask</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">),</span> <span class="s1">&#39;circle&#39;</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">draw_img_with_mask</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="mi">75</span><span class="p">),</span> <span class="s1">'circle'</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">((</span><span class="n">result</span> <span class="o">==</span> <span class="mi">255</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="go">441</span>
 </code></pre></div>
@@ -6136,7 +6136,7 @@ drawing (overlay) can be applied within the masked region.</p>
 <span class="normal"><a href="#__codelineno-0-2158">2158</a></span>
 <span class="normal"><a href="#__codelineno-0-2159">2159</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-2093" name="__codelineno-0-2093"></a><span class="k">def</span><span class="w"> </span><span class="nf">draw_img_with_mask</span><span class="p">(</span><span class="n">img</span><span class="p">:</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">dims</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">minmax</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">drawing</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">only_contours</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
 <a id="__codelineno-0-2094" name="__codelineno-0-2094"></a>                       <span class="n">dilate_mask</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
-<a id="__codelineno-0-2095" name="__codelineno-0-2095"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-2095" name="__codelineno-0-2095"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-2096" name="__codelineno-0-2096"></a>
 <a id="__codelineno-0-2097" name="__codelineno-0-2097"></a><span class="sd">    Draw an image with a mask and optional contours.</span>
 <a id="__codelineno-0-2098" name="__codelineno-0-2098"></a>
@@ -6153,7 +6153,7 @@ drawing (overlay) can be applied within the masked region.</p>
 <a id="__codelineno-0-2109" name="__codelineno-0-2109"></a><span class="sd">    minmax : Tuple[int, int, int, int]</span>
 <a id="__codelineno-0-2110" name="__codelineno-0-2110"></a><span class="sd">        Coordinates of the subregion (x_start, x_end, y_start, y_end).</span>
 <a id="__codelineno-0-2111" name="__codelineno-0-2111"></a><span class="sd">    shape : str</span>
-<a id="__codelineno-0-2112" name="__codelineno-0-2112"></a><span class="sd">        Shape of the mask to draw (&#39;circle&#39; or &#39;rectangle&#39;).</span>
+<a id="__codelineno-0-2112" name="__codelineno-0-2112"></a><span class="sd">        Shape of the mask to draw ('circle' or 'rectangle').</span>
 <a id="__codelineno-0-2113" name="__codelineno-0-2113"></a><span class="sd">    drawing : Tuple[NDArray, NDArray, NDArray]</span>
 <a id="__codelineno-0-2114" name="__codelineno-0-2114"></a><span class="sd">        Optional drawing (overlay) to apply within the masked region.</span>
 <a id="__codelineno-0-2115" name="__codelineno-0-2115"></a><span class="sd">    only_contours : bool, optional</span>
@@ -6174,11 +6174,11 @@ drawing (overlay) can be applied within the masked region.</p>
 <a id="__codelineno-0-2130" name="__codelineno-0-2130"></a><span class="sd">    --------</span>
 <a id="__codelineno-0-2131" name="__codelineno-0-2131"></a><span class="sd">    &gt;&gt;&gt; dim = (100, 100, 3)</span>
 <a id="__codelineno-0-2132" name="__codelineno-0-2132"></a><span class="sd">    &gt;&gt;&gt; img = np.zeros(dim)</span>
-<a id="__codelineno-0-2133" name="__codelineno-0-2133"></a><span class="sd">    &gt;&gt;&gt; result = draw_img_with_mask(img, dim, (50, 75, 50, 75), &#39;circle&#39;, (0, 255, 0))</span>
+<a id="__codelineno-0-2133" name="__codelineno-0-2133"></a><span class="sd">    &gt;&gt;&gt; result = draw_img_with_mask(img, dim, (50, 75, 50, 75), 'circle', (0, 255, 0))</span>
 <a id="__codelineno-0-2134" name="__codelineno-0-2134"></a><span class="sd">    &gt;&gt;&gt; print((result == 255).sum())</span>
 <a id="__codelineno-0-2135" name="__codelineno-0-2135"></a><span class="sd">    441</span>
-<a id="__codelineno-0-2136" name="__codelineno-0-2136"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-2137" name="__codelineno-0-2137"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">&#39;circle&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-2136" name="__codelineno-0-2136"></a><span class="sd">    """</span>
+<a id="__codelineno-0-2137" name="__codelineno-0-2137"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">'circle'</span><span class="p">:</span>
 <a id="__codelineno-0-2138" name="__codelineno-0-2138"></a>        <span class="n">mask</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="n">minmax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">minmax</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-2139" name="__codelineno-0-2139"></a>        <span class="k">if</span> <span class="n">only_contours</span><span class="p">:</span>
 <a id="__codelineno-0-2140" name="__codelineno-0-2140"></a>            <span class="n">mask</span> <span class="o">=</span> <span class="n">get_contours</span><span class="p">(</span><span class="n">mask</span><span class="p">)</span>
@@ -6369,7 +6369,7 @@ The function ensures that rays do not extend beyond the image borders.</p>
 <span class="normal"><a href="#__codelineno-0-799">799</a></span>
 <span class="normal"><a href="#__codelineno-0-800">800</a></span>
 <span class="normal"><a href="#__codelineno-0-801">801</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-747" name="__codelineno-0-747"></a><span class="k">def</span><span class="w"> </span><span class="nf">draw_me_a_sun</span><span class="p">(</span><span class="n">main_shape</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">ray_length_coef</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
-<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-748" name="__codelineno-0-748"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-749" name="__codelineno-0-749"></a><span class="sd">    Draw a sun-shaped pattern on an image based on the main shape and ray length coefficient.</span>
 <a id="__codelineno-0-750" name="__codelineno-0-750"></a>
 <a id="__codelineno-0-751" name="__codelineno-0-751"></a><span class="sd">    This function takes an input binary image (main_shape) and draws sun rays</span>
@@ -6397,7 +6397,7 @@ The function ensures that rays do not extend beyond the image borders.</p>
 <a id="__codelineno-0-773" name="__codelineno-0-773"></a><span class="sd">    &gt;&gt;&gt; rays, sun = draw_me_a_sun(main_shape)</span>
 <a id="__codelineno-0-774" name="__codelineno-0-774"></a><span class="sd">    &gt;&gt;&gt; print(sun)</span>
 <a id="__codelineno-0-775" name="__codelineno-0-775"></a>
-<a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-776" name="__codelineno-0-776"></a><span class="sd">    """</span>
 <a id="__codelineno-0-777" name="__codelineno-0-777"></a>    <span class="n">nb</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">center</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponentsWithStats</span><span class="p">(</span><span class="n">main_shape</span><span class="p">)</span>
 <a id="__codelineno-0-778" name="__codelineno-0-778"></a>    <span class="n">sun</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">main_shape</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">)</span>
 <a id="__codelineno-0-779" name="__codelineno-0-779"></a>    <span class="n">rays</span> <span class="o">=</span> <span class="p">[]</span>
@@ -6586,7 +6586,7 @@ an array of distances against time used to fill the holes.</p>
 <span class="normal"><a href="#__codelineno-0-1449">1449</a></span>
 <span class="normal"><a href="#__codelineno-0-1450">1450</a></span>
 <span class="normal"><a href="#__codelineno-0-1451">1451</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1394" name="__codelineno-0-1394"></a><span class="k">def</span><span class="w"> </span><span class="nf">dynamically_expand_to_fill_holes</span><span class="p">(</span><span class="n">binary_video</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">holes</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">]]:</span>
-<a id="__codelineno-0-1395" name="__codelineno-0-1395"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1395" name="__codelineno-0-1395"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1396" name="__codelineno-0-1396"></a><span class="sd">    Fill the holes in a binary video by progressively expanding the shape made of ones.</span>
 <a id="__codelineno-0-1397" name="__codelineno-0-1397"></a>
 <a id="__codelineno-0-1398" name="__codelineno-0-1398"></a><span class="sd">    Parameters</span>
@@ -6612,7 +6612,7 @@ an array of distances against time used to fill the holes.</p>
 <a id="__codelineno-0-1418" name="__codelineno-0-1418"></a><span class="sd">    &gt;&gt;&gt; filled_video, end_time, distances = dynamically_expand_to_fill_holes(binary_video, holes)</span>
 <a id="__codelineno-0-1419" name="__codelineno-0-1419"></a><span class="sd">    &gt;&gt;&gt; print(filled_video.shape)  # Should print (10, 640, 480)</span>
 <a id="__codelineno-0-1420" name="__codelineno-0-1420"></a><span class="sd">    (10, 640, 480)</span>
-<a id="__codelineno-0-1421" name="__codelineno-0-1421"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1421" name="__codelineno-0-1421"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1422" name="__codelineno-0-1422"></a>    <span class="c1">#first move should be the time at wich the first pixel hole could have been covered</span>
 <a id="__codelineno-0-1423" name="__codelineno-0-1423"></a>    <span class="c1">#it should ask how much time the shape made to cross a distance long enough to overlap all holes</span>
 <a id="__codelineno-0-1424" name="__codelineno-0-1424"></a>    <span class="n">holes_contours</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">dilate</span><span class="p">(</span><span class="n">holes</span><span class="p">,</span> <span class="n">cross_33</span><span class="p">,</span> <span class="n">borderType</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">BORDER_CONSTANT</span><span class="p">,</span> <span class="n">borderValue</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
@@ -6866,12 +6866,12 @@ contour and its own centroid.</p>
 <span class="normal"><a href="#__codelineno-0-1262">1262</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1186" name="__codelineno-0-1186"></a><span class="k">def</span><span class="w"> </span><span class="nf">expand_until_neighbor_center_gets_nearer_than_own</span><span class="p">(</span><span class="n">shape_to_expand</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">without_shape_i</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span>
 <a id="__codelineno-0-1187" name="__codelineno-0-1187"></a>                                                      <span class="n">shape_original_centroid</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
 <a id="__codelineno-0-1188" name="__codelineno-0-1188"></a>                                                      <span class="n">ref_centroids</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">kernel</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1189" name="__codelineno-0-1189"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-1190" name="__codelineno-0-1190"></a><span class="sd">    Expand a shape until its neighbor&#39;s centroid is closer than its own.</span>
+<a id="__codelineno-0-1189" name="__codelineno-0-1189"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-1190" name="__codelineno-0-1190"></a><span class="sd">    Expand a shape until its neighbor's centroid is closer than its own.</span>
 <a id="__codelineno-0-1191" name="__codelineno-0-1191"></a>
 <a id="__codelineno-0-1192" name="__codelineno-0-1192"></a><span class="sd">    This function takes in several numpy arrays representing shapes and their</span>
 <a id="__codelineno-0-1193" name="__codelineno-0-1193"></a><span class="sd">    centroids, and expands the input shape until the distance to the nearest</span>
-<a id="__codelineno-0-1194" name="__codelineno-0-1194"></a><span class="sd">    neighboring centroid is less than or equal to the distance between the shape&#39;s</span>
+<a id="__codelineno-0-1194" name="__codelineno-0-1194"></a><span class="sd">    neighboring centroid is less than or equal to the distance between the shape's</span>
 <a id="__codelineno-0-1195" name="__codelineno-0-1195"></a><span class="sd">    contour and its own centroid.</span>
 <a id="__codelineno-0-1196" name="__codelineno-0-1196"></a>
 <a id="__codelineno-0-1197" name="__codelineno-0-1197"></a><span class="sd">    Parameters</span>
@@ -6891,7 +6891,7 @@ contour and its own centroid.</p>
 <a id="__codelineno-0-1211" name="__codelineno-0-1211"></a><span class="sd">    -------</span>
 <a id="__codelineno-0-1212" name="__codelineno-0-1212"></a><span class="sd">    ndarray of uint8</span>
 <a id="__codelineno-0-1213" name="__codelineno-0-1213"></a><span class="sd">        The expanded shape.</span>
-<a id="__codelineno-0-1214" name="__codelineno-0-1214"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1214" name="__codelineno-0-1214"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1215" name="__codelineno-0-1215"></a>    <span class="n">previous_shape_to_expand</span> <span class="o">=</span> <span class="n">shape_to_expand</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-1216" name="__codelineno-0-1216"></a>    <span class="k">if</span> <span class="n">shape_to_expand</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
 <a id="__codelineno-0-1217" name="__codelineno-0-1217"></a>        <span class="n">without_shape</span> <span class="o">=</span> <span class="n">without_shape_i</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -7104,7 +7104,7 @@ of the major incline section in the vector.</p>
 <span class="normal"><a href="#__codelineno-0-1070">1070</a></span>
 <span class="normal"><a href="#__codelineno-0-1071">1071</a></span>
 <span class="normal"><a href="#__codelineno-0-1072">1072</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1015" name="__codelineno-0-1015"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_major_incline</span><span class="p">(</span><span class="n">vector</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">natural_noise</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1016" name="__codelineno-0-1016"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1017" name="__codelineno-0-1017"></a><span class="sd">    Find the major incline section in a vector.</span>
 <a id="__codelineno-0-1018" name="__codelineno-0-1018"></a>
 <a id="__codelineno-0-1019" name="__codelineno-0-1019"></a><span class="sd">    This function identifies the segment of a vector that exhibits</span>
@@ -7132,7 +7132,7 @@ of the major incline section in the vector.</p>
 <a id="__codelineno-0-1041" name="__codelineno-0-1041"></a><span class="sd">    &gt;&gt;&gt; left, right = find_major_incline(vector, natural_noise)</span>
 <a id="__codelineno-0-1042" name="__codelineno-0-1042"></a><span class="sd">    &gt;&gt;&gt; (left, right)</span>
 <a id="__codelineno-0-1043" name="__codelineno-0-1043"></a><span class="sd">    (0, 1)</span>
-<a id="__codelineno-0-1044" name="__codelineno-0-1044"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1044" name="__codelineno-0-1044"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1045" name="__codelineno-0-1045"></a>    <span class="n">left</span> <span class="o">=</span> <span class="mi">0</span>
 <a id="__codelineno-0-1046" name="__codelineno-0-1046"></a>    <span class="n">right</span> <span class="o">=</span> <span class="mi">1</span>
 <a id="__codelineno-0-1047" name="__codelineno-0-1047"></a>    <span class="n">ref_length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">((</span><span class="mi">5</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">natural_noise</span><span class="p">))</span>
@@ -7275,7 +7275,7 @@ that appear in at least half of the input slices are set to 1.</p>
 <span class="normal"><a href="#__codelineno-0-829">829</a></span>
 <span class="normal"><a href="#__codelineno-0-830">830</a></span>
 <span class="normal"><a href="#__codelineno-0-831">831</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-804" name="__codelineno-0-804"></a><span class="k">def</span><span class="w"> </span><span class="nf">find_median_shape</span><span class="p">(</span><span class="n">binary_3d_matrix</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-805" name="__codelineno-0-805"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-806" name="__codelineno-0-806"></a><span class="sd">    Find the median shape from a binary 3D matrix.</span>
 <a id="__codelineno-0-807" name="__codelineno-0-807"></a>
 <a id="__codelineno-0-808" name="__codelineno-0-808"></a><span class="sd">    This function computes the median 2D slice of a binary (0/1) 3D matrix</span>
@@ -7297,7 +7297,7 @@ that appear in at least half of the input slices are set to 1.</p>
 <a id="__codelineno-0-824" name="__codelineno-0-824"></a><span class="sd">    &gt;&gt;&gt; binary_3d_matrix = np.random.randint(0, 2, (10, 5, 5), dtype=np.uint8)</span>
 <a id="__codelineno-0-825" name="__codelineno-0-825"></a><span class="sd">    &gt;&gt;&gt; median_shape = find_median_shape(binary_3d_matrix)</span>
 <a id="__codelineno-0-826" name="__codelineno-0-826"></a><span class="sd">    &gt;&gt;&gt; print(median_shape)</span>
-<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-827" name="__codelineno-0-827"></a><span class="sd">    """</span>
 <a id="__codelineno-0-828" name="__codelineno-0-828"></a>    <span class="n">binary_2d_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_along_axis</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">binary_3d_matrix</span><span class="p">)</span>
 <a id="__codelineno-0-829" name="__codelineno-0-829"></a>    <span class="n">median_shape</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">binary_2d_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-830" name="__codelineno-0-830"></a>    <span class="n">median_shape</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">greater_equal</span><span class="p">(</span><span class="n">binary_2d_matrix</span><span class="p">,</span> <span class="n">binary_3d_matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">1</span>
@@ -7455,7 +7455,7 @@ as integer values.</p>
 <span class="normal"><a href="#__codelineno-0-742">742</a></span>
 <span class="normal"><a href="#__codelineno-0-743">743</a></span>
 <span class="normal"><a href="#__codelineno-0-744">744</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-704" name="__codelineno-0-704"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_all_line_coordinates</span><span class="p">(</span><span class="n">start_point</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">end_points</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-<a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-705" name="__codelineno-0-705"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-706" name="__codelineno-0-706"></a><span class="sd">    Get all line coordinates between start point and end points.</span>
 <a id="__codelineno-0-707" name="__codelineno-0-707"></a>
 <a id="__codelineno-0-708" name="__codelineno-0-708"></a><span class="sd">    This function computes the coordinates of lines connecting a</span>
@@ -7489,7 +7489,7 @@ as integer values.</p>
 <a id="__codelineno-0-736" name="__codelineno-0-736"></a><span class="sd">       [1, 2],</span>
 <a id="__codelineno-0-737" name="__codelineno-0-737"></a><span class="sd">       [2, 3],</span>
 <a id="__codelineno-0-738" name="__codelineno-0-738"></a><span class="sd">       [3, 4]], dtype=uint64)]</span>
-<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-739" name="__codelineno-0-739"></a><span class="sd">    """</span>
 <a id="__codelineno-0-740" name="__codelineno-0-740"></a>    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-741" name="__codelineno-0-741"></a>    <span class="k">for</span> <span class="n">end_point</span> <span class="ow">in</span> <span class="n">end_points</span><span class="p">:</span>
 <a id="__codelineno-0-742" name="__codelineno-0-742"></a>        <span class="n">line_coords</span> <span class="o">=</span> <span class="n">get_line_points</span><span class="p">(</span><span class="n">start_point</span><span class="p">,</span> <span class="n">end_point</span><span class="p">)</span>
@@ -7651,8 +7651,8 @@ It uses morphological operations like dilation to detect shape changes over fram
 
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">top</span><span class="p">,</span> <span class="n">bot</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">ordered_image</span> <span class="o">=</span> <span class="n">_get_bb_with_moving_centers</span><span class="p">(</span><span class="n">motion_frames</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">binary_img</span><span class="p">,</span> <span class="n">y_bounds</span><span class="p">)</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Top coordinates:&quot;</span><span class="p">,</span> <span class="n">top</span><span class="p">)</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bottom coordinates:&quot;</span><span class="p">,</span> <span class="n">bot</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"Top coordinates:"</span><span class="p">,</span> <span class="n">top</span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"Bottom coordinates:"</span><span class="p">,</span> <span class="n">bot</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -7800,7 +7800,7 @@ It uses morphological operations like dilation to detect shape changes over fram
 <span class="normal"><a href="#__codelineno-0-1774">1774</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1635" name="__codelineno-0-1635"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_bb_with_moving_centers</span><span class="p">(</span><span class="n">motion_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">all_specimens_have_same_direction</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
 <a id="__codelineno-0-1636" name="__codelineno-0-1636"></a>                                <span class="n">original_shape_hsize</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span>
 <a id="__codelineno-0-1637" name="__codelineno-0-1637"></a>                                <span class="n">y_boundaries</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">):</span>
-<a id="__codelineno-0-1638" name="__codelineno-0-1638"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1638" name="__codelineno-0-1638"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1639" name="__codelineno-0-1639"></a><span class="sd">    Get the bounding boxes with moving centers.</span>
 <a id="__codelineno-0-1640" name="__codelineno-0-1640"></a>
 <a id="__codelineno-0-1641" name="__codelineno-0-1641"></a><span class="sd">    Parameters</span>
@@ -7839,10 +7839,10 @@ It uses morphological operations like dilation to detect shape changes over fram
 <a id="__codelineno-0-1674" name="__codelineno-0-1674"></a><span class="sd">    Examples</span>
 <a id="__codelineno-0-1675" name="__codelineno-0-1675"></a><span class="sd">    --------</span>
 <a id="__codelineno-0-1676" name="__codelineno-0-1676"></a><span class="sd">    &gt;&gt;&gt; top, bot, left, right, ordered_image = _get_bb_with_moving_centers(motion_frames, True, None, binary_img, y_bounds)</span>
-<a id="__codelineno-0-1677" name="__codelineno-0-1677"></a><span class="sd">    &gt;&gt;&gt; print(&quot;Top coordinates:&quot;, top)</span>
-<a id="__codelineno-0-1678" name="__codelineno-0-1678"></a><span class="sd">    &gt;&gt;&gt; print(&quot;Bottom coordinates:&quot;, bot)</span>
-<a id="__codelineno-0-1679" name="__codelineno-0-1679"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1680" name="__codelineno-0-1680"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Read and segment each sample image and rank shapes from top to bot and from left to right&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1677" name="__codelineno-0-1677"></a><span class="sd">    &gt;&gt;&gt; print("Top coordinates:", top)</span>
+<a id="__codelineno-0-1678" name="__codelineno-0-1678"></a><span class="sd">    &gt;&gt;&gt; print("Bottom coordinates:", bot)</span>
+<a id="__codelineno-0-1679" name="__codelineno-0-1679"></a><span class="sd">    """</span>
+<a id="__codelineno-0-1680" name="__codelineno-0-1680"></a>    <span class="nb">print</span><span class="p">(</span><span class="s2">"Read and segment each sample image and rank shapes from top to bot and from left to right"</span><span class="p">)</span>
 <a id="__codelineno-0-1681" name="__codelineno-0-1681"></a>    <span class="n">k_size</span> <span class="o">=</span> <span class="mi">3</span>
 <a id="__codelineno-0-1682" name="__codelineno-0-1682"></a>    <span class="k">if</span> <span class="n">original_shape_hsize</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-1683" name="__codelineno-0-1683"></a>        <span class="n">k_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">original_shape_hsize</span> <span class="o">/</span> <span class="mi">5</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
@@ -7853,7 +7853,7 @@ It uses morphological operations like dilation to detect shape changes over fram
 <a id="__codelineno-0-1688" name="__codelineno-0-1688"></a>    <span class="n">blob_number</span> <span class="o">=</span> <span class="n">ordered_stats</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-0-1689" name="__codelineno-0-1689"></a>
 <a id="__codelineno-0-1690" name="__codelineno-0-1690"></a>    <span class="n">ordered_image_i</span> <span class="o">=</span> <span class="n">ordered_image</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-1691" name="__codelineno-0-1691"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;For each frame, expand each previously confirmed shape to add area to its maximal bounding box&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-1691" name="__codelineno-0-1691"></a>    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"For each frame, expand each previously confirmed shape to add area to its maximal bounding box"</span><span class="p">)</span>
 <a id="__codelineno-0-1692" name="__codelineno-0-1692"></a>    <span class="k">for</span> <span class="n">step_i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">motion_list</span><span class="p">)):</span>
 <a id="__codelineno-0-1693" name="__codelineno-0-1693"></a>        <span class="n">previously_ordered_centroids</span> <span class="o">=</span> <span class="n">ordered_centroids</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-1694" name="__codelineno-0-1694"></a>        <span class="n">new_image_i</span> <span class="o">=</span> <span class="n">motion_list</span><span class="p">[</span><span class="n">step_i</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -8077,7 +8077,7 @@ structuring element and then subtracts the eroded image from the original to obt
 <span class="normal"><a href="#__codelineno-0-1539">1539</a></span>
 <span class="normal"><a href="#__codelineno-0-1540">1540</a></span>
 <span class="normal"><a href="#__codelineno-0-1541">1541</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1498" name="__codelineno-0-1498"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_contours</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1499" name="__codelineno-0-1499"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1499" name="__codelineno-0-1499"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1500" name="__codelineno-0-1500"></a><span class="sd">    Find and return the contours of a binary image.</span>
 <a id="__codelineno-0-1501" name="__codelineno-0-1501"></a>
 <a id="__codelineno-0-1502" name="__codelineno-0-1502"></a><span class="sd">    This function erodes the input binary image using a 3x3 cross-shaped</span>
@@ -8109,7 +8109,7 @@ structuring element and then subtracts the eroded image from the original to obt
 <a id="__codelineno-0-1528" name="__codelineno-0-1528"></a><span class="sd">     [0 0 1 1 1 1 1 1 0 0]</span>
 <a id="__codelineno-0-1529" name="__codelineno-0-1529"></a><span class="sd">     [0 0 0 0 0 0 0 0 0 0]</span>
 <a id="__codelineno-0-1530" name="__codelineno-0-1530"></a><span class="sd">     [0 0 0 0 0 0 0 0 0 0]]</span>
-<a id="__codelineno-0-1531" name="__codelineno-0-1531"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1531" name="__codelineno-0-1531"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1532" name="__codelineno-0-1532"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">binary_image</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">):</span>
 <a id="__codelineno-0-1533" name="__codelineno-0-1533"></a>        <span class="n">binary_image</span> <span class="o">=</span> <span class="n">binary_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-1534" name="__codelineno-0-1534"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">binary_image</span><span class="p">):</span>
@@ -8250,7 +8250,7 @@ different connected components.</p>
 <span class="normal"><a href="#__codelineno-0-1181">1181</a></span>
 <span class="normal"><a href="#__codelineno-0-1182">1182</a></span>
 <span class="normal"><a href="#__codelineno-0-1183">1183</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1147" name="__codelineno-0-1147"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_largest_connected_component</span><span class="p">(</span><span class="n">segmentation</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">[</span><span class="nb">bool</span><span class="p">]]:</span>
-<a id="__codelineno-0-1148" name="__codelineno-0-1148"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1148" name="__codelineno-0-1148"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1149" name="__codelineno-0-1149"></a><span class="sd">    Find the largest connected component in a segmentation image.</span>
 <a id="__codelineno-0-1150" name="__codelineno-0-1150"></a>
 <a id="__codelineno-0-1151" name="__codelineno-0-1151"></a><span class="sd">    This function labels all connected components in a binary</span>
@@ -8279,7 +8279,7 @@ different connected components.</p>
 <a id="__codelineno-0-1174" name="__codelineno-0-1174"></a><span class="sd">    &gt;&gt;&gt; size, mask = get_largest_connected_component(segmentation)</span>
 <a id="__codelineno-0-1175" name="__codelineno-0-1175"></a><span class="sd">    &gt;&gt;&gt; print(size)</span>
 <a id="__codelineno-0-1176" name="__codelineno-0-1176"></a><span class="sd">    12</span>
-<a id="__codelineno-0-1177" name="__codelineno-0-1177"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1177" name="__codelineno-0-1177"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1178" name="__codelineno-0-1178"></a>    <span class="n">labels</span> <span class="o">=</span> <span class="n">label</span><span class="p">(</span><span class="n">segmentation</span><span class="p">)</span>
 <a id="__codelineno-0-1179" name="__codelineno-0-1179"></a>    <span class="k">assert</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># assume at least 1 CC</span>
 <a id="__codelineno-0-1180" name="__codelineno-0-1180"></a>    <span class="n">con_comp_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">labels</span><span class="o">.</span><span class="n">flat</span><span class="p">)[</span><span class="mi">1</span><span class="p">:]</span>
@@ -8461,12 +8461,12 @@ the number of points on the line.</p>
 <span class="normal"><a href="#__codelineno-0-700">700</a></span>
 <span class="normal"><a href="#__codelineno-0-701">701</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-635" name="__codelineno-0-635"></a><span class="nd">@njit</span><span class="p">()</span>
 <a id="__codelineno-0-636" name="__codelineno-0-636"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_line_points</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">],</span> <span class="n">end</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">]:</span>
-<a id="__codelineno-0-637" name="__codelineno-0-637"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<a id="__codelineno-0-638" name="__codelineno-0-638"></a><span class="sd">    Get line points between two endpoints using Bresenham&#39;s line algorithm.</span>
+<a id="__codelineno-0-637" name="__codelineno-0-637"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-638" name="__codelineno-0-638"></a><span class="sd">    Get line points between two endpoints using Bresenham's line algorithm.</span>
 <a id="__codelineno-0-639" name="__codelineno-0-639"></a>
 <a id="__codelineno-0-640" name="__codelineno-0-640"></a><span class="sd">    This function calculates all the integer coordinate points that form a</span>
-<a id="__codelineno-0-641" name="__codelineno-0-641"></a><span class="sd">    line between two endpoints using Bresenham&#39;s line algorithm. It is</span>
-<a id="__codelineno-0-642" name="__codelineno-0-642"></a><span class="sd">    optimized for performance using Numba&#39;s just-in-time compilation.</span>
+<a id="__codelineno-0-641" name="__codelineno-0-641"></a><span class="sd">    line between two endpoints using Bresenham's line algorithm. It is</span>
+<a id="__codelineno-0-642" name="__codelineno-0-642"></a><span class="sd">    optimized for performance using Numba's just-in-time compilation.</span>
 <a id="__codelineno-0-643" name="__codelineno-0-643"></a>
 <a id="__codelineno-0-644" name="__codelineno-0-644"></a><span class="sd">    Parameters</span>
 <a id="__codelineno-0-645" name="__codelineno-0-645"></a><span class="sd">    ----------</span>
@@ -8490,7 +8490,7 @@ the number of points on the line.</p>
 <a id="__codelineno-0-663" name="__codelineno-0-663"></a><span class="sd">    [[0 0]</span>
 <a id="__codelineno-0-664" name="__codelineno-0-664"></a><span class="sd">    [0 1]</span>
 <a id="__codelineno-0-665" name="__codelineno-0-665"></a><span class="sd">    [1 2]]</span>
-<a id="__codelineno-0-666" name="__codelineno-0-666"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-666" name="__codelineno-0-666"></a><span class="sd">    """</span>
 <a id="__codelineno-0-667" name="__codelineno-0-667"></a>    <span class="n">y0</span><span class="p">,</span> <span class="n">x0</span> <span class="o">=</span> <span class="n">start</span>
 <a id="__codelineno-0-668" name="__codelineno-0-668"></a>    <span class="n">y1</span><span class="p">,</span> <span class="n">x1</span> <span class="o">=</span> <span class="n">end</span>
 <a id="__codelineno-0-669" name="__codelineno-0-669"></a>
@@ -8510,7 +8510,7 @@ the number of points on the line.</p>
 <a id="__codelineno-0-683" name="__codelineno-0-683"></a>    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
 <a id="__codelineno-0-684" name="__codelineno-0-684"></a>        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">])</span>
 <a id="__codelineno-0-685" name="__codelineno-0-685"></a>
-<a id="__codelineno-0-686" name="__codelineno-0-686"></a>        <span class="c1"># Check if we&#39;ve reached the end</span>
+<a id="__codelineno-0-686" name="__codelineno-0-686"></a>        <span class="c1"># Check if we've reached the end</span>
 <a id="__codelineno-0-687" name="__codelineno-0-687"></a>        <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="n">x1</span> <span class="ow">and</span> <span class="n">y</span> <span class="o">==</span> <span class="n">y1</span><span class="p">:</span>
 <a id="__codelineno-0-688" name="__codelineno-0-688"></a>            <span class="k">break</span>
 <a id="__codelineno-0-689" name="__codelineno-0-689"></a>
@@ -8536,7 +8536,7 @@ the number of points on the line.</p>
 
 
 <h2 id="cellects.image.morphological_operations.get_min_or_max_euclidean_pair" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s1">&#39;max&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s1">'max'</span><span class="p">)</span></code>
 
 </h2>
 
@@ -8650,13 +8650,13 @@ the number of points on the line.</p>
 
 <p><span class="doc-section-title">Examples:</span></p>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]])</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span> <span class="o">=</span> <span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s2">&quot;max&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span> <span class="o">=</span> <span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s2">"max"</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">point1</span><span class="p">)</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go">[0 1]</span>
 <a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">point2</span><span class="p">)</span>
 <a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="go">[4 5]</span>
 <a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">coords</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">]))</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span> <span class="o">=</span> <span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">point1</span><span class="p">,</span> <span class="n">point2</span> <span class="o">=</span> <span class="n">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="o">=</span><span class="s2">"min"</span><span class="p">)</span>
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">point1</span><span class="p">)</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="go">[0 0]</span>
 <a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">point2</span><span class="p">)</span>
@@ -8744,8 +8744,8 @@ the number of points on the line.</p>
 <span class="normal"><a href="#__codelineno-0-1010">1010</a></span>
 <span class="normal"><a href="#__codelineno-0-1011">1011</a></span>
 <span class="normal"><a href="#__codelineno-0-1012">1012</a></span>
-<span class="normal"><a href="#__codelineno-0-1013">1013</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-935" name="__codelineno-0-935"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">&quot;max&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
-<a id="__codelineno-0-936" name="__codelineno-0-936"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-1013">1013</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-935" name="__codelineno-0-935"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_min_or_max_euclidean_pair</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">min_or_max</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">"max"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<a id="__codelineno-0-936" name="__codelineno-0-936"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-937" name="__codelineno-0-937"></a><span class="sd">    Find the pair of points in a given set with the minimum or maximum Euclidean distance.</span>
 <a id="__codelineno-0-938" name="__codelineno-0-938"></a>
 <a id="__codelineno-0-939" name="__codelineno-0-939"></a><span class="sd">    Parameters</span>
@@ -8753,7 +8753,7 @@ the number of points on the line.</p>
 <a id="__codelineno-0-941" name="__codelineno-0-941"></a><span class="sd">    coords : Union[np.ndarray, Tuple]</span>
 <a id="__codelineno-0-942" name="__codelineno-0-942"></a><span class="sd">        An Nx2 numpy array or a tuple of two arrays, each containing the x and y coordinates of points.</span>
 <a id="__codelineno-0-943" name="__codelineno-0-943"></a><span class="sd">    min_or_max : str, optional</span>
-<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">        Whether to find the &#39;min&#39; or &#39;max&#39; distance pair. Default is &#39;max&#39;.</span>
+<a id="__codelineno-0-944" name="__codelineno-0-944"></a><span class="sd">        Whether to find the 'min' or 'max' distance pair. Default is 'max'.</span>
 <a id="__codelineno-0-945" name="__codelineno-0-945"></a>
 <a id="__codelineno-0-946" name="__codelineno-0-946"></a><span class="sd">    Returns</span>
 <a id="__codelineno-0-947" name="__codelineno-0-947"></a><span class="sd">    -------</span>
@@ -8763,7 +8763,7 @@ the number of points on the line.</p>
 <a id="__codelineno-0-951" name="__codelineno-0-951"></a><span class="sd">    Raises</span>
 <a id="__codelineno-0-952" name="__codelineno-0-952"></a><span class="sd">    ------</span>
 <a id="__codelineno-0-953" name="__codelineno-0-953"></a><span class="sd">    ValueError</span>
-<a id="__codelineno-0-954" name="__codelineno-0-954"></a><span class="sd">        If `min_or_max` is not &#39;min&#39; or &#39;max&#39;.</span>
+<a id="__codelineno-0-954" name="__codelineno-0-954"></a><span class="sd">        If `min_or_max` is not 'min' or 'max'.</span>
 <a id="__codelineno-0-955" name="__codelineno-0-955"></a>
 <a id="__codelineno-0-956" name="__codelineno-0-956"></a><span class="sd">    Notes</span>
 <a id="__codelineno-0-957" name="__codelineno-0-957"></a><span class="sd">    -----</span>
@@ -8774,19 +8774,19 @@ the number of points on the line.</p>
 <a id="__codelineno-0-962" name="__codelineno-0-962"></a><span class="sd">    Examples</span>
 <a id="__codelineno-0-963" name="__codelineno-0-963"></a><span class="sd">    --------</span>
 <a id="__codelineno-0-964" name="__codelineno-0-964"></a><span class="sd">    &gt;&gt;&gt; coords = np.array([[0, 1], [2, 3], [4, 5]])</span>
-<a id="__codelineno-0-965" name="__codelineno-0-965"></a><span class="sd">    &gt;&gt;&gt; point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max=&quot;max&quot;)</span>
+<a id="__codelineno-0-965" name="__codelineno-0-965"></a><span class="sd">    &gt;&gt;&gt; point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="max")</span>
 <a id="__codelineno-0-966" name="__codelineno-0-966"></a><span class="sd">    &gt;&gt;&gt; print(point1)</span>
 <a id="__codelineno-0-967" name="__codelineno-0-967"></a><span class="sd">    [0 1]</span>
 <a id="__codelineno-0-968" name="__codelineno-0-968"></a><span class="sd">    &gt;&gt;&gt; print(point2)</span>
 <a id="__codelineno-0-969" name="__codelineno-0-969"></a><span class="sd">    [4 5]</span>
 <a id="__codelineno-0-970" name="__codelineno-0-970"></a><span class="sd">    &gt;&gt;&gt; coords = (np.array([0, 2, 4, 8, 1, 5]), np.array([0, 2, 4, 8, 0, 5]))</span>
-<a id="__codelineno-0-971" name="__codelineno-0-971"></a><span class="sd">    &gt;&gt;&gt; point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max=&quot;min&quot;)</span>
+<a id="__codelineno-0-971" name="__codelineno-0-971"></a><span class="sd">    &gt;&gt;&gt; point1, point2 = get_min_or_max_euclidean_pair(coords, min_or_max="min")</span>
 <a id="__codelineno-0-972" name="__codelineno-0-972"></a><span class="sd">    &gt;&gt;&gt; print(point1)</span>
 <a id="__codelineno-0-973" name="__codelineno-0-973"></a><span class="sd">    [0 0]</span>
 <a id="__codelineno-0-974" name="__codelineno-0-974"></a><span class="sd">    &gt;&gt;&gt; print(point2)</span>
 <a id="__codelineno-0-975" name="__codelineno-0-975"></a><span class="sd">    [1 0]</span>
 <a id="__codelineno-0-976" name="__codelineno-0-976"></a>
-<a id="__codelineno-0-977" name="__codelineno-0-977"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-977" name="__codelineno-0-977"></a><span class="sd">    """</span>
 <a id="__codelineno-0-978" name="__codelineno-0-978"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coords</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">):</span>
 <a id="__codelineno-0-979" name="__codelineno-0-979"></a>        <span class="n">coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
 <a id="__codelineno-0-980" name="__codelineno-0-980"></a>    <span class="n">N</span> <span class="o">=</span> <span class="n">coords</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -8797,9 +8797,9 @@ the number of points on the line.</p>
 <a id="__codelineno-0-985" name="__codelineno-0-985"></a>    <span class="n">distances</span> <span class="o">=</span> <span class="n">pdist</span><span class="p">(</span><span class="n">coords</span><span class="p">)</span>
 <a id="__codelineno-0-986" name="__codelineno-0-986"></a>
 <a id="__codelineno-0-987" name="__codelineno-0-987"></a>    <span class="c1"># Step 2: Find the index of the maximum distance</span>
-<a id="__codelineno-0-988" name="__codelineno-0-988"></a>    <span class="k">if</span> <span class="n">min_or_max</span> <span class="o">==</span> <span class="s2">&quot;max&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-988" name="__codelineno-0-988"></a>    <span class="k">if</span> <span class="n">min_or_max</span> <span class="o">==</span> <span class="s2">"max"</span><span class="p">:</span>
 <a id="__codelineno-0-989" name="__codelineno-0-989"></a>        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
-<a id="__codelineno-0-990" name="__codelineno-0-990"></a>    <span class="k">elif</span> <span class="n">min_or_max</span> <span class="o">==</span> <span class="s2">&quot;min&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-990" name="__codelineno-0-990"></a>    <span class="k">elif</span> <span class="n">min_or_max</span> <span class="o">==</span> <span class="s2">"min"</span><span class="p">:</span>
 <a id="__codelineno-0-991" name="__codelineno-0-991"></a>        <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
 <a id="__codelineno-0-992" name="__codelineno-0-992"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-993" name="__codelineno-0-993"></a>        <span class="k">raise</span> <span class="ne">ValueError</span>
@@ -8962,7 +8962,7 @@ It can optionally reduce the image size for faster processing.</p>
 <span class="normal"><a href="#__codelineno-0-931">931</a></span>
 <span class="normal"><a href="#__codelineno-0-932">932</a></span>
 <span class="normal"><a href="#__codelineno-0-933">933</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-899" name="__codelineno-0-899"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_minimal_distance_between_2_shapes</span><span class="p">(</span><span class="n">image_of_2_shapes</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">increase_speed</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-<a id="__codelineno-0-900" name="__codelineno-0-900"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-900" name="__codelineno-0-900"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-901" name="__codelineno-0-901"></a><span class="sd">    Get the minimal distance between two shapes in an image.</span>
 <a id="__codelineno-0-902" name="__codelineno-0-902"></a>
 <a id="__codelineno-0-903" name="__codelineno-0-903"></a><span class="sd">    This function calculates the minimal Euclidean distance between</span>
@@ -8988,7 +8988,7 @@ It can optionally reduce the image size for faster processing.</p>
 <a id="__codelineno-0-923" name="__codelineno-0-923"></a><span class="sd">    &gt;&gt;&gt; distance = get_minimal_distance_between_2_shapes(image)</span>
 <a id="__codelineno-0-924" name="__codelineno-0-924"></a><span class="sd">    &gt;&gt;&gt; print(distance)</span>
 <a id="__codelineno-0-925" name="__codelineno-0-925"></a><span class="sd">    expected output</span>
-<a id="__codelineno-0-926" name="__codelineno-0-926"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-926" name="__codelineno-0-926"></a><span class="sd">    """</span>
 <a id="__codelineno-0-927" name="__codelineno-0-927"></a>    <span class="k">if</span> <span class="n">increase_speed</span><span class="p">:</span>
 <a id="__codelineno-0-928" name="__codelineno-0-928"></a>        <span class="n">shape1_idx</span><span class="p">,</span> <span class="n">shape2_idx</span> <span class="o">=</span> <span class="n">reduce_image_size_for_speed</span><span class="p">(</span><span class="n">image_of_2_shapes</span><span class="p">)</span>
 <a id="__codelineno-0-929" name="__codelineno-0-929"></a>    <span class="k">else</span><span class="p">:</span>
@@ -9212,7 +9212,7 @@ It can optionally reduce the image size for faster processing.</p>
 <span class="normal"><a href="#__codelineno-0-1629">1629</a></span>
 <span class="normal"><a href="#__codelineno-0-1630">1630</a></span>
 <span class="normal"><a href="#__codelineno-0-1631">1631</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1544" name="__codelineno-0-1544"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_quick_bounding_boxes</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">ordered_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">ordered_stats</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">,</span> <span class="n">NDArray</span><span class="p">]:</span>
-<a id="__codelineno-0-1545" name="__codelineno-0-1545"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1545" name="__codelineno-0-1545"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1546" name="__codelineno-0-1546"></a><span class="sd">    Compute bounding boxes for shapes in a binary image.</span>
 <a id="__codelineno-0-1547" name="__codelineno-0-1547"></a>
 <a id="__codelineno-0-1548" name="__codelineno-0-1548"></a><span class="sd">    Parameters</span>
@@ -9247,7 +9247,7 @@ It can optionally reduce the image size for faster processing.</p>
 <a id="__codelineno-0-1577" name="__codelineno-0-1577"></a><span class="sd">    [0 -1]</span>
 <a id="__codelineno-0-1578" name="__codelineno-0-1578"></a><span class="sd">    &gt;&gt;&gt; print(right)</span>
 <a id="__codelineno-0-1579" name="__codelineno-0-1579"></a><span class="sd">    [3 2]</span>
-<a id="__codelineno-0-1580" name="__codelineno-0-1580"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1580" name="__codelineno-0-1580"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1581" name="__codelineno-0-1581"></a>    <span class="n">shapes</span> <span class="o">=</span> <span class="n">get_contours</span><span class="p">(</span><span class="n">binary_image</span><span class="p">)</span>
 <a id="__codelineno-0-1582" name="__codelineno-0-1582"></a>    <span class="n">x_min</span> <span class="o">=</span> <span class="n">ordered_stats</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
 <a id="__codelineno-0-1583" name="__codelineno-0-1583"></a>    <span class="n">y_min</span> <span class="o">=</span> <span class="n">ordered_stats</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
@@ -9466,7 +9466,7 @@ by analyzing a binary video and mapping it to corresponding field values.</p>
 <span class="normal"><a href="#__codelineno-0-1347">1347</a></span>
 <span class="normal"><a href="#__codelineno-0-1348">1348</a></span>
 <span class="normal"><a href="#__codelineno-0-1349">1349</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1304" name="__codelineno-0-1304"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_radius_distance_against_time</span><span class="p">(</span><span class="n">binary_video</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">field</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">],</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-<a id="__codelineno-0-1305" name="__codelineno-0-1305"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1305" name="__codelineno-0-1305"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1306" name="__codelineno-0-1306"></a><span class="sd">    Calculate the radius distance against time from a binary video and field.</span>
 <a id="__codelineno-0-1307" name="__codelineno-0-1307"></a>
 <a id="__codelineno-0-1308" name="__codelineno-0-1308"></a><span class="sd">    This function computes the change in radius distances over time</span>
@@ -9493,7 +9493,7 @@ by analyzing a binary video and mapping it to corresponding field values.</p>
 <a id="__codelineno-0-1329" name="__codelineno-0-1329"></a><span class="sd">    &gt;&gt;&gt; binary_video = np.ones((10, 5, 5), dtype=np.uint8)</span>
 <a id="__codelineno-0-1330" name="__codelineno-0-1330"></a>
 <a id="__codelineno-0-1331" name="__codelineno-0-1331"></a><span class="sd">    &gt;&gt;&gt; distance_against_time, time_start, time_end = get_radius_distance_against_time(binary_video, field)</span>
-<a id="__codelineno-0-1332" name="__codelineno-0-1332"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1332" name="__codelineno-0-1332"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1333" name="__codelineno-0-1333"></a>    <span class="n">pixel_start</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">field</span><span class="p">[</span><span class="n">field</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
 <a id="__codelineno-0-1334" name="__codelineno-0-1334"></a>    <span class="n">pixel_end</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">field</span><span class="p">[</span><span class="n">field</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
 <a id="__codelineno-0-1335" name="__codelineno-0-1335"></a>    <span class="n">time_span</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">binary_video</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -9521,7 +9521,7 @@ by analyzing a binary video and mapping it to corresponding field values.</p>
 
 
 <h2 id="cellects.image.morphological_operations.image_borders" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="s1">&#39;rectangular&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="s1">'rectangular'</span><span class="p">)</span></code>
 
 </h2>
 
@@ -9604,7 +9604,7 @@ if "rectangular", a rectangular border.</p>
 
 
 <p><span class="doc-section-title">Examples:</span></p>
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">borders</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">&quot;rectangle&quot;</span><span class="p">)</span>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">borders</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">"rectangle"</span><span class="p">)</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">borders</span><span class="p">)</span>
 <a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="go">[[0 0 0]</span>
 <a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="go"> [0 1 0]</span>
@@ -9650,8 +9650,8 @@ if "rectangular", a rectangular border.</p>
 <span class="normal"><a href="#__codelineno-0-1298">1298</a></span>
 <span class="normal"><a href="#__codelineno-0-1299">1299</a></span>
 <span class="normal"><a href="#__codelineno-0-1300">1300</a></span>
-<span class="normal"><a href="#__codelineno-0-1301">1301</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1265" name="__codelineno-0-1265"></a><span class="k">def</span><span class="w"> </span><span class="nf">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">&quot;rectangular&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1266" name="__codelineno-0-1266"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="normal"><a href="#__codelineno-0-1301">1301</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1265" name="__codelineno-0-1265"></a><span class="k">def</span><span class="w"> </span><span class="nf">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">,</span> <span class="n">shape</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="s2">"rectangular"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
+<a id="__codelineno-0-1266" name="__codelineno-0-1266"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1267" name="__codelineno-0-1267"></a><span class="sd">    Create an image with borders, either rectangular or circular.</span>
 <a id="__codelineno-0-1268" name="__codelineno-0-1268"></a>
 <a id="__codelineno-0-1269" name="__codelineno-0-1269"></a><span class="sd">    Parameters</span>
@@ -9659,24 +9659,24 @@ if "rectangular", a rectangular border.</p>
 <a id="__codelineno-0-1271" name="__codelineno-0-1271"></a><span class="sd">    dimensions : tuple</span>
 <a id="__codelineno-0-1272" name="__codelineno-0-1272"></a><span class="sd">        The dimensions of the image (height, width).</span>
 <a id="__codelineno-0-1273" name="__codelineno-0-1273"></a><span class="sd">    shape : str, optional</span>
-<a id="__codelineno-0-1274" name="__codelineno-0-1274"></a><span class="sd">        The shape of the borders. Options are &quot;rectangular&quot; or &quot;circular&quot;.</span>
-<a id="__codelineno-0-1275" name="__codelineno-0-1275"></a><span class="sd">        Defaults to &quot;rectangular&quot;.</span>
+<a id="__codelineno-0-1274" name="__codelineno-0-1274"></a><span class="sd">        The shape of the borders. Options are "rectangular" or "circular".</span>
+<a id="__codelineno-0-1275" name="__codelineno-0-1275"></a><span class="sd">        Defaults to "rectangular".</span>
 <a id="__codelineno-0-1276" name="__codelineno-0-1276"></a>
 <a id="__codelineno-0-1277" name="__codelineno-0-1277"></a><span class="sd">    Returns</span>
 <a id="__codelineno-0-1278" name="__codelineno-0-1278"></a><span class="sd">    -------</span>
 <a id="__codelineno-0-1279" name="__codelineno-0-1279"></a><span class="sd">    out : ndarray of uint8</span>
-<a id="__codelineno-0-1280" name="__codelineno-0-1280"></a><span class="sd">        The image with borders. If the shape is &quot;circular&quot;, an ellipse border;</span>
-<a id="__codelineno-0-1281" name="__codelineno-0-1281"></a><span class="sd">        if &quot;rectangular&quot;, a rectangular border.</span>
+<a id="__codelineno-0-1280" name="__codelineno-0-1280"></a><span class="sd">        The image with borders. If the shape is "circular", an ellipse border;</span>
+<a id="__codelineno-0-1281" name="__codelineno-0-1281"></a><span class="sd">        if "rectangular", a rectangular border.</span>
 <a id="__codelineno-0-1282" name="__codelineno-0-1282"></a>
 <a id="__codelineno-0-1283" name="__codelineno-0-1283"></a><span class="sd">    Examples</span>
 <a id="__codelineno-0-1284" name="__codelineno-0-1284"></a><span class="sd">    --------</span>
-<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="sd">    &gt;&gt;&gt; borders = image_borders((3, 3), &quot;rectangle&quot;)</span>
+<a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="sd">    &gt;&gt;&gt; borders = image_borders((3, 3), "rectangle")</span>
 <a id="__codelineno-0-1286" name="__codelineno-0-1286"></a><span class="sd">    &gt;&gt;&gt; print(borders)</span>
 <a id="__codelineno-0-1287" name="__codelineno-0-1287"></a><span class="sd">    [[0 0 0]</span>
 <a id="__codelineno-0-1288" name="__codelineno-0-1288"></a><span class="sd">     [0 1 0]</span>
 <a id="__codelineno-0-1289" name="__codelineno-0-1289"></a><span class="sd">     [0 0 0]]</span>
-<a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-1291" name="__codelineno-0-1291"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">&quot;circle&quot;</span><span class="p">:</span>
+<a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">    """</span>
+<a id="__codelineno-0-1291" name="__codelineno-0-1291"></a>    <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s2">"circle"</span><span class="p">:</span>
 <a id="__codelineno-0-1292" name="__codelineno-0-1292"></a>        <span class="n">borders</span> <span class="o">=</span> <span class="n">create_ellipse</span><span class="p">(</span><span class="n">dimensions</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">dimensions</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 <a id="__codelineno-0-1293" name="__codelineno-0-1293"></a>        <span class="n">img_contours</span> <span class="o">=</span> <span class="n">image_borders</span><span class="p">(</span><span class="n">dimensions</span><span class="p">)</span>
 <a id="__codelineno-0-1294" name="__codelineno-0-1294"></a>        <span class="n">borders</span> <span class="o">=</span> <span class="n">borders</span> <span class="o">*</span> <span class="n">img_contours</span>
@@ -9865,7 +9865,7 @@ to the nearest zero value in the input image.</p>
 <span class="normal"><a href="#__codelineno-0-630">630</a></span>
 <span class="normal"><a href="#__codelineno-0-631">631</a></span>
 <span class="normal"><a href="#__codelineno-0-632">632</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-585" name="__codelineno-0-585"></a><span class="k">def</span><span class="w"> </span><span class="nf">inverted_distance_transform</span><span class="p">(</span><span class="n">original_shape</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">max_distance</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">with_erosion</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">]:</span>
-<a id="__codelineno-0-586" name="__codelineno-0-586"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-586" name="__codelineno-0-586"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-587" name="__codelineno-0-587"></a><span class="sd">    Calculate the distance transform around ones in a binary image, with optional erosion.</span>
 <a id="__codelineno-0-588" name="__codelineno-0-588"></a>
 <a id="__codelineno-0-589" name="__codelineno-0-589"></a><span class="sd">    This function computes the Euclidean distance transform where zero values</span>
@@ -9902,7 +9902,7 @@ to the nearest zero value in the input image.</p>
 <a id="__codelineno-0-620" name="__codelineno-0-620"></a><span class="sd">     [1.41421356 0.         0.         1.41421356]</span>
 <a id="__codelineno-0-621" name="__codelineno-0-621"></a><span class="sd">     [1.41421356 0.         0.         1.41421356]</span>
 <a id="__codelineno-0-622" name="__codelineno-0-622"></a><span class="sd">     [1.         1.41421356 1.41421356 1.        ]]</span>
-<a id="__codelineno-0-623" name="__codelineno-0-623"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-623" name="__codelineno-0-623"></a><span class="sd">    """</span>
 <a id="__codelineno-0-624" name="__codelineno-0-624"></a>    <span class="k">if</span> <span class="n">with_erosion</span><span class="p">:</span>
 <a id="__codelineno-0-625" name="__codelineno-0-625"></a>        <span class="n">original_shape</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">erode</span><span class="p">(</span><span class="n">original_shape</span><span class="p">,</span> <span class="n">cross_33</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="n">with_erosion</span><span class="p">,</span> <span class="n">borderType</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">BORDER_CONSTANT</span><span class="p">,</span> <span class="n">borderValue</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-626" name="__codelineno-0-626"></a>    <span class="n">gravity_field</span> <span class="o">=</span> <span class="n">distance_transform_edt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">original_shape</span><span class="p">)</span>
@@ -10031,12 +10031,12 @@ shape classification.</p>
 <span class="normal"><a href="#__codelineno-0-2001">2001</a></span>
 <span class="normal"><a href="#__codelineno-0-2002">2002</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1973" name="__codelineno-0-1973"></a><span class="nd">@njit</span><span class="p">()</span>
 <a id="__codelineno-0-1974" name="__codelineno-0-1974"></a><span class="k">def</span><span class="w"> </span><span class="nf">keep_largest_shape</span><span class="p">(</span><span class="n">indexed_shapes</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1975" name="__codelineno-0-1975"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1975" name="__codelineno-0-1975"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1976" name="__codelineno-0-1976"></a><span class="sd">    Keep the largest shape from an array of indexed shapes.</span>
 <a id="__codelineno-0-1977" name="__codelineno-0-1977"></a>
 <a id="__codelineno-0-1978" name="__codelineno-0-1978"></a><span class="sd">    This function identifies the most frequent non-zero shape in the input</span>
 <a id="__codelineno-0-1979" name="__codelineno-0-1979"></a><span class="sd">    array and returns a binary mask where elements matching this shape are set to 1,</span>
-<a id="__codelineno-0-1980" name="__codelineno-0-1980"></a><span class="sd">    and others are set to 0. The function uses NumPy&#39;s bincount to count occurrences</span>
+<a id="__codelineno-0-1980" name="__codelineno-0-1980"></a><span class="sd">    and others are set to 0. The function uses NumPy's bincount to count occurrences</span>
 <a id="__codelineno-0-1981" name="__codelineno-0-1981"></a><span class="sd">    of each shape and assumes that the first element (index 0) is not part of any</span>
 <a id="__codelineno-0-1982" name="__codelineno-0-1982"></a><span class="sd">    shape classification.</span>
 <a id="__codelineno-0-1983" name="__codelineno-0-1983"></a>
@@ -10055,7 +10055,7 @@ shape classification.</p>
 <a id="__codelineno-0-1996" name="__codelineno-0-1996"></a><span class="sd">    &gt;&gt;&gt; indexed_shapes = np.array([0, 2, 2, 3, 1], dtype=np.int32)</span>
 <a id="__codelineno-0-1997" name="__codelineno-0-1997"></a><span class="sd">    &gt;&gt;&gt; keep_largest_shape(indexed_shapes)</span>
 <a id="__codelineno-0-1998" name="__codelineno-0-1998"></a><span class="sd">    array([0, 1, 1, 0, 0], dtype=uint8)</span>
-<a id="__codelineno-0-1999" name="__codelineno-0-1999"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1999" name="__codelineno-0-1999"></a><span class="sd">    """</span>
 <a id="__codelineno-0-2000" name="__codelineno-0-2000"></a>    <span class="n">label_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">bincount</span><span class="p">(</span><span class="n">indexed_shapes</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
 <a id="__codelineno-0-2001" name="__codelineno-0-2001"></a>    <span class="n">largest_label</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">label_counts</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
 <a id="__codelineno-0-2002" name="__codelineno-0-2002"></a>    <span class="k">return</span> <span class="p">(</span><span class="n">indexed_shapes</span> <span class="o">==</span> <span class="n">largest_label</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
@@ -10190,7 +10190,7 @@ The function ensures the input is in uint8 format before processing.</p>
 <span class="normal"><a href="#__codelineno-0-2040">2040</a></span>
 <span class="normal"><a href="#__codelineno-0-2041">2041</a></span>
 <span class="normal"><a href="#__codelineno-0-2042">2042</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-2005" name="__codelineno-0-2005"></a><span class="k">def</span><span class="w"> </span><span class="nf">keep_one_connected_component</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span><span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-2006" name="__codelineno-0-2006"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-2006" name="__codelineno-0-2006"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-2007" name="__codelineno-0-2007"></a><span class="sd">    Keep only one connected component in a binary image.</span>
 <a id="__codelineno-0-2008" name="__codelineno-0-2008"></a>
 <a id="__codelineno-0-2009" name="__codelineno-0-2009"></a><span class="sd">    This function filters out all but the largest connected component in</span>
@@ -10219,7 +10219,7 @@ The function ensures the input is in uint8 format before processing.</p>
 <a id="__codelineno-0-2032" name="__codelineno-0-2032"></a><span class="sd">     [0 0 0 0 0]</span>
 <a id="__codelineno-0-2033" name="__codelineno-0-2033"></a><span class="sd">     [0 0 0 0 0]</span>
 <a id="__codelineno-0-2034" name="__codelineno-0-2034"></a><span class="sd">     [0 0 0 0 0]]</span>
-<a id="__codelineno-0-2035" name="__codelineno-0-2035"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-2035" name="__codelineno-0-2035"></a><span class="sd">    """</span>
 <a id="__codelineno-0-2036" name="__codelineno-0-2036"></a>    <span class="k">if</span> <span class="n">binary_image</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">:</span>
 <a id="__codelineno-0-2037" name="__codelineno-0-2037"></a>        <span class="n">binary_image</span> <span class="o">=</span> <span class="n">binary_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-2038" name="__codelineno-0-2038"></a>    <span class="n">num_labels</span><span class="p">,</span> <span class="n">sh</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponents</span><span class="p">(</span><span class="n">binary_image</span><span class="p">)</span>
@@ -10388,7 +10388,7 @@ or None if no such component is found.</p>
 <span class="normal"><a href="#__codelineno-0-1968">1968</a></span>
 <span class="normal"><a href="#__codelineno-0-1969">1969</a></span>
 <span class="normal"><a href="#__codelineno-0-1970">1970</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1922" name="__codelineno-0-1922"></a><span class="k">def</span><span class="w"> </span><span class="nf">keep_shape_connected_with_ref</span><span class="p">(</span><span class="n">all_shapes</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">reference_shape</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
-<a id="__codelineno-0-1923" name="__codelineno-0-1923"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1923" name="__codelineno-0-1923"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1924" name="__codelineno-0-1924"></a><span class="sd">    Keep shape connected with reference.</span>
 <a id="__codelineno-0-1925" name="__codelineno-0-1925"></a>
 <a id="__codelineno-0-1926" name="__codelineno-0-1926"></a><span class="sd">    This function analyzes the connected components of a binary image represented by `all_shapes`</span>
@@ -10422,7 +10422,7 @@ or None if no such component is found.</p>
 <a id="__codelineno-0-1954" name="__codelineno-0-1954"></a><span class="sd">     [0 0 0 0 0]</span>
 <a id="__codelineno-0-1955" name="__codelineno-0-1955"></a><span class="sd">     [0 0 0 1 0]</span>
 <a id="__codelineno-0-1956" name="__codelineno-0-1956"></a><span class="sd">     [0 0 0 0 0]]</span>
-<a id="__codelineno-0-1957" name="__codelineno-0-1957"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1957" name="__codelineno-0-1957"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1958" name="__codelineno-0-1958"></a>    <span class="n">number</span><span class="p">,</span> <span class="n">order</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponents</span><span class="p">(</span><span class="n">all_shapes</span><span class="p">,</span> <span class="n">ltype</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">CV_16U</span><span class="p">)</span>
 <a id="__codelineno-0-1959" name="__codelineno-0-1959"></a>    <span class="n">expanded_shape</span> <span class="o">=</span> <span class="kc">None</span>
 <a id="__codelineno-0-1960" name="__codelineno-0-1960"></a>    <span class="k">if</span> <span class="n">number</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
@@ -10670,7 +10670,7 @@ contour extraction if specified.</p>
 <span class="normal"><a href="#__codelineno-0-1845">1845</a></span>
 <span class="normal"><a href="#__codelineno-0-1846">1846</a></span>
 <span class="normal"><a href="#__codelineno-0-1847">1847</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1777" name="__codelineno-0-1777"></a><span class="k">def</span><span class="w"> </span><span class="nf">prepare_box_counting</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">min_im_side</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">min_mesh_side</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">zoom_step</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">contours</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]]:</span>
-<a id="__codelineno-0-1778" name="__codelineno-0-1778"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Prepare box counting parameters for image analysis.</span>
+<a id="__codelineno-0-1778" name="__codelineno-0-1778"></a><span class="w">    </span><span class="sd">"""Prepare box counting parameters for image analysis.</span>
 <a id="__codelineno-0-1779" name="__codelineno-0-1779"></a>
 <a id="__codelineno-0-1780" name="__codelineno-0-1780"></a><span class="sd">    Prepares parameters for box counting method based on binary</span>
 <a id="__codelineno-0-1781" name="__codelineno-0-1781"></a><span class="sd">    image input. Adjusts image size, computes side lengths, and applies</span>
@@ -10712,7 +10712,7 @@ contour extraction if specified.</p>
 <a id="__codelineno-0-1817" name="__codelineno-0-1817"></a><span class="sd">     [0 0 0 1 1 1 0]</span>
 <a id="__codelineno-0-1818" name="__codelineno-0-1818"></a><span class="sd">     [0 0 0 0 0 0 0]]</span>
 <a id="__codelineno-0-1819" name="__codelineno-0-1819"></a><span class="sd">    [4 2]</span>
-<a id="__codelineno-0-1820" name="__codelineno-0-1820"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1820" name="__codelineno-0-1820"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1821" name="__codelineno-0-1821"></a>    <span class="n">side_lengths</span> <span class="o">=</span> <span class="kc">None</span>
 <a id="__codelineno-0-1822" name="__codelineno-0-1822"></a>    <span class="n">zoomed_binary</span> <span class="o">=</span> <span class="n">binary_image</span>
 <a id="__codelineno-0-1823" name="__codelineno-0-1823"></a>    <span class="n">binary_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">binary_image</span><span class="p">)</span>
@@ -10934,7 +10934,7 @@ Default is False.</p>
 <span class="normal"><a href="#__codelineno-0-1142">1142</a></span>
 <span class="normal"><a href="#__codelineno-0-1143">1143</a></span>
 <span class="normal"><a href="#__codelineno-0-1144">1144</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-1075" name="__codelineno-0-1075"></a><span class="k">def</span><span class="w"> </span><span class="nf">rank_from_top_to_bottom_from_left_to_right</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">y_boundaries</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="n">get_ordered_image</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">:</span>
-<a id="__codelineno-0-1076" name="__codelineno-0-1076"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-1076" name="__codelineno-0-1076"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-1077" name="__codelineno-0-1077"></a><span class="sd">    Rank components in a binary image from top to bottom and from left to right.</span>
 <a id="__codelineno-0-1078" name="__codelineno-0-1078"></a>
 <a id="__codelineno-0-1079" name="__codelineno-0-1079"></a><span class="sd">    This function processes a binary image to rank its components based on</span>
@@ -10968,7 +10968,7 @@ Default is False.</p>
 <a id="__codelineno-0-1107" name="__codelineno-0-1107"></a><span class="sd">            Statistics for the ordered components.</span>
 <a id="__codelineno-0-1108" name="__codelineno-0-1108"></a><span class="sd">        - ordered_centroids : ndarray of float64</span>
 <a id="__codelineno-0-1109" name="__codelineno-0-1109"></a><span class="sd">            Centroids for the ordered components.</span>
-<a id="__codelineno-0-1110" name="__codelineno-0-1110"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-1110" name="__codelineno-0-1110"></a><span class="sd">    """</span>
 <a id="__codelineno-0-1111" name="__codelineno-0-1111"></a>    <span class="n">nb_components</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">centroids</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponentsWithStats</span><span class="p">(</span><span class="n">binary_image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>
 <a id="__codelineno-0-1112" name="__codelineno-0-1112"></a>                                                                               <span class="n">connectivity</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <a id="__codelineno-0-1113" name="__codelineno-0-1113"></a>
@@ -11155,7 +11155,7 @@ those that contain both shapes until a minimal size is reached.</p>
 <span class="normal"><a href="#__codelineno-0-895">895</a></span>
 <span class="normal"><a href="#__codelineno-0-896">896</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-834" name="__codelineno-0-834"></a><span class="nd">@njit</span><span class="p">()</span>
 <a id="__codelineno-0-835" name="__codelineno-0-835"></a><span class="k">def</span><span class="w"> </span><span class="nf">reduce_image_size_for_speed</span><span class="p">(</span><span class="n">image_of_2_shapes</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Tuple</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">]:</span>
-<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-836" name="__codelineno-0-836"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-837" name="__codelineno-0-837"></a><span class="sd">    Reduces the size of an image containing two shapes for faster processing.</span>
 <a id="__codelineno-0-838" name="__codelineno-0-838"></a>
 <a id="__codelineno-0-839" name="__codelineno-0-839"></a><span class="sd">    The function iteratively divides the image into quadrants and keeps only</span>
@@ -11179,7 +11179,7 @@ those that contain both shapes until a minimal size is reached.</p>
 <a id="__codelineno-0-857" name="__codelineno-0-857"></a><span class="sd">    &gt;&gt;&gt; shape1_idx, shape2_idx = reduce_image_size_for_speed(image_of_2_shapes)</span>
 <a id="__codelineno-0-858" name="__codelineno-0-858"></a><span class="sd">    &gt;&gt;&gt; print(shape1_idx)</span>
 <a id="__codelineno-0-859" name="__codelineno-0-859"></a><span class="sd">    (array([1, 1, 2, 2]), array([1, 2, 1, 2]))</span>
-<a id="__codelineno-0-860" name="__codelineno-0-860"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-860" name="__codelineno-0-860"></a><span class="sd">    """</span>
 <a id="__codelineno-0-861" name="__codelineno-0-861"></a>    <span class="n">sub_image</span> <span class="o">=</span> <span class="n">image_of_2_shapes</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 <a id="__codelineno-0-862" name="__codelineno-0-862"></a>    <span class="n">y_size</span><span class="p">,</span> <span class="n">x_size</span> <span class="o">=</span> <span class="n">sub_image</span><span class="o">.</span><span class="n">shape</span>
 <a id="__codelineno-0-863" name="__codelineno-0-863"></a>    <span class="n">images_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">sub_image</span><span class="p">]</span>
@@ -11390,7 +11390,7 @@ max distance or until no further expansion is needed.</p>
 <span class="normal"><a href="#__codelineno-0-580">580</a></span>
 <span class="normal"><a href="#__codelineno-0-581">581</a></span>
 <span class="normal"><a href="#__codelineno-0-582">582</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-533" name="__codelineno-0-533"></a><span class="k">def</span><span class="w"> </span><span class="nf">rounded_inverted_distance_transform</span><span class="p">(</span><span class="n">original_shape</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">],</span> <span class="n">max_distance</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">with_erosion</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint32</span><span class="p">]:</span>
-<a id="__codelineno-0-534" name="__codelineno-0-534"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-534" name="__codelineno-0-534"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-535" name="__codelineno-0-535"></a><span class="sd">    Perform rounded inverted distance transform on a binary image.</span>
 <a id="__codelineno-0-536" name="__codelineno-0-536"></a>
 <a id="__codelineno-0-537" name="__codelineno-0-537"></a><span class="sd">    This function computes the inverse of the Euclidean distance transform,</span>
@@ -11422,7 +11422,7 @@ max distance or until no further expansion is needed.</p>
 <a id="__codelineno-0-563" name="__codelineno-0-563"></a><span class="sd">     [2 0 0 2]</span>
 <a id="__codelineno-0-564" name="__codelineno-0-564"></a><span class="sd">     [2 0 0 2]</span>
 <a id="__codelineno-0-565" name="__codelineno-0-565"></a><span class="sd">     [1 2 2 1]]</span>
-<a id="__codelineno-0-566" name="__codelineno-0-566"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-566" name="__codelineno-0-566"></a><span class="sd">    """</span>
 <a id="__codelineno-0-567" name="__codelineno-0-567"></a>    <span class="k">if</span> <span class="n">with_erosion</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
 <a id="__codelineno-0-568" name="__codelineno-0-568"></a>        <span class="n">original_shape</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">erode</span><span class="p">(</span><span class="n">original_shape</span><span class="p">,</span> <span class="n">cross_33</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="n">with_erosion</span><span class="p">,</span> <span class="n">borderType</span><span class="o">=</span><span class="n">cv2</span><span class="o">.</span><span class="n">BORDER_CONSTANT</span><span class="p">,</span> <span class="n">borderValue</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 <a id="__codelineno-0-569" name="__codelineno-0-569"></a>    <span class="n">expand</span> <span class="o">=</span> <span class="n">original_shape</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -11646,7 +11646,7 @@ sample number or applies additional filtering if necessary.</p>
 <span class="normal"><a href="#__codelineno-0-528">528</a></span>
 <span class="normal"><a href="#__codelineno-0-529">529</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-366" name="__codelineno-0-366"></a><span class="k">def</span><span class="w"> </span><span class="nf">shape_selection</span><span class="p">(</span><span class="n">binary_image</span><span class="p">:</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">several_blob_per_arena</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">true_shape_number</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
 <a id="__codelineno-0-367" name="__codelineno-0-367"></a>                    <span class="n">horizontal_size</span><span class="p">:</span> <span class="nb">int</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">spot_shape</span><span class="p">:</span> <span class="nb">str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bio_mask</span><span class="p">:</span><span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">back_mask</span><span class="p">:</span><span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-368" name="__codelineno-0-368"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-369" name="__codelineno-0-369"></a><span class="sd">    Process the binary image to identify and validate shapes.</span>
 <a id="__codelineno-0-370" name="__codelineno-0-370"></a>
 <a id="__codelineno-0-371" name="__codelineno-0-371"></a><span class="sd">    This method processes a binary image to detect connected components,</span>
@@ -11668,14 +11668,14 @@ sample number or applies additional filtering if necessary.</p>
 <a id="__codelineno-0-387" name="__codelineno-0-387"></a>
 <a id="__codelineno-0-388" name="__codelineno-0-388"></a><span class="sd">    Args:</span>
 <a id="__codelineno-0-389" name="__codelineno-0-389"></a><span class="sd">        horizontal_size (int): The expected horizontal size of the stains to use as a reference.</span>
-<a id="__codelineno-0-390" name="__codelineno-0-390"></a><span class="sd">        shape (str): The shape type (&#39;circle&#39; or &#39;rectangle&#39;)</span>
+<a id="__codelineno-0-390" name="__codelineno-0-390"></a><span class="sd">        shape (str): The shape type ('circle' or 'rectangle')</span>
 <a id="__codelineno-0-391" name="__codelineno-0-391"></a><span class="sd">            that the stains should match. Other shapes are not currently supported.</span>
 <a id="__codelineno-0-392" name="__codelineno-0-392"></a><span class="sd">        confint (float): The confidence interval as a decimal</span>
 <a id="__codelineno-0-393" name="__codelineno-0-393"></a><span class="sd">            representing the percentage within which the size of the stains should fall.</span>
 <a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="sd">        do_not_delete (NDArray, optional): An array of stain indices that should not be deleted.</span>
 <a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="sd">            Default is None.</span>
 <a id="__codelineno-0-396" name="__codelineno-0-396"></a>
-<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">    """</span>
 <a id="__codelineno-0-398" name="__codelineno-0-398"></a>
 <a id="__codelineno-0-399" name="__codelineno-0-399"></a>    <span class="n">shape_number</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">centroids</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponentsWithStats</span><span class="p">(</span><span class="n">binary_image</span><span class="p">,</span> <span class="n">connectivity</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <a id="__codelineno-0-400" name="__codelineno-0-400"></a>    <span class="n">do_not_delete</span> <span class="o">=</span> <span class="kc">None</span>
@@ -11697,7 +11697,7 @@ sample number or applies additional filtering if necessary.</p>
 <a id="__codelineno-0-416" name="__codelineno-0-416"></a>            <span class="n">c_spot_shapes</span> <span class="o">=</span> <span class="n">spot_shapes</span>
 <a id="__codelineno-0-417" name="__codelineno-0-417"></a>            <span class="n">c_spot_sizes</span> <span class="o">=</span> <span class="n">spot_sizes</span>
 <a id="__codelineno-0-418" name="__codelineno-0-418"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-419" name="__codelineno-0-419"></a>            <span class="k">if</span> <span class="n">spot_shape</span> <span class="o">==</span> <span class="s1">&#39;circle&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-419" name="__codelineno-0-419"></a>            <span class="k">if</span> <span class="n">spot_shape</span> <span class="o">==</span> <span class="s1">'circle'</span><span class="p">:</span>
 <a id="__codelineno-0-420" name="__codelineno-0-420"></a>                <span class="n">c_spot_shapes</span> <span class="o">=</span> <span class="n">spot_shapes</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span>
 <a id="__codelineno-0-421" name="__codelineno-0-421"></a>            <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-422" name="__codelineno-0-422"></a>                <span class="n">c_spot_shapes</span> <span class="o">=</span> <span class="n">spot_shapes</span><span class="p">[::</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
@@ -11732,12 +11732,12 @@ sample number or applies additional filtering if necessary.</p>
 <a id="__codelineno-0-451" name="__codelineno-0-451"></a>            <span class="n">nb_components</span><span class="p">,</span> <span class="n">ordered_shapes</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">centroids</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">connectedComponentsWithStats</span><span class="p">(</span><span class="n">validated_shapes</span><span class="p">,</span>
 <a id="__codelineno-0-452" name="__codelineno-0-452"></a>                                                                                               <span class="n">connectivity</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <a id="__codelineno-0-453" name="__codelineno-0-453"></a>            <span class="k">if</span> <span class="n">nb_components</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-<a id="__codelineno-0-454" name="__codelineno-0-454"></a>                <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">&#39;circle&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-454" name="__codelineno-0-454"></a>                <span class="k">if</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">'circle'</span><span class="p">:</span>
 <a id="__codelineno-0-455" name="__codelineno-0-455"></a>                    <span class="n">surf_interval</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">horizontal_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">confint</span><span class="p">),</span>
 <a id="__codelineno-0-456" name="__codelineno-0-456"></a>                                     <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">horizontal_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">confint</span><span class="p">)]</span>
 <a id="__codelineno-0-457" name="__codelineno-0-457"></a>                    <span class="n">cc_to_remove</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span>
 <a id="__codelineno-0-458" name="__codelineno-0-458"></a>                        <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">stats</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">surf_interval</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stats</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">surf_interval</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-<a id="__codelineno-0-459" name="__codelineno-0-459"></a>                <span class="k">elif</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">&#39;rectangle&#39;</span><span class="p">:</span>
+<a id="__codelineno-0-459" name="__codelineno-0-459"></a>                <span class="k">elif</span> <span class="n">shape</span> <span class="o">==</span> <span class="s1">'rectangle'</span><span class="p">:</span>
 <a id="__codelineno-0-460" name="__codelineno-0-460"></a>                    <span class="c1"># If the smaller side is the horizontal one, use the user provided horizontal side</span>
 <a id="__codelineno-0-461" name="__codelineno-0-461"></a>                    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">2</span><span class="p">]),</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">stats</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="mi">3</span><span class="p">])))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
 <a id="__codelineno-0-462" name="__codelineno-0-462"></a>                        <span class="n">surf_interval</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">horizontal_size</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">confint</span><span class="p">),</span>
@@ -11751,7 +11751,7 @@ sample number or applies additional filtering if necessary.</p>
 <a id="__codelineno-0-470" name="__codelineno-0-470"></a>                        <span class="n">cc_to_remove</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argwhere</span><span class="p">(</span>
 <a id="__codelineno-0-471" name="__codelineno-0-471"></a>                            <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="p">(</span><span class="n">stats</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">surf_interval</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stats</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">surf_interval</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
 <a id="__codelineno-0-472" name="__codelineno-0-472"></a>                <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-473" name="__codelineno-0-473"></a>                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Original blob shape not well written&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-473" name="__codelineno-0-473"></a>                    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Original blob shape not well written"</span><span class="p">)</span>
 <a id="__codelineno-0-474" name="__codelineno-0-474"></a>
 <a id="__codelineno-0-475" name="__codelineno-0-475"></a>                <span class="k">if</span> <span class="n">do_not_delete</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 <a id="__codelineno-0-476" name="__codelineno-0-476"></a>                    <span class="n">ordered_shapes</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">ordered_shapes</span><span class="p">,</span> <span class="n">cc_to_remove</span><span class="p">)]</span> <span class="o">=</span> <span class="mi">0</span>

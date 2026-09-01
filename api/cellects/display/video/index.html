@@ -3151,7 +3151,7 @@ OpenCV dependencies are met.</p>
 <span class="normal"><a href="#__codelineno-0-61">61</a></span>
 <span class="normal"><a href="#__codelineno-0-62">62</a></span>
 <span class="normal"><a href="#__codelineno-0-63">63</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-10" name="__codelineno-0-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">movie</span><span class="p">(</span><span class="n">video</span><span class="p">,</span> <span class="n">increase_contrast</span><span class="p">:</span> <span class="nb">bool</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-12" name="__codelineno-0-12"></a><span class="sd">    Summary</span>
 <a id="__codelineno-0-13" name="__codelineno-0-13"></a><span class="sd">    -------</span>
 <a id="__codelineno-0-14" name="__codelineno-0-14"></a><span class="sd">    Processes a video to display each frame with optional contrast increase and resizing.</span>
@@ -3181,7 +3181,7 @@ OpenCV dependencies are met.</p>
 <a id="__codelineno-0-38" name="__codelineno-0-38"></a>
 <a id="__codelineno-0-39" name="__codelineno-0-39"></a><span class="sd">    Notes</span>
 <a id="__codelineno-0-40" name="__codelineno-0-40"></a><span class="sd">    -----</span>
-<a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">    This function uses OpenCV&#39;s `imshow` to display each frame. Ensure that the required</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41"></a><span class="sd">    This function uses OpenCV's `imshow` to display each frame. Ensure that the required</span>
 <a id="__codelineno-0-42" name="__codelineno-0-42"></a><span class="sd">    OpenCV dependencies are met.</span>
 <a id="__codelineno-0-43" name="__codelineno-0-43"></a>
 <a id="__codelineno-0-44" name="__codelineno-0-44"></a><span class="sd">    Examples</span>
@@ -3193,15 +3193,15 @@ OpenCV dependencies are met.</p>
 <a id="__codelineno-0-50" name="__codelineno-0-50"></a><span class="sd">    &gt;&gt;&gt; movie(video, increase_contrast=False)</span>
 <a id="__codelineno-0-51" name="__codelineno-0-51"></a><span class="sd">    Processes and displays a video without increasing contrast.</span>
 <a id="__codelineno-0-52" name="__codelineno-0-52"></a>
-<a id="__codelineno-0-53" name="__codelineno-0-53"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53"></a><span class="sd">    """</span>
 <a id="__codelineno-0-54" name="__codelineno-0-54"></a>    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">video</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
 <a id="__codelineno-0-55" name="__codelineno-0-55"></a>        <span class="n">image</span> <span class="o">=</span> <span class="n">video</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
 <a id="__codelineno-0-56" name="__codelineno-0-56"></a>        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">image</span><span class="p">):</span>
 <a id="__codelineno-0-57" name="__codelineno-0-57"></a>            <span class="k">if</span> <span class="n">increase_contrast</span><span class="p">:</span>
 <a id="__codelineno-0-58" name="__codelineno-0-58"></a>                <span class="n">image</span> <span class="o">=</span> <span class="n">bracket_to_uint8_image_contrast</span><span class="p">(</span><span class="n">image</span><span class="p">)</span>
 <a id="__codelineno-0-59" name="__codelineno-0-59"></a>            <span class="n">final_img</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="mi">500</span><span class="p">))</span>
-<a id="__codelineno-0-60" name="__codelineno-0-60"></a>            <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;Motion analysis&#39;</span><span class="p">,</span> <span class="n">final_img</span><span class="p">)</span>
-<a id="__codelineno-0-61" name="__codelineno-0-61"></a>            <span class="k">if</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">):</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60"></a>            <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">'Motion analysis'</span><span class="p">,</span> <span class="n">final_img</span><span class="p">)</span>
+<a id="__codelineno-0-61" name="__codelineno-0-61"></a>            <span class="k">if</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xFF</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">'q'</span><span class="p">):</span>
 <a id="__codelineno-0-62" name="__codelineno-0-62"></a>                <span class="k">break</span>
 <a id="__codelineno-0-63" name="__codelineno-0-63"></a>    <span class="n">cv2</span><span class="o">.</span><span class="n">destroyAllWindows</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
