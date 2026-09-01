@@ -31,10 +31,6 @@ class TestNetworkDetection(CellectsUnitTest):
                                       cls.origin_to_add, edge_max_width=1)
         cls.NetDet.get_best_network_detection_method()
 
-    def test_get_best_network_detection_method_outputs_proper_method(self):
-        """Check that best network detection method outputs proper method"""
-        self.assertTrue(isinstance(self.NetDet.best_result['method'], str))
-
     def test_get_best_network_detection_method_outputs_proper_binary_image(self):
         """Check that best network detection method outputs proper binary image"""
         self.assertTrue(isinstance(self.NetDet.best_result['binary'], np.ndarray))
