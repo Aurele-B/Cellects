@@ -132,9 +132,23 @@ class InsertImage(QtWidgets.QLabel):
         self.base_scale = 1.0
         self.pan_x = 0
         self.pan_y = 0
-
+        self.pixmap = None
         self.setMinimumWidth(200)
         self.setMinimumHeight(200)
+
+        self.bar_size = 16
+        self.vbar = QtWidgets.QScrollBar(QtCore.Qt.Vertical, self)
+        self.hbar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal, self)
+
+        self.vbar.setFixedWidth(self.bar_size)
+        self.hbar.setFixedHeight(self.bar_size)
+
+        self.vbar.valueChanged.connect(self._vbar_changed)
+        self.hbar.valueChanged.connect(self._hbar_changed)
+
+        self._layout_bars()
+        self._sync_scrollbars()
+
 
         self.timer = QtCore.QTimer(self)
         self.timer.setSingleShot(True)
@@ -172,23 +186,174 @@ class InsertImage(QtWidgets.QLabel):
         self.max_size = (int(geom.width() * 0.8), int(geom.height() * 0.8))
         self._schedule_update()
 
+    def _has_image(self):
+        return self.image is not None and not self.image.isNull()
+
+    def _view_size(self):
+        """
+        Visible image area, excluding the scrollbar strips.
+        """
+        w = max(0, self.width() - self.bar_size)
+        h = max(0, self.height() - self.bar_size)
+        return w, h
+
+    def _layout_bars(self):
+        w = max(0, self.width())
+        h = max(0, self.height())
+        b = self.bar_size
+
+        self.vbar.setGeometry(max(0, w - b), 0, b, max(0, h - b))
+        self.hbar.setGeometry(0, max(0, h - b), max(0, w - b), b)
+
+    def _clamp_pan(self):
+        """
+        Keep pan_x/pan_y within a useful range.
+
+        If the displayed image is smaller than the view, center it.
+        If it is larger, allow panning exactly far enough to see the edges.
+        """
+        if not self._has_image():
+            self.pan_x = 0
+            self.pan_y = 0
+            return
+
+        scale = self.base_scale * self.zoom
+        if scale <= 0:
+            self.pan_x = 0
+            self.pan_y = 0
+            return
+
+        vw, vh = self._view_size()
+
+        dw = self.image.width() * scale
+        dh = self.image.height() * scale
+
+        if dw > vw:
+            half = max(0.0, (dw - vw) / 2.0)
+            self.pan_x = float(np.clip(self.pan_x, -half, half))
+        else:
+            self.pan_x = 0
+
+        if dh > vh:
+            half = max(0.0, (dh - vh) / 2.0)
+            self.pan_y = float(np.clip(self.pan_y, -half, half))
+        else:
+            self.pan_y = 0
+
+    def _sync_scrollbars(self):
+        """
+        Update scrollbar range/value from current zoom and pan.
+        """
+        if not self._has_image():
+            self.hbar.setRange(0, 0)
+            self.hbar.setValue(0)
+            self.vbar.setRange(0, 0)
+            self.vbar.setValue(0)
+
+            self.hbar.setEnabled(False)
+            self.vbar.setEnabled(False)
+            return
+
+        scale = self.base_scale * self.zoom
+        vw, vh = self._view_size()
+
+        dw = self.image.width() * scale
+        dh = self.image.height() * scale
+
+        max_x = max(0, int(dw - vw))
+        max_y = max(0, int(dh - vh))
+
+        self.hbar.setRange(0, max_x)
+        self.vbar.setRange(0, max_y)
+
+        self.hbar.setSingleStep(max(1, int(dw * 0.02)))
+        self.vbar.setSingleStep(max(1, int(dh * 0.02)))
+
+        self.hbar.setPageStep(max(1, int(vw)))
+        self.vbar.setPageStep(max(1, int(vh)))
+
+        self.hbar.setEnabled(max_x > 0)
+        self.vbar.setEnabled(max_y > 0)
+
+        self.hbar.blockSignals(True)
+        self.vbar.blockSignals(True)
+
+        if max_x > 0:
+            value_x = (dw - vw) / 2.0 - self.pan_x
+            self.hbar.setValue(int(np.clip(value_x, 0, max_x)))
+        else:
+            self.hbar.setValue(0)
+
+        if max_y > 0:
+            value_y = (dh - vh) / 2.0 - self.pan_y
+            self.vbar.setValue(int(np.clip(value_y, 0, max_y)))
+        else:
+            self.vbar.setValue(0)
+
+        self.hbar.blockSignals(False)
+        self.vbar.blockSignals(False)
+
+    def _hbar_changed(self, value):
+        if not self._has_image():
+            return
+
+        scale = self.base_scale * self.zoom
+        vw, vh = self._view_size()
+
+        dw = self.image.width() * scale
+        max_x = max(0, int(dw - vw))
+
+        if max_x > 0:
+            self.pan_x = (dw - vw) / 2.0 - value
+        else:
+            self.pan_x = 0
+
+        self._clamp_pan()
+        self.update()
+
+    def _vbar_changed(self, value):
+        if not self._has_image():
+            return
+
+        scale = self.base_scale * self.zoom
+        vw, vh = self._view_size()
+
+        dh = self.image.height() * scale
+        max_y = max(0, int(dh - vh))
+
+        if max_y > 0:
+            self.pan_y = (dh - vh) / 2.0 - value
+        else:
+            self.pan_y = 0
+
+        self._clamp_pan()
+        self.update()
+
     def _schedule_update(self):
         self.timer.start(20)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        self._layout_bars()
         self._schedule_update()
 
     def _update_scaled(self):
-        if not self.image:
+        if not self._has_image():
             return
+
+        vw, vh = self._view_size()
+
+        if vw <= 0 or vh <= 0:
+            return
+
         sx = self.width() / self.image.width()
         sy = self.height() / self.image.height()
         self.base_scale = min(sx, sy)
+        self._sync_scrollbars()
         self.update()
 
     def paintEvent(self, event):
-        if not self.image:
+        if not self._has_image():
             return
 
         painter = QPainter(self)
@@ -200,27 +365,40 @@ class InsertImage(QtWidgets.QLabel):
         )
 
         scale = self.base_scale * self.zoom
+        if scale <= 0:
+            return
         draw_w = self.image.width() * scale
         draw_h = self.image.height() * scale
 
-        x = (self.width() - draw_w) / 2
-        y = (self.height() - draw_h) / 2
+        vw, vh = self._view_size()
+
+        x = (vw - draw_w) / 2
+        y = (vh - draw_h) / 2
         painter.translate(x + self.pan_x, y + self.pan_y)
         painter.scale(scale, scale)
-        painter.drawPixmap(0, 0, self.pixmap)
+        if self.pixmap is not None and not self.pixmap.isNull():
+            painter.drawPixmap(0, 0, self.pixmap)
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._layout_bars()
         self.update_screen_limits()
 
     def image_coordinates(self, pos):
-        if self.image is None:
+        if not self._has_image():
+            return None
+
+        if self.image.width() <= 0 or self.image.height() <= 0:
             return None
 
         scale = self.base_scale * self.zoom
+        if scale <= 0:
+            return None
 
-        x0 = self.width() / 2 + self.pan_x - (self.image.width() * scale) / 2
-        y0 = self.height() / 2 + self.pan_y - (self.image.height() * scale) / 2
+        vw, vh = self._view_size()
+
+        x0 = vw / 2 + self.pan_x - (self.image.width() * scale) / 2
+        y0 = vh / 2 + self.pan_y - (self.image.height() * scale) / 2
 
         ix = (pos.x() - x0) / scale
         iy = (pos.y() - y0) / scale
@@ -243,6 +421,10 @@ class InsertImage(QtWidgets.QLabel):
             self.pan_x += delta.x()
             self.pan_y += delta.y()
             self.last_mouse = event.position()
+
+            self._clamp_pan()
+            self._sync_scrollbars()
+
             self.update()
         elif self.track_mouse:
             self.parent.mouse_moves(self, event)
@@ -254,24 +436,54 @@ class InsertImage(QtWidgets.QLabel):
             self.parent.mouse_releases(self, event)
 
     def wheelEvent(self, event):
-        old_zoom = self.zoom
+        if not self._has_image():
+            return
 
-        factor = 1.15 if event.angleDelta().y() > 0 else 1 / 1.15
-        self.zoom = np.clip(self.zoom * factor, 0.05, 50.0)
+        # If pinch is reported as Ctrl + wheel, use that for zoom.
+        # Normal wheel is treated as two-finger parallel scrolling/panning.
+        if event.modifiers() & QtCore.Qt.ControlModifier:
+            self._wheel_zoom(event)
+        else:
+            self._wheel_pan(event)
+
+    def _wheel_zoom(self, event):
+        dy = event.angleDelta().y()
+        if dy == 0:
+            return
+
+        old_zoom = self.zoom
+        factor = 1.15 if dy > 0 else 1 / 1.15
+
+        self.zoom = float(np.clip(self.zoom * factor, 0.05, 50.0))
 
         mouse = event.position()
+        vw, vh = self._view_size()
 
         scale_old = self.base_scale * old_zoom
         scale_new = self.base_scale * self.zoom
 
-        # convert mouse to image space BEFORE zoom
-        ix = (mouse.x() - self.width() / 2 - self.pan_x) / scale_old
-        iy = (mouse.y() - self.height() / 2 - self.pan_y) / scale_old
+        if scale_old <= 0 or scale_new <= 0:
+            self._sync_scrollbars()
+            self.update()
+            return
 
-        # recompute pan so point stays fixed
-        self.pan_x = mouse.x() - self.width() / 2 - ix * scale_new
-        self.pan_y = mouse.y() - self.height() / 2 - iy * scale_new
+        ix = (mouse.x() - vw / 2 - self.pan_x) / scale_old
+        iy = (mouse.y() - vh / 2 - self.pan_y) / scale_old
 
+        self.pan_x = mouse.x() - vw / 2 - ix * scale_new
+        self.pan_y = mouse.y() - vh / 2 - iy * scale_new
+
+        self._clamp_pan()
+        self._sync_scrollbars()
+        self.update()
+
+    def _wheel_pan(self, event):
+        # Tune these factors if the pad scrolling feels too fast/slow.
+        self.pan_x -= event.angleDelta().x() * 0.25
+        self.pan_y -= event.angleDelta().y() * 0.25
+
+        self._clamp_pan()
+        self._sync_scrollbars()
         self.update()
 
     def closeEvent(self, event):
