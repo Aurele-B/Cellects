@@ -2480,8 +2480,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize_label.setVisible(False)
         self.select_option.setVisible(False)
         self.select_option_label.setVisible(False)
-        self.advanced_mode_cb.setVisible(False)
-        self.advanced_mode_label.setVisible(False)
+        self.advanced_mode_widget.setVisible(False)
         self.display_image.setVisible(False)
 
         self.decision_label.setText(f"Want to know when the specimen(s) reach a particular area, click 'yes' to draw these target areas")
