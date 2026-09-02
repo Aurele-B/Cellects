@@ -19,7 +19,7 @@ import logging
 import os
 import numpy as np
 import cv2  # named opencv-python
-import multiprocessing.pool as mp
+from multiprocessing import Pool
 from numba.typed import List
 from numba.typed import Dict
 from numpy.typing import NDArray
@@ -431,8 +431,8 @@ class OneImageAnalysis:
 
     def init_combinations_lists(self):
         self.im_combinations = []
-        self.saved_images_list = List()
-        self.converted_images_list = List()
+        self.saved_images_list = list()
+        self.converted_images_list = list()
         self.saved_color_space_list = list()
         self.saved_filter_list = list()
         self.saved_csc_nb = 0
@@ -618,9 +618,12 @@ class OneImageAnalysis:
                 for list_arg in list_args:
                     ProcessImage(list_arg)
             else:
-                pool = mp.ThreadPool(processes=os.cpu_count() - 1)
-                for process_i in pool.imap_unordered(ProcessImage, list_args):
-                    pass
+                for list_arg in list_args:
+                    ProcessImage(list_arg)
+                # workers = max(1, (os.cpu_count() or 2) - 1)
+                # with Pool(processes=workers) as pool:
+                #     for result in pool.imap_unordered(ProcessImage, list_args):
+                #         pass
 
             # 6. Take a combination of all selected channels and try to remove each color space one by one
             ProcessImage([self, params, 'subtract', 0])
