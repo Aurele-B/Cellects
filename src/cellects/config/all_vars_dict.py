@@ -52,6 +52,7 @@ class DefaultDicts:
             'minimal_appearance_size': 10,
             'more_than_two_colors': False,
             'free_hand': False,
+            'target_shape': 'rectangle', # 'circle',
             'initial_bio_mask': None,
             'initial_back_mask': None,
             'keep_cell_and_back_for_all_folders': False,

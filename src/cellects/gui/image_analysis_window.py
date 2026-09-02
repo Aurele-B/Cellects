@@ -291,6 +291,11 @@ class ImageAnalysisWindow(MainTabsType):
         self.arena_shape.setFixedWidth(160)
         self.arena_shape.setCurrentText(self.po.vars['arena_shape'])
         self.arena_shape.currentTextChanged.connect(self.arena_shape_changed)
+        self.target_shape = Combobox(['circle', 'rectangle'], night_mode=self.po.all['night_mode'])
+        self.target_shape.setFixedWidth(160)
+        self.target_shape.setCurrentText(self.po.all['target_shape'])
+        self.target_shape.currentTextChanged.connect(self.target_shape_changed)
+        self.target_shape.setVisible(False)
         self.set_spot_shape = Checkbox(self.po.all['set_spot_shape'])
         self.set_spot_shape.stateChanged.connect(self.set_spot_shape_check)
         self.spot_shape_label = FixedText(IAW["Spot_shape"]["label"], tip=IAW["Spot_shape"]["tips"], night_mode=self.po.all['night_mode'])
@@ -311,6 +316,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.sup_param_row2_layout.addItem(QtWidgets.QSpacerItem(1, 1, QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum))
         self.sup_param_row2_layout.addWidget(self.arena_shape_label)
         self.sup_param_row2_layout.addWidget(self.arena_shape)
+        self.sup_param_row2_layout.addWidget(self.target_shape)
         self.sup_param_row2_layout.addWidget(self.set_spot_shape)
         self.sup_param_row2_layout.addWidget(self.spot_shape_label)
         self.sup_param_row2_layout.addWidget(self.spot_shape)
@@ -624,6 +630,12 @@ class ImageAnalysisWindow(MainTabsType):
                 self.thread_dict['UpdateImage'].wait()
             self.thread_dict['UpdateImage'].start()
             self.thread_dict['UpdateImage'].message_when_thread_finished.connect(self.automatic_delineation_display_done)
+
+    def target_shape_changed(self):
+        """
+        When specimen(s) have a target area to reach, users draw it as this shape.
+        """
+        self.po.all['target_shape'] = self.target_shape.currentText()
 
     def reinitialize_bio_and_back_legend(self):
         """
@@ -2498,6 +2510,9 @@ class ImageAnalysisWindow(MainTabsType):
         """
         self.asking_target_flag = False
         self.po.target_flag = True
+        self.arena_shape_label.setText('Target Shape:')
+        self.arena_shape_label.setVisible(True)
+        self.target_shape.setVisible(True)
         self.display_image.setVisible(True)
         self.decision_label.setText(
             f"Hold click to draw {self.po.sample_number} target(s) on the image. Once done, click yes.")

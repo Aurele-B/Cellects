@@ -367,7 +367,10 @@ class UpdateImageThread(QtCore.QThread):
                     mask = np.nonzero(mask)
                 else:
                     if self.po.arena0_back1_bio2 == 0:
-                        mask_shape = self.po.vars['arena_shape']
+                        if self.po.target_flag:
+                            mask_shape = self.po.all['target_shape']
+                        else:
+                            mask_shape = self.po.vars['arena_shape']
                     elif self.po.arena0_back1_bio2 == 1:
                         mask_shape = "rectangle"
                     else:
@@ -414,8 +417,12 @@ class UpdateImageThread(QtCore.QThread):
                     image = cv2.putText(image, f"{_i + 1}", position, cv2.FONT_HERSHEY_SIMPLEX, 1,  arena_contour_col + (255,),2)
                     if (max_cy - min_cy) < 0 or (max_cx - min_cx) < 0:
                         self.message_from_thread.emit("Error: the shape number or the detection is wrong")
+                    if self.po.target_flag:
+                        mask_shape = self.po.all['target_shape']
+                    else:
+                        mask_shape = self.po.vars['arena_shape']
                     image = draw_img_with_mask(image, dims, (min_cy, max_cy - 1, min_cx, max_cx - 1),
-                                               self.po.vars['arena_shape'], arena_contour_col, True, contour_width)
+                                               mask_shape, arena_contour_col, True, contour_width)
         else: #load
             if user_input:
                 # III/ If this thread runs from user input: update the drawn_image according to the current user input
@@ -440,7 +447,10 @@ class UpdateImageThread(QtCore.QThread):
                     elif self.po.arena0_back1_bio2 == 1:
                         mask_shape = "rectangle"
                     else:
-                        mask_shape = self.po.vars['arena_shape']
+                        if self.po.target_flag:
+                            mask_shape = self.po.all['target_shape']
+                        else:
+                            mask_shape = self.po.vars['arena_shape']
                     image = draw_img_with_mask(image, dims, minmax, mask_shape, color)
         self.image_from_thread.emit({"current_image": image})
         self.message_when_thread_finished.emit(True)
@@ -710,9 +720,15 @@ class SaveManualDrawingsThread(QtCore.QThread):
             logging.info("Save manual video delineation")
             self.po.vars['analyzed_individuals'] = list(range(1, self.po.sample_number + 1))
         elif self.po.target_flag:
-            for arena_i in np.arange(self.po.sample_number):
-                coord = np.transpose(np.array(np.nonzero(self.po.arena_mask == arena_i + 1)))
-                write_h5(f"ind_{arena_i + 1}.h5", coord, 'target')
+            arena_im = np.zeros_like(self.po.first_image.binary_image)
+            for i in np.arange(self.po.sample_number):
+                arena_im[self.po.top[i]:self.po.bot[i], self.po.left[i]:self.po.right[i]] = i + 1
+            for i in np.arange(self.po.sample_number):
+                coord = np.transpose(np.array(np.nonzero(self.po.arena_mask == i + 1)))
+                arena_label = arena_im[coord[:, 0], coord[:, 1]][0]
+                coord[:, 0] -= self.po.top[arena_label - 1]
+                coord[:, 1] -= self.po.left[arena_label - 1]
+                write_h5(f"ind_{arena_label}.h5", coord, 'target')
 
 
 
