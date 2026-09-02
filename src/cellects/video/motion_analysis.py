@@ -54,7 +54,7 @@ from cellects.video.oscillations_tracking import OscillationsTracking
 from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image.shape_descriptors import compute_one_descriptor_per_frame, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import detect_first_move, eudist
-from cellects.display.param import red_bgr, purple_bgr, darkblue_bgr, teal_bgr, firebrick_bgr
+from cellects.display.param import red_bgr, purple_bgr, darkblue_bgr, teal_bgr, firebrick_bgr, orange_bgr
 from cellects.io.load import read_h5, read_one_arena, get_h5_keys, video2numpy
 from cellects.io.save import remove_h5_key, write_video
 
@@ -146,6 +146,7 @@ class MotionAnalysis:
         self.gradient_segmentation = None
         self.logical_and = None
         self.logical_or = None
+        self.target_coord = None
         self.ind_h5_keys = []
         if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.h5"):
             self.ind_h5_keys = get_h5_keys(f"ind_{self.one_descriptor_per_arena['arena']}.h5")
@@ -1273,11 +1274,11 @@ class MotionAnalysis:
 
         # Find when the target gets reached
         if 'target' in self.ind_h5_keys:
-            target_coord = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'target')
+            self.target_coord = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'target')
             target_mask = np.zeros(self.dims[1:3], dtype=np.uint8)
-            target_mask[target_coord[:, 0], target_coord[:, 1]] = 1
+            target_mask[self.target_coord[:, 0], self.target_coord[:, 1]] = 1
             self.one_descriptor_per_arena['target_reaching'] = pd.NA
-            pixels_reaching_target = (self.binary * target_mask).sum((1,2))
+            pixels_reaching_target = (self.binary * target_mask).any((1,2))
             if np.any(pixels_reaching_target):
                 self.one_descriptor_per_arena['target_reaching'] = np.nonzero(pixels_reaching_target)[0][0]
             del target_mask
@@ -1356,11 +1357,18 @@ class MotionAnalysis:
                         different_solidity = self.one_row_per_frame["solidity"].values < (0.9 * solidity_reference)
                     # Make sure that isotropic breaking not occur before isotropic growth
                     if np.any(different_solidity):
-                        self.one_descriptor_per_arena["iso_digi_transi"] = np.nonzero(different_solidity)[0][0] * self.time_interval
+                        self.one_descriptor_per_arena["iso_digi_transi"] = np.nonzero(different_solidity)[0][0]
                 else:
                     self.one_descriptor_per_arena['is_growth_isotropic'] = 0
             else:
                 self.one_descriptor_per_arena['is_growth_isotropic'] = pd.NA
+        if np.any(self.one_row_per_frame['time'] > 0):
+            if not pd.isna(self.one_descriptor_per_arena['first_move']):
+                self.one_descriptor_per_arena['first_move'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['first_move']]
+            if 'target_reaching' in self.one_descriptor_per_arena and not pd.isna(self.one_descriptor_per_arena['target_reaching']):
+                self.one_descriptor_per_arena['target_reaching'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['target_reaching']]
+            if 'iso_digi_transi' in self.one_descriptor_per_arena and not pd.isna(self.one_descriptor_per_arena['iso_digi_transi']):
+                self.one_descriptor_per_arena['iso_digi_transi'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['iso_digi_transi']]
 
     def check_converted_video_type(self):
         """
@@ -1611,7 +1619,6 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                 self.converted_video = np.stack((self.converted_video, self.converted_video, self.converted_video),
                                                 axis=3)
             for t in np.arange(self.dims[0]):
-
                 eroded_binary = cv2.erode(self.binary[t, :, :], cross_33)
                 contours = np.nonzero(self.binary[t, :, :] - eroded_binary)
                 self.converted_video[t, contours[0], contours[1], :] = self.vars['contour_color']
@@ -1663,6 +1670,8 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
                     self.converted_video[t, slim[0], slim[1], :] = darkblue_bgr
                 del thickening
                 del slimming
+            if self.target_coord is not None:
+                self.visu[:, self.target_coord[:, 0], self.target_coord[:, 1], :] =  orange_bgr
             self.converted_video = np.concatenate((self.visu, self.converted_video), axis=2)
             if self.vars['save_coord_network']:
                 network = read_h5(
