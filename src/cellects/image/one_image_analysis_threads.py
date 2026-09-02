@@ -272,7 +272,7 @@ class ProcessImage:
         the number of color spaces. This process is repeated until no further
         improvements are possible.
         """
-        potentials = self.parent.all_combined
+        potentials = dict(self.parent.all_combined)
         # Try to remove color space one by one
         i = 0
         original_length = len(potentials)
@@ -287,7 +287,7 @@ class ProcessImage:
                     self.validated_shapes)
                 previous_blob_nb -= 1
             previous_sum = self.validated_shapes.sum()
-            color_space_to_remove = List()
+            color_space_to_remove = []
             for c_space in potentials.keys():
                 try_potentials = potentials.copy()
                 try_potentials.pop(c_space)
