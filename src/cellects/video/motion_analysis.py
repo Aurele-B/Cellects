@@ -146,6 +146,9 @@ class MotionAnalysis:
         self.gradient_segmentation = None
         self.logical_and = None
         self.logical_or = None
+        self.ind_h5_keys = []
+        if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.h5"):
+            self.ind_h5_keys = get_h5_keys(f"ind_{self.one_descriptor_per_arena['arena']}.h5")
         self.bit_usage = {'images': 0, 'videos': 0}
         self.vars = vars
         if not 'contour_color' in self.vars:
@@ -1268,6 +1271,17 @@ class MotionAnalysis:
         # Detect first motion
         self.one_descriptor_per_arena['first_move'] = detect_first_move(self.surfarea, self.vars['first_move_threshold'])
 
+        # Find when the target gets reached
+        if 'target' in self.ind_h5_keys:
+            target_coord = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'target')
+            target_mask = np.zeros(self.dims[1:3], dtype=np.uint8)
+            target_mask[target_coord[:, 0], target_coord[:, 1]] = 1
+            self.one_descriptor_per_arena['target_reaching'] = pd.NA
+            pixels_reaching_target = (self.binary * target_mask).sum((1,2))
+            if np.any(pixels_reaching_target):
+                self.one_descriptor_per_arena['target_reaching'] = np.nonzero(pixels_reaching_target)[0][0]
+            del target_mask
+
         self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not self.vars['descriptors']['solidity']
         if self.compute_solidity_separately:
             self.solidity = np.zeros(self.dims[0], dtype=np.float64)
@@ -1616,10 +1630,7 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             collect()
             if self.visu is None:
                 true_frame_width = self.dims[2]
-                h5_keys = []
-                if os.path.isfile(f"ind_{self.one_descriptor_per_arena['arena']}.h5"):
-                    h5_keys = get_h5_keys(f"ind_{self.one_descriptor_per_arena['arena']}.h5")
-                if 'video' in h5_keys:
+                if 'video' in self.ind_h5_keys:
                     self.visu = video2numpy(f"ind_{self.one_descriptor_per_arena['arena']}.h5",
                               None, true_frame_width=true_frame_width)
                 else:

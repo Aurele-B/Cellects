@@ -384,7 +384,7 @@ class UpdateImageThread(QtCore.QThread):
                 elif self.po.arena0_back1_bio2 == 2:
                     self.po.bio_masks_number += 1
                     self.po.bio_mask[mask[0], mask[1]] = self.po.available_bio_names[0]
-                elif self.po.manual_delineation_flag:
+                elif self.po.manual_delineation_flag or self.po.target_flag:
                     self.po.arena_masks_number += 1
                     self.po.arena_mask[mask[0], mask[1]] = self.po.available_arena_names[0]
                 # Apply all these masks to the drawn image:
@@ -666,9 +666,9 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
         self.message_when_thread_finished.emit(self.status)
 
 
-class SaveManualDelineationThread(QtCore.QThread):
+class SaveManualDrawingsThread(QtCore.QThread):
     """
-    Thread for saving user's defined arena delineation through the GUI.
+    Thread for saving user's defined arena delineation or specimen target through the GUI.
 
     Notes
     -----
@@ -676,7 +676,7 @@ class SaveManualDelineationThread(QtCore.QThread):
     """
     def __init__(self, po, parent=None):
         """
-        Initialize the worker thread for saving the arena coordinates when the user draw them manually
+        Initialize the worker thread for saving the coordinates when the user draw them manually
 
         Parameters
         ----------
@@ -685,7 +685,7 @@ class SaveManualDelineationThread(QtCore.QThread):
         parent : QObject, optional
             The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
         """
-        super(SaveManualDelineationThread, self).__init__(parent)
+        super(SaveManualDrawingsThread, self).__init__(parent)
         self.setParent(parent)
         self.po: ProgramOrganizer = po
 
@@ -693,21 +693,27 @@ class SaveManualDelineationThread(QtCore.QThread):
         """
         Do save the coordinates.
         """
-        self.po.left = []
-        self.po.right = []
-        self.po.top = []
-        self.po.bot = []
-        for arena_i in np.arange(self.po.sample_number):
-            y, x = np.nonzero(self.po.arena_mask == arena_i + 1)
-            self.po.left.append(int(np.min(x)))
-            self.po.right.append(int(np.max(x)))
-            self.po.top.append(int(np.min(y)))
-            self.po.bot.append(int(np.max(y)))
-        self.po.save_coordinates()
-        self.po.save_data_to_run_cellects_quickly()
+        if self.po.manual_delineation_flag:
+            self.po.left = []
+            self.po.right = []
+            self.po.top = []
+            self.po.bot = []
+            for arena_i in np.arange(self.po.sample_number):
+                y, x = np.nonzero(self.po.arena_mask == arena_i + 1)
+                self.po.left.append(int(np.min(x)))
+                self.po.right.append(int(np.max(x)))
+                self.po.top.append(int(np.min(y)))
+                self.po.bot.append(int(np.max(y)))
+            self.po.save_coordinates()
+            self.po.save_data_to_run_cellects_quickly()
 
-        logging.info("Save manual video delineation")
-        self.po.vars['analyzed_individuals'] = list(range(1, self.po.sample_number + 1))
+            logging.info("Save manual video delineation")
+            self.po.vars['analyzed_individuals'] = list(range(1, self.po.sample_number + 1))
+        elif self.po.target_flag:
+            for arena_i in np.arange(self.po.sample_number):
+                coord = np.transpose(np.array(np.nonzero(self.po.arena_mask == arena_i + 1)))
+                write_h5(f"ind_{arena_i + 1}.h5", coord, 'target')
+
 
 
 class GetExifDataThread(QtCore.QThread):

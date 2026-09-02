@@ -131,6 +131,7 @@ class ProgramOrganizer:
         self.available_back_names = np.arange(1, 10, dtype=np.uint16)
         self.available_arena_names = np.arange(1, 10, dtype=np.uint16)
         self.manual_delineation_flag: bool = False
+        self.target_flag: bool = False
         self.delineation_done: bool = False
         self.asking_first_im_parameters_flag: bool = True
         self.load_quick_full: int = 0

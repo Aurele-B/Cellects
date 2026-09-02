@@ -24,7 +24,7 @@ from PySide6 import QtWidgets, QtCore, QtGui
 from cellects.core.cellects_threads import (
     GetFirstImThread, GetLastImThread, FirstImageAnalysisThread,
     CropScaleSubtractDelineateThread, UpdateImageThread, CompleteImageAnalysisThread,
-    LastImageAnalysisThread, SaveManualDelineationThread, PrepareVideoAnalysisThread)
+    LastImageAnalysisThread, SaveManualDrawingsThread, PrepareVideoAnalysisThread)
 from cellects.gui.ui_strings import IAW
 from cellects.gui.custom_widgets import (
     MainTabsType, InsertImage, PButton, Spinbox,
@@ -100,6 +100,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.asking_slower_or_manual_delineation_flag: bool = False
         self.slower_delineation_flag: bool = False
         self.asking_last_image_flag: bool = False
+        self.last_image_flag: bool = False
+        self.asking_target_flag: bool = False
         self.step = 0
         self.po.temporary_mask_coord = []
         self.po.user_saved_coord = []
@@ -111,9 +113,6 @@ class ImageAnalysisWindow(MainTabsType):
         self.po.current_combination_id = 0
 
         self.display_image = InsertImage(self, track_mouse=True)
-        # self.display_image.mousePressEvent = self.get_click_coordinates
-        # self.display_image.mouseMoveEvent = self.get_mouse_move_coordinates
-        # self.display_image.mouseReleaseEvent = self.get_mouse_release_coordinates
 
         ## Title
         self.image_number_label = FixedText(IAW["Image_number"]["label"],
@@ -458,7 +457,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.thread_dict['UpdateImage'].message_from_thread.connect(self.display_message_from_thread)
         self.thread_dict['UpdateImage'].image_from_thread.connect(self.display_image_during_thread)
         self.thread_dict['CropScaleSubtractDelineate'] = CropScaleSubtractDelineateThread(self.po, self.parent())
-        self.thread_dict['SaveManualDelineation'] = SaveManualDelineationThread(self.po, self.parent())
+        self.thread_dict['SaveManualDrawings'] = SaveManualDrawingsThread(self.po, self.parent())
         self.thread_dict['CompleteImageAnalysisThread'] = CompleteImageAnalysisThread(self.po, self.parent())
         self.thread_dict['PrepareVideoAnalysis'] = PrepareVideoAnalysisThread(self.po, self.parent())
 
@@ -848,7 +847,7 @@ class ImageAnalysisWindow(MainTabsType):
         event : QMouseEvent
             The mouse event that triggered the function.
         """
-        if self.po.arena0_back1_bio2 > 0 or self.po.manual_delineation_flag:
+        if self.po.arena0_back1_bio2 > 0 or self.po.manual_delineation_flag or self.po.target_flag:
             if not self.is_image_analysis_display_running and not self.thread_dict['UpdateImage'].isRunning():
                 self.hold_click_flag = True
                 true_coord = image_object.image_coordinates(event.position().toPoint())
@@ -905,7 +904,10 @@ class ImageAnalysisWindow(MainTabsType):
                 self.thread_dict['UpdateImage'].wait()
             self.po.temporary_mask_coord = []
             if self.po.manual_delineation_flag and len(self.po.available_arena_names) == 0:
-                self.message.setText(f"The total number of arenas are already drawn ({self.po.sample_number})")
+                self.message.setText(f"All arenas are drawn ({self.po.sample_number})")
+                self.po.user_saved_coord = []
+            elif self.po.target_flag and len(self.po.available_arena_names) == 0:
+                self.message.setText(f"All targets are drawn ({self.po.sample_number})")
                 self.po.user_saved_coord = []
             else:
                 true_coord = image_object.image_coordinates(event.position().toPoint())
@@ -950,7 +952,7 @@ class ImageAnalysisWindow(MainTabsType):
             self.more_than_two_colors.setVisible(self.advanced_mode_cb.isChecked())
             self.more_than_two_colors_label.setVisible(self.advanced_mode_cb.isChecked())
             self.distinct_colors_number.setVisible(self.advanced_mode_cb.isChecked() and self.more_than_two_colors.isChecked())
-        elif self.po.manual_delineation_flag:
+        elif self.po.manual_delineation_flag or self.po.target_flag:
             arena_name = self.po.available_arena_names[0]
             self.arena_lines[arena_name] = {}
             pbutton_name = u"\u00D7" + " Arena" + str(arena_name)
@@ -960,6 +962,7 @@ class ImageAnalysisWindow(MainTabsType):
             else:
                 self.back_added_lines_layout.addWidget(self.arena_lines[arena_name][pbutton_name])
             self.po.available_arena_names = self.po.available_arena_names[1:]
+
         self.po.user_saved_coord = []
         self.po.arena0_back1_bio2 = 0
         self.thread_dict['UpdateImage'].message_when_thread_finished.disconnect()
@@ -1253,15 +1256,13 @@ class ImageAnalysisWindow(MainTabsType):
             self.basic.setVisible(True)
             self.visualize.setVisible(True)
 
-            self.decision_label.setText("Adjust parameters until the color delimits the specimen(s) correctly")
-            self.yes.setVisible(False)
             self.no.setVisible(False)
             if self.po.all["im_or_vid"] == 1 or len(self.po.data_list) > 1:
-                self.next.setVisible(True)
-                self.message.setText('When the resulting segmentation of the last image seems good, click next.')
+                self.decision_label.setText("Is the color delimiting the specimen(s) correctly?")
+                self.yes.setVisible(True)
             else:
                 self.video_tab.set_not_usable()
-                self.message.setText('When the resulting segmentation of the last image seems good, save image analysis.')
+                self.decision_label.setText("When the resulting segmentation of the image seems good, save image analysis.")
             self.complete_image_analysis.setVisible(True)
         self.is_image_analysis_running = False
         self.is_image_analysis_display_running = False
@@ -2228,79 +2229,92 @@ class ImageAnalysisWindow(MainTabsType):
         appropriate methods based on the user's input.
         """
         color_analysis = not self.po.vars['already_greyscale']
-        if self.po.is_first_image_flag:
-            if self.po.asking_first_im_parameters_flag:
-                # Ask for the right number of distinct arenas, if not add parameters
-                if not is_yes:
-                    self.first_im_parameters()
-                else:
-                    self.auto_delineation()
-                self.po.asking_first_im_parameters_flag = False
-
-            elif self.auto_delineation_flag:
+        if self.po.asking_first_im_parameters_flag:
+            # Ask for the right number of distinct arenas, if not add parameters
+            if not is_yes:
+                self.first_im_parameters()
+            else:
                 self.auto_delineation()
+            self.po.asking_first_im_parameters_flag = False
 
-            # Is automatic Video delineation correct?
-            elif self.asking_delineation_flag:
-                self.decision_label.setToolTip("")
-                if not is_yes:
-                    self.asking_slower_or_manual_delineation()
-                else:
-                    self.last_image_question()
-                self.asking_delineation_flag = False
+        elif self.auto_delineation_flag:
+            self.auto_delineation()
 
-            # Slower or manual delineation?
-            elif self.asking_slower_or_manual_delineation_flag:
-                self.po.arena0_back1_bio2 = 0
-                if not is_yes:
-                    self.manual_delineation()
-                else:
-                    self.slower_delineation_flag = True
-                    self.slower_delineation()
-                self.asking_slower_or_manual_delineation_flag = False
+        # Is automatic Video delineation correct?
+        elif self.asking_delineation_flag:
+            self.decision_label.setToolTip("")
+            if not is_yes:
+                self.asking_slower_or_manual_delineation()
+            else:
+                self.last_image_question()
+            self.asking_delineation_flag = False
 
-            # Is slower delineation correct?
-            elif self.slower_delineation_flag:
-                self.yes.setText("Yes")
-                self.no.setText("No")
-                if not is_yes:
-                    self.manual_delineation()
-                else:
-                    self.last_image_question()
-                self.slower_delineation_flag = False
+        # Slower or manual delineation?
+        elif self.asking_slower_or_manual_delineation_flag:
+            self.po.arena0_back1_bio2 = 0
+            if not is_yes:
+                self.manual_delineation()
+            else:
+                self.slower_delineation_flag = True
+                self.slower_delineation()
+            self.asking_slower_or_manual_delineation_flag = False
 
-            elif self.po.manual_delineation_flag:
-                if is_yes:
-                    if self.po.sample_number == self.po.arena_masks_number:
-                        self.thread_dict['SaveManualDelineation'].start()
-                        self.last_image_question()
-                        self.po.manual_delineation_flag = False
-                    else:
-                        self.message.setText(
-                            f"{self.po.arena_masks_number} arenas are drawn over the {self.po.sample_number} expected")
+        # Is slower delineation correct?
+        elif self.slower_delineation_flag:
+            self.yes.setText("Yes")
+            self.no.setText("No")
+            if not is_yes:
+                self.manual_delineation()
+            else:
+                self.last_image_question()
+            self.slower_delineation_flag = False
 
-            elif self.asking_last_image_flag:
-                self.decision_label.setToolTip("")
-                self.po.first_image.im_combinations = None
-                self.select_option.clear()
-                self.arena_shape.setVisible(False)
-                self.arena_shape_label.setVisible(False)
-                if is_yes:
-                    self.start_last_image()
-                else:
-                    if "PCA" in self.csc_dict:
-                        if self.po.last_image.first_pc_vector is None:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.first_image.first_pc_vector).tolist(), "logical": None}
-                        else:
-                            self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.last_image.first_pc_vector).tolist(), "logical": None}
-                    self.po.vars['convert_for_origin'] = self.csc_dict.copy()
-                    self.po.vars['convert_for_motion'] = self.csc_dict.copy()
-                    self.go_to_next_widget()
-                self.asking_last_image_flag = False
-        else:
+        elif self.po.manual_delineation_flag:
             if is_yes:
+                if self.po.sample_number == self.po.arena_masks_number:
+                    self.thread_dict['SaveManualDrawings'].start()
+                    self.last_image_question()
+                    self.po.manual_delineation_flag = False
+                else:
+                    self.message.setText(
+                        f"{self.po.arena_masks_number} arenas are drawn over the {self.po.sample_number} expected")
+
+        elif self.asking_last_image_flag:
+            self.decision_label.setToolTip("")
+            self.po.first_image.im_combinations = None
+            self.select_option.clear()
+            self.arena_shape.setVisible(False)
+            self.arena_shape_label.setVisible(False)
+            if is_yes:
+                self.start_last_image()
+            else:
+                if "PCA" in self.csc_dict:
+                    if self.po.last_image.first_pc_vector is None:
+                        self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.first_image.first_pc_vector).tolist(), "logical": None}
+                    else:
+                        self.csc_dict = {"bgr": bracket_to_uint8_image_contrast(self.po.last_image.first_pc_vector).tolist(), "logical": None}
+                self.po.vars['convert_for_origin'] = self.csc_dict.copy()
                 self.po.vars['convert_for_motion'] = self.csc_dict.copy()
+                self.target_question()
+            self.asking_last_image_flag = False
+        elif self.last_image_flag:
+            if is_yes:
+                self.target_question()
+                self.last_image_flag = False
+        elif self.asking_target_flag:
+            if is_yes:
+                self.drawing_target()
+            else:
                 self.go_to_next_widget()
+        elif self.po.target_flag:
+            if is_yes:
+                if self.po.sample_number == self.po.arena_masks_number:
+                    self.thread_dict['SaveManualDrawings'].start()
+                    self.go_to_next_widget()
+                    self.po.target_flag = False
+                else:
+                    self.message.setText(
+                        f"{self.po.arena_masks_number} targets are drawn over the {self.po.sample_number} expected")
 
     def first_im_parameters(self):
         """
@@ -2444,6 +2458,75 @@ class ImageAnalysisWindow(MainTabsType):
             self.yes.setVisible(True)
             self.no.setVisible(True)
 
+    def target_question(self):
+        self.po.manual_delineation_flag = False
+        self.asking_target_flag = True
+        self.starting_differs_from_growing_label.setVisible(False)
+        self.starting_differs_from_growing_cb.setVisible(False)
+        self.scale_with_label.setVisible(False)
+        self.scale_with.setVisible(False)
+        self.scale_size_label.setVisible(False)
+        self.horizontal_size.setVisible(False)
+
+        self.user_drawn_lines_label.setVisible(False)
+        self.cell.setVisible(False)
+        self.background.setVisible(False)
+        self.freehand_label.setVisible(False)
+        self.freehand_cb.setVisible(False)
+        self.generate_analysis_options.setVisible(False)
+        self.network_shaped.setVisible(False)
+        self.basic.setVisible(False)
+        self.visualize.setVisible(False)
+        self.visualize_label.setVisible(False)
+        self.select_option.setVisible(False)
+        self.select_option_label.setVisible(False)
+        self.advanced_mode_cb.setVisible(False)
+        self.advanced_mode_label.setVisible(False)
+        self.display_image.setVisible(False)
+
+        self.decision_label.setText(f"Want to know when the specimen(s) reach a particular area, click 'yes' to draw these target areas")
+        self.message.setText(f"Clicking no leads to the video tracking widget")
+        self.decision_label.setVisible(True)
+        self.message.setVisible(True)
+        self.yes.setVisible(True)
+        self.no.setVisible(True)
+
+
+    def drawing_target(self):
+        """
+        Start a tool to draw one target per arena to record when the specimen(s) reach it.
+        """
+        self.asking_target_flag = False
+        self.po.target_flag = True
+        self.display_image.setVisible(True)
+        self.decision_label.setText(
+            f"Hold click to draw {self.po.sample_number} target(s) on the image. Once done, click yes.")
+        self.message.setText('An error? Hit one button on the left to remove any drawn arena.')
+        self.select_option_label.setVisible(False)
+        self.select_option.setVisible(False)
+        self.reinitialize_image_and_masks(self.po.first_image.bgr)
+        self.reinitialize_bio_and_back_legend()
+        self.po.available_arena_names = np.arange(1, self.po.sample_number + 1)
+        self.po.arena_masks_number = 0
+        self.po.user_saved_coord = []
+        self.po.arena_mask = np.zeros(self.po.current_image.shape[:2], dtype=np.uint16)
+        self.decision_label.setVisible(True)
+        self.cell.setVisible(False)
+        self.background.setVisible(False)
+        self.yes.setVisible(True)
+        self.no.setVisible(False)
+        self.generate_analysis_options.setVisible(False)
+        self.network_shaped.setVisible(False)
+        self.basic.setVisible(False)
+        self.visualize.setVisible(False)
+        self.visualize_label.setVisible(False)
+        self.select_option.setVisible(False)
+        self.select_option_label.setVisible(False)
+        self.user_drawn_lines_label.setText("Draw each target")
+        self.user_drawn_lines_label.setVisible(True)
+        self.freehand_label.setVisible(True)
+        self.freehand_cb.setVisible(True)
+
     def start_last_image(self):
         """
         Start the process of analyzing the last image in the time-lapse or the video.
@@ -2453,6 +2536,7 @@ class ImageAnalysisWindow(MainTabsType):
         considering it as the first image, and updates the visualization.
         """
         self.po.is_first_image_flag = False
+        self.last_image_flag = True
         self.decision_label.setText('')
         self.yes.setVisible(False)
         self.no.setVisible(False)
@@ -2461,8 +2545,8 @@ class ImageAnalysisWindow(MainTabsType):
         self.starting_differs_from_growing_label.setVisible(False)
         self.message.setText('Gathering data and visualizing last image analysis result')
         self.po.get_last_image()
-        if self.thread_dict['SaveManualDelineation'].isRunning():
-            self.thread_dict['SaveManualDelineation'].wait()
+        if self.thread_dict['SaveManualDrawings'].isRunning():
+            self.thread_dict['SaveManualDrawings'].wait()
         self.po.cropping(is_first_image=False)
         self.reinitialize_image_and_masks(self.po.last_image.bgr)
         self.reinitialize_bio_and_back_legend()
@@ -2484,7 +2568,7 @@ class ImageAnalysisWindow(MainTabsType):
         """
         Completes the image analysis process if no listed threads are running.
         """
-        if (not self.thread_dict['SaveManualDelineation'].isRunning() or not self.thread_dict[
+        if (not self.thread_dict['SaveManualDrawings'].isRunning() or not self.thread_dict[
             'PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning() or not
         self.thread_dict['CompleteImageAnalysisThread'].isRunning()):
             self.message.setText(f"Analyzing and saving the segmentation result, wait... ")
@@ -2505,7 +2589,7 @@ class ImageAnalysisWindow(MainTabsType):
             - Waits for some background threads to complete their execution.
             - Advances the UI to the video analysis window if certain conditions are met.
         """
-        if not self.thread_dict['SaveManualDelineation'].isRunning() or not self.thread_dict['PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning():
+        if not self.thread_dict['SaveManualDrawings'].isRunning() or not self.thread_dict['PrepareVideoAnalysis'].isRunning() or not self.thread_dict['SaveData'].isRunning():
 
             # self.popup = QtWidgets.QMessageBox()
             # self.popup.setWindowTitle("Info")
