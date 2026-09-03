@@ -10,17 +10,18 @@ This module implements a user-assisted image analysis workflow using a QStackedW
 
 Main Components
 CellectsMainWidget : Central stacked widget managing workflow navigation
+LoadingPopup : Progress bar during Cellects launch
 
 Notes
 Uses QThread for background operations to maintain UI responsiveness.
 """
 import logging
-import signal
+import time
 import numpy as np
 from PySide6 import QtWidgets, QtGui, QtCore
 from cellects.core.program_organizer import ProgramOrganizer
 from cellects.core.cellects_threads import SaveAllVarsThread, PrecompileNJITThread
-from cellects.gui.custom_widgets import backgroundcolor, night_background_color
+from cellects.gui.custom_widgets import backgroundcolor, night_background_color, FixedText
 from cellects.gui.advanced_parameters import AdvancedParameters
 from cellects.gui.first_window import FirstWindow
 from cellects.gui.if_several_folders_window import IfSeveralFoldersWindow
@@ -68,8 +69,8 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
 
         self.setWindowTitle('Cellects')
         self.thread_dict = {}
-        self.thread_dict['PrecompileNJIT'] = PrecompileNJITThread()
-        self.thread_dict['PrecompileNJIT'].start()
+        # self.thread_dict['PrecompileNJIT'] = PrecompileNJITThread()
+        # self.thread_dict['PrecompileNJIT'].start()
         self.pre_processing_done: bool = False
         self.last_is_first: bool = True
         self.last_tab: str = "data_specifications"
@@ -210,3 +211,77 @@ class CellectsMainWidget(QtWidgets.QStackedWidget):
             event.accept()
         else:
             event.ignore()
+
+
+class LoadingPopup(QtWidgets.QWidget):
+    """
+    A progress bar displaying njit precompilation progress during Cellects launches.
+    """
+    def __init__(self):
+        super().__init__()
+
+        self.i: int = 0
+        self.total: int = 18
+
+        self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint |
+                            QtCore.Qt.WindowType.WindowStaysOnTopHint |
+                            QtCore.Qt.WindowType.NoDropShadowWindowHint)
+
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(300, 6)  # Fixed dimensions for a clean bar look
+
+        # Zero margins so only the bar fills the widget
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.progress = QtWidgets.QProgressBar(self)
+        self.progress.setTextVisible(False)  # No text allowed
+        self.progress.setRange(0, 100)  # Infinite marquee loading animation
+        self.progress.setValue(0)
+
+        self.progress.setStyleSheet("""
+            QProgressBar {
+                border: none;
+                background-color: rgba(0, 0, 0, 10);
+                border-radius: 15px;
+            }
+            
+            QProgressBar::chunk {
+                /* Forces pill-shaped rounded ends on both sides */
+                border-radius: 15px; 
+                
+                /* Radial gradient creates a spherical glass orb effect rather than a flat sheet */
+                background: qradialgradient(
+                    cx: 0.5, cy: 0.4, radius: 0.9,
+                    fx: 0.5, fy: 0.2,
+                    stop: 0 #ffffff,       /* Ultra-bright white reflection spot at the top-center */
+                    stop: 0.2 #555555,     /* Soft silver reflection falloff */
+                    stop: 0.5 #1a1a1a,     /* Deep obsidian core */
+                    stop: 0.8 #000000,     /* Pitch black base */
+                    stop: 1.0 #0d0d0d      /* Outer shadow definition */
+                );
+            
+                /* Clean, bright edge highlight to accentuate the curved glass profile */
+                border: 1px solid rgba(255, 255, 255, 0.25);
+            }
+        """)
+
+        layout.addWidget(self.progress)
+
+    def start_application(self):
+        """
+        Start Cellects application
+        """
+        self.session = CellectsMainWidget()
+        self.session.instantiate_cellects()
+        self.add_progress()
+        self.session.show()
+        self.close()
+
+    def add_progress(self):
+        """
+        Helper to increment the progress bar
+        """
+        self.i += 1
+        self.progress.setValue(int(self.i / self.total * 100))
+        QtWidgets.QApplication.processEvents()

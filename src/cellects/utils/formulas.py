@@ -36,7 +36,7 @@ from numpy.typing import NDArray
 from typing import Tuple, Any
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def sum_of_abs_differences(array1: NDArray, array2: NDArray):
     """
     Compute the sum of absolute differences between two arrays.
@@ -64,7 +64,7 @@ def sum_of_abs_differences(array1: NDArray, array2: NDArray):
     return np.sum(np.absolute(array1 - array2))
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def to_uint8(an_array: NDArray):
     """
     Convert an array to unsigned 8-bit integers.
@@ -134,7 +134,7 @@ def bracket_to_uint8_image_contrast(image: NDArray):
     else:
         return to_uint8(255 * (image / np.max(image)))
 
-@njit()
+@njit(nogil=True, cache=True)
 def linear_model(x: NDArray, a: float, b: float) -> float:
     """
     Perform a linear transformation on input data using slope and intercept.
@@ -166,7 +166,7 @@ def linear_model(x: NDArray, a: float, b: float) -> float:
     return a * x + b
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_power_dists(binary_image: np.ndarray, cx: float, cy: float, n: int):
     """
     Calculate the power distributions based on the given center coordinates and exponent.
@@ -209,7 +209,7 @@ def get_power_dists(binary_image: np.ndarray, cx: float, cy: float, n: int):
     return xn, yn
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[float, float]:
     """
     Compute the center of mass in 2D space.
@@ -251,12 +251,12 @@ def get_var(mo: dict, binary_image: NDArray, Xn: NDArray, Yn: NDArray) -> Tuple[
     return vx, vy
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) -> Tuple[float, float]:
     """
-    Calculates skewness and kurtosis of a distribution.
+    Calculates skewness or kurtosis of a distribution.
 
-    This function computes the skewness and kurtosis from given statistical
+    This function computes the skewness or kurtosis from given statistical
     moments, standard deviations, and order of moments.
 
     Parameters
@@ -274,10 +274,10 @@ def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) 
 
     Returns
     -------
-    skewness : float
-        The computed skewness.
-    kurtosis : float
-        The computed kurtosis.
+    fx  : float
+        The computed skewness or kurtosis on x.
+    fy : float
+        The computed skewness or kurtosis on y.
 
     Notes
     -----
@@ -287,12 +287,9 @@ def get_skewness_kurtosis(mnx: float, mny: float, sx: float, sy: float, n: int) 
 
     Examples
     --------
-    >>> skewness, kurtosis = get_skewness_kurtosis(1.5, 2.0, 0.5, 0.75, 3)
-    >>> print("Skewness:", skewness)
-    Skewness: 8.0
-    >>> print("Kurtosis:", kurtosis)
-    Kurtosis: nan
-
+    >>> fx, fy = get_skewness_kurtosis(1.5, 2.0, 0.5, 0.75, 3)
+    >>> print(fx, fy)
+    8.0, nan
     """
     if sx == 0:
         fx = 0
@@ -443,7 +440,7 @@ def get_kurtosis(mo: dict, binary_image: NDArray, cx: float, cy: float, sx: floa
     return get_skewness_kurtosis(m4x, m4y, sx, sy, 4)
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_inertia_axes(mo: dict) -> Tuple[float, float, float, float, float]:
     """
     Calculate the inertia axes of a moment object.
@@ -681,7 +678,7 @@ def detect_first_move(size_dynamics: NDArray, growth_threshold)-> int:
         first_move = thresh_reached[0]
     return first_move
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_newly_explored_area(binary_vid: NDArray[np.uint8]) -> NDArray:
     """
     Get newly explored area in a binary video.

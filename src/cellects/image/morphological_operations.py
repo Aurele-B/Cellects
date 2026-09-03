@@ -632,7 +632,7 @@ def inverted_distance_transform(original_shape: NDArray[np.uint8], max_distance:
     return gravity_field
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_line_points(start: Tuple[np.int64], end: Tuple[np.int64]) -> NDArray[np.int64]:
     """
     Get line points between two endpoints using Bresenham's line algorithm.
@@ -831,7 +831,7 @@ def find_median_shape(binary_3d_matrix: NDArray[np.uint8]) -> NDArray[np.uint8]:
     return median_shape
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def reduce_image_size_for_speed(image_of_2_shapes: NDArray[np.uint8]) -> Tuple[Tuple, Tuple]:
     """
     Reduces the size of an image containing two shapes for faster processing.
@@ -1451,7 +1451,7 @@ def dynamically_expand_to_fill_holes(binary_video: NDArray[np.uint8], holes: NDA
     return binary_video, holes_time_end, distance_against_time
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def create_ellipse(vsize: int, hsize: int, min_size: int=0) -> NDArray[np.uint8]:
     """
     Create a 2D array representing an ellipse with given vertical and horizontal sizes.
@@ -1970,7 +1970,7 @@ def keep_shape_connected_with_ref(all_shapes: NDArray[np.uint8], reference_shape
     return expanded_shape
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def keep_largest_shape(indexed_shapes: NDArray[np.int32]) -> NDArray[np.uint8]:
     """
     Keep the largest shape from an array of indexed shapes.

@@ -37,7 +37,7 @@ from glob import glob
 vectorized_len = np.vectorize(len)
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def greater_along_first_axis(array_in_1: NDArray, array_in_2: NDArray) -> NDArray[np.uint8]:
     """
     Compare two arrays along the first axis and store the result in a third array.
@@ -75,7 +75,7 @@ def greater_along_first_axis(array_in_1: NDArray, array_in_2: NDArray) -> NDArra
     return array_out
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def less_along_first_axis(array_in_1: NDArray, array_in_2: NDArray) -> NDArray[np.uint8]:
     """
     Compare two arrays along the first axis and store the result in a third array.

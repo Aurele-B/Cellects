@@ -11,6 +11,8 @@ import logging
 import coloredlogs
 from pathlib import Path
 
+from cellects.utils.numba_precompilation import warming_up_numba_functions
+
 
 def get_icon_path():
     if hasattr(sys, "_MEIPASS"):
@@ -73,7 +75,7 @@ def run_cellects():
     _initialize_coloredlogs(LOGLEVEL)
 
     try:
-        from cellects.gui.cellects import CellectsMainWidget
+        from cellects.gui.cellects import LoadingPopup
 
         # Initialize application
         app = QtWidgets.QApplication([])
@@ -86,15 +88,15 @@ def run_cellects():
             app.setWindowIcon(icon)
 
         # Create and display main window
-        session = CellectsMainWidget()
-        session.instantiate_cellects()
-        session.show()
-
+        loading = LoadingPopup()
+        loading.show()
         # Set custom window icon for taskbar
-
+        warming_up_numba_functions(loading)
+        loading.start_application()
         if icon is not None:
             app.setWindowIcon(icon)
-            session.setWindowIcon(icon)
+            loading.setWindowIcon(icon)
+            loading.session.setWindowIcon(icon)
         # Set exit
         sys.exit(app.exec())
     except Exception as e:

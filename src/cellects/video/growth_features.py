@@ -43,7 +43,7 @@ default_features = {"exp_intercept": pd.NA,               # intercept of best ex
         "growth_rupture_surface_mm2": pd.NA}
 
 # Low‑level helpers (Numba‑compatible)
-@njit(inline='always')
+@njit(nogil=True, cache=True, inline='always')
 def _linregress(x: np.ndarray, y: np.ndarray) -> Tuple[float, float, float]:
     """Plain‑Python/Numba implementation of the textbook OLS formulas.
        Returns (slope, intercept, Pearson r)."""
@@ -68,7 +68,7 @@ def _linregress(x: np.ndarray, y: np.ndarray) -> Tuple[float, float, float]:
     return slope, intercept, r
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     """Mean of each non‑overlapping block of length `cluster_len`."""
     n = y.shape[0]
@@ -83,7 +83,7 @@ def _cluster_means(y: np.ndarray, cluster_len: int) -> np.ndarray:
     return out
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def _slope_shifts(
     y: np.ndarray,
     cluster_len: int,
@@ -124,7 +124,7 @@ def _slope_shifts(
     return out
 
 
-@njit(parallel=True)
+@njit(nogil=True, cache=True, parallel=True)
 def _fill_r_squared_matrices(
     y: np.ndarray,
     time_step: float,

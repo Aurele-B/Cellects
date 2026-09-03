@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+"""
+This module modifies the njit decorator to make it optional.
+"""
 import os
 from numba import njit as _real_njit
 

@@ -435,7 +435,7 @@ def coord_set_to_array(coords: CoordSet, dtype=np.int32) -> NDArray:
         return np.zeros((0, 2), dtype=dtype)
     return np.array(tuple(coords), dtype=dtype)
 
-@njit()
+@njit(nogil=True, cache=True)
 def nonzero_to_set(mask: NDArray) -> CoordSet:
     """Convert non-zero pixels of a 2D mask to a set of (y, x) coordinates."""
     return set(zip(*np.nonzero(mask)))

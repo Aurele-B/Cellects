@@ -214,7 +214,7 @@ def get_color_spaces(bgr_image: NDArray[np.uint8], space_names: list="") -> Dict
     return c_spaces
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def combine_color_spaces(c_space_dict: Dict, all_c_spaces: Dict, subtract_background: NDArray=None) -> NDArray:
     """
     Combine color spaces from a dictionary and generate an analyzable image.
@@ -339,7 +339,7 @@ def generate_color_space_combination(bgr_image: NDArray[np.uint8], c_spaces: lis
     return greyscale_image, greyscale_image2, all_c_spaces, first_pc_vector
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def get_otsu_threshold(image: NDArray):
     """
     Calculate the optimal threshold value for an image using Otsu's method.
@@ -391,7 +391,7 @@ def get_otsu_threshold(image: NDArray):
     return threshold
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def otsu_thresholding(image: NDArray) -> NDArray[np.uint8]:
     """
     Apply Otsu's thresholding to a grayscale image.
@@ -869,7 +869,7 @@ def find_threshold_given_mask(greyscale: NDArray[np.uint8], mask: np.uint8, min_
     return best_thresh
 
 
-@njit()
+@njit(nogil=True, cache=True)
 def _get_counts_jit(thresh: np.uint8, region_a: NDArray[np.uint8], region_b: NDArray[np.uint8]) -> Tuple[int, int]:
     """
     Get counts of values in two regions above a threshold using Just-In-Time compilation.
