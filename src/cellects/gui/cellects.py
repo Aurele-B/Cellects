@@ -20,8 +20,7 @@ import time
 import numpy as np
 from PySide6 import QtWidgets, QtGui, QtCore
 from cellects.core.program_organizer import ProgramOrganizer
-from cellects.core.cellects_threads import SaveAllVarsThread, PrecompileNJITThread
-from cellects.gui.custom_widgets import backgroundcolor, night_background_color, FixedText
+from cellects.core.cellects_threads import SaveAllVarsThread
 from cellects.gui.advanced_parameters import AdvancedParameters
 from cellects.gui.first_window import FirstWindow
 from cellects.gui.if_several_folders_window import IfSeveralFoldersWindow

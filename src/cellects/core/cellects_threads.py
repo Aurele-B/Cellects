@@ -45,39 +45,6 @@ from cellects.video.network_tracking import NetworkTracking
 from cellects.video.oscillations_tracking import OscillationsTracking
 from psutil import virtual_memory
 
-class PrecompileNJITThread(QtCore.QThread):
-    """
-    Precompile n-jit functions for speed optimization.
-
-    Notes
-    -----
-    This class uses `QThread` to manage the process asynchronously.
-    """
-
-    def __init__(self, parent=None):
-        """
-        Initialize the worker thread for recompiling n-jit functions.
-
-        Parameters
-        ----------
-        parent : QObject, optional
-            The parent object of this thread instance. In use, an instance of CellectsMainWidget class. Default is None.
-        """
-        super(PrecompileNJITThread, self).__init__(parent)
-        self.setParent(parent)
-
-    def run(self):
-        """
-        Execute the main functions for basic image segmentation to make it faster for true images.
-        """
-        po = ProgramOrganizer()
-        im = np.zeros((3, 3, 3), dtype=np.uint8)
-        im[1, 1, :] = 1
-        po.get_first_image(im, sample_number=1)
-        if not self.isInterruptionRequested():
-            po.fast_first_image_segmentation()
-
-
 class LoadDataToRunCellectsQuicklyThread(QtCore.QThread):
     """
     Load data to run Cellects quickly in a separate thread.

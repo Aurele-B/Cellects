@@ -2,25 +2,10 @@
 """
 This script contains all unit tests of the cellects_threads script
 """
-from cellects.utils.utilitarian import insensitive_glob
 from cellects.core.cellects_threads import *
 from cellects.core.cellects_paths import CONFIG_DIR
 from tests._base import CellectsUnitTest
 import unittest
-
-
-class TestPrecompileNJITThread(CellectsUnitTest):
-    """Test suite for PrecompileNJITThread class."""
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.precompile = PrecompileNJITThread()
-
-    def test_precompile_n_jit_methods(self):
-        """Test basic behavior."""
-        self.precompile.run()
-        self.assertFalse(self.precompile.isRunning())
-        self.assertFalse(self.precompile.isInterruptionRequested())
 
 
 class TestOnSeveralFolders(CellectsUnitTest):

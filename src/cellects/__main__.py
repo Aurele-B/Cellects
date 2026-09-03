@@ -11,7 +11,7 @@ import logging
 import coloredlogs
 from pathlib import Path
 
-from cellects.utils.numba_precompilation import warming_up_numba_functions
+from cellects.gui.numba_precompilation import warming_up_numba_functions
 
 
 def get_icon_path():
