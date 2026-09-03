@@ -36,9 +36,9 @@ from cellects.core.program_organizer import ProgramOrganizer
 from cellects.image.morphological_operations import cross_33, create_mask, draw_img_with_mask, get_contours, keep_one_connected_component, cc, CompareNeighborsWithValue, box_counting_dimension, prepare_box_counting
 from cellects.image.image_segmentation import convert_subtract_and_filter_video
 from cellects.io.save import video_writing_decision, write_video, remove_h5_key, write_h5
-from cellects.io.load import create_empty_videos, read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image, read_h5
+from cellects.io.load import create_empty_videos, read_one_arena, read_and_rotate, read_rotate_crop_and_reduce_image, read_h5, get_h5_keys
 from cellects.utils.formulas import bracket_to_uint8_image_contrast, get_contour_width_from_im_shape, scale_coordinates
-from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, smallest_memory_array
+from cellects.utils.utilitarian import PercentAndTimeTracker, reduce_path_len, smallest_memory_array, insensitive_glob
 from cellects.video.graph_tracking import GraphTracking
 from cellects.video.motion_analysis import MotionAnalysis
 from cellects.video.network_tracking import NetworkTracking
@@ -666,6 +666,10 @@ class CropScaleSubtractDelineateThread(QtCore.QThread):
                 self.po.first_image.y_boundaries = None
                 self.status['continue'] = False
         if self.status['continue']:
+            if os.path.isfile(f'ind_{1}.h5') and 'target_coord' in get_h5_keys(f'ind_{1}.h5'):
+                ind_files = insensitive_glob(f'ind_*.h5')
+                for ind_file in ind_files:
+                    remove_h5_key(ind_file, 'target_coord')
             self.po.save_first_image()
             self.po.save_masks()
             logging.info("Start automatic video delineation")
