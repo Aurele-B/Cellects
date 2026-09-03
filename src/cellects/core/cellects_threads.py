@@ -684,10 +684,16 @@ class SaveManualDrawingsThread(QtCore.QThread):
     """
     Thread for saving user's defined arena delineation or specimen target through the GUI.
 
+    Parameters
+    ----------
+    message_from_thread : Signal(str)
+        Signal emitted from the thread to the user.
+
     Notes
     -----
     This class uses `QThread` to manage the process asynchronously.
     """
+    message_from_thread = QtCore.Signal(str)
     def __init__(self, po, parent=None):
         """
         Initialize the worker thread for saving the coordinates when the user draw them manually
@@ -707,7 +713,37 @@ class SaveManualDrawingsThread(QtCore.QThread):
         """
         Do save the coordinates.
         """
-        if self.po.manual_delineation_flag:
+        if self.po.target_flag:
+            arena_im = np.zeros(self.po.first_image.binary_image.shape, dtype=np.uint32)
+            arenas = np.arange(self.po.sample_number)
+            for i in arenas:
+                arena_im[self.po.top[i]:self.po.bot[i], self.po.left[i]:self.po.right[i]] = i + 1
+
+            remaining_arenas = list(arenas + 1)
+            message = ""
+            for i in arenas:
+                im_i = (self.po.arena_mask == (i + 1)) * arena_im
+                coord = np.transpose(np.array(np.nonzero(im_i)))
+                if not coord.any():
+                    message = "One target area contains no pixel."
+                    break
+                arena_label = arena_im[coord[0, 0], coord[0, 1]]
+                if arena_label in remaining_arenas:
+                    remaining_arenas.remove(arena_label)
+                else:
+                    message = "There are several target areas per arena. Restart and draw only one per arena."
+                    break
+                coord[:, 0] -= self.po.top[arena_label - 1]
+                coord[:, 1] -= self.po.left[arena_label - 1]
+                write_h5(f"ind_{arena_label}.h5", coord, 'target')
+            if len(message) == 0 and len(remaining_arenas) > 0:
+                message = "Not all arenas have a target area. Restart and draw one per arena."
+            if len(message) > 0:
+                self.po.target_flag = False
+                logging.error(message)
+                self.message_from_thread.emit(message)
+
+        else:
             self.po.left = []
             self.po.right = []
             self.po.top = []
@@ -723,17 +759,6 @@ class SaveManualDrawingsThread(QtCore.QThread):
 
             logging.info("Save manual video delineation")
             self.po.vars['analyzed_individuals'] = list(range(1, self.po.sample_number + 1))
-        elif self.po.target_flag:
-            arena_im = np.zeros_like(self.po.first_image.binary_image)
-            for i in np.arange(self.po.sample_number):
-                arena_im[self.po.top[i]:self.po.bot[i], self.po.left[i]:self.po.right[i]] = i + 1
-            for i in np.arange(self.po.sample_number):
-                coord = np.transpose(np.array(np.nonzero(self.po.arena_mask == i + 1)))
-                arena_label = arena_im[coord[:, 0], coord[:, 1]][0]
-                coord[:, 0] -= self.po.top[arena_label - 1]
-                coord[:, 1] -= self.po.left[arena_label - 1]
-                write_h5(f"ind_{arena_label}.h5", coord, 'target')
-
 
 
 class GetExifDataThread(QtCore.QThread):

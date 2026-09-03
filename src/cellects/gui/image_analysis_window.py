@@ -2321,9 +2321,14 @@ class ImageAnalysisWindow(MainTabsType):
         elif self.po.target_flag:
             if is_yes:
                 if self.po.sample_number == self.po.arena_masks_number:
+                    self.thread_dict['SaveManualDrawings'].message_from_thread.connect(self.display_message_from_thread)
                     self.thread_dict['SaveManualDrawings'].start()
-                    self.go_to_next_widget()
-                    self.po.target_flag = False
+                    self.thread_dict['SaveManualDrawings'].wait()
+                    if self.po.target_flag:
+                        self.go_to_next_widget()
+                        self.po.target_flag = False
+                    else:
+                        self.drawing_target()
                 else:
                     self.message.setText(
                         f"{self.po.arena_masks_number} targets are drawn over the {self.po.sample_number} expected")
@@ -2537,6 +2542,7 @@ class ImageAnalysisWindow(MainTabsType):
         self.visualize_label.setVisible(False)
         self.select_option.setVisible(False)
         self.select_option_label.setVisible(False)
+        self.complete_image_analysis.setVisible(False)
         self.user_drawn_lines_label.setText("Draw each target")
         self.user_drawn_lines_label.setVisible(True)
         self.freehand_label.setVisible(True)
