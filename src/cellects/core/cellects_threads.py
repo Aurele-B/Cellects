@@ -974,6 +974,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.po: ProgramOrganizer = po
         self.status = {"continue": True, "folder": "", "message": ""}
         self.videos_in_ram = None
+        self.setStackSize(16 * 1024 * 1024)
 
     def run(self):
         self.status = {"continue": True, "folder": reduce_path_len(self.po.all['global_pathway'], 6, 10), "message": ""}
