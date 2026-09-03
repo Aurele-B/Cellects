@@ -1718,35 +1718,35 @@ class EdgeIdentification:
         for k,v in vertex_to_edges_map.items():
             if len(v)==2:
                 vertices_to_clear.append(k)
+
+        lost_edges = []
         for vertex_to_clear in vertices_to_clear:  # vertex_to_clear = 185vertices2[0]
             # Get its two edges
             edges = vertex_to_edges_map[vertex_to_clear]
             # Get the two other vertices connected by these two edges
-            v_names = np.array(self.edge_to_vertices_map[edges[0]] + self.edge_to_vertices_map[edges[1]])
+            v_names = np.array(self.edge_to_vertices_map.get(edges[0]) + self.edge_to_vertices_map.get(edges[1]))
             v_names = v_names[v_names != vertex_to_clear]
 
             # Keep the longest edge label
             is_longer_edge = self.edge_to_length_map[edges[0]] >= self.edge_to_length_map[edges[1]]
             kept_edge = edges[1 - is_longer_edge]
             lost_edge = edges[is_longer_edge]
+            lost_edges.append(lost_edge)
 
             # Update vertex_to_edges_map to avoid gaps when clearing two connected vertices
             vertex_to_update = self.edge_to_vertices_map[lost_edge]
             vertex_to_update = vertex_to_update[vertex_to_update != vertex_to_clear]
             vertex_to_edges_map[vertex_to_update].append(kept_edge)
-            vertex_to_edges_map[vertex_to_update].remove(lost_edge)
+            if lost_edge in vertex_to_edges_map[vertex_to_update]:
+                vertex_to_edges_map[vertex_to_update].remove(lost_edge)
 
             # 1. Modify edge_to_length_map
             # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
             self.edge_to_length_map[kept_edge] += self.edge_to_length_map[lost_edge]
-            # Remove the corresponding edge length from the map
-            self.edge_to_length_map.pop(lost_edge)
 
             # 2. Modify edge_to_vertices_map
             # Rename the vertex of the kept edge in edge_to_vertices_map
             self.edge_to_vertices_map[kept_edge] = v_names[0], v_names[1]
-            # Remove the removed edge from the edge_to_vertices_map
-            self.edge_to_vertices_map.pop(lost_edge)
 
             # 3. Modify non_tip_vertices
             # Remove the useless vertex from non_tip_vertices set
@@ -1754,11 +1754,16 @@ class EdgeIdentification:
             self.non_tip_vertices.discard((int(vY), int(vX)))
             # 2. Modify edge_to_coord_map
             self.edge_to_coord_map[kept_edge] = self.edge_to_coord_map[kept_edge].union(self.edge_to_coord_map[lost_edge]).union([(int(vY), int(vX))])
-            self.edge_to_coord_map.pop(lost_edge)
 
             # 4. Modify vertex_to_coord_map
             # Remove the useless vertex from vertex_to_coord_map
             self.vertex_to_coord_map.pop(vertex_to_clear)
+        for lost_edge in np.unique(lost_edges):
+            # Remove the corresponding edge length from the map
+            self.edge_to_length_map.pop(lost_edge)
+            # Remove the removed edge from the edge_to_vertices_map
+            self.edge_to_vertices_map.pop(lost_edge)
+            self.edge_to_coord_map.pop(lost_edge)
 
         # self._refresh_edge_arrays_from_dicts()
         # v_labels, v_counts = np.unique(self.edges_labels[:, 1:], return_counts=True)
