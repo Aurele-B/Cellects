@@ -1227,8 +1227,9 @@ class ImageAnalysisWindow(MainTabsType):
         self.message.setText("")
 
         if self.step < 2:
-            detected_shape_nb = self.po.first_image.im_combinations[self.po.current_combination_id][
-                'shape_number']
+            if self.po.first_image.im_combinations is None:
+                self.message.setText("Error: restart Cellects")
+            detected_shape_nb = self.po.first_image.im_combinations[self.po.current_combination_id]['shape_number']
             if detected_shape_nb == self.po.sample_number or self.po.vars['several_blob_per_arena']:
                 self.decision_label.setText(
                     f"{detected_shape_nb} distinct specimen(s) detected in {self.po.sample_number} arena(s). Does the color match the cell(s)?")
