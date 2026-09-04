@@ -987,8 +987,6 @@ class EdgeIdentification:
                 sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
                 # If the vertex does not connect at least 3 edges anymore, remove its vertex label
                 if sub_vertices[3, 3] == 0:
-                    # vertex_to_remove = np.nonzero(np.logical_and(self.non_tip_vertices[:, 0] == Y, self.non_tip_vertices[:, 1] == X))[0]
-                    # branches_to_remove[vertex_to_remove] = True
                     branches_to_remove.add(branch)
                 # If that pixel became a tip connected to another vertex remove it from the skeleton
                 if sub_tips[3, 3]:
