@@ -79,16 +79,15 @@ def is_8_connected(point, points) -> bool:
     >>> print(is_8_connected(point, points1))
     True
     """
-    if isinstance(points, np.ndarray):
-        if points.shape == (2,):
-            points = points[np.newaxis, :]
-        points = coord_array_to_set(points)
+    if not isinstance(points, np.ndarray):
+        points = np.array(points)
+    if points.shape == (2,):
+        points = points[np.newaxis, :]
     y, x = point
     return any(
         (y + dy, x + dx) in points
         for dy in (-1, 0, 1)
-        for dx in (-1, 0, 1)
-    )
+        for dx in (-1, 0, 1))
 
 def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
     """
