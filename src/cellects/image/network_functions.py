@@ -2129,8 +2129,8 @@ def print_wrong_edge_to_vertex_connections(edges_to_vertices, coord_by_edge, coo
             edge_id = edge_i[0]
             vertex1 = edge_i[1]
             vertex2 = edge_i[2]
-            v1_coord = coord_by_vertex[vertex1][0]
-            v2_coord = coord_by_vertex[vertex2][0]
+            v1_coord = coord_by_vertex[vertex1]
+            v2_coord = coord_by_vertex[vertex2]
             if edge_i[3] == 0:
                 # Check that the both vertices are connected together
                 if not is_8_connected(v1_coord, v2_coord):

@@ -632,8 +632,11 @@ def coord_table_to_dict(coord_table):
         if 't' in coord_table.columns:
             dim_nb += 1
         coord_table = np.array(coord_table.iloc[:, :dim_nb+1])
-    unique_labels = np.unique(coord_table[:, dim_nb])
-    return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb][0]) for label in unique_labels}
+    unique_labels, counts_labels = np.unique(coord_table[:, dim_nb], return_counts=True)
+    if np.any(counts_labels > 1):
+        return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb]) for label in unique_labels}
+    else:
+        return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb][0]) for label in unique_labels}
 
 def dict_to_coord_table(coord_dict: dict[int, CoordSet], dtype=np.int32) -> NDArray:
     """Convert a dict mapping al label to (y, x) coordinates into a ndarray of shape (n, 3) with labels in the third column."""
