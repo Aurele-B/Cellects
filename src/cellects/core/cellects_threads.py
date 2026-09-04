@@ -1788,7 +1788,7 @@ class VideoTrackingThread(QtCore.QThread):
         """
         true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
         expected_mem_use = ((self.po.motion.bit_usage['images'] + 8 * 8 + 3 * 8) * prod(self.po.motion.dims[1:]) + (self.po.motion.bit_usage['videos'] + 0) * prod(self.po.motion.dims)) * 1.16415e-10
-        logging.info(f"Post processing memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+        logging.info(f"Post processing memory usage: {true_mem_use} Go (overestimated forecast: {expected_mem_use} Go)")
 
         self.po.motion.dict_signal = self.image_from_thread.emit
         if not self.can_continue():
@@ -1801,7 +1801,7 @@ class VideoTrackingThread(QtCore.QThread):
         self.po.motion.detect_growth_transitions()
         true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
         expected_mem_use = ((self.po.motion.bit_usage['images'] +  2 * 8) * prod(self.po.motion.dims[1:]) + self.po.motion.bit_usage['videos'] * prod(self.po.motion.dims)) * 1.16415e-10
-        logging.info(f"Growth transitions memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+        logging.info(f"Growth transitions memory usage: {true_mem_use} Go (overestimated forecast: {expected_mem_use} Go)")
 
         if not self.can_continue():
             return
@@ -1857,7 +1857,7 @@ class VideoTrackingThread(QtCore.QThread):
                                         'current_image': imtoshow})
             self.po.motion.coord_network, self.po.motion.pseudopod_coord = net_track.save_network()
             true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
-            logging.info(f"Network detection memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+            logging.info(f"Network detection memory usage: {true_mem_use} Go (overestimated forecast: {expected_mem_use} Go)")
             del net_track
 
     def extract_graph_dynamics(self):
@@ -1891,7 +1891,7 @@ class VideoTrackingThread(QtCore.QThread):
                      'current_image': graph})
             graph_track.save_graph()
             true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
-            logging.info(f"Graph tracking memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+            logging.info(f"Graph tracking memory usage: {true_mem_use} Go (overestimated forecast: {expected_mem_use} Go)")
             del graph_track
 
     def detect_oscillations_dynamics(self):
@@ -1919,7 +1919,7 @@ class VideoTrackingThread(QtCore.QThread):
                      'current_image': oscillations_image})
             osci_track.save_oscillations()
             true_mem_use = self.po.motion.init_avail_mem - virtual_memory().available / (1024 ** 3)
-            logging.info(f"Oscillations analysis memory usage: {true_mem_use} Go (expected: {expected_mem_use} Go)")
+            logging.info(f"Oscillations analysis memory usage: {true_mem_use} Go (overestimated forecast: {expected_mem_use} Go)")
             del osci_track
 
 
