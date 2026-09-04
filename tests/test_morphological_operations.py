@@ -8,6 +8,55 @@ import numpy as np
 from tests._base import CellectsUnitTest, several_arenas_bin_img
 from cellects.image.morphological_operations import *
 
+class TestIs8Connected(CellectsUnitTest):
+    """Test suite for is_8_connected() method"""
+    @classmethod
+    def setUpClass(cls):
+        """Setup test fixtures."""
+        super().setUpClass()
+        cls.point = (0, 0)
+        cls.points1 = ((1, 0), (2, 2))
+        cls.points2 = ((1, 1), (2, 2))
+        cls.points3 = ((3, 3), (2, 2))
+
+    def test_is_4_connected(self):
+        """Test when there is a 4-connected neighbor."""
+        self.assertTrue(is_8_connected(self.point, self.points1))
+
+    def test_is_8_connected(self):
+        """Test when there is a 8-connected neighbor."""
+        self.assertTrue(is_8_connected(self.point, self.points2))
+
+    def test_no_8_connected(self):
+        """Test when there is no 8-connected neighbor."""
+        self.assertFalse(is_8_connected(self.point, self.points3))
+
+
+class TestDilateCoord(CellectsUnitTest):
+    """Test suite for dilate_coord() method"""
+    @classmethod
+    def setUpClass(cls):
+        """Setup test fixtures."""
+        super().setUpClass()
+        cls.coord1 = np.array([[1, 1]], dtype=np.uint8)
+        cls.coord2 = np.array([[1, 1], [2, 2]], dtype=np.uint8)
+
+    def test_dilate_coord_to_4_connected(self):
+        """Test 4-connected dilatation."""
+        dilated_coord = dilate_coord(self.coord1, connectivity=4)
+        self.assertTrue(len(dilated_coord) == 5)
+
+    def test_dilate_coord_to_8_connected(self):
+        """Test 8-connected dilatation."""
+        dilated_coord = dilate_coord(self.coord1, connectivity=8)
+        self.assertTrue(len(dilated_coord) == 9)
+
+    def test_two_points_dilatation(self):
+        """Test two points dilatation."""
+        dilated_coord = dilate_coord(self.coord2, connectivity=8)
+        print(len(dilated_coord))
+        self.assertTrue(len(dilated_coord) == 18)
+
 
 class TestCompareNeighborsWithValue(CellectsUnitTest):
     """Test CompareNeighborsWithValue functionality."""
