@@ -2096,23 +2096,24 @@ def window_on_edge(dims, edges, vertices, edge_id=None, vertex_id=None, padding:
 def print_graph_disconnections(dims, edges, vertices):
     """"Look for disconnections in a graph and print neighboring edge labels"""
     # edges, vertices = e_t, v_t
-    if isinstance(edges, pd.DataFrame):
-        edges = np.array(edges.iloc[:, :3])
-    if isinstance(vertices, pd.DataFrame):
-        vertices = np.array(vertices.iloc[:, :3])
-    graph_im = np.zeros(dims, dtype=np.uint8)
-    graph_im[edges[:, 0], edges[:, 1]] = 1
-    graph_im[vertices[:, 0], vertices[:, 1]] = 1
-    nb, c_im = cv2.connectedComponents(graph_im)
-    if nb == 0:
-        print(f'Empty image')
-    elif nb > 2:
-        edges_im = np.zeros(dims, dtype=np.uint32)
-        edges_im[edges[:, 0], edges[:, 1]] = edges[:, 2]
-        edges_labels = []
-        for _i in range(2, nb):
-            edges_labels.append(edges_im[c_im == _i][0])
-        print(f'The graph is not connected, potential edges near disconnections are: {edges_labels}')
+    if edges.shape[0] > 0:
+        if isinstance(edges, pd.DataFrame):
+            edges = np.array(edges.iloc[:, :3])
+        if isinstance(vertices, pd.DataFrame):
+            vertices = np.array(vertices.iloc[:, :3])
+        graph_im = np.zeros(dims, dtype=np.uint8)
+        graph_im[edges[:, 0], edges[:, 1]] = 1
+        graph_im[vertices[:, 0], vertices[:, 1]] = 1
+        nb, c_im = cv2.connectedComponents(graph_im)
+        if nb == 0:
+            print(f'Empty image')
+        elif nb > 2:
+            edges_im = np.zeros(dims, dtype=np.uint32)
+            edges_im[edges[:, 0], edges[:, 1]] = edges[:, 2]
+            edges_labels = []
+            for _i in range(2, nb):
+                edges_labels.append(edges_im[c_im == _i][0])
+            print(f'The graph is not connected, potential edges near disconnections are: {edges_labels}')
 
 
 def print_wrong_edge_to_vertex_connections(edges_to_vertices, coord_by_edge, coord_by_vertex):
