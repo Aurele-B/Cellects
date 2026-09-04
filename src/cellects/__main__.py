@@ -84,18 +84,16 @@ def run_cellects():
             icon = QtGui.QIcon(str(ICONS_DIR / "cellects_icon.ico"))
         elif sys.platform.startswith("linux"):
             icon = QtGui.QIcon(str(ICONS_DIR / "cellects_icon.png"))
-        if icon is not None:
-            app.setWindowIcon(icon)
 
         # Create and display main window
         loading = LoadingPopup()
+        if icon is not None:
+            loading.setWindowIcon(icon)
         loading.show()
         # Set custom window icon for taskbar
         warming_up_numba_functions(loading)
         loading.start_application()
         if icon is not None:
-            app.setWindowIcon(icon)
-            loading.setWindowIcon(icon)
             loading.session.setWindowIcon(icon)
         # Set exit
         sys.exit(app.exec())
