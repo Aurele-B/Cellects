@@ -396,6 +396,33 @@ class TestRemoveCoordinates(CellectsUnitTest):
             result = remove_coordinates(arr1, arr2)
 
 
+class TestCoordConversions(CellectsUnitTest):
+    """Test suite for several conversion methods"""
+    @classmethod
+    def setUpClass(cls):
+        """Setup test fixtures."""
+        cls.labelled_image = np.zeros((3, 3), dtype=np.uint8)
+        cls.labelled_image[0, 0] = 1
+        cls.labelled_image[2, 2] = 2
+        cls.label_dict = {1: (0, 0), 2: (2, 2)}
+        cls.coord_array = np.array([[0, 0, 1], [2, 2, 2]], dtype=np.uint32)
+        cls.coord_dataframe = pd.DataFrame(cls.coord_array, columns=['x', 'y', 'label'])
+
+    def test_labeled_image_to_dict(self):
+        """Test conversion from labeled image to dict."""
+        label_dict = labeled_image_to_dict(self.labelled_image)
+        self.assertEqual(label_dict, self.label_dict)
+
+    def test_coord_table_to_dict_from_array(self):
+        """Test conversion from coord array to dict."""
+        label_dict = coord_table_to_dict(self.coord_array)
+        self.assertEqual(label_dict, self.label_dict)
+
+    def test_coord_table_to_dict_from_data_frame(self):
+        """Test conversion from coord data frame to dict."""
+        label_dict = coord_table_to_dict(self.coord_dataframe)
+        self.assertEqual(label_dict, self.label_dict)
+
 
 if __name__ == '__main__':
     unittest.main()

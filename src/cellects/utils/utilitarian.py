@@ -614,7 +614,7 @@ def zoom_on_nonzero(binary_image:NDArray, padding: int = 2, return_coord: bool=T
 
 Coord = tuple[int, int]
 CoordSet = set[Coord]
-def labelled_image_to_dict(labelled_image: NDArray):
+def labeled_image_to_dict(labelled_image: NDArray):
     """Convert an ndarray of shape (y, x) to a dict mapping the labels in the image to their (y, x) coordinates."""
     labels = np.unique(labelled_image)
     id_to_coord_map = {}
@@ -633,7 +633,7 @@ def coord_table_to_dict(coord_table):
             dim_nb += 1
         coord_table = np.array(coord_table.iloc[:, :dim_nb+1])
     unique_labels = np.unique(coord_table[:, dim_nb])
-    return {label: coord_table[coord_table[:, dim_nb] == label, :dim_nb] for label in unique_labels}
+    return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb][0]) for label in unique_labels}
 
 def dict_to_coord_table(coord_dict: dict[int, CoordSet], dtype=np.int32) -> NDArray:
     """Convert a dict mapping al label to (y, x) coordinates into a ndarray of shape (n, 3) with labels in the third column."""
