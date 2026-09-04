@@ -1734,11 +1734,11 @@ class EdgeIdentification:
             lost_edges.append(lost_edge)
 
             # Update vertex_to_edges_map to avoid gaps when clearing two connected vertices
-            vertex_to_update = self.edge_to_vertices_map[lost_edge]
+            vertex_to_update = np.array(self.edge_to_vertices_map[lost_edge])
             vertex_to_update = vertex_to_update[vertex_to_update != vertex_to_clear]
-            vertex_to_edges_map[vertex_to_update].append(kept_edge)
-            if lost_edge in vertex_to_edges_map[vertex_to_update]:
-                vertex_to_edges_map[vertex_to_update].remove(lost_edge)
+            vertex_to_edges_map[vertex_to_update[0]].append(kept_edge)
+            if lost_edge in vertex_to_edges_map[vertex_to_update[0]]:
+                vertex_to_edges_map[vertex_to_update[0]].remove(lost_edge)
 
             # 1. Modify edge_to_length_map
             # Add the removed edge length to the kept edge length (minus 2, corresponding to the removed vertex)
