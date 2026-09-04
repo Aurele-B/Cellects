@@ -609,3 +609,102 @@ def zoom_on_nonzero(binary_image:NDArray, padding: int = 2, return_coord: bool=T
         return cy_min, cy_max, cx_min, cx_max
     else:
         return binary_image[cy_min:cy_max, cx_min:cx_max]
+
+
+Coord = tuple[int, int]
+CoordSet = set[Coord]
+def labelled_image_to_dict(labelled_image: NDArray):
+    """Convert an ndarray of shape (y, x) to a dict mapping the labels in the image to their (y, x) coordinates."""
+    labels = np.unique(labelled_image)
+    id_to_coord_map = {}
+    for label in labels[labels != 0]:
+        y, x = np.nonzero(labelled_image == label)
+        id_to_coord_map[label] = (y, x)
+    return id_to_coord_map
+
+def coord_table_to_dict(coord_table):
+    """Convert an ndarray (or a dataframe) of shape (n, 3) or more to a dict mapping the third column to (y, x) coordinates."""
+    if coord_table is None or coord_table.size == 0:
+        return dict()
+    dim_nb = 2
+    if isinstance(coord_table, pd.DataFrame):
+        if 't' in coord_table.columns:
+            dim_nb += 1
+        coord_table = np.array(coord_table.iloc[:, :dim_nb+1])
+    unique_labels = np.unique(coord_table[:, dim_nb])
+    return {label: coord_table[coord_table[:, dim_nb] == label, :dim_nb] for label in unique_labels}
+
+def dict_to_coord_table(coord_dict: dict[int, CoordSet], dtype=np.int32) -> NDArray:
+    """Convert a dict mapping al label to (y, x) coordinates into a ndarray of shape (n, 3) with labels in the third column."""
+    rows = []
+    if len(coord_dict) > 0:
+        first_element = list(coord_dict.values())[0]
+        if isinstance(first_element, set):
+            for edge_id, coords in coord_dict.items():
+                rows.extend((y, x, edge_id) for y, x in coords)
+        else:
+            if np.isscalar(first_element[0]):
+                for id, (y, x) in coord_dict.items():
+                    rows.append([y, x, id])
+            else:
+                for id, (y, x) in coord_dict.items():
+                    rows.append([y[0], x[0], id])
+    if not rows:
+        return np.zeros((0, 3), dtype=dtype)
+    return np.array(rows, dtype=dtype)
+
+def coord_array_to_set(coords: NDArray) -> CoordSet:
+    """Convert an ndarray of shape (n, 2) or more to a set of (y, x) coordinates."""
+    if coords is None or coords.size == 0:
+        return set()
+    return {(int(y), int(x)) for y, x in coords[:, :2]}
+
+
+def coord_set_to_array(coords: CoordSet, dtype=np.int32) -> NDArray:
+    """Convert a set of (y, x) coordinates to an ndarray of shape (n, 2)."""
+    if not coords:
+        return np.zeros((0, 2), dtype=dtype)
+    return np.array(tuple(coords), dtype=dtype)
+
+@njit(nogil=True, cache=True)
+def nonzero_to_set(mask: NDArray) -> CoordSet:
+    """Convert non-zero pixels of a 2D mask to a set of (y, x) coordinates."""
+    return set(zip(*np.nonzero(mask)))
+
+def write_coords_to_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
+    """Write a coordinate set into an existing 2D mask."""
+    if coords:
+        arr = coord_set_to_array(coords)
+        mask[arr[:, 0], arr[:, 1]] = value
+
+
+def clear_coords_from_mask(mask: NDArray, coords: CoordSet) -> None:
+    """Set coordinates to 0 in a 2D mask."""
+    if coords:
+        arr = coord_set_to_array(coords)
+        mask[arr[:, 0], arr[:, 1]] = 0
+
+
+def set_coords_in_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
+    """Set coordinates to a given value in a 2D mask."""
+    if coords:
+        arr = coord_set_to_array(coords)
+        mask[arr[:, 0], arr[:, 1]] = value
+
+
+def unpad_coord_set(coords: CoordSet) -> CoordSet:
+    """Subtract 1 from y and x for every coordinate in a set."""
+    return {(y - 1, x - 1) for y, x in coords}
+
+
+def unpad_coord_dict_values(coord_map: dict[int, Coord]) -> dict[int, Coord]:
+    """Subtract 1 from y and x for every coordinate value in an id -> coord mapping."""
+    return {idx: (y - 1, x - 1) for idx, (y, x) in coord_map.items()}
+
+
+def unpad_edge_to_coord_map(edge_to_coord_map: dict[int, CoordSet]) -> dict[int, CoordSet]:
+    """Subtract 1 from y and x for every edge pixel coordinate."""
+    return {
+        edge_id: {(y - 1, x - 1) for y, x in coords}
+        for edge_id, coords in edge_to_coord_map.items()
+    }

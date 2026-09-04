@@ -27,9 +27,8 @@ and distance transform analysis. Implements both Otsu thresholding and rolling w
 methods for image processing workflows.
 """
 import numpy as np
-
-from cellects.image.morphological_operations import square_33, cross_33, rhombus_55, create_ellipse, image_borders, CompareNeighborsWithValue, get_contours, get_all_line_coordinates, close_holes, keep_one_connected_component, get_min_or_max_euclidean_pair
-from cellects.utils.utilitarian import remove_coordinates, smallest_memory_array
+from cellects.image.morphological_operations import *
+from cellects.utils.utilitarian import *
 from cellects.utils.formulas import *
 from cellects.io.save import *
 from cellects.utils.utilitarian import zoom_on_nonzero
@@ -411,83 +410,6 @@ class  NetworkDetection:
         else:
             self.pseudopods = self.pseudopods.astype(np.uint8)
         self.incomplete_network *= (1 - self.pseudopods)
-
-
-# 8-connectivity neighbors
-neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
-             (0, -1), (0, 1),
-             (1, -1), (1, 0), (1, 1)]
-neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
-Coord = tuple[int, int]
-CoordSet = set[Coord]
-
-
-def coord_array_to_set(coords: NDArray) -> CoordSet:
-    """Convert an ndarray of shape (n, 2) or more to a set of (y, x) coordinates."""
-    if coords is None or coords.size == 0:
-        return set()
-    return {(int(y), int(x)) for y, x in coords[:, :2]}
-
-
-def coord_set_to_array(coords: CoordSet, dtype=np.int32) -> NDArray:
-    """Convert a set of (y, x) coordinates to an ndarray of shape (n, 2)."""
-    if not coords:
-        return np.zeros((0, 2), dtype=dtype)
-    return np.array(tuple(coords), dtype=dtype)
-
-@njit(nogil=True, cache=True)
-def nonzero_to_set(mask: NDArray) -> CoordSet:
-    """Convert non-zero pixels of a 2D mask to a set of (y, x) coordinates."""
-    return set(zip(*np.nonzero(mask)))
-
-def write_coords_to_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
-    """Write a coordinate set into an existing 2D mask."""
-    if coords:
-        arr = coord_set_to_array(coords)
-        mask[arr[:, 0], arr[:, 1]] = value
-
-
-def edge_pixels_dict_to_array(edge_pixels: dict[int, CoordSet], dtype=np.int32) -> NDArray:
-    """Convert {edge_id: {(y, x), ...}} to ndarray rows (y, x, edge_id)."""
-    rows = []
-    for edge_id, coords in edge_pixels.items():
-        rows.extend((y, x, edge_id) for y, x in coords)
-    if not rows:
-        return np.zeros((0, 3), dtype=dtype)
-    return np.array(rows, dtype=dtype)
-
-
-def clear_coords_from_mask(mask: NDArray, coords: CoordSet) -> None:
-    """Set coordinates to 0 in a 2D mask."""
-    if coords:
-        arr = coord_set_to_array(coords)
-        mask[arr[:, 0], arr[:, 1]] = 0
-
-
-def set_coords_in_mask(mask: NDArray, coords: CoordSet, value=1) -> None:
-    """Set coordinates to a given value in a 2D mask."""
-    if coords:
-        arr = coord_set_to_array(coords)
-        mask[arr[:, 0], arr[:, 1]] = value
-
-
-def unpad_coord_set(coords: CoordSet) -> CoordSet:
-    """Subtract 1 from y and x for every coordinate in a set."""
-    return {(y - 1, x - 1) for y, x in coords}
-
-
-def unpad_coord_dict_values(coord_map: dict[int, Coord]) -> dict[int, Coord]:
-    """Subtract 1 from y and x for every coordinate value in an id -> coord mapping."""
-    return {idx: (y - 1, x - 1) for idx, (y, x) in coord_map.items()}
-
-
-def unpad_edge_to_coord_map(edge_to_coord_map: dict[int, CoordSet]) -> dict[int, CoordSet]:
-    """Subtract 1 from y and x for every edge pixel coordinate."""
-    return {
-        edge_id: {(y - 1, x - 1) for y, x in coords}
-        for edge_id, coords in edge_to_coord_map.items()
-    }
-
 
 def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray[np.int64]=None) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:
     """
@@ -2138,120 +2060,6 @@ def _find_closest_vertices(skeleton: NDArray[np.uint8], all_vertices_coord: Coor
 
     return ending_vertices, edge_lengths, edge_pixels
 
-def ad_pad(arr: NDArray) -> NDArray:
-    """
-    Pad the input array with a single layer of zeros around its edges.
-
-    Parameters
-    ----------
-    arr : ndarray
-        The input array to pad. Must be at least 2-dimensional.
-
-    Returns
-    -------
-    padded_arr : ndarray
-        The output array with a single 0-padded layer around its edges.
-
-    Notes
-    -----
-    This function uses NumPy's `pad` with mode='constant' to add a single layer
-    of zeros around the edges of the input array.
-
-    Examples
-    --------
-    >>> arr = np.array([[1, 2], [3, 4]])
-    >>> ad_pad(arr)
-    array([[0, 0, 0, 0],
-       [0, 1, 2, 0],
-       [0, 3, 4, 0],
-       [0, 0, 0, 0]])
-    """
-    return np.pad(arr, [(1, ), (1, )], mode='constant')
-
-def un_pad(arr: NDArray) -> NDArray:
-    """
-    Unpads a 2D NumPy array by removing the first and last row/column.
-
-    Extended Description
-    --------------------
-    Reduces the size of a 2D array by removing the outermost rows and columns.
-    Useful for trimming boundaries added during padding operations.
-
-    Parameters
-    ----------
-    arr : ndarray
-        Input 2D array to be unpadded. Shape (n,m) is expected.
-
-    Returns
-    -------
-    ndarray
-        Unpadded 2D array with shape (n-2, m-2).
-
-    Examples
-    --------
-    >>> arr = np.array([[0, 0, 0],
-    >>>                 [0, 4, 0],
-    >>>                 [0, 0, 0]])
-    >>> un_pad(arr)
-    array([[4]])
-    """
-    return arr[1:-1, 1:-1]
-
-def add_padding(array_list: list) -> list:
-    """
-    Add padding to each 2D array in a list.
-
-    Parameters
-    ----------
-    array_list : list of ndarrays
-        List of 2D NumPy arrays to be processed.
-
-    Returns
-    -------
-    out : list of ndarrays
-        List of 2D NumPy arrays with the padding removed.
-
-    Examples
-    --------
-    >>> array_list = [np.array([[1, 2], [3, 4]])]
-    >>> padded_list = add_padding(array_list)
-    >>> print(padded_list[0])
-    [[0 0 0]
-     [0 1 2 0]
-     [0 3 4 0]
-     [0 0 0]]
-    """
-    new_array_list = []
-    for arr in array_list:
-        new_array_list.append(ad_pad(arr))
-    return new_array_list
-
-
-def remove_padding(array_list: list) -> list:
-    """
-    Remove padding from a list of 2D arrays.
-
-    Parameters
-    ----------
-    array_list : list of ndarrays
-        List of 2D NumPy arrays to be processed.
-
-    Returns
-    -------
-    out : list of ndarrays
-        List of 2D NumPy arrays with the padding removed.
-
-    Examples
-    --------
-    >>> arr1 = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
-    >>> arr2 = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-    >>> remove_padding([arr1, arr2])
-    [array([[1]]), array([[0]])]
-    """
-    new_array_list = []
-    for arr in array_list:
-        new_array_list.append(un_pad(arr))
-    return new_array_list
 
 
 def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], pad_origin: NDArray[np.uint8], pad_network: NDArray[np.uint8], pad_origin_centroid: NDArray[np.int64]) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:

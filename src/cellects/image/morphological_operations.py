@@ -36,6 +36,7 @@ from typing import Tuple
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
+from cellects.utils.utilitarian import coord_array_to_set
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
 from skimage.measure import label
 from scipy.stats import linregress
@@ -46,6 +47,197 @@ import matplotlib.pyplot as plt
 cross_33 = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
 square_33 = np.ones((3, 3), np.uint8)
 
+# 8-connectivity neighbors
+neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
+             (0, -1), (0, 1),
+             (1, -1), (1, 0), (1, 1)]
+neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
+
+def is_8_connected(point, points) -> bool:
+    """
+    Test whether a point (y, x) is connected with a set of points
+
+
+    Parameters
+    ----------
+    point : typle or ndarray
+        Coordinates of the point (y, x)
+
+    points : typle or ndarray
+        Coordinates of the points (n, 2), with y first column and x second.
+
+
+    Returns
+    -------
+    is_8_connected: bool
+        True if one of the points is connected to the point, False otherwise.
+
+    Examples
+    --------
+    >>> point = (0, 0)
+    >>> points1 = ((1, 0), (2, 2))
+    >>> print(is_8_connected(point, points1))
+    True
+    """
+    if isinstance(points, np.ndarray):
+        if points.shape == (2,):
+            points = points[np.newaxis, :]
+        points = coord_array_to_set(points)
+    y, x = point
+    return any(
+        (y + dy, x + dx) in points
+        for dy in (-1, 0, 1)
+        for dx in (-1, 0, 1)
+    )
+
+def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
+    """
+    Find the coordinates of all the neighboring points connected to a point
+
+
+    Parameters
+    ----------
+    coord : ndarray
+        Coordinates to dilate (y, x)
+
+    connectivity : int
+        Can be 4 or 8.
+
+    Returns
+    -------
+    dilated_coord: NDArray
+        Array containing the original coord supplemented with their neighbors.
+
+    Examples
+    --------
+    >>> coord = np.array([[1, 1]], dtype=np.uint8)
+    >>> print(len(dilate_coord(coord)))
+    9
+    """
+    if connectivity == 8:
+        neighbors = neighbors_8
+    else:
+        neighbors = neighbors_4
+    dilated = np.zeros((coord.shape[0] * (len(neighbors) + 1), coord.shape[1]), dtype=np.uint32)
+    dilated[:coord.shape[0], :] = coord
+    for n_i, neighbor in enumerate(neighbors):
+        dilated[(n_i + 1) * coord.shape[0]:(n_i + 2) * coord.shape[0], :] = coord + neighbor
+    return dilated
+
+def ad_pad(arr: NDArray) -> NDArray:
+    """
+    Pad the input array with a single layer of zeros around its edges.
+
+    Parameters
+    ----------
+    arr : ndarray
+        The input array to pad. Must be at least 2-dimensional.
+
+    Returns
+    -------
+    padded_arr : ndarray
+        The output array with a single 0-padded layer around its edges.
+
+    Notes
+    -----
+    This function uses NumPy's `pad` with mode='constant' to add a single layer
+    of zeros around the edges of the input array.
+
+    Examples
+    --------
+    >>> arr = np.array([[1, 2], [3, 4]])
+    >>> ad_pad(arr)
+    array([[0, 0, 0, 0],
+       [0, 1, 2, 0],
+       [0, 3, 4, 0],
+       [0, 0, 0, 0]])
+    """
+    return np.pad(arr, [(1, ), (1, )], mode='constant')
+
+def un_pad(arr: NDArray) -> NDArray:
+    """
+    Unpads a 2D NumPy array by removing the first and last row/column.
+
+    Extended Description
+    --------------------
+    Reduces the size of a 2D array by removing the outermost rows and columns.
+    Useful for trimming boundaries added during padding operations.
+
+    Parameters
+    ----------
+    arr : ndarray
+        Input 2D array to be unpadded. Shape (n,m) is expected.
+
+    Returns
+    -------
+    ndarray
+        Unpadded 2D array with shape (n-2, m-2).
+
+    Examples
+    --------
+    >>> arr = np.array([[0, 0, 0],
+    >>>                 [0, 4, 0],
+    >>>                 [0, 0, 0]])
+    >>> un_pad(arr)
+    array([[4]])
+    """
+    return arr[1:-1, 1:-1]
+
+def add_padding(array_list: list) -> list:
+    """
+    Add padding to each 2D array in a list.
+
+    Parameters
+    ----------
+    array_list : list of ndarrays
+        List of 2D NumPy arrays to be processed.
+
+    Returns
+    -------
+    out : list of ndarrays
+        List of 2D NumPy arrays with the padding removed.
+
+    Examples
+    --------
+    >>> array_list = [np.array([[1, 2], [3, 4]])]
+    >>> padded_list = add_padding(array_list)
+    >>> print(padded_list[0])
+    [[0 0 0]
+     [0 1 2 0]
+     [0 3 4 0]
+     [0 0 0]]
+    """
+    new_array_list = []
+    for arr in array_list:
+        new_array_list.append(ad_pad(arr))
+    return new_array_list
+
+
+def remove_padding(array_list: list) -> list:
+    """
+    Remove padding from a list of 2D arrays.
+
+    Parameters
+    ----------
+    array_list : list of ndarrays
+        List of 2D NumPy arrays to be processed.
+
+    Returns
+    -------
+    out : list of ndarrays
+        List of 2D NumPy arrays with the padding removed.
+
+    Examples
+    --------
+    >>> arr1 = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
+    >>> arr2 = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
+    >>> remove_padding([arr1, arr2])
+    [array([[1]]), array([[0]])]
+    """
+    new_array_list = []
+    for arr in array_list:
+        new_array_list.append(un_pad(arr))
+    return new_array_list
 
 class CompareNeighborsWithValue:
     """
