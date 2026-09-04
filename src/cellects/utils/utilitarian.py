@@ -27,6 +27,7 @@ The progress tracker records initialization time for potential performance analy
 """
 
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 from typing import Tuple
 from timeit import default_timer
