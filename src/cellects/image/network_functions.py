@@ -995,11 +995,14 @@ class EdgeIdentification:
                     if sub_vertices[2:5, 2:5].sum() > 1:
                         self.pad_skeleton[Y, X] = 0
                         branches_to_remove.add(branch)
-        # Check that excedent connected components are 1 pixel size, if so:
-        # It means that they were neighbors to removed tips and not necessary for the skeleton
         nb, sh = cv2.connectedComponents(self.pad_skeleton)
         if nb > 2:
-            logging.error("Removing small tipped edges split the skeleton")
+            # Check that supplementary components are 1 or 2 pixel size, if so:
+            # It means that they were neighbors to removed tips and not necessary for the skeleton
+            # and will be removed by clear_areas_of_1_or_2_unidentified_pixels
+            nb, sh, st, ce = cv2.connectedComponentsWithStats(self.pad_skeleton)
+            if (st[:, 4] > 2).sum() > 3:
+                logging.error(f"Removing small tipped edges split the skeleton at t={self.t}")
 
         # Remove in distances the pixels removed in skeleton:
         self.pad_distances *= self.pad_skeleton
