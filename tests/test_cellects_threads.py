@@ -82,6 +82,8 @@ class TestCellectsThreads(CellectsUnitTest):
         cls.get_last_im_thread.run()
         cls.po.drawn_image = cls.po.first_image.image.copy()
         cls.po.current_image = cls.po.first_image.image.copy()
+        cls.temporary_mask_coord = [[50, 50], [60, 60]]
+        cls.user_saved_coord = [[50, 50], [70, 70]]
         cls.update_image_thread = UpdateImageThread(cls.po)
         cls.first_image_analysis_thread = FirstImageAnalysisThread(cls.po)
         cls.first_image_analysis_thread.run()
@@ -122,8 +124,110 @@ class TestCellectsThreads(CellectsUnitTest):
         """Test the basic behavior of the GetLastImThread class."""
         self.assertIsNotNone(self.po.last_im)
 
-    def test_update_image_thread(self):
-        """Test the basic behavior of the UpdateImageThread class."""
+    def test_update_image_thread_with_temporary_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user is drawing."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_background_temporary_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user is drawing on the background."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.po.arena0_back1_bio2 = 1
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_cells_temporary_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user is drawing on cells."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.po.arena0_back1_bio2 = 2
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_targets_temporary_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user is drawing a target."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.po.target_flag = True
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_free_hand_temporary_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user is free hand drawing."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.po.drawing_mode = "free_hand"
+        self.po.free_hand_points = self.temporary_mask_coord
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_temporary_masks_on_last_im(self):
+        """Test the behavior of the UpdateImageThread class when the user is drawing on the last image."""
+        self.po.temporary_mask_coord = self.temporary_mask_coord
+        self.po.user_saved_coord = []
+        self.po.is_first_image_flag = False
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_saved_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user has finished drawing."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_saved_delineation_masks(self):
+        """Test the behavior of the UpdateImageThread class when delineation is done."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.delineation_done = True
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_saved_target_masks(self):
+        """Test the behavior of the UpdateImageThread class when target masks are done."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.arena0_back1_bio2 = 0
+        self.po.delineation_done = True
+        self.po.vars['contour_color'] = 0
+        self.po.target_flag = True
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_background_saved_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user has finished drawing on the background."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.arena0_back1_bio2 = 1
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_cells_saved_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user has finished drawing on cells."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.arena0_back1_bio2 = 2
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_targets_saved_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user has finished drawing the targets."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.target_flag = True
+        self.update_image_thread.run()
+        self.assertTrue(self.po.drawn_image.any())
+
+    def test_update_image_thread_with_free_hand_saved_masks(self):
+        """Test the behavior of the UpdateImageThread class when the user has finished free hand drawing."""
+        self.po.temporary_mask_coord = []
+        self.po.user_saved_coord = self.user_saved_coord
+        self.po.drawing_mode = "free_hand"
+        self.po.free_hand_points = self.user_saved_coord
         self.update_image_thread.run()
         self.assertTrue(self.po.drawn_image.any())
 
@@ -144,6 +248,10 @@ class TestCellectsThreads(CellectsUnitTest):
     def test_get_exif_data_thread(self):
         """Test the basic behavior of the GetExifDataThread class."""
         self.assertTrue('exif' in self.po.vars)
+
+    def test_manual_targets_saving(self):
+        self.po.target_flag = True
+        self.save_manual_drawings_thread.run()
 
     def test_complete_image_analysis_thread(self):
         """Test the basic behavior of the CompleteImageAnalysisThread class."""
