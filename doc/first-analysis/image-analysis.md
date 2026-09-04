@@ -135,7 +135,10 @@ detection (e.g., 6 spots in 6 arenas), click *Yes*. Otherwise, improve analysis 
 
 <!-- START_Arena_shape -->
 ## Arena shape:
-Specifies whether the specimen(s) can move in a circular or rectangular arena.
+Specifies the shape (circular or rectangular) to draw.
+
+- For arenas: the shape of the area in which each specimen can grow and/or move.
+- For targets (optional): the shape of the target area specimen(s) can reach.
 
 <!-- END_Arena_shape -->
 

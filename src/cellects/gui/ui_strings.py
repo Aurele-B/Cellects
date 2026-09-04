@@ -285,7 +285,9 @@ IAW["Arena_shape"] = {}
 IAW["Arena_shape"]["label"] = "Arena shape"
 # START_TIP
 IAW["Arena_shape"]["tips"] = \
-f"""Specifies whether the specimen(s) can move in a circular or rectangular arena.
+f"""Specifies the shape (circular or rectangular) to draw.
+- For arenas: the shape of the area in which each specimen can grow and/or move.
+- For targets (optional): the shape of the target area specimen(s) can reach.
 """
 # END_TIP
 
