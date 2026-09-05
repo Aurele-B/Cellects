@@ -1729,6 +1729,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../gui/numba_precompilation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    numba_precompilation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../gui/required_output/" class="md-nav__link">
         
   
@@ -2465,34 +2493,6 @@
     
   
     formulas
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../utils/load_display_save/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    load_display_save
   
 
     
@@ -3630,7 +3630,7 @@ converted to uint8. Optionally subtracts background from the resultant image.</p
 <span class="normal"><a href="#__codelineno-0-270">270</a></span>
 <span class="normal"><a href="#__codelineno-0-271">271</a></span>
 <span class="normal"><a href="#__codelineno-0-272">272</a></span>
-<span class="normal"><a href="#__codelineno-0-273">273</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="nd">@njit</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-273">273</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="k">def</span><span class="w"> </span><span class="nf">combine_color_spaces</span><span class="p">(</span><span class="n">c_space_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">all_c_spaces</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">subtract_background</span><span class="p">:</span> <span class="n">NDArray</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">:</span>
 <a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="sd">    Combine color spaces from a dictionary and generate an analyzable image.</span>
@@ -5157,7 +5157,7 @@ performs histogram shape analysis for threshold selection.</p>
 <span class="normal"><a href="#__codelineno-0-388">388</a></span>
 <span class="normal"><a href="#__codelineno-0-389">389</a></span>
 <span class="normal"><a href="#__codelineno-0-390">390</a></span>
-<span class="normal"><a href="#__codelineno-0-391">391</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="nd">@njit</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-391">391</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-342" name="__codelineno-0-342"></a><span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-343" name="__codelineno-0-343"></a><span class="k">def</span><span class="w"> </span><span class="nf">get_otsu_threshold</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">):</span>
 <a id="__codelineno-0-344" name="__codelineno-0-344"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-345" name="__codelineno-0-345"></a><span class="sd">    Calculate the optimal threshold value for an image using Otsu's method.</span>
@@ -5861,7 +5861,7 @@ The output is a binary image where pixel values are either
 <span class="normal"><a href="#__codelineno-0-423">423</a></span>
 <span class="normal"><a href="#__codelineno-0-424">424</a></span>
 <span class="normal"><a href="#__codelineno-0-425">425</a></span>
-<span class="normal"><a href="#__codelineno-0-426">426</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="nd">@njit</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-426">426</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-394" name="__codelineno-0-394"></a><span class="nd">@njit</span><span class="p">(</span><span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">cache</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-395" name="__codelineno-0-395"></a><span class="k">def</span><span class="w"> </span><span class="nf">otsu_thresholding</span><span class="p">(</span><span class="n">image</span><span class="p">:</span> <span class="n">NDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">]:</span>
 <a id="__codelineno-0-396" name="__codelineno-0-396"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-397" name="__codelineno-0-397"></a><span class="sd">    Apply Otsu's thresholding to a grayscale image.</span>

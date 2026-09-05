@@ -1729,6 +1729,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../gui/numba_precompilation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    numba_precompilation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../gui/required_output/" class="md-nav__link">
         
   
@@ -2485,34 +2513,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../load_display_save/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    load_display_save
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../utilitarian/" class="md-nav__link">
         
   
@@ -2910,6 +2910,8 @@
 
     <div class="doc doc-contents first">
 
+        <p>This module modifies the njit decorator to make it optional.</p>
+
 
 
 
@@ -2946,23 +2948,23 @@
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/utils/decorators.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-6"> 6</a></span>
-<span class="normal"><a href="#__codelineno-0-7"> 7</a></span>
-<span class="normal"><a href="#__codelineno-0-8"> 8</a></span>
-<span class="normal"><a href="#__codelineno-0-9"> 9</a></span>
-<span class="normal"><a href="#__codelineno-0-10">10</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-10">10</a></span>
 <span class="normal"><a href="#__codelineno-0-11">11</a></span>
 <span class="normal"><a href="#__codelineno-0-12">12</a></span>
 <span class="normal"><a href="#__codelineno-0-13">13</a></span>
-<span class="normal"><a href="#__codelineno-0-14">14</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-6" name="__codelineno-0-6"></a><span class="k">def</span><span class="w"> </span><span class="nf">njit</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7"></a><span class="w">    </span><span class="sd">""" numba n-jit decorator that can be disabled. Useful for testing.</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8"></a><span class="sd">    """</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9"></a>    <span class="k">if</span> <span class="n">USE_NUMBA</span><span class="p">:</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10"></a>        <span class="k">return</span> <span class="n">_real_njit</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11"></a>    <span class="c1"># test mode: return identity decorator</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13"></a>        <span class="k">return</span> <span class="n">func</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14"></a>    <span class="k">return</span> <span class="n">deco</span>
+<span class="normal"><a href="#__codelineno-0-14">14</a></span>
+<span class="normal"><a href="#__codelineno-0-15">15</a></span>
+<span class="normal"><a href="#__codelineno-0-16">16</a></span>
+<span class="normal"><a href="#__codelineno-0-17">17</a></span>
+<span class="normal"><a href="#__codelineno-0-18">18</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-10" name="__codelineno-0-10"></a><span class="k">def</span><span class="w"> </span><span class="nf">njit</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11"></a><span class="w">    </span><span class="sd">""" numba n-jit decorator that can be disabled. Useful for testing.</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12"></a><span class="sd">    """</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13"></a>    <span class="k">if</span> <span class="n">USE_NUMBA</span><span class="p">:</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14"></a>        <span class="k">return</span> <span class="n">_real_njit</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15"></a>    <span class="c1"># test mode: return identity decorator</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">deco</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17"></a>        <span class="k">return</span> <span class="n">func</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18"></a>    <span class="k">return</span> <span class="n">deco</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
