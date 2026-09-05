@@ -651,8 +651,8 @@ class SaveManualDrawingsThread(QtCore.QThread):
     """
     Thread for saving user's defined arena delineation or specimen target through the GUI.
 
-    Parameters
-    ----------
+    Signals
+    -------
     message_from_thread : Signal(str)
         Signal emitted from the thread to the user.
 
