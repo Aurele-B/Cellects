@@ -1263,7 +1263,7 @@ class VideoTrackingThread(QtCore.QThread):
                                         else:
                                             write_h5(vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
                                 except OSError:
-                                    self.status['message'] = f"Full disk memory: clear space and retry"
+                                    self.status['message'] = f"Disk memory full: clear space and retry"
                                     self.status['continue'] = False
                                 if not self.can_continue():
                                     return
