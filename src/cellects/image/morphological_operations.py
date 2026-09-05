@@ -113,6 +113,8 @@ def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
     >>> print(len(dilate_coord(coord)))
     9
     """
+    if len(coord.shape) == 1:
+        coord = coord[None,:]
     if connectivity == 8:
         neighbors = neighbors_8
     else:
