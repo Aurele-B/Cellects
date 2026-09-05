@@ -1317,6 +1317,7 @@ class EdgeIdentification:
             skel_copy[y1:y2, x1:x2][self.unidentified_shapes[y1:y2, x1:x2] == pix_i] = 0
             nb1, sh1 = cv2.connectedComponents(skel_copy.astype(np.uint8), connectivity=8)
             if nb1 > 2:
+                # Removing it break the skel, look for neighbors (vertices, and if necessary, edges) to identify it.
                 edges = np.zeros_like(self.pad_skeleton)
                 edges[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = self.edge_pix_coord[:, 2]
                 new_edge_pix_coord_set = nonzero_to_set(self.unidentified_shapes == pix_i)
