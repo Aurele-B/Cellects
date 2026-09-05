@@ -1311,18 +1311,49 @@ class EdgeIdentification:
         """
         # Check whether the 1 or 2 pixel size non-identified areas can be removed without breaking the skel
         one_pix = np.nonzero(self.unidentified_stats[:, 4 ] <= 2)[0] # == 1)[0]
-        cutting_removal = []
         for pix_i in one_pix: #pix_i=one_pix[0]
             skel_copy = self.pad_skeleton.copy()
             y1, y2, x1, x2 = self.unidentified_stats[pix_i, 1], self.unidentified_stats[pix_i, 1] + self.unidentified_stats[pix_i, 3], self.unidentified_stats[pix_i, 0], self.unidentified_stats[pix_i, 0] + self.unidentified_stats[pix_i, 2]
             skel_copy[y1:y2, x1:x2][self.unidentified_shapes[y1:y2, x1:x2] == pix_i] = 0
             nb1, sh1 = cv2.connectedComponents(skel_copy.astype(np.uint8), connectivity=8)
             if nb1 > 2:
-                cutting_removal.append(pix_i)
+                edges = np.zeros_like(self.pad_skeleton)
+                edges[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = self.edge_pix_coord[:, 2]
+                new_edge_pix_coord_set = nonzero_to_set(self.unidentified_shapes == pix_i)
+                new_edge_pix_coord = coord_set_to_array(new_edge_pix_coord_set)
+                new_edge_length = len(new_edge_pix_coord)
+                connected_vertices = []
+                if new_edge_length == 1:
+                    # With one pixel length, look for vertices in its direct neighborhood
+                    dilated_coord = dilate_coord(new_edge_pix_coord)
+                    connected_vertices = self.numbered_vertices[dilated_coord[:, 0], dilated_coord[:, 1]]
+                    connected_vertices = connected_vertices[connected_vertices > 0]
+                else:
+                    # With two pixel length, find a different vertex connected to ech of them
+                    dilated_coord1 = dilate_coord(new_edge_pix_coord[0, :])
+                    dilated_coord2 = dilate_coord(new_edge_pix_coord[1, :])
+                    dilated_coord = np.vstack((dilated_coord1, dilated_coord2))
+                    connected_vertices1 = self.numbered_vertices[dilated_coord1[:, 0], dilated_coord1[:, 1]]
+                    connected_vertices2 = self.numbered_vertices[dilated_coord2[:, 0], dilated_coord2[:, 1]]
+                    connected_vertices1 = connected_vertices1[connected_vertices1 > 0]
+                    connected_vertices2 = connected_vertices2[connected_vertices2 > 0]
+                    if len(connected_vertices1) > 0 and len(connected_vertices2) > 0:
+                        connected_vertices = [connected_vertices1[0], connected_vertices2[0]]
+                if len(connected_vertices) > 1:
+                    # Make the edge connect two vertices
+                    start = connected_vertices[0]
+                    end = connected_vertices[-1]
+                    new_edge_pix_coord = np.hstack((new_edge_pix_coord, np.arange(1, new_edge_length + 1)[:, np.newaxis]))
+                    self._update_edge_data(start, end, new_edge_length, new_edge_pix_coord)
+                else:
+                    # There must be an edge in the neighborhood: increase it with these pixels
+                    connected_edges = edges[dilated_coord[:, 0], dilated_coord[:, 1]]
+                    connected_edges = connected_edges[connected_edges > 0]
+                    self.edge_to_length_map[connected_edges[0]] += new_edge_length
+                    self.edge_to_coord_map[connected_edges[0]] |= new_edge_pix_coord_set
+                self.identified[new_edge_pix_coord[:, 0], new_edge_pix_coord[:, 1]] = 1
             else:
                 self.pad_skeleton[y1:y2, x1:x2][self.unidentified_shapes[y1:y2, x1:x2] == pix_i] = 0
-        if len(cutting_removal) > 0:
-            logging.error(f"t={self.t}, These pixels break the skeleton when removed: {cutting_removal}")
         if (self.identified > 0).sum() != self.pad_skeleton.sum():
             logging.error(f"t={self.t}, Proportion of identified pixels in the skeleton: {(self.identified > 0).sum() / self.pad_skeleton.sum()}")
         self.pad_distances *= self.pad_skeleton
