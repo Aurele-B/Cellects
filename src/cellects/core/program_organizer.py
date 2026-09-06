@@ -186,6 +186,9 @@ class ProgramOrganizer:
         -----
         This method is used to preserve state between Cellects sessions or restart scenarios.
         """
+        logging.debug("Saving variable dict to: %s", ALL_VARS_JSON_FILE)
+        logging.debug("Parent dir: %s", os.path.dirname(ALL_VARS_JSON_FILE))
+        logging.debug("Directory writable: %s", os.access(os.path.dirname(ALL_VARS_JSON_FILE), os.W_OK))
         logging.info("Update -cellects_settings.json- in the Cellects folder")
         all_vars = self.all.copy()
         all_vars['vars'] = self.vars.copy()
