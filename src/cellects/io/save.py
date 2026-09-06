@@ -150,9 +150,11 @@ def write_video_sets(img_list: list, sizes: NDArray, vid_names: list, crop_coord
                 else:
                      write_h5(pathway + vid_names[arena_name], video_bunch[:, :, :, arena_i], 'video')
 
-def write_json(file_name: str, data: dict):
-    with open(file_name, 'w') as f:
-        json.dump(data, f)
+def write_json(file_name: str| Path, data: dict) -> None:
+    path = Path(file_name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
 
 def write_h5(file_name: str, table: NDArray, key: str="data"):
     """
