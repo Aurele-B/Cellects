@@ -6,6 +6,17 @@ Adjust the path names according to the current position of the software.
 
 import os
 from pathlib import Path
+from PySide6.QtCore import QStandardPaths
+
+def get_user_data_dir() -> Path:
+    data_dir = Path(
+        QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)
+    )
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return data_dir
+
+def get_user_settings_path() -> Path:
+    return get_user_data_dir() / "cellects_settings.json"
 
 # Current file -> src/cellects/cellect_paths.py
 CURR_DIR = Path(os.path.dirname(os.path.realpath(__file__)))
@@ -28,4 +39,4 @@ EXPERIMENTS_DIR = DATA_DIR / "single_experiment"
 TEST_DIR = REPO_ROOT / "tests"
 
 # Example packaged file
-ALL_VARS_JSON_FILE = CONFIG_DIR / "cellects_settings.json"
+ALL_VARS_JSON_FILE = get_user_settings_path()
