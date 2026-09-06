@@ -944,24 +944,6 @@ class VideoTrackingThread(QtCore.QThread):
         self.setStackSize(8 * 1024 * 1024)
 
     def run(self):
-        import traceback
-        logging.debug("VideoTrackingThread.run() starting")
-        try:
-            self._run_original()
-            logging.debug("VideoTrackingThread.run() finished normally")
-        except Exception:
-            msg = traceback.format_exc()
-            logging.critical("VideoTrackingThread CRASHED:\n%s", msg)
-            try:
-                self.update_status(False, "Worker crashed; see debug log")
-                self.message_from_thread.emit(
-                    f"{self.status['folder']}, Worker crashed; see debug log"
-                )
-                self.when_detection_finished.emit("crash")
-            except Exception:
-                logging.exception("Failed to emit crash signal")
-
-    def _run_original(self):
         self.status = {"continue": True, "folder": reduce_path_len(self.po.all['global_pathway'], 6, 10), "message": ""}
         if self.po.video_task == 'all':
             self.run_all()
@@ -1285,11 +1267,6 @@ class VideoTrackingThread(QtCore.QThread):
                                     self.status['continue'] = False
                                 if not self.can_continue():
                                     return
-                            import sys
-                            logging.debug("global_pathway=%s", self.po.all.get("global_pathway"))
-                            logging.debug("cwd=%s", os.getcwd())
-                            logging.debug("sys.executable=%s", sys.executable)
-                            logging.debug("sys._MEIPASS=%s", getattr(sys, "_MEIPASS", None))
                             self.message_from_thread.emit(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved")
                             logging.info(f"{self.status['folder']}, Writing videos: Bunch {bunch + 1} over {bunch_nb} saved.")
                             logging.info("When they exist, do not overwrite unaltered video")

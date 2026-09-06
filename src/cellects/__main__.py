@@ -5,56 +5,6 @@ Launcher for the Cellects software.
 This module initializes logging configuration, creates the Qt application instance,
 loads Cellects icon, and launches the main GUI interface.
 """
-import os
-import sys
-import logging
-import tempfile
-import pathlib
-import traceback
-import faulthandler
-import atexit
-import threading
-
-def setup_debug_logging():
-    log_path = pathlib.Path(tempfile.gettempdir()) / "Cellects_debug.log"
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    # Remove duplicate handlers if called multiple times
-    for h in list(logger.handlers):
-        logger.removeHandler(h)
-
-    file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s | %(process)s | %(threadName)s | %(levelname)s | %(message)s"
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    if sys.stderr is not None:
-        stream_handler = logging.StreamHandler(sys.stderr)
-        stream_handler.setLevel(logging.DEBUG)
-        stream_handler.setFormatter(formatter)
-        logger.addHandler(stream_handler)
-
-    faulthandler_file = open(log_path, "a", encoding="utf-8")
-    atexit.register(faulthandler_file.close)
-    faulthandler.enable(file=faulthandler_file)
-
-    logging.info(
-        "Debug log path: %s",
-        log_path
-    )
-    logging.info(
-        "cwd=%s executable=%s _MEIPASS=%s",
-        os.getcwd(),
-        sys.executable,
-        getattr(sys, "_MEIPASS", None)
-    )
-
-setup_debug_logging()
 
 import sys
 import logging
