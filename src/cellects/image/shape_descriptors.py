@@ -24,6 +24,7 @@ If you want to allow the software to compute another variable:
     attribute a None value to the variable that store it
     add a if condition in the for loop to compute that variable when its name appear in the wanted_descriptors_list
 """
+import os
 import cv2
 import numpy as np
 from typing import Tuple
@@ -32,6 +33,7 @@ import pandas as pd
 from cellects.utils.utilitarian import translate_dict, smallest_memory_array
 from cellects.utils.formulas import (get_inertia_axes, get_standard_deviations, get_skewness, get_kurtosis,
                                      get_newly_explored_area)
+from cellects.io.load import read_h5
 from cellects.io.save import write_h5
 
 descriptors_categories = {'area': True, 'perimeter': False, 'circularity': False, 'rectangularity': False,
@@ -57,7 +59,7 @@ from_shape_descriptors_class = {'area': True, 'perimeter': False, 'circularity':
                                }
 
 length_descriptors = ['perimeter', 'major_axis_len', 'minor_axis_len']
-area_descriptors = ['area', 'area_total', 'total_hole_area', 'newly_explored_area', 'final_area']
+area_descriptors = ['area', 'area_total', 'target_area_coverage', 'total_hole_area', 'newly_explored_area', 'final_area']
 
 descriptors = from_shape_descriptors_class.copy()
 descriptors.update({'minkowski_dimension': False})
@@ -78,13 +80,13 @@ def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label:
         Array of timestamps corresponding to each frame.
     descriptors_dict : dict
         Dictionary containing the descriptors to be computed.
-    output_in_mm : bool, optional
+    output_in_mm : bool
         Flag indicating if output should be in millimeters. Default is False.
-    pixel_size : float, optional
+    pixel_size : float
         Size of a pixel in the video when `output_in_mm` is True. Default is None.
-    do_fading : bool, optional
+    do_fading : bool
         Flag indicating if the fading effect should be applied. Default is False.
-    save_coord_specimen : bool, optional
+    save_coord_specimen : bool
         Flag indicating if the coordinates of specimens should be saved. Default is False.
 
     Returns
@@ -132,6 +134,15 @@ def compute_one_descriptor_per_frame(binary_vid: NDArray[np.uint8], arena_label:
                                           columns=['arena', 'time'] + all_descriptors)
     one_row_per_frame['arena'] = [arena_label] * dims[0]
     one_row_per_frame['time'] = timings
+    if os.path.isfile(f"ind_{arena_label}.h5"):
+        target_coord = read_h5(f"ind_{arena_label}.h5", 'target')
+        if target_coord is not None:
+            one_row_per_frame['target_area_coverage'] = 0
+            target_mask = np.zeros(dims[1:3], dtype=np.uint8)
+            target_mask[target_coord[:, 0], target_coord[:, 1]] = 1
+            one_row_per_frame['target_area_coverage'] = (binary_vid * target_mask).sum((1, 2))
+            del target_mask
+
     for t in np.arange(dims[0]):
         SD = ShapeDescriptors(binary_vid[t, :, :], to_compute_from_sd)
         for descriptor in to_compute_from_sd:

@@ -1271,18 +1271,6 @@ class MotionAnalysis:
 
         # Detect first motion
         self.one_descriptor_per_arena['first_move'] = detect_first_move(self.surfarea, self.vars['first_move_threshold'])
-
-        # Find when the target gets reached
-        if 'target' in self.ind_h5_keys:
-            self.target_coord = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'target')
-            target_mask = np.zeros(self.dims[1:3], dtype=np.uint8)
-            target_mask[self.target_coord[:, 0], self.target_coord[:, 1]] = 1
-            self.one_descriptor_per_arena['target_reaching'] = pd.NA
-            pixels_reaching_target = (self.binary * target_mask).any((1,2))
-            if np.any(pixels_reaching_target):
-                self.one_descriptor_per_arena['target_reaching'] = np.nonzero(pixels_reaching_target)[0][0]
-            del target_mask
-
         self.compute_solidity_separately: bool = self.vars['iso_digi_analysis'] and not self.vars['several_blob_per_arena'] and not self.vars['descriptors']['solidity']
         if self.compute_solidity_separately:
             self.solidity = np.zeros(self.dims[0], dtype=np.float64)
@@ -1306,7 +1294,6 @@ class MotionAnalysis:
                                                                               self.vars['output_in_mm'],
                                                                               self.vars['average_pixel_size'],
                                                                               self.vars['specimen_activity'] == 'move and grow')
-
             self.cc_coord = pd.DataFrame(self.cc_coord, columns=["time", "colony", "y", "x"])
             self.cc_centroids = pd.DataFrame(self.cc_centroids, columns=["time", "colony", "y", "x"])
             if self.vars['save_coord_specimen']:
@@ -1317,6 +1304,16 @@ class MotionAnalysis:
                     f"colony_centroids{self.one_descriptor_per_arena['arena']}_{self.cc_final_number}col_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
                     sep=';', index=False, lineterminator='\n')
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
+
+        if not pd.isna(self.one_descriptor_per_arena['first_move']):
+            self.one_descriptor_per_arena['first_move'] = timings[self.one_descriptor_per_arena['first_move']]
+
+        # Find when the target gets reached
+        if 'target' in self.ind_h5_keys:
+            self.one_descriptor_per_arena['target_area_arrival'] = pd.NA
+            if 'target_area_coverage' in self.one_row_per_frame and np.any(self.one_row_per_frame['target_area_coverage']):
+                self.one_descriptor_per_arena['target_area_arrival'] = np.min(self.one_row_per_frame.loc[self.one_row_per_frame['target_area_coverage'] > 0, 'time'])
+                # self.one_descriptor_per_arena['target_area_arrival'] = np.nonzero(self.one_row_per_frame['target_area_coverage'])[0][0]
         if self.vars['output_in_mm']:
             self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
 
@@ -1363,10 +1360,6 @@ class MotionAnalysis:
             else:
                 self.one_descriptor_per_arena['is_growth_isotropic'] = pd.NA
         if np.any(self.one_row_per_frame['time'] > 0):
-            if not pd.isna(self.one_descriptor_per_arena['first_move']):
-                self.one_descriptor_per_arena['first_move'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['first_move']]
-            if 'target_reaching' in self.one_descriptor_per_arena and not pd.isna(self.one_descriptor_per_arena['target_reaching']):
-                self.one_descriptor_per_arena['target_reaching'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['target_reaching']]
             if 'iso_digi_transi' in self.one_descriptor_per_arena and not pd.isna(self.one_descriptor_per_arena['iso_digi_transi']):
                 self.one_descriptor_per_arena['iso_digi_transi'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['iso_digi_transi']]
 

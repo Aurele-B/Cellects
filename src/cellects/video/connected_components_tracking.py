@@ -19,12 +19,14 @@ Notes
 - Relies on external shape descriptor computation from `cellects.image.shape_descriptors`
 - Requires numpy for array operations and pandas for result organization
 """
+import os
 import cv2
 import numpy as np
 from numpy.typing import NDArray
 import pandas as pd
 from cellects.image.shape_descriptors import initialize_descriptor_computation, scale_descriptors, ShapeDescriptors
 from cellects.utils.formulas import get_newly_explored_area
+from cellects.io.load import read_h5
 
 
 
@@ -138,6 +140,14 @@ class ConnectedComponentsTracking:
                                       do_fading)
         return one_row_per_frame, self.cc_centroids, self.cc_coord, self.cc_final_number
         
+    def init_target_mask(self, arena_label):
+        self.target_mask = None
+        if os.path.isfile(f"ind_{arena_label}.h5"):
+            target_coord = read_h5(f"ind_{arena_label}.h5", 'target')
+            if target_coord is not None:
+                self.target_mask = np.zeros(self.dims[1:3], dtype=np.uint8)
+                self.target_mask[target_coord[:, 0], target_coord[:, 1]] = 1
+
     def init_descriptors_table(self):
         """
         Initialize a matrix to store shape descriptors for all tracked components.
@@ -260,6 +270,8 @@ class ConnectedComponentsTracking:
         # Compute shape descriptors
         SD = ShapeDescriptors(self.current_cc_img, self.to_compute_from_sd)
         descriptors = SD.descriptors
+        if self.target_mask is not None:
+            descriptors['target_area_coverage'] = (self.current_cc_img * self.target_mask).sum()
         # Adjust descriptors if output_in_mm is specified
         if output_in_mm:
             descriptors = scale_descriptors(descriptors, pixel_size, self.length_measures, self.area_measures)
