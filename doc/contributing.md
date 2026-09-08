@@ -52,3 +52,11 @@ mkdocs serve
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
+
+## Build desktop installers
+In `Automatic triggers on develop branch` section in `.github/workflows/desktop-build.yml`:
+- Update `push:`/`branches:`/ from `develop` to your branch name
+- Uncomment the section
+- git push
+
+Note: don't forget to re-comment the section afterward
