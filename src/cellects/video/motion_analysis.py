@@ -231,8 +231,9 @@ class MotionAnalysis:
                               self.vars['convert_for_motion'], videos_already_in_ram, true_frame_width, vid_name,
                               self.background, self.background2)
         self.visu, self.converted_video, self.converted_video2 = vids
-        self.bit_usage['videos'] += 2 * 8 * 3
-        self.bit_usage['videos'] += 2 * 8 * 2
+        self.bit_usage['videos'] += 2 * 8 * 4
+        if self.converted_video2 is not None:
+            self.bit_usage['videos'] += 2 * 8
 
         if self.visu is not None:
             self.dims = self.visu.shape[:3]
@@ -561,6 +562,7 @@ class MotionAnalysis:
                         if luminosity_segmentation is not None and gradient_segmentation is not None:
                             self.segmented = np.logical_or(luminosity_segmentation, gradient_segmentation)
                 self.segmented = self.segmented.astype(np.uint8)
+        self.bit_usage['videos'] -= 24
 
 
     def frame_by_frame_segmentation(self, t: int, previous_binary_image: NDArray=None):
