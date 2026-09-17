@@ -1620,7 +1620,7 @@ class ProgramOrganizer:
             if self.vars['lose_accuracy_to_save_memory']:
                 video_bit_number -= 56
         if self.vars['already_greyscale']:
-            video_bit_number -= 64
+            video_bit_number -= 16
 
 
         if isinstance(self.bot, list):
@@ -1640,7 +1640,7 @@ class ProgramOrganizer:
             bit_number = max(bit_number, initial_bit_number + 16 * one_video_memory + 88 * one_image_memory)
 
         necessary_memory = bit_number * 1.16415e-10
-        logging.info(f"Total memory expected usage: {necessary_memory}")
+        logging.info(f"Total memory expected usage per core: {necessary_memory} Go")
         available_memory = virtual_memory().available / (1024 ** 3) - self.vars['min_ram_free']
         max_repeat_in_memory = int(available_memory // necessary_memory)
         if max_repeat_in_memory > 1:
