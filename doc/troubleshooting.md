@@ -2,8 +2,8 @@
 
 ## Common Errors and Fixes  
 
-### Error: Anything causing the application to freeze
-**Cause**: Nothing happens when clicking on any widget.  
+### Error: Anything going wrong in the application
+**Cause**: Nothing happens when clicking on any widget, an analysis does not proceed, an entry remains incorrect...
 **Fix**: Restart the application, use *Advanced parameters* and *Reset all settings*. Restart the application again.
 
 ### Error: "GUI Fails to Launch"  
