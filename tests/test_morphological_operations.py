@@ -15,9 +15,9 @@ class TestIs8Connected(CellectsUnitTest):
         """Setup test fixtures."""
         super().setUpClass()
         cls.point = (0, 0)
-        cls.points1 = ((1, 0), (2, 2))
-        cls.points2 = ((1, 1), (2, 2))
-        cls.points3 = ((3, 3), (2, 2))
+        cls.points1 = {(1, 0), (2, 2)}
+        cls.points2 = {(1, 1), (2, 2)}
+        cls.points3 = {(3, 3), (2, 2)}
 
     def test_is_4_connected(self):
         """Test when there is a 4-connected neighbor."""
