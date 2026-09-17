@@ -1044,8 +1044,11 @@ class VideoTrackingThread(QtCore.QThread):
                 curr_path = reduce_path_len(self.po.all['global_pathway'], 6, 10)
                 self.message_from_thread.emit(f'Exp {curr_path} analyzed')
         else:
-            logging.error(f"{self.status['folder']}, {self.status['message']}")
-            self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
+            if self.status['message'] == 'Was waiting for thread interruption.':
+                logging.info(f"{self.status['folder']}, {self.status['message']}")
+            else:
+                logging.error(f"{self.status['folder']}, {self.status['message']}")
+                self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
 
     def run_one_arena(self):
         """
@@ -1097,8 +1100,11 @@ class VideoTrackingThread(QtCore.QThread):
                             self.when_detection_finished.emit("Detection done, read to see the result")
 
         if not self.status['continue']:
-            self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
-            logging.error(f"{self.status['folder']}, {self.status['message']}")
+            if self.status['message'] == 'Was waiting for thread interruption.':
+                logging.info(f"{self.status['folder']}, {self.status['message']}")
+            else:
+                self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
+                logging.error(f"{self.status['folder']}, {self.status['message']}")
 
     def set_current_folder(self, exp_i: int=1):
         """
