@@ -1337,7 +1337,51 @@ class EdgeIdentification:
                 end = np.unique(unique_vertices_im[end_coord[0], end_coord[1]])
                 self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
             else:
-                logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
+                # v_nb is 0, Other edges blocked its access to vertices
+                edge_im = np.zeros_like(self.numbered_vertices)
+                edge_im[self.edge_pix_coord[:, 0], self.edge_pix_coord[:, 1]] = self.edge_pix_coord[:, 2]
+                # Find these edges
+                connected_edges = dil_edge_i * edge_im
+                # Identify the two conflicting pixels
+                ce_coord = np.nonzero(connected_edges)
+                if len(ce_coord[0]) >= 2:
+                    e1_coord = ce_coord[0][0], ce_coord[1][0]
+                    e2_coord = ce_coord[0][-1], ce_coord[1][-1]
+                    e1_id = connected_edges[e1_coord]
+                    e2_id = connected_edges[e2_coord]
+                    dil_connected_edges = cv2.dilate((connected_edges > 0).astype(np.uint8), square_33)
+                    # Identify the vertices connected to these conflicting pixels
+                    unique_vertices_im = non_tip_vertices.copy()
+                    unique_vertices_im = dil_connected_edges * unique_vertices_im
+                    unique_vertices = np.unique(unique_vertices_im)
+                    unique_vertices = unique_vertices[unique_vertices > 0]
+                    if len(unique_vertices) >= 2:
+                        start, end = unique_vertices[0], unique_vertices[-1]
+                        # Try if removing conflicting pixels from these edges break their vertex connectivity
+                        e1_coords = self.edge_to_coord_map[e1_id].copy()
+                        e1_coords.remove(e1_coord)
+                        e1v1_con = is_8_connected(self.vertex_to_coord_map[unique_vertices[0]], e1_coords)
+                        e1v2_con = is_8_connected(self.vertex_to_coord_map[unique_vertices[1]], e1_coords)
+                        if e1v1_con + e1v2_con:
+                            # If not, remove them definitely
+                            self.edge_to_coord_map[e1_id].remove(e1_coord)
+                            self.edge_to_length_map[e1_id] -= 1
+                            # Otherwise, the pixel will be used by two edges simultaneously
+                        e2_coords = self.edge_to_coord_map[e2_id].copy()
+                        e2_coords.remove(e2_coord)
+                        e2v1_con = is_8_connected(self.vertex_to_coord_map[unique_vertices[0]], e2_coords)
+                        e2v2_con = is_8_connected(self.vertex_to_coord_map[unique_vertices[1]], e2_coords)
+                        if e2v1_con + e2v2_con:
+                            self.edge_to_coord_map[e2_id].remove(e2_coord)
+                            self.edge_to_length_map[e2_id] -= 1
+                        # Create new edge with these two pixels to connect with the two vertices
+                        new_edge_lengths += 2
+                        new_edge_pix_coord = np.vstack((new_edge_pix_coord, [e1_coord[0], e1_coord[1], 1], [e2_coord[0], e2_coord[1], 1]))
+                        self._update_edge_data(start, end, new_edge_lengths, new_edge_pix_coord)
+                    else:
+                        logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
+                else:
+                    logging.error(f"t={self.t}, One long edge is not identified: i={loop_i} of length={edge_i.sum()} close to {len(unique_vertices)} vertices.")
 
         self.edge_pix_coord = dict_to_coord_table(self.edge_to_coord_map)
         if self.edge_pix_coord.shape[0] > 0:
