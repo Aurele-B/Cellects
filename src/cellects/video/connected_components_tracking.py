@@ -127,6 +127,7 @@ class ConnectedComponentsTracking:
         ...                                                 do_fading=False)
         """
         self.descriptors_dict = descriptors_dict
+        self.init_target_mask(arena_label)
         self.init_descriptors_table()
         self.init_cc_tracking()
         for self.t in np.arange(self.dims[0]):
@@ -141,6 +142,14 @@ class ConnectedComponentsTracking:
         return one_row_per_frame, self.cc_centroids, self.cc_coord, self.cc_final_number
         
     def init_target_mask(self, arena_label):
+        """
+        Look for saved target coord and initialize target_mask: an image containing the target area.
+
+        Parameters
+        ----------
+        arena_label : int
+            Identifier for the experimental arena.
+        """
         self.target_mask = None
         if os.path.isfile(f"ind_{arena_label}.h5"):
             target_coord = read_h5(f"ind_{arena_label}.h5", 'target')
@@ -162,6 +171,8 @@ class ConnectedComponentsTracking:
         # Create a matrix with 4 columns (time, y, x, colony) containing the coordinates of all colonies against time
         all_descriptors, self.to_compute_from_sd, self.length_measures, self.area_measures = initialize_descriptor_computation(
             self.descriptors_dict)
+        if self.target_mask is not None:
+            self.to_compute_from_sd.append('target_area_coverage')
         max_colonies = 0
         for t in np.arange(self.dims[0]):
             nb, shapes = cv2.connectedComponents(self.binary_vid[t, :, :])
