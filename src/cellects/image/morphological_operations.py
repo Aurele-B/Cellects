@@ -36,7 +36,7 @@ from typing import Tuple
 from scipy.spatial import KDTree
 from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
-from cellects.utils.utilitarian import coord_array_to_set
+from cellects.utils.utilitarian import CoordSet
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
 from skimage.measure import label
 from scipy.stats import linregress
@@ -53,7 +53,7 @@ neighbors_8 = [(-1, -1), (-1, 0), (-1, 1),
              (1, -1), (1, 0), (1, 1)]
 neighbors_4 = [(-1, 0), (0, -1), (0, 1), (1, 0)]
 
-def is_8_connected(point, points) -> bool:
+def is_8_connected(point: tuple | NDArray, points: CoordSet) -> bool:
     """
     Test whether a point (y, x) is connected with a set of points
 
@@ -63,7 +63,7 @@ def is_8_connected(point, points) -> bool:
     point : typle or ndarray
         Coordinates of the point (y, x)
 
-    points : typle or ndarray
+    points : CoordSet
         Coordinates of the points (n, 2), with y first column and x second.
 
 
@@ -75,19 +75,15 @@ def is_8_connected(point, points) -> bool:
     Examples
     --------
     >>> point = (0, 0)
-    >>> points1 = ((1, 0), (2, 2))
+    >>> points1 = {(1, 0), (2, 2)}
     >>> print(is_8_connected(point, points1))
     True
     """
-    if not isinstance(points, np.ndarray):
-        points = np.array(points)
-    if points.shape == (2,):
-        points = points[np.newaxis, :]
     y, x = point
-    return any(
-        (y + dy, x + dx) in points
-        for dy in (-1, 0, 1)
-        for dx in (-1, 0, 1))
+    if not isinstance(points, set) and len(points) == 2:
+        return  any((y + dy, x + dx) == points for dy in (-1, 0, 1) for dx in (-1, 0, 1))
+    else:
+        return any((y + dy, x + dx) in points for dy in (-1, 0, 1) for dx in (-1, 0, 1))
 
 def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
     """
