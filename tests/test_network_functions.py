@@ -4,9 +4,9 @@ This script contains all unit tests of the network_functions script
 """
 
 import unittest
+from cellects.image.image_segmentation import generate_color_space_combination
 from cellects.image.network_functions import *
 from tests._base import CellectsUnitTest
-
 
 class TestNetworkDetection(CellectsUnitTest):
     """Test suite for get_best_network_detection_method() method"""

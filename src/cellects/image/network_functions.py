@@ -32,7 +32,7 @@ from cellects.utils.utilitarian import *
 from cellects.utils.formulas import *
 from cellects.io.save import *
 from cellects.utils.utilitarian import zoom_on_nonzero
-from cellects.image.image_segmentation import generate_color_space_combination, rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
+from cellects.image.image_segmentation import rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
 from numba.typed import Dict as TDict
 from skimage import morphology
 from skimage.filters import frangi, sato, threshold_otsu
@@ -147,7 +147,7 @@ class  NetworkDetection:
             binary_to_assess = self.possibly_filled_pixels * binary_otsu
             if self.origin_to_add is not None:
                  binary_to_assess *= (1-self.origin_to_add)
-            quality_otsu = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
+            quality_otsu = binary_quality_index(binary_to_assess)
             # Method 2: Rolling window thresholding
 
             # Store results
@@ -167,7 +167,7 @@ class  NetworkDetection:
                 binary_to_assess = self.possibly_filled_pixels * binary_rolling
                 if self.origin_to_add is not None:
                      binary_to_assess *= (1-self.origin_to_add)
-                quality_rolling = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
+                quality_rolling = binary_quality_index(binary_to_assess)
                 results.append({
                     'quality': quality_rolling,
                     'surface_area': binary_rolling.sum(),
@@ -229,7 +229,7 @@ class  NetworkDetection:
             binary_to_assess = self.possibly_filled_pixels * binary_otsu
             if self.origin_to_add is not None:
                  binary_to_assess *= (1-self.origin_to_add)
-            quality_otsu = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
+            quality_otsu = binary_quality_index(binary_to_assess)
 
             # Store results
             results.append({
@@ -249,7 +249,7 @@ class  NetworkDetection:
                 binary_to_assess = self.possibly_filled_pixels * binary_rolling
                 if self.origin_to_add is not None:
                      binary_to_assess *= (1-self.origin_to_add)
-                quality_rolling = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
+                quality_rolling = binary_quality_index(binary_to_assess)
 
                 results.append({
                     'binary': binary_rolling,
