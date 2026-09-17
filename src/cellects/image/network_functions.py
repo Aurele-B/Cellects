@@ -1295,6 +1295,9 @@ class EdgeIdentification:
         set_coords_in_mask(self.identified, self.tips_coord, 1)
         unidentified = (1 - self.identified) * self.pad_skeleton
 
+        non_tip_vertices = self.numbered_vertices.copy()
+        clear_coords_from_mask(non_tip_vertices, self.tips_coord)
+
         # Find out the remaining non-identified pixels
         nb, self.unidentified_shapes, self.unidentified_stats, ce = cv2.connectedComponentsWithStats(unidentified.astype(np.uint8))
         # Handle the cases where edges are loops over only one vertex
@@ -1302,8 +1305,7 @@ class EdgeIdentification:
         for loop_i in looping_edges: # loop_i = looping_edges[0] loop_i=11 #  zoom_on_nonzero(unique_vertices_im, return_coord=False)
             edge_i = (self.unidentified_shapes == loop_i).astype(np.uint8)
             dil_edge_i = cv2.dilate(edge_i, square_33)
-            unique_vertices_im = self.numbered_vertices.copy()
-            clear_coords_from_mask(unique_vertices_im, self.tips_coord)
+            unique_vertices_im = non_tip_vertices.copy()
             unique_vertices_im = dil_edge_i * unique_vertices_im
             unique_vertices = np.unique(unique_vertices_im)
             unique_vertices = unique_vertices[unique_vertices > 0]
