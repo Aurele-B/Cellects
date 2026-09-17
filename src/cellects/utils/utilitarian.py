@@ -634,7 +634,7 @@ def coord_table_to_dict(coord_table):
         coord_table = np.array(coord_table.iloc[:, :dim_nb+1])
     unique_labels, counts_labels = np.unique(coord_table[:, dim_nb], return_counts=True)
     if np.any(counts_labels > 1):
-        return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb]) for label in unique_labels}
+        return {label: coord_array_to_set(coord_table[coord_table[:, dim_nb] == label, :dim_nb]) for label in unique_labels}
     else:
         return {label: tuple(coord_table[coord_table[:, dim_nb] == label, :dim_nb][0]) for label in unique_labels}
 
