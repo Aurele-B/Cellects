@@ -1307,9 +1307,6 @@ class MotionAnalysis:
                     sep=';', index=False, lineterminator='\n')
         self.one_descriptor_per_arena["final_area"] = self.binary[-1, :, :].sum()
 
-        if not pd.isna(self.one_descriptor_per_arena['first_move']):
-            self.one_descriptor_per_arena['first_move'] = timings[self.one_descriptor_per_arena['first_move']]
-
         # Find when the target gets reached
         if 'target' in self.ind_h5_keys:
             self.one_descriptor_per_arena['target_area_arrival'] = pd.NA
@@ -1364,6 +1361,9 @@ class MotionAnalysis:
         if np.any(self.one_row_per_frame['time'] > 0):
             if 'iso_digi_transi' in self.one_descriptor_per_arena and not pd.isna(self.one_descriptor_per_arena['iso_digi_transi']):
                 self.one_descriptor_per_arena['iso_digi_transi'] = self.one_row_per_frame['time'].values[self.one_descriptor_per_arena['iso_digi_transi']]
+
+        if not pd.isna(self.one_descriptor_per_arena['first_move']):
+            self.one_descriptor_per_arena['first_move'] = self.one_descriptor_per_arena['first_move'] * self.time_interval
 
     def check_converted_video_type(self):
         """
