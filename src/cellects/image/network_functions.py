@@ -1017,10 +1017,22 @@ class EdgeIdentification:
                 if sub_vertices[3, 3] == 0:
                     branches_to_remove.add(branch)
                 # If that pixel became a tip connected to another vertex remove it from the skeleton
-                if sub_tips[3, 3]:
-                    if sub_vertices[2:5, 2:5].sum() > 1:
+                while sub_tips[3, 3]:
+                    sub_tips[3, 3] = 0
+                    vertex_neighbors = sub_vertices[2:5, 2:5]
+                    if vertex_neighbors.sum() > 1:
                         self.pad_skeleton[Y, X] = 0
                         branches_to_remove.add(branch)
+                        if vertex_neighbors.sum() == 2:
+                            vertex_neighbors[1, 1] = 0
+                            sY, sX = np.nonzero(vertex_neighbors)
+                            Y = Y + sY[0] - 1
+                            X = X + sX[0] - 1
+                            pad_sub_skeleton = ad_pad(self.pad_skeleton[(Y - 2): (Y + 3), (X - 2): (X + 3)])
+                            if pad_sub_skeleton.shape != (7, 7):
+                                continue
+                            sub_vertices, sub_tips = get_vertices_and_tips_from_skeleton(pad_sub_skeleton)
+
         nb, sh = cv2.connectedComponents(self.pad_skeleton)
         if nb > 2:
             # Check that supplementary components are 1 or 2 pixel size, if so:
