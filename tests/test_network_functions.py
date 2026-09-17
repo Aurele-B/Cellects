@@ -97,14 +97,14 @@ class TestNetworkDetection(CellectsUnitTest):
         img = np.random.randint(255, size=(self.dims[0], self.dims[1], 3), dtype=np.uint8)
         first_dict = {"hsv": [0, 0, 1]}
         previous_greyscale = self.greyscale_image.copy()
-        self.NetDet.change_greyscale(img, first_dict)
+        new_greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
+        self.NetDet.change_greyscale(new_greyscale_image)
         self.assertFalse(np.array_equal(previous_greyscale, self.NetDet.greyscale_image))
 
     def test_detect_pseudopods(self):
         """Test detect_pseudopods basic behavior"""
-        lighter_background = True
         pseudopod_min_size = 3
-        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_size)
+        self.NetDet.detect_pseudopods(pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
 
     def test_detect_pseudopods_with_no_possibly_filled_pixels(self):
@@ -112,18 +112,16 @@ class TestNetworkDetection(CellectsUnitTest):
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=None,
                                        edge_max_width = 1, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
-        lighter_background = True
         pseudopod_min_size = 3
-        NetDet_fast.detect_pseudopods(lighter_background, pseudopod_min_size)
+        NetDet_fast.detect_pseudopods(pseudopod_min_size)
         self.assertTrue(NetDet_fast.pseudopods.any())
         self.assertFalse(NetDet_fast.pseudopods.all())
 
-    def test_detect_pseudopods_dark_back_no_ori(self):
-        """test_detect_pseudopods_dark_back_no_ori"""
-        lighter_background = False
+    def test_detect_pseudopods_no_ori(self):
+        """test_detect_pseudopods_no_ori"""
         pseudopod_min_size = 3
         self.NetDet.origin_to_add = None
-        self.NetDet.detect_pseudopods(lighter_background, pseudopod_min_size)
+        self.NetDet.detect_pseudopods(pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
         # Check that all network is inside possibly_filled_pixels
         self.assertFalse((self.NetDet.complete_network * (1 - self.NetDet.possibly_filled_pixels)).any())

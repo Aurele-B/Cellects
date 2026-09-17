@@ -281,7 +281,7 @@ class TestCellectsThreads(CellectsUnitTest):
         self.assertTrue(os.path.isfile( f"one_row_per_arena.csv"))
 
     def test_analyze_post_processing_results_in_video_tracking_thread(self):
-        """Test running analyses on the post processing results of all arenas and all folders."""
+        """Test running analyses on the post-processing results of all arenas and all folders."""
         self.po.video_task = 'all'
         self.po.all['do_multiprocessing'] = False
         self.po.vars['save_coord_network'] = True

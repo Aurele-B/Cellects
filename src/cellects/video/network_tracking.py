@@ -42,8 +42,6 @@ class NetworkTracking:
         - Instantiates :class:`NetworkDetection` with the greyscale frame,
           the binary mask of the last frame, the origin (if any), and the
           morphological closing flag.
-        - Sets ``self.lighter_background`` by comparing the mean intensity of
-          foreground and background pixels.
         """
         self.motion.coord_network = None
         self.motion.pseudopod_coord = None
@@ -67,17 +65,71 @@ class NetworkTracking:
             self.motion.visu = np.stack(
                 (self.motion.converted_video, self.motion.converted_video, self.motion.converted_video),
                 axis=3)
-            greyscale = self.motion.converted_video[-1, ...]
-        else:
-            greyscale = self.motion.visu[-1, ...].mean(axis=-1)
+        self.find_network_detection_method()
 
-        self.NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.motion.binary[-1, ...],
-                                  origin_to_add=self.origin, morphological_closing=self.motion.vars['morphological_closing'])
-        self.NetDet.get_best_network_detection_method(include_images=False)
+    def find_network_detection_method(self):
+        """
+        Explore 3 sets of 3 frames in the video, exclude methods producing too much variation, keep the best score
+
+
+        """
+        max_surface_area_variation = .002
+        if self.dims[0] < 10:
+            if self.do_convert:
+                greyscale = self.motion.visu[0, ...].mean(axis=-1)
+            else:
+                greyscale = self.motion.converted_video[0, ...]
+            self.NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.motion.binary[0, ...],
+                                           origin_to_add=self.origin,
+                                           morphological_closing=self.motion.vars['morphological_closing'])
+            self.NetDet.get_best_network_detection_method(include_images=False)
+        else:
+            if self.dims[0] < 20:
+                frames = list(range(self.dims[0] - 9, self.dims[0]))
+            else:
+                tot = self.dims[0]
+                deno = self.dims[0] // 6
+                frames = [4 * deno - 3, 4 * deno - 2, 4 * deno - 1, 5 * deno - 1, 5 * deno, 5 * deno + 1, tot - 3, tot - 2, tot - 1]
+            metric_table = np.zeros((len(frames) * 24, 5))
+            metric_table[:, 2] = np.repeat(frames, 24)
+            metric_table[:, 3] = np.tile(np.arange(24), len(frames))
+            for f_i, frame in enumerate(frames):
+                if self.do_convert:
+                    greyscale = self.motion.visu[frame, ...].mean(axis=-1)
+                else:
+                    greyscale = self.motion.converted_video[frame, ...]
+                self.NetDet = NetworkDetection(greyscale, possibly_filled_pixels=self.motion.binary[frame, ...],
+                                               origin_to_add=self.origin,
+                                               morphological_closing=self.motion.vars['morphological_closing'])
+                self.NetDet.get_best_network_detection_method(include_images=False)
+                start = f_i * len(self.NetDet.quality_metrics)
+                end = (f_i + 1) * len(self.NetDet.quality_metrics)
+                metric_table[start:end, :2] = self.NetDet.quality_metrics
+
+            areas = metric_table[:, 1].reshape(3, 3, 24)
+            area_variation = (areas.max(axis=1) - areas.min(axis=1)) / areas.mean(axis=1)
+            valid_methods = np.all(area_variation <= max_surface_area_variation, axis=0)
+            m_i = 0
+            m_i_max = - np.log(max_surface_area_variation) / np.log(2)
+            while valid_methods.sum() < 3 and m_i < m_i_max:
+                max_surface_area_variation *= 2
+                valid_methods = np.all(area_variation <= max_surface_area_variation, axis=0)
+                m_i += 1
+
+            scores = metric_table[:, 0].reshape(3, 3, 24)
+            mean_scores = scores.mean(axis=(0, 1))
+            if valid_methods.any():
+                sorted_idx = list(np.argsort(mean_scores)[::-1])
+                while not valid_methods[sorted_idx[0]]:
+                    sorted_idx.pop(0)
+                best_idx = sorted_idx[0]
+            else:
+                best_idx = np.argmax(mean_scores)
+            self.NetDet.best_idx = best_idx
+            self.NetDet.best_result = self.NetDet.all_results[self.NetDet.best_idx]
+            # display_network_methods(self.NetDet)
         if self.do_convert:
-            self.NetDet.greyscale_image = self.motion.converted_video[-1, ...]
-        self.lighter_background = self.NetDet.greyscale_image[self.motion.binary[-1, ...] > 0].mean() < self.NetDet.greyscale_image[
-            self.motion.binary[-1, ...] == 0].mean()
+            self.NetDet.change_greyscale(self.motion.converted_video[-1, ...])
 
     def frame_by_frame_tracking(self) -> NDArray[np.uint8]:
         """
@@ -126,10 +178,13 @@ class NetworkTracking:
                                        morphological_closing=self.motion.vars['morphological_closing'],
                                        best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
-        NetDet_fast.greyscale_image = self.motion.converted_video[t, ...]
         if self.detect_pseudopods:
-            NetDet_fast.detect_pseudopods(self.lighter_background, pseudopod_min_size=self.pseudopod_min_size)
+            if self.do_convert:
+                NetDet_fast.change_greyscale(self.motion.converted_video[t, ...])
+            NetDet_fast.detect_pseudopods(pseudopod_min_size=self.pseudopod_min_size)
             self.pseudopod_vid[t, ...] = NetDet_fast.pseudopods
+        else:
+            NetDet_fast.complete_network = NetDet_fast.incomplete_network
         self.potential_network[t, ...] = NetDet_fast.complete_network
         return NetDet_fast.complete_network
         
@@ -151,7 +206,7 @@ class NetworkTracking:
         for t in np.arange(self.starting_time, self.dims[0]):
             imtoshow = self.post_process(t)
             
-    def post_process(self, t: int) -> NDArray[np.uint8]:
+    def post_process(self, t: int, shape_disappearance_supremum: int=500) -> NDArray[np.uint8]:
         """
         Post‑process a single time‑frame of the network and return a visualisation image.
 
@@ -160,6 +215,8 @@ class NetworkTracking:
         t: int
             Index of the time‑frame to be processed. Must be a non‑negative integer
             within the range of the video sequence.
+        shape_disappearance_supremum: int
+            All connected components having an inferior surface area (in pixels), are allowed to disappear from one frame to the next.
 
         Returns
         -------
@@ -216,33 +273,28 @@ class NetworkTracking:
         else:
             computed_network = self.potential_network[t, :, :].copy()
 
-        # Replace original shape with its contour
-        if self.origin is not None:
-            computed_network = computed_network * (1 - self.origin)
-            origin_contours = get_contours(self.origin)
-            complete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
-        else:
-            complete_network = computed_network
-        complete_network = keep_one_connected_component(complete_network)
+        complete_network = keep_one_connected_component(computed_network)
 
         # Impede large parts of the network to disappear from one frame to the next
-        if self.detect_pseudopods:
-            current_network = np.logical_or(complete_network, self.pseudopod_vid[t]).astype(np.uint8)
+        current_network = complete_network.copy()
+        if t > self.starting_time:
+            prev_network = self.network_dynamics[t - 1]
         else:
-            current_network = complete_network.copy()
-        minimal_network_size = self.network_dynamics[t - 1].sum() * (1 - self.motion.vars['maximal_growth_factor'])
-        if current_network.sum() < minimal_network_size:
-            mising_pieces = (1 - current_network) * self.network_dynamics[t - 1]
-            nb, sh, stats, centroids = cv2.connectedComponentsWithStats(mising_pieces)
-            largest_accepted_disappearance = 50 #  minimal_network_size * .1
-            large_shapes = stats[1:, 4] > largest_accepted_disappearance
-            if large_shapes.any():
-                large_shapes = np.nonzero(large_shapes)[0] + 1
-                for large_shape in large_shapes:
-                    complete_network[sh == large_shape] = 1
+            prev_network = np.zeros_like(self.network_dynamics[t], dtype=np.uint8)
+        # minimal_network_size = prev_network.sum() * allowed_shrinkage_rate
+        # if current_network.sum() < minimal_network_size:
+        mising_pieces = ((1 - current_network) * prev_network).astype(np.uint8)
+        nb, sh, stats, centroids = cv2.connectedComponentsWithStats(mising_pieces)
+        large_shapes = stats[1:, 4] > shape_disappearance_supremum
+        if large_shapes.any():
+            large_shapes = np.nonzero(large_shapes)[0] + 1
+            for large_shape in large_shapes:
+                complete_network[sh == large_shape] = 1
 
         # Discriminate large growing regions from the rest of the network
         if self.detect_pseudopods:
+            complete_network = np.logical_or(complete_network, self.pseudopod_vid[t])
+            complete_network = keep_one_connected_component(complete_network)
             # Make sure that removing pseudopods do not cut the network:
             without_pseudopods = complete_network * (1 - self.pseudopod_vid[t])
             only_connected_network = keep_one_connected_component(without_pseudopods)

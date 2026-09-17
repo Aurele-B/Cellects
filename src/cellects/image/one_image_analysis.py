@@ -787,14 +787,14 @@ class OneImageAnalysis:
             first_dict, second_dict, c_spaces = split_dict(csc_dict)
             self.image, _, _, first_pc_vector = generate_color_space_combination(self.bgr, c_spaces, first_dict, second_dict, all_c_spaces=self.all_c_spaces)
         greyscale = self.image
-        NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask)
-        NetDet.get_best_network_detection_method()
         if lighter_background is None:
             lighter_background = True
             if arenas_mask.any() and not arenas_mask.all():
-                lighter_background = NetDet.greyscale_image[arenas_mask > 0].mean() < NetDet.greyscale_image[arenas_mask == 0].mean()
-        NetDet.detect_pseudopods(lighter_background, pseudopod_min_size=pseudopod_min_size, only_one_connected_component=False)
-        cc_efficiency_order = np.argsort(NetDet.quality_metrics)
+                lighter_background = greyscale[arenas_mask > 0].mean() < greyscale[arenas_mask == 0].mean()
+        NetDet = NetworkDetection(greyscale, possibly_filled_pixels=arenas_mask, lighter_background=lighter_background)
+        NetDet.get_best_network_detection_method()
+        NetDet.detect_pseudopods(pseudopod_min_size=pseudopod_min_size, only_one_connected_component=False)
+        cc_efficiency_order = np.argsort(NetDet.quality_metrics[:, 0])[::-1]
         self.im_combinations = []
         for _i in cc_efficiency_order:
             res_i = NetDet.all_results[_i]

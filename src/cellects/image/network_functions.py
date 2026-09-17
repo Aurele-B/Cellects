@@ -49,7 +49,7 @@ class  NetworkDetection:
     Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
     It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
     """
-    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, edge_max_width: int=5, morphological_closing: bool=True, best_result: dict=None):
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, edge_max_width: int=5, morphological_closing: bool=True, lighter_background: bool=None, best_result: dict=None):
         """
         Initialize the object with given parameters.
 
@@ -67,14 +67,19 @@ class  NetworkDetection:
             Maximal width of network edges. Defaults to 5.
         morphological_closing : bool, optional (default=True)
             Flag indicating whether to apply morphological closing on binary images of the network.
+        lighter_background : bool
+            Boolean flag to indicate if the background should be considered lighter.
         best_result : dict, optional
             Best result dictionary. Defaults to None.
         """
         self.greyscale_image = greyscale_image
+        self.use_possibly_filled_pixels: bool = True
         if possibly_filled_pixels is None:
             self.possibly_filled_pixels = np.ones(self.greyscale_image.shape, dtype=np.uint8)
+            self.use_possibly_filled_pixels = False
         else:
             self.possibly_filled_pixels = possibly_filled_pixels
+        self.is_lighter_background(lighter_background)
         self.edge_max_width = edge_max_width
         k_size = edge_max_width // 2
         k_size = k_size - k_size % 2 + 1
@@ -86,6 +91,16 @@ class  NetworkDetection:
         self.frangi_beta = 1.
         self.frangi_gamma = 1.
         self.black_ridges = True
+
+    def is_lighter_background(self, lighter_background: bool=None):
+        if lighter_background is not None:
+            self.lighter_background = lighter_background
+        else:
+            if self.use_possibly_filled_pixels:
+                self.lighter_background = self.greyscale_image[self.possibly_filled_pixels > 0].mean() < self.greyscale_image[self.possibly_filled_pixels == 0].mean()
+            else:
+                self.lighter_background = self.greyscale_image.mean() < np.median(self.greyscale_image)
+
 
     def apply_frangi_variations(self, include_images: bool=False) -> list:
         """
@@ -122,20 +137,23 @@ class  NetworkDetection:
         for i, (key, sigmas) in enumerate(frangi_sigmas.items()):
             # Apply Frangi filter
             frangi_result = frangi(self.greyscale_image, sigmas=sigmas, beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
-
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             thresh_otsu = threshold_otsu(frangi_result)
             binary_otsu = (frangi_result > thresh_otsu).astype(np.uint8)
             if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
                 binary_otsu = 1 - binary_otsu
-            quality_otsu = binary_quality_index(self.possibly_filled_pixels * binary_otsu)
-
+            # print(f'F{i}')
+            binary_to_assess = self.possibly_filled_pixels * binary_otsu
+            if self.origin_to_add is not None:
+                 binary_to_assess *= (1-self.origin_to_add)
+            quality_otsu = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
             # Method 2: Rolling window thresholding
 
             # Store results
             results.append({
                 'quality': quality_otsu,
+                'surface_area': binary_otsu.sum(),
                 'filter': f'Frangi',
                 'rolling_window': False,
                 'sigmas': sigmas
@@ -146,9 +164,13 @@ class  NetworkDetection:
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(frangi_result, self.possibly_filled_pixels, patch_size=(10, 10))
-                quality_rolling = binary_quality_index(binary_rolling)
+                binary_to_assess = self.possibly_filled_pixels * binary_rolling
+                if self.origin_to_add is not None:
+                     binary_to_assess *= (1-self.origin_to_add)
+                quality_rolling = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
                 results.append({
                     'quality': quality_rolling,
+                    'surface_area': binary_rolling.sum(),
                     'filter': f'Frangi',
                     'rolling_window': True,
                     'sigmas': sigmas
@@ -197,20 +219,22 @@ class  NetworkDetection:
         for i, (key, sigmas) in enumerate(sato_sigmas.items()):
             # Apply sato filter
             sato_result = sato(self.greyscale_image, sigmas=sigmas, black_ridges=self.black_ridges, mode='reflect')
-
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             thresh_otsu = threshold_otsu(sato_result)
             binary_otsu = (sato_result > thresh_otsu).astype(np.uint8)
             if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
                 binary_otsu = 1 - binary_otsu
-            quality_otsu = binary_quality_index(self.possibly_filled_pixels * binary_otsu)
-
+            # print(f'S{i}')
+            binary_to_assess = self.possibly_filled_pixels * binary_otsu
+            if self.origin_to_add is not None:
+                 binary_to_assess *= (1-self.origin_to_add)
+            quality_otsu = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
 
             # Store results
             results.append({
-                'binary': binary_otsu,
                 'quality': quality_otsu,
+                'surface_area': binary_otsu.sum(),
                 'filter': f'Sato',
                 'rolling_window': False,
                 'sigmas': sigmas
@@ -222,10 +246,14 @@ class  NetworkDetection:
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(sato_result, self.possibly_filled_pixels, patch_size=(10, 10))
-                quality_rolling = binary_quality_index(binary_rolling)
+                binary_to_assess = self.possibly_filled_pixels * binary_rolling
+                if self.origin_to_add is not None:
+                     binary_to_assess *= (1-self.origin_to_add)
+                quality_rolling = binary_quality_index(binary_to_assess, self.greyscale_image, self.lighter_background)
 
                 results.append({
                     'binary': binary_rolling,
+                    'surface_area': binary_rolling.sum(),
                     'quality': quality_rolling,
                     'filter': f'Sato',
                     'rolling_window': True,
@@ -284,11 +312,15 @@ class  NetworkDetection:
         frangi_res = self.apply_frangi_variations(include_images)
         sato_res = self.apply_sato_variations(include_images)
         self.all_results = frangi_res + sato_res
-        self.quality_metrics = np.array([result['quality'] for result in self.all_results])
-        self.best_idx = np.argmax(self.quality_metrics)
+        self.quality_metrics = np.array([[result['quality'], result['surface_area']] for result in self.all_results])
+        self.best_idx = np.argmax(self.quality_metrics[:, 0])
         self.best_result = self.all_results[self.best_idx]
         if include_images:
             self.incomplete_network = self.best_result['binary'] * self.possibly_filled_pixels
+            if self.origin_to_add  is not None:
+                computed_network = self.incomplete_network * (1 - self.origin_to_add)
+                origin_contours = get_contours(self.origin_to_add)
+                self.incomplete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
             if self.morphological_closing:
                 self.incomplete_network = cv2.morphologyEx(self.incomplete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
 
@@ -312,25 +344,29 @@ class  NetworkDetection:
             thresh_otsu = threshold_otsu(filtered_result)
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
+
+        # Replace original shape by its contour
+        if self.origin_to_add  is not None:
+            computed_network = self.incomplete_network * (1 - self.origin_to_add)
+            origin_contours = get_contours(self.origin_to_add)
+            self.incomplete_network = np.logical_or(origin_contours, computed_network).astype(np.uint8)
+
         if self.morphological_closing:
             self.incomplete_network = cv2.morphologyEx(self.incomplete_network.astype(np.uint8), cv2.MORPH_CLOSE, kernel=self.kernel)
 
-    def change_greyscale(self, img: NDArray[np.uint8], first_dict: dict):
+    def change_greyscale(self, new_greyscale: NDArray[np.uint8]):
         """
-        Change the image to greyscale using color space combinations.
-
-        This function converts an input image to greyscale by generating
-        and applying a combination of color spaces specified in the dictionary.
-        The resulting greyscale image is stored as an attribute of the instance.
+        Change the greyscale image and update lighter_background.
 
         Parameters
         ----------
         img : ndarray of uint8
-            The input image to be converted to greyscale.
+            The greyscale image.
         """
-        self.greyscale_image, g2, all_c_spaces, first_pc_vector  = generate_color_space_combination(img, list(first_dict.keys()), first_dict)
+        self.greyscale_image  = new_greyscale
+        self.is_lighter_background()
 
-    def detect_pseudopods(self, lighter_background: bool=None, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
+    def detect_pseudopods(self, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
         """
         Detect pseudopods in a binary image.
 
@@ -340,8 +376,6 @@ class  NetworkDetection:
 
         Parameters
         ----------
-        lighter_background : bool
-            Boolean flag to indicate if the background should be considered lighter.
         pseudopod_min_size : int, optional
             Minimum size for pseudopods to be considered valid. Default is 50.
         only_one_connected_component : bool, optional
@@ -365,19 +399,14 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
-        if lighter_background is None:
-            if self.possibly_filled_pixels.all():
-                lighter_background = self.greyscale_image.mean() < np.median(self.greyscale_image)
-            else:
-                lighter_background = self.greyscale_image[self.possibly_filled_pixels > 0].mean() < self.greyscale_image[self.possibly_filled_pixels == 0].mean()
         scored_im = self.possibly_filled_pixels
-        if not self.possibly_filled_pixels.all():
+        if self.use_possibly_filled_pixels:
             scored_im = close_holes(self.possibly_filled_pixels)
             scored_im = distance_transform_edt(scored_im)
             scored_im = scored_im.max() - scored_im
         # Add dilatation of bracket of distances from medial_axis to the multiplication
         grey = self.greyscale_image
-        if lighter_background:
+        if self.lighter_background:
             grey = self.greyscale_image.max() - self.greyscale_image
         if self.origin_to_add is not None:
             scored_im = scored_im * distance_transform_edt(1 - self.origin_to_add) * grey
@@ -962,7 +991,6 @@ class EdgeIdentification:
         # Identify edges that are smaller than the width of the branch it is attached to
         branches_to_remove: CoordSet = set()
         for tip, edge_id in self.tip_to_initial_edge_id.items():
-            # Y, X = self.vertices_branching_tips[i, 0], self.vertices_branching_tips[i, 1]
             branch = self.vertices_branching_tips_by_tip.get(tip)
             if branch is None:
                 continue
