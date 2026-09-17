@@ -1577,7 +1577,7 @@ class ProgramOrganizer:
                     self.vars['descriptors'][descriptor] = self.all['descriptors'][descriptor]
         self.vars['descriptors']['newly_explored_area'] = self.vars['specimen_activity'] == 'move' or self.vars['specimen_activity'] == 'move and grow'
 
-    def update_available_core_nb(self, image_bit_number=300, video_bit_number=130):# video_bit_number=176
+    def update_available_core_nb(self, image_bit_number=300, video_bit_number=110):# video_bit_number=176
         """
         Update available computation resources based on memory and processing constraints.
 
