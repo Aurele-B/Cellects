@@ -134,7 +134,7 @@ class  NetworkDetection:
             frangi_result = frangi(self.greyscale_image, sigmas=sigmas, beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
-            thresh_otsu = threshold_otsu(frangi_result)
+            thresh_otsu = get_otsu_threshold(frangi_result)
             binary_otsu = (frangi_result > thresh_otsu).astype(np.uint8)
             if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
                 binary_otsu = 1 - binary_otsu
@@ -216,7 +216,7 @@ class  NetworkDetection:
             sato_result = sato(self.greyscale_image, sigmas=sigmas, black_ridges=self.black_ridges, mode='reflect')
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
-            thresh_otsu = threshold_otsu(sato_result)
+            thresh_otsu = get_otsu_threshold(sato_result)
             binary_otsu = (sato_result > thresh_otsu).astype(np.uint8)
             if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
                 binary_otsu = 1 - binary_otsu
@@ -336,7 +336,7 @@ class  NetworkDetection:
         if self.best_result['rolling_window']:
             binary_image = rolling_window_segmentation(filtered_result, self.possibly_filled_pixels, patch_size=(10, 10))
         else:
-            thresh_otsu = threshold_otsu(filtered_result)
+            thresh_otsu = get_otsu_threshold(filtered_result)
             binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
