@@ -376,8 +376,8 @@ class TestRollingWindowSegmentation(CellectsUnitTest):
         # Expected output based on the example in docstring
         expected = np.array([[0, 1, 0, 0],
                              [0, 1, 1, 0],
-                             [0, 1, 1, 0],
-                             [0, 0, 1, 0]], dtype=np.uint8)
+                             [1, 1, 1, 0],
+                             [1, 0, 1, 0]], dtype=np.uint8)
 
         # Verify result
         self.assertTrue(np.array_equal(result, expected))

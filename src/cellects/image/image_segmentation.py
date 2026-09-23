@@ -763,7 +763,7 @@ def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels
     for patch in patch_slices:
         v = greyscale_image[patch] * possibly_filled_pixels[patch]
         if v.max() > 0 and np.ptp(v) > 0.5:
-            t = threshold_otsu(v)
+            t = get_otsu_threshold(v)
 
             if maximize_parameter:
                 res = minimize(_network_perimeter, x0=t, args=(v,), method='Nelder-Mead')
