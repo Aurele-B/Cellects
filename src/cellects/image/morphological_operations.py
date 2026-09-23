@@ -38,7 +38,6 @@ from scipy.spatial.distance import pdist
 from cellects.utils.decorators import njit
 from cellects.utils.utilitarian import CoordSet
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
-from skimage.measure import label
 from scipy.stats import linregress
 from scipy.ndimage import distance_transform_edt
 import matplotlib.pyplot as plt
@@ -1364,7 +1363,7 @@ def get_largest_connected_component(segmentation: NDArray[np.uint8]) -> Tuple[np
     >>> print(size)
     12
     """
-    labels = label(segmentation)
+    _, labels = cv2.connectedComponents(segmentation)
     assert(labels.max() != 0) # assume at least 1 CC
     con_comp_sizes = np.bincount(labels.flat)[1:]
     largest_idx = np.argmax(con_comp_sizes)
