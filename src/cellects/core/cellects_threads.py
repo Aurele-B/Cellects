@@ -1323,10 +1323,11 @@ class VideoTrackingThread(QtCore.QThread):
         logging.info(f"Starting motion analysis with the detection method n°{self.po.all['video_option']}")
         self.po.instantiate_tables()
         try:
+            self.po.set_analyzed_individuals()
+            arena_nb = len(self.po.vars['analyzed_individuals'])
             memory_diff = self.po.update_available_core_nb()
             if self.po.cores > 0:  # i.e. enough memory
                 if not self.po.all['do_multiprocessing']:
-                    arena_nb = len(self.po.vars['analyzed_individuals'])
                     self.status['message'] = f"Starting sequential analysis of {arena_nb} arena(s)"
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
@@ -1390,7 +1391,7 @@ class VideoTrackingThread(QtCore.QThread):
                     self.status['message'] = f"Sequential analysis lasted {duration} minutes"
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
                 else:
-                    self.status['message'] = f"Analyse all videos using {self.po.cores} cores..."
+                    self.status['message'] = f"Starting parallel analysis of {arena_nb} arena(s) using {self.po.cores} cores..."
                     self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message'] }")
                     logging.info(f"{self.status['folder']}, {self.status['message'] }")
 

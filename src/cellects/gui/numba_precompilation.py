@@ -10,6 +10,7 @@ from cellects.image.network_functions import nonzero_to_set
 from cellects.utils.formulas import sum_of_abs_differences, bracket_to_uint8_image_contrast, get_power_dists, get_var, \
     get_skewness_kurtosis, get_inertia_axes, get_newly_explored_area
 from cellects.utils.utilitarian import greater_along_first_axis, less_along_first_axis
+from cellects.image.image_filtering import *
 
 
 def warming_up_numba_functions(loading):
@@ -21,7 +22,9 @@ def warming_up_numba_functions(loading):
     integer = np.uint8(1)
     vect = np.zeros((1), dtype=np.float64)
     img = np.zeros((1, 1, 3), dtype=np.uint8)
-    b_img = np.zeros((1, 1), dtype=np.uint8)
+    g_img = np.array([[191, 231, 173], [ 97,  51,  73], [242,  65,  40]], dtype=np.uint8)
+    mask_bool = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
+    b_img = np.ones((1, 1), dtype=np.uint8)
     b_vid = np.zeros((1, 1, 1), dtype=np.uint8)
     c_space_dict = Dict()
     c_space_dict['bgr'] = List([0, 0, 0])
@@ -86,6 +89,12 @@ def warming_up_numba_functions(loading):
 
     loading.add_progress()
     _ = less_along_first_axis(b_img, vect)
+
+    loading.add_progress()
+    _ = masked_vessel_filters(g_img, filter_name='Sato', sigmas=[.5], mask_bool=mask_bool)
+
+    loading.add_progress()
+    _ = masked_vessel_filters(g_img, filter_name='Frangi', sigmas=[.5], mask_bool=mask_bool)
 
     # Not yet in:
     # linear_model

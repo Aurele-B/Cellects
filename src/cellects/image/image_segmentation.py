@@ -26,10 +26,11 @@ from typing import Tuple
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict, split_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
 from cellects.image.morphological_operations import get_largest_connected_component
+from cellects.image.image_filtering import sato_filter, frangi_filter
 from skimage.measure import perimeter
 from scipy.optimize import minimize
-from skimage.filters import (threshold_otsu, gaussian, butterworth, farid, frangi, hessian, laplace, median, meijering,
-                             prewitt, roberts, sato, scharr, sobel)
+from skimage.filters import (gaussian, butterworth, farid, hessian, laplace, median, meijering,
+                             prewitt, roberts, scharr, sobel)
 
 
 filter_dict = {"": {'': {}},
@@ -133,9 +134,9 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
     elif filter_type == "Butterworth":
         image = butterworth(image, cutoff_frequency_ratio=param[0], order=param[1])
     elif filter_type == "Frangi":
-        image = frangi(image, sigmas=np.linspace(param[0], param[1], num=3))
+        image = frangi_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Sato":
-        image = sato(image, sigmas=np.linspace(param[0], param[1], num=3))
+        image = sato_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Meijering":
         image = meijering(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Hessian":

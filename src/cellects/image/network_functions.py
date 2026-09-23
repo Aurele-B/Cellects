@@ -28,14 +28,15 @@ methods for image processing workflows.
 """
 import numpy as np
 from cellects.image.morphological_operations import *
+from cellects.image.shape_descriptors import ShapeDescriptors
+from cellects.image.image_filtering import sato_filter, frangi_filter, masked_vessel_filters
 from cellects.utils.utilitarian import *
 from cellects.utils.formulas import *
 from cellects.io.save import *
 from cellects.utils.utilitarian import zoom_on_nonzero
-from cellects.image.image_segmentation import rolling_window_segmentation, binary_quality_index, find_threshold_given_mask
+from cellects.image.image_segmentation import rolling_window_segmentation, binary_quality_index, find_threshold_given_mask, get_otsu_threshold, otsu_thresholding
 from numba.typed import Dict as TDict
 from skimage import morphology
-from skimage.filters import frangi, sato, threshold_otsu
 from collections import deque
 from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
@@ -131,7 +132,7 @@ class  NetworkDetection:
 
         for i, (key, sigmas) in enumerate(frangi_sigmas.items()):
             # Apply Frangi filter
-            frangi_result = frangi(self.greyscale_image, sigmas=sigmas, beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
+            frangi_result = frangi_filter(self.greyscale_image, sigmas=sigmas)
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             thresh_otsu = get_otsu_threshold(frangi_result)
@@ -213,7 +214,7 @@ class  NetworkDetection:
 
         for i, (key, sigmas) in enumerate(sato_sigmas.items()):
             # Apply sato filter
-            sato_result = sato(self.greyscale_image, sigmas=sigmas, black_ridges=self.black_ridges, mode='reflect')
+            sato_result = sato_filter(self.greyscale_image, sigmas=sigmas)
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             thresh_otsu = get_otsu_threshold(sato_result)
@@ -329,9 +330,9 @@ class  NetworkDetection:
         The final network detection result is stored in `self.incomplete_network`.
         """
         if self.best_result['filter'] == 'Frangi':
-            filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'], beta=self.frangi_beta, gamma=self.frangi_gamma, black_ridges=self.black_ridges)
+            filtered_result = frangi_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
         else:
-            filtered_result = sato(self.greyscale_image, sigmas=self.best_result['sigmas'], black_ridges=self.black_ridges, mode='reflect')
+            filtered_result = sato_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
 
         if self.best_result['rolling_window']:
             binary_image = rolling_window_segmentation(filtered_result, self.possibly_filled_pixels, patch_size=(10, 10))
