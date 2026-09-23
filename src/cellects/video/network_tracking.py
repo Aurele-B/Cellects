@@ -174,7 +174,6 @@ class NetworkTracking:
             greyscale = self.motion.converted_video[t, ...]
         NetDet_fast = NetworkDetection(greyscale, possibly_filled_pixels=self.motion.binary[t, ...],
                                        origin_to_add=self.origin,
-                                       edge_max_width=self.edge_max_width,
                                        morphological_closing=self.motion.vars['morphological_closing'],
                                        best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()

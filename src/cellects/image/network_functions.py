@@ -49,7 +49,7 @@ class  NetworkDetection:
     Class for detecting vessels in images using Frangi and Sato filters with various parameter sets.
     It applies different thresholding methods, calculates quality metrics, and selects the best detection method.
     """
-    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, edge_max_width: int=5, morphological_closing: bool=True, lighter_background: bool=None, best_result: dict=None):
+    def __init__(self, greyscale_image: NDArray[np.uint8], possibly_filled_pixels: NDArray[np.uint8]=None, add_rolling_window: bool=False, origin_to_add: NDArray[np.uint8]=None, morphological_closing: bool=True, lighter_background: bool=None, best_result: dict=None):
         """
         Initialize the object with given parameters.
 
@@ -63,8 +63,6 @@ class  NetworkDetection:
             Flag to add rolling window. Defaults to False.
         origin_to_add : NDArray[np.uint8], optional
             Origin to add. Defaults to None.
-        edge_max_width : int, optional
-            Maximal width of network edges. Defaults to 5.
         morphological_closing : bool, optional (default=True)
             Flag indicating whether to apply morphological closing on binary images of the network.
         lighter_background : bool
@@ -80,10 +78,7 @@ class  NetworkDetection:
         else:
             self.possibly_filled_pixels = possibly_filled_pixels
         self.is_lighter_background(lighter_background)
-        self.edge_max_width = edge_max_width
-        k_size = edge_max_width // 2
-        k_size = k_size - k_size % 2 + 1
-        self.kernel = create_ellipse(k_size, k_size).astype(np.uint8)
+        self.kernel = np.array([[1]], dtype=np.uint8)
         self.morphological_closing = morphological_closing
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
@@ -366,7 +361,7 @@ class  NetworkDetection:
         self.greyscale_image  = new_greyscale
         self.is_lighter_background()
 
-    def detect_pseudopods(self, pseudopod_min_size: int=50, only_one_connected_component: bool=True):
+    def detect_pseudopods(self, pseudopod_min_size: int=50, only_one_connected_component: bool=True, edge_max_width: int=None):
         """
         Detect pseudopods in a binary image.
 
@@ -380,10 +375,8 @@ class  NetworkDetection:
             Minimum size for pseudopods to be considered valid. Default is 50.
         only_one_connected_component : bool, optional
             Flag to ensure only one connected component is kept. Default is True.
-
-        Returns
-        -------
-        None
+        edge_max_width : int, optional
+            Anything above this width threshold will be considered as a pseudopod.
 
         Notes
         -----
@@ -399,9 +392,11 @@ class  NetworkDetection:
                [0, 1, ..., 0]], dtype=uint8)
 
         """
+        # Score possible pixels according to their distance to the border, their intensity and their distance to origin (when available)
+        # Then find a threshold to minimize hole area and maximize convexity (to avoid including network parts)
         scored_im = self.possibly_filled_pixels
         if self.use_possibly_filled_pixels:
-            scored_im = close_holes(self.possibly_filled_pixels)
+            scored_im = close_holes(self.possibly_filled_pixels.copy())
             scored_im = distance_transform_edt(scored_im)
             scored_im = scored_im.max() - scored_im
         # Add dilatation of bracket of distances from medial_axis to the multiplication
@@ -411,33 +406,126 @@ class  NetworkDetection:
         if self.origin_to_add is not None:
             scored_im = scored_im * distance_transform_edt(1 - self.origin_to_add) * grey
         else:
-            scored_im = (scored_im**2) * grey
+            scored_im = scored_im * grey
         scored_im = bracket_to_uint8_image_contrast(scored_im)
-        thresh = threshold_otsu(scored_im)
-        thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=thresh)
-        high_score_mask = (scored_im > thresh).astype(np.uint8) * self.possibly_filled_pixels
+        score_thresh = get_otsu_threshold(scored_im)
+        score_thresh = find_threshold_given_mask(scored_im, self.possibly_filled_pixels, min_threshold=score_thresh)
+        high_score_mask = (scored_im > score_thresh).astype(np.uint8) * self.possibly_filled_pixels
 
-        _, pseudopod_widths = morphology.medial_axis(high_score_mask, return_distance=True, rng=0)
-        high_score_mask = high_score_mask * cv2.dilate((pseudopod_widths >= self.edge_max_width).astype(np.uint8), kernel=create_ellipse(7, 7).astype(np.uint8), iterations=1)
-        nb, shapes, stats, centro = cv2.connectedComponentsWithStats(high_score_mask)
-        self.pseudopods = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-        self.pseudopods = np.isin(shapes, self.pseudopods)
+        high_score_mask = high_score_mask | self.incomplete_network
 
-        # Make sure that the tubes connecting two pseudopods belong to pseudopods if removing pseudopods cuts the network
-        self.complete_network = np.logical_or(self.pseudopods, self.incomplete_network).astype(np.uint8)
-        if self.morphological_closing:
-            self.complete_network = cv2.morphologyEx(self.complete_network, cv2.MORPH_CLOSE, kernel=self.kernel)
+        pseudopod_widths = distance_transform_edt(high_score_mask)
+        # Find all areas above pseudopod_width
+        if edge_max_width is None:
+            max_size = high_score_mask.sum()
+            convexity = 0.
+            total_hole_area = max_size
+            edge_max_width = 10
+            while (total_hole_area > max_size * .5 or convexity < .5) and edge_max_width < 100:
+                potential_mask = pseudopod_widths > edge_max_width
+                SD = ShapeDescriptors(potential_mask, ['total_hole_area', 'convexity'])
+                total_hole_area = SD.total_hole_area
+                convexity = SD.convexity
+                edge_max_width += 1
+            if edge_max_width == 100:
+                edge_max_width = 10
+
+        k_size = edge_max_width // 2
+        k_size = k_size - k_size % 2 + 1
+        self.kernel = create_ellipse(k_size, k_size).astype(np.uint8)
+
+        # large_width_mask = cv2.dilate((pseudopod_widths >= edge_max_width).astype(np.uint8), create_ellipse(edge_max_width * 2, edge_max_width * 2).astype(np.uint8))
+        kernel = create_ellipse(edge_max_width, edge_max_width).astype(np.uint8)
+        large_width_mask = cv2.dilate((pseudopod_widths >= edge_max_width).astype(np.uint8), kernel)
+        self.complete_network = (pseudopod_widths > 0).astype(np.uint8)
+        self.complete_network[large_width_mask > 0] = 0
+        SD = ShapeDescriptors(self.complete_network, ['perimeter'])
+        ref_perimeter = SD.perimeter
+
+        # Try to re-segment large areas to try to detect less contrasted networks
+        shapes, stats, centro = cc(large_width_mask)
+        large_shapes = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        x_mins, y_mins, x_maxs, y_maxs = stats[:, 0], stats[:, 1], stats[:, 2],stats[:, 3]
+        ref_int = 127
+        if self.incomplete_network.any():
+            ref_int = grey[self.incomplete_network > 0].mean()
+        for i_ in large_shapes: # i_=1
+            x_min, x_max, y_min, y_max = x_mins[i_], x_maxs[i_], y_mins[i_], y_maxs[i_]
+            shape_i = shapes[y_min:y_max, x_min:x_max] == i_
+            if grey[y_min:y_max, x_min:x_max][shape_i].min() > ref_int:
+                large_width_mask[y_min:y_max, x_min:x_max][shape_i] = 1
+                continue
+            masked_filtered = masked_vessel_filters(self.greyscale_image[y_min:y_max, x_min:x_max], self.best_result['filter'], self.best_result['sigmas'], shape_i)
+            area_thresh = get_otsu_threshold(masked_filtered[shape_i])
+            binary = shape_i & (masked_filtered > area_thresh)
+            if not binary.any():
+                large_width_mask[y_min:y_max, x_min:x_max][shape_i] = 1
+                continue
+            complete_network = self.complete_network.copy()
+            complete_network[y_min:y_max, x_min:x_max][binary] = 1
+            SD = ShapeDescriptors(complete_network, ['perimeter'])
+            if SD.perimeter > ref_perimeter:
+                large_width_mask[y_min:y_max, x_min:x_max][binary] = 1
+            else:
+                large_width_mask[y_min:y_max, x_min:x_max][shape_i] = 1
+
+        # Close the extended network to foster connectivity between the new and the old parts
+        large_width_mask = cv2.morphologyEx(large_width_mask, cv2.MORPH_CLOSE, kernel=cross_33)
+
+        self.complete_network *= (1 - large_width_mask)
+        if only_one_connected_component:
+            # Remove non-connected small parts from the complete network to add them to the pseudopods
+            one_component = keep_one_connected_component(self.complete_network)
+            large_width_mask[(self.complete_network - one_component) > 0] = 1
+            self.complete_network = one_component
+
+        self.pseudopods = large_width_mask * self.possibly_filled_pixels
+
+        # Any net hole, near the periphery, containing pseudopod pixels become a bigger pseudopod
+        periphery_dist = (distance_transform_edt(close_holes(self.complete_network.copy())))
+        num_holes, holes_stats, holes_centers = cc(1 - self.complete_network)
+        holes_near_periphery = np.unique(num_holes * (periphery_dist < edge_max_width))
+        holes_near_periphery = holes_near_periphery[holes_near_periphery > 1]
+        for i_ in holes_near_periphery:
+            hole_bool = num_holes == i_
+            # print(i_, holes_stats[i_, 4])
+            # show(hole_bool)
+            if np.any(hole_bool * self.pseudopods) and scored_im[hole_bool].mean() > score_thresh:
+                hole_bool = cv2.dilate(hole_bool.astype(np.uint8), kernel) > 0
+                self.pseudopods[hole_bool] = 1
+
+        # Validate pseudopods only if they are large enough
+        # and if adding them to the complete network do not change total connected component number
+        net_nb, _ = cv2.connectedComponents(self.complete_network)
+        num_pseu, stats, centro = cc(self.pseudopods)
+        large_shapes = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+        self.pseudopods[np.logical_not(np.isin(num_pseu, large_shapes))] = 0
+        half_net_size = self.complete_network.sum() * .5
+        for i_ in large_shapes:
+            pseu_bool = num_pseu == i_
+            nb_i, _ = cv2.connectedComponents(pseu_bool.astype(np.uint8))
+            if net_nb == nb_i:
+                # And if removing the pseudopod break the network
+                nb_parts, broke_parts = cv2.connectedComponents(self.complete_network - pseu_bool)
+                if nb_parts > net_nb:
+                    for part_i in range(1, nb_parts):
+                        part_bool = broke_parts == part_i
+                        if part_bool.sum() < pseu_bool.sum() and (self.complete_network * part_bool).sum() < half_net_size:
+                            self.pseudopods[part_bool] = 1
+                            # pseu_bool += part_bool
+                            # SD = ShapeDescriptors(pseu_bool, ['convexity'])
+                            # if SD.convexity > .5:
+                            #     self.pseudopods[part_bool] = 1
+            else:
+                self.pseudopods[pseu_bool] = 0
+        self.pseudopods *= self.possibly_filled_pixels
+        self.complete_network[self.pseudopods > 0] = 1
+        self.complete_network *= self.possibly_filled_pixels
         if only_one_connected_component:
             self.complete_network = keep_one_connected_component(self.complete_network)
-            without_pseudopods = self.complete_network.copy()
-            self.pseudopods = cv2.dilate(self.pseudopods.astype(np.uint8), kernel=self.kernel, iterations=2)
-            without_pseudopods[self.pseudopods > 0] = 0
-            only_connected_network = keep_one_connected_component(without_pseudopods)
-            self.pseudopods = (1 - only_connected_network) * self.complete_network
-            # Merge the connected network with pseudopods to get the complete network
-            self.complete_network = np.logical_or(only_connected_network, self.pseudopods).astype(np.uint8)
-        else:
-            self.pseudopods = self.pseudopods.astype(np.uint8)
+            self.pseudopods *= self.complete_network
+
+        self.incomplete_network = self.complete_network.copy()
         self.incomplete_network *= (1 - self.pseudopods)
 
 def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[np.uint8]=None, pad_origin_centroid: NDArray[np.int64]=None) -> Tuple[NDArray[np.uint8], NDArray[np.float64], NDArray[np.uint8]]:

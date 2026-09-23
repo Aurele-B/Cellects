@@ -28,7 +28,7 @@ class TestNetworkDetection(CellectsUnitTest):
         cls.greyscale_image[cls.greyscale_image == 0] = np.random.randint(0, 50, int(cls.possibly_filled_pixels.size - cls.possibly_filled_pixels.sum()))
         cls.add_rolling_window=True
         cls.NetDet = NetworkDetection(cls.greyscale_image, cls.possibly_filled_pixels, cls.add_rolling_window,
-                                      cls.origin_to_add, edge_max_width=1)
+                                      cls.origin_to_add)
         cls.NetDet.get_best_network_detection_method()
 
     def test_get_best_network_detection_method_outputs_proper_binary_image(self):
@@ -58,7 +58,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = False
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -68,7 +68,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = True
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -78,7 +78,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = False
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -88,7 +88,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.best_result['rolling_window'] = True
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=self.possibly_filled_pixels,
                                        add_rolling_window=self.add_rolling_window,
-                                       origin_to_add=self.origin_to_add, edge_max_width=1, best_result=self.NetDet.best_result)
+                                       origin_to_add=self.origin_to_add, best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         self.assertTrue(isinstance(NetDet_fast.incomplete_network, np.ndarray))
 
@@ -110,12 +110,11 @@ class TestNetworkDetection(CellectsUnitTest):
     def test_detect_pseudopods_with_no_possibly_filled_pixels(self):
         """Test detect_pseudopods behavior when no possibly filled pixels are given"""
         NetDet_fast = NetworkDetection(self.greyscale_image, possibly_filled_pixels=None,
-                                       edge_max_width = 1, best_result=self.NetDet.best_result)
+                                       best_result=self.NetDet.best_result)
         NetDet_fast.detect_network()
         pseudopod_min_size = 3
         NetDet_fast.detect_pseudopods(pseudopod_min_size)
-        self.assertTrue(NetDet_fast.pseudopods.any())
-        self.assertFalse(NetDet_fast.pseudopods.all())
+        self.assertTrue(NetDet_fast.complete_network.any())
 
     def test_detect_pseudopods_no_ori(self):
         """test_detect_pseudopods_no_ori"""
