@@ -27,7 +27,6 @@ dependencies = [
   "PySide6",
   "scipy",
   "numpy",
-  "scikit-image",
   "tqdm",
   "h5py",
   "matplotlib",
