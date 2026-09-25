@@ -29,14 +29,14 @@ methods for image processing workflows.
 import numpy as np
 from cellects.image.morphological_operations import *
 from cellects.image.shape_descriptors import ShapeDescriptors
-from cellects.image.image_filtering import sato_filter, frangi_filter, masked_vessel_filters
+from cellects.image.filters import sato_filter, frangi_filter, masked_vessel_filters
 from cellects.utils.utilitarian import *
 from cellects.utils.formulas import *
 from cellects.io.save import *
 from cellects.utils.utilitarian import zoom_on_nonzero
 from cellects.image.image_segmentation import rolling_window_segmentation, binary_quality_index, find_threshold_given_mask, get_otsu_threshold, otsu_thresholding
 from numba.typed import Dict as TDict
-from skimage import morphology
+from cellects.image.skeletonize import *
 from collections import deque
 from scipy.spatial.distance import cdist
 from scipy.ndimage import distance_transform_edt
@@ -562,7 +562,8 @@ def get_skeleton_and_widths(pad_network: NDArray[np.uint8], pad_origin: NDArray[
     >>> skeleton, distances, contours = get_skeleton_and_widths(pad_network)
     >>> print(skeleton)
     """
-    pad_skeleton, pad_distances = morphology.medial_axis(pad_network, return_distance=True, rng=0)
+    # pad_skeleton, pad_distances = morphology.medial_axis(pad_network, return_distance=True, rng=0)
+    pad_skeleton, pad_distances = medial_axis(pad_network, return_distance=True)
     pad_skeleton = pad_skeleton.astype(np.uint8)
     if pad_origin is not None:
         pad_skeleton, pad_distances, pad_origin_contours = _add_central_contour(pad_skeleton, pad_distances, pad_origin, pad_network, pad_origin_centroid)
@@ -621,7 +622,8 @@ def remove_small_loops(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[n
     filled_loops[surrounding == 2] = 0
     filled_loops += loop_centers
 
-    new_pad_skeleton = morphology.skeletonize(filled_loops, method='lee')
+    # new_pad_skeleton = morphology.skeletonize(filled_loops, method='lee')
+    new_pad_skeleton = skeletonize(filled_loops)
 
     # Put the new pixels in pad_distances
     new_pixels = new_pad_skeleton * (1 - pad_skeleton)
@@ -924,7 +926,7 @@ class EdgeIdentification:
     provided skeleton and distance arrays. It performs various operations to
     refine and label edges, ultimately producing a fully identified network.
     """
-    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], t: int=0):
+    def __init__(self, pad_skeleton: NDArray[np.uint8], pad_distances: NDArray[np.float64], t=0):
         """
         Initialize the class with skeleton and distance arrays.
 
@@ -934,6 +936,8 @@ class EdgeIdentification:
             Array representing the skeleton to pad.
         pad_distances : ndarray of float64
             Array representing distances corresponding to the skeleton.
+        t : int or str
+            Image identifier
 
         Attributes
         ----------
@@ -2236,7 +2240,7 @@ def _add_central_contour(pad_skeleton: NDArray[np.uint8], pad_distances: NDArray
     dil_im_border = cv2.dilate(im_border, cross_33, iterations=1)
     if not np.any(new_contour * dil_im_border):
         new_contour = cv2.morphologyEx(new_contour, cv2.MORPH_CLOSE, square_33)
-    new_contour = morphology.medial_axis(new_contour, rng=0).astype(np.uint8)
+    new_contour = medial_axis(new_contour).astype(np.uint8)
     new_skeleton = with_central_contour * (1 - dil_origin)
     new_skeleton += new_contour
     new_pixels = np.logical_and(pad_distances == 0, new_skeleton == 1)

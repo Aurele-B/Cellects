@@ -2395,3 +2395,9 @@ def add_mask_contour(img: NDArray, mask: NDArray, color=None, dilate: int=0) -> 
             color = (0, 0, 0)
     contoured_img[contours_coord[0], contours_coord[1], :] = color
     return contoured_img
+
+def perimeter(binary_image):
+    if binary_image.dtype != np.uint8:
+        binary_image = binary_image.astype(np.uint8)
+    contours, hierarchy = cv2.findContours(binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    return cv2.arcLength(contours[0], True)

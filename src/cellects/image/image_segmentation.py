@@ -4,7 +4,7 @@
 This module provides tools to process images through grayscale conversion, apply various filters (e.g., Gaussian, Median, Butterworth), perform thresholding methods like Otsu's algorithm, combine color spaces for enhanced segmentation, and evaluate binary image quality. Key functionalities include dynamic background subtraction, rolling window segmentation with localized thresholds, and optimization of segmentation masks using shape descriptors.
 
 Functions
-apply_filter : Apply skimage or OpenCV-based filters to grayscale images.
+apply_filter : Apply filters to grayscale images.
 get_color_spaces : Convert BGR images into specified color space representations (e.g., LAB, HSV).
 combine_color_spaces : Merge multiple color channels with coefficients to produce a segmented image.
 generate_color_space_combination : Create custom grayscale combinations using two sets of channel weights and backgrounds.
@@ -25,12 +25,9 @@ from numpy.typing import NDArray
 from typing import Tuple
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict, split_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.image.morphological_operations import get_largest_connected_component
-from cellects.image.image_filtering import sato_filter, frangi_filter
-from skimage.measure import perimeter
+from cellects.image.morphological_operations import get_largest_connected_component, perimeter
+from cellects.image.filters import *
 from scipy.optimize import minimize
-from skimage.filters import (gaussian, butterworth, farid, hessian, laplace, median, meijering,
-                             prewitt, roberts, scharr, sobel)
 
 
 filter_dict = {"": {'': {}},
@@ -64,7 +61,6 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
     specified `filter_type` and associated parameters. Supported filters
     include Gaussian, Median, Butterworth, Frangi, Sato, Meijering,
     Hessian, Laplace, Mexican hat, Farid, Prewitt, Roberts, Scharr, and Sobel.
-    Except from Sharpen and Mexican hat, these filters are implemented using the skimage.filters module.
     Additionally, the function can rescale the output image to uint8
     format if specified.
 
@@ -82,15 +78,6 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
         depends on the chosen filter.
     rescale_to_uint8 : bool, optional
         Whether to rescale the output image to uint8 format. Default is False.
-
-    Notes
-    -----
-    The Sharpen filter is implemented through:
-    cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
-    The Maxican hat filter is implemented through:
-    cv2.filter2D(image, -1, np.array(
-            [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
-    All other filters are skimage filters.
 
     Returns
     -------
@@ -128,36 +115,35 @@ def apply_filter(image: NDArray, filter_type: str, param, rescale_to_uint8=False
     Filtered image with Butterworth filter.
     """
     if filter_type == "Gaussian":
-        image = gaussian(image, sigma=param[0])
+        image = gaussian_filter(image, sigma=param[0])
     elif filter_type == "Median":
-        image = median(image)
+        image = median_filter(image)
     elif filter_type == "Butterworth":
-        image = butterworth(image, cutoff_frequency_ratio=param[0], order=param[1])
+        image = butterworth_filter(image, cutoff_frequency_ratio=param[0], order=param[1])
     elif filter_type == "Frangi":
         image = frangi_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Sato":
         image = sato_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Meijering":
-        image = meijering(image, sigmas=np.linspace(param[0], param[1], num=3))
+        image = meijering_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Hessian":
-        image = hessian(image, sigmas=np.linspace(param[0], param[1], num=3))
+        image = hessian_filter(image, sigmas=np.linspace(param[0], param[1], num=3))
     elif filter_type == "Laplace":
-        image = laplace(image, ksize=np.max((3, int(np.ceil(param[0])))))
+        image = laplace_filter(image, ksize=np.max((3, int(np.ceil(param[0])))))
     elif filter_type == "Sharpen":
-        image = cv2.filter2D(image, -1, np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]))
+        image = sharpen_filter(image)
     elif filter_type == "Mexican hat":
-        image = cv2.filter2D(image, -1, np.array(
-            [[0, 0, -1, 0, 0], [0, -1, -2, -1, 0], [-1, -2, 16, -2, -1], [0, -1, -2, -1, 0], [0, 0, -1, 0, 0]]))
+        image = mexican_hat_filter(image)
     elif filter_type == "Farid":
-        image = farid(image)
+        image = farid_filter(image)
     elif filter_type == "Prewitt":
-        image = prewitt(image)
+        image = prewitt_filter(image)
     elif filter_type == "Roberts":
-        image = roberts(image)
+        image = roberts_filter(image)
     elif filter_type == "Scharr":
-        image = scharr(image)
+        image = scharr_filter(image)
     elif filter_type == "Sobel":
-        image = sobel(image)
+        image = sobel_filter(image)
     if rescale_to_uint8 and image.dtype != np.uint8:
         image = bracket_to_uint8_image_contrast(image)
     return image

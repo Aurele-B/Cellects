@@ -10,7 +10,7 @@ from cellects.image.network_functions import nonzero_to_set
 from cellects.utils.formulas import sum_of_abs_differences, bracket_to_uint8_image_contrast, get_power_dists, get_var, \
     get_skewness_kurtosis, get_inertia_axes, get_newly_explored_area
 from cellects.utils.utilitarian import greater_along_first_axis, less_along_first_axis
-from cellects.image.image_filtering import *
+from cellects.image.filters import masked_vessel_filters
 
 
 def warming_up_numba_functions(loading):
