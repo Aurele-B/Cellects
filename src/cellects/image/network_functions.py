@@ -1127,9 +1127,35 @@ class EdgeIdentification:
             # Check that supplementary components are 1 or 2 pixel size, if so:
             # It means that they were neighbors to removed tips and not necessary for the skeleton
             # and will be removed by clear_areas_of_1_or_2_unidentified_pixels
-            nb, sh, st, ce = cv2.connectedComponentsWithStats(self.pad_skeleton)
-            if (st[:, 4] > 2).sum() > 3:
-                logging.error(f"Removing small tipped edges split the skeleton at t={self.t}")
+            sh, st, ce = cc(self.pad_skeleton)
+            nb = len(st)
+            if (st[:, 4] > 2).sum() > 2:
+                # Removing small tipped edges split the skeleton
+                dists = distance_transform_edt(1 - (sh == 1))
+                new_nb = nb
+                # Loop over these split parts and make the shortest path to reconnect them
+                for split_i in range(2, nb):
+                    prev_nb = new_nb
+                    split_shape = sh == split_i
+                    cnv4, cnv8 = get_neighbor_comparisons(split_shape)
+                    split_tips = get_terminations_and_their_connected_nodes(split_shape, cnv4, cnv8)
+                    # Add pixels, starting from the neighborhood of the tips, along the distance gradient.
+                    while prev_nb == new_nb:
+                        split_tips = cv2.dilate(split_tips, cross_33)
+                        closest_pix = dists * split_tips
+                        closest_dist = np.unique(closest_pix)
+                        closest_dist = closest_dist[closest_dist > 0].min()
+                        split_tips = (closest_pix == closest_dist).astype(np.uint8)
+                        close_tip_nb, close_tip_sh, close_tip_st, _ = cv2.connectedComponentsWithStats(split_tips)
+                        for close_tip_i in range(1, close_tip_nb):
+                            if close_tip_st[close_tip_i, 4] > 1:
+                                # If new pixels are connected, only keep the first
+                                close_tip_coord = np.nonzero(close_tip_sh == close_tip_i)
+                                split_tips[close_tip_coord[0][1:], close_tip_coord[1][1:]] = 0
+                        self.pad_skeleton[split_tips > 0] = 1
+                        new_nb, _ = cv2.connectedComponents(self.pad_skeleton)
+                if new_nb != 2:
+                    logging.error(f"Removing small tipped edges split the skeleton into {new_nb} at t={self.t}")
 
         # Remove in distances the pixels removed in skeleton:
         self.pad_distances *= self.pad_skeleton
