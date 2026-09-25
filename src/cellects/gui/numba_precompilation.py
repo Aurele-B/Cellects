@@ -11,6 +11,7 @@ from cellects.utils.formulas import sum_of_abs_differences, bracket_to_uint8_ima
     get_skewness_kurtosis, get_inertia_axes, get_newly_explored_area
 from cellects.utils.utilitarian import greater_along_first_axis, less_along_first_axis
 from cellects.image.filters import masked_vessel_filters
+from cellects.image.skeletonize import medial_axis, skeletonize
 
 
 def warming_up_numba_functions(loading):
@@ -95,6 +96,12 @@ def warming_up_numba_functions(loading):
 
     loading.add_progress()
     _ = masked_vessel_filters(g_img, filter_name='Frangi', sigmas=[.5], mask_bool=mask_bool)
+
+    loading.add_progress()
+    _ =  medial_axis(b_img)
+
+    loading.add_progress()
+    _ =  skeletonize(b_img)
 
     # Not yet in:
     # linear_model

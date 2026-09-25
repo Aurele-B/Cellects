@@ -221,7 +221,7 @@ class LoadingPopup(QtWidgets.QWidget):
         super().__init__()
 
         self.i: int = 0
-        self.total: int = 20
+        self.total: int = 22
 
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint |
                             QtCore.Qt.WindowType.WindowStaysOnTopHint |
