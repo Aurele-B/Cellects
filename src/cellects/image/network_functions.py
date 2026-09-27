@@ -135,11 +135,7 @@ class  NetworkDetection:
             frangi_result = frangi_filter(self.greyscale_image, sigmas=sigmas)
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
-            thresh_otsu = get_otsu_threshold(frangi_result)
-            binary_otsu = (frangi_result > thresh_otsu).astype(np.uint8)
-            if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
-                binary_otsu = 1 - binary_otsu
-            # print(f'F{i}')
+            binary_otsu = otsu_thresholding(frangi_result)
             binary_to_assess = self.possibly_filled_pixels * binary_otsu
             if self.origin_to_add is not None:
                  binary_to_assess *= (1-self.origin_to_add)
@@ -217,11 +213,7 @@ class  NetworkDetection:
             sato_result = sato_filter(self.greyscale_image, sigmas=sigmas)
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
-            thresh_otsu = get_otsu_threshold(sato_result)
-            binary_otsu = (sato_result > thresh_otsu).astype(np.uint8)
-            if ((1 - self.possibly_filled_pixels) * (1 - binary_otsu)).sum() < ((1 - self.possibly_filled_pixels) * binary_otsu).sum():
-                binary_otsu = 1 - binary_otsu
-            # print(f'S{i}')
+            binary_otsu = otsu_thresholding(sato_result)
             binary_to_assess = self.possibly_filled_pixels * binary_otsu
             if self.origin_to_add is not None:
                  binary_to_assess *= (1-self.origin_to_add)
@@ -331,14 +323,17 @@ class  NetworkDetection:
         """
         if self.best_result['filter'] == 'Frangi':
             filtered_result = frangi_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
+            # filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'])
         else:
             filtered_result = sato_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
+            # filtered_result = sato(self.greyscale_image, sigmas=self.best_result['sigmas'])
 
         if self.best_result['rolling_window']:
             binary_image = rolling_window_segmentation(filtered_result, self.possibly_filled_pixels, patch_size=(10, 10))
         else:
-            thresh_otsu = get_otsu_threshold(filtered_result)
-            binary_image = filtered_result > thresh_otsu
+            binary_image = otsu_thresholding(filtered_result)
+            # thresh_otsu = get_otsu_threshold(filtered_result)
+            # binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
         # Replace original shape by its contour
