@@ -1923,5 +1923,391 @@ class TestDrawImgWithMask(CellectsUnitTest):
         self.assertEqual((result[:, :, 0] == 255).sum(), 27)
 
 
+class TestTotalPerimeter(CellectsUnitTest):
+    """Test suite for total_perimeter."""
+
+    def test_total_perimeter_single_2x2_block_returns_4(self):
+        """A 2x2 foreground block produces a perimeter of 4.0."""
+        image = np.zeros((4, 4), dtype=np.uint8)
+        image[1:3, 1:3] = 1
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 4.0)
+        self.assertTrue(isinstance(result, float))
+
+    def test_total_perimeter_empty_image_returns_zero(self):
+        """An all-zero image has no contours and returns zero perimeter."""
+        image = np.zeros((5, 5), dtype=np.uint8)
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 0.0)
+
+    def test_total_perimeter_3x3_block_returns_8(self):
+        """A 3x3 foreground block has a perimeter of 8.0."""
+        image = np.zeros((5, 5), dtype=np.uint8)
+        image[1:4, 1:4] = 1
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 8.0)
+
+    def test_total_perimeter_full_4x4_image_returns_12(self):
+        """A full 4x4 foreground image has a perimeter of 12.0."""
+        image = np.ones((4, 4), dtype=np.uint8)
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 12.0)
+
+    def test_total_perimeter_rectangle_2x3_returns_6(self):
+        """A 2x3 rectangular block has a perimeter of 6.0."""
+        image = np.zeros((4, 5), dtype=np.uint8)
+        image[1:3, 1:4] = 1
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 6.0)
+
+    def test_total_perimeter_multiple_disjoint_shapes_sums_perimeters(self):
+        """Multiple disjoint shapes return the sum of their external perimeters."""
+        image = np.zeros((8, 8), dtype=np.uint8)
+        image[1:3, 1:3] = 1
+        image[1:3, 5:7] = 1
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 8.0)
+
+    def test_total_perimeter_hole_is_ignored(self):
+        """Only external contours are counted, so an internal hole is ignored."""
+        image = np.ones((5, 5), dtype=np.uint8)
+        image[2, 2] = 0
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 16.0)
+
+    def test_total_perimeter_accepts_bool_input(self):
+        """Boolean input is converted to uint8 before contour extraction."""
+        image = np.zeros((4, 4), dtype=bool)
+        image[1:3, 1:3] = True
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 4.0)
+
+    def test_total_perimeter_accepts_nonzero_non_uint8_input(self):
+        """Non-uint8 non-zero values are treated as foreground after conversion."""
+        image = np.zeros((4, 4), dtype=np.int16)
+        image[1:3, 1:3] = 7
+
+        result = total_perimeter(image)
+
+        self.assertEqual(result, 4.0)
+
+    def test_total_perimeter_does_not_modify_input(self):
+        """The input image is not mutated by perimeter calculation."""
+        image = np.zeros((4, 4), dtype=np.uint8)
+        image[1:3, 1:3] = 1
+        original = image.copy()
+
+        total_perimeter(image)
+
+        self.assertTrue(np.array_equal(image, original))
+
+    def test_total_perimeter_none_input_raises_attribute_error(self):
+        """None is invalid because it has no dtype attribute."""
+        with self.assertRaises(AttributeError):
+            total_perimeter(None)
+
+    def test_total_perimeter_3d_input_raises_cv2_error(self):
+        """A 3D array is not a valid 2D binary image for contour extraction."""
+        image = np.zeros((2, 2, 2), dtype=np.uint8)
+
+        with self.assertRaises(cv2.error):
+            total_perimeter(image)
+
+
+class TestConnectComponents(CellectsUnitTest):
+    """Test suite for connect_components."""
+
+    def test_connect_components_empty_mask_returns_zero_mask(self):
+        """An empty mask returns an empty uint8 mask."""
+        mask = np.zeros((5, 5), dtype=np.uint8)
+
+        result = connect_components(mask, 10)
+
+        self.assertEqual(result.dtype, np.uint8)
+        self.assertTrue(result is not mask)
+        self.assertTrue(np.array_equal(result, np.zeros((5, 5), dtype=np.uint8)))
+
+    def test_connect_components_single_component_returns_copy(self):
+        """A single connected component is returned as an unchanged copy."""
+        mask = np.zeros((5, 5), dtype=np.uint8)
+        mask[1:3, 1:3] = 1
+        original = mask.copy()
+
+        result = connect_components(mask, 10)
+
+        self.assertTrue(np.array_equal(result, original))
+        self.assertEqual(result.dtype, np.uint8)
+
+        result[1, 1] = 0
+        self.assertTrue(np.array_equal(mask, original))
+
+    def test_connect_components_two_components_too_far_returns_original(self):
+        """Components farther than max_distance are not connected."""
+        mask = np.zeros((4, 4), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[-1, -1] = 1
+
+        result = connect_components(mask, 4)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_two_components_within_distance_draws_line(self):
+        """Components within max_distance are connected by a line."""
+        mask = np.zeros((4, 4), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[-1, -1] = 1
+
+        expected = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=np.uint8,
+        )
+
+        result = connect_components(mask, 5)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_includes_boundary_distance(self):
+        """A pair exactly at max_distance is connected."""
+        mask = np.zeros((1, 3), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+
+        expected = np.array([[1, 1, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_below_boundary_distance_returns_original(self):
+        """A pair just below max_distance is not connected."""
+        mask = np.zeros((1, 3), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+
+        result = connect_components(mask, 1.999)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_three_in_a_row_uses_mst_to_connect_all(self):
+        """When all pairwise edges are valid, the MST connects the whole chain."""
+        mask = np.zeros((1, 6), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+        mask[0, 5] = 1
+
+        expected = np.ones((1, 6), dtype=np.uint8)
+
+        result = connect_components(mask, 5)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_three_in_a_row_only_valid_edges(self):
+        """Only edges whose distance is within max_distance are drawn."""
+        mask = np.zeros((1, 6), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+        mask[0, 5] = 1
+
+        expected = np.array([[1, 1, 1, 0, 0, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 2.5)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_negative_max_distance_returns_original(self):
+        """A negative max_distance allows no connections."""
+        mask = np.zeros((1, 6), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+        mask[0, 5] = 1
+
+        result = connect_components(mask, -1)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_disconnected_groups_connect_within_group_only(self):
+        """Separate valid groups are connected internally without bridging groups."""
+        mask = np.zeros((11, 13), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+        mask[10, 10] = 1
+        mask[10, 12] = 1
+
+        expected = mask.copy()
+        expected[0, 1] = 1
+        expected[10, 11] = 1
+
+        result = connect_components(mask, 2)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_disconnected_groups_no_valid_edges_returns_original(self):
+        """If no component pair is within max_distance, the mask is unchanged."""
+        mask = np.zeros((11, 13), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+        mask[10, 10] = 1
+        mask[10, 12] = 1
+
+        result = connect_components(mask, 1.9)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_mst_does_not_draw_heavier_direct_edge(self):
+        """The MST avoids a heavier direct edge when cheaper indirect edges exist."""
+        mask = np.zeros((11, 11), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[10, 0] = 1
+        mask[0, 10] = 1
+
+        result = connect_components(mask, 15)
+
+        # The chosen MST should connect row 0 and column 0.
+        self.assertEqual(int(result[0, 5]), 1)
+        self.assertEqual(int(result[5, 0]), 1)
+
+        # The heavier diagonal edge between (10, 0) and (0, 10) should not be drawn.
+        self.assertEqual(int(result[5, 5]), 0)
+        self.assertEqual(int(result.sum()), 21)
+
+    def test_connect_components_triangle_boundary_distance_connects_two_edges(self):
+        """Edges exactly at max_distance are allowed in the MST."""
+        mask = np.zeros((11, 11), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[10, 0] = 1
+        mask[0, 10] = 1
+
+        result = connect_components(mask, 10)
+
+        self.assertEqual(int(result.sum()), 21)
+        self.assertEqual(int(result[5, 5]), 0)
+
+    def test_connect_components_triangle_no_edges_below_min_distance(self):
+        """No edges are selected when all distances exceed max_distance."""
+        mask = np.zeros((11, 11), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[10, 0] = 1
+        mask[0, 10] = 1
+
+        result = connect_components(mask, 9.9)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_treats_nonzero_values_as_foreground(self):
+        """All non-zero values are converted to foreground 1."""
+        mask = np.zeros((4, 4), dtype=np.int16)
+        mask[0, 0] = 10
+        mask[-1, -1] = 20
+
+        expected = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+            dtype=np.uint8,
+        )
+
+        result = connect_components(mask, 5)
+
+        self.assertTrue(np.array_equal(result, expected))
+        self.assertEqual(result.dtype, np.uint8)
+
+    def test_connect_components_ignores_negative_values(self):
+        """Negative values are treated as background because mask > 0 is used."""
+        mask = np.zeros((1, 3), dtype=np.int16)
+        mask[0, 0] = -5
+        mask[0, 2] = 1
+
+        expected = np.array([[0, 0, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 10)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_does_not_modify_input(self):
+        """The original input mask is not mutated by drawing connection lines."""
+        mask = np.zeros((4, 4), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[-1, -1] = 1
+        original = mask.copy()
+
+        result = connect_components(mask, 5)
+        result[0, 0] = 0
+
+        self.assertTrue(np.array_equal(mask, original))
+
+    def test_connect_components_returns_same_shape_and_uint8_dtype(self):
+        """The result preserves shape and is always uint8."""
+        mask = np.array([[0.0, 1.5], [2.0, 0.0]])
+
+        expected = np.array([[0, 1], [1, 0]], dtype=np.uint8)
+
+        result = connect_components(mask, 1)
+
+        self.assertEqual(result.shape, (2, 2))
+        self.assertEqual(result.dtype, np.uint8)
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_none_max_distance_raises_type_error(self):
+        """None is invalid for max_distance when components must be compared."""
+        mask = np.zeros((1, 3), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+
+        with self.assertRaises(TypeError):
+            connect_components(mask, None)
+
+    def test_connect_components_connectivity_4_connects_horizontal_gap(self):
+        """4-connectivity treats horizontally separated pixels as separate components."""
+        mask = np.zeros((1, 3), dtype=np.uint8)
+        mask[0, 0] = 1
+        mask[0, 2] = 1
+
+        expected = np.array([[1, 1, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 2, connectivity=4)
+
+        self.assertTrue(np.array_equal(result, expected))
+
+    def test_connect_components_connectivity_8_groups_diagonal_pixels_without_adding_pixels(self):
+        """8-connectivity groups diagonally touching pixels, so no new pixels are added."""
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 10, connectivity=8)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+    def test_connect_components_connectivity_4_diagonal_pair_returns_same_pixels(self):
+        """With 4-connectivity, a diagonal pair is separate but the 8-line adds no new pixels."""
+        mask = np.array([[1, 0], [0, 1]], dtype=np.uint8)
+
+        result = connect_components(mask, 10, connectivity=4)
+
+        self.assertTrue(np.array_equal(result, mask))
+
+
 if __name__ == '__main__':
     unittest.main()

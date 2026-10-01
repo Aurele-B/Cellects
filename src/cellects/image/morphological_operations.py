@@ -11,20 +11,10 @@ CompareNeighborsWithValue : Class to compare neighboring pixels to a specified v
 Functions
 ---------------
 cc : Sort connected components according to size
-make_gravity_field : Create a gradient field around shapes
 find_median_shape : Generate median shape from multiple inputs
-make_numbered_rays : Create numbered rays for analysis
-CompareNeighborsWithFocal : Compare neighboring pixels to focal values
-ShapeDescriptors : Generate shape descriptors using provided functions
 get_radius_distance_against_time : Calculate radius distances over time
-expand_until_one : Expand shapes until a single connected component remains
-expand_and_rate_until_one : Expand and rate shapes until one remains
-expand_until_overlap : Expand shapes until overlap occurs
 dynamically_expand_to_fill_holes : Dynamically expand to fill holes in shapes
-expand_smalls_toward_biggest : Expand smaller shapes toward largest component
-change_thresh_until_one : Change threshold until one connected component remains
 create_ellipse : Generate ellipse shape descriptors
-get_rolling_window_coordinates_list : Get coordinates for rolling window operations
 
 """
 import logging
@@ -39,7 +29,9 @@ from cellects.utils.decorators import njit
 from cellects.utils.utilitarian import CoordSet
 from cellects.utils.formulas import moving_average, bracket_to_uint8_image_contrast
 from scipy.stats import linregress
-from scipy.ndimage import distance_transform_edt
+from scipy.ndimage import distance_transform_edt, label
+from scipy.spatial import cKDTree
+from scipy.sparse.csgraph import minimum_spanning_tree
 import matplotlib.pyplot as plt
 
 
@@ -2396,8 +2388,141 @@ def add_mask_contour(img: NDArray, mask: NDArray, color=None, dilate: int=0) -> 
     contoured_img[contours_coord[0], contours_coord[1], :] = color
     return contoured_img
 
-def perimeter(binary_image):
+def total_perimeter(binary_image: NDArray[np.uint8]) -> float:
+    """
+    Compute the total perimeter of a binary image.
+
+    Parameters
+    ----------
+    binary_image: NDArray[np.uint8]
+        A 2D binary image containing the shapes to extract the perimeter from
+
+    Returns
+    -------
+    perimeter: float
+
+    Examples
+    --------
+    >>> binary_image = np.zeros((4, 4), dtype=np.uint8)
+    >>> binary_image[1:3, 1:3] = 1
+    >>> print(total_perimeter(binary_image))
+    4.0
+    """
     if binary_image.dtype != np.uint8:
         binary_image = binary_image.astype(np.uint8)
-    contours, hierarchy = cv2.findContours(binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    return cv2.arcLength(contours[0], True)
+    contours, hierarchy = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    return sum(cv2.arcLength(contour, closed=True) for contour in contours)
+
+
+def connect_components(mask: NDArray[np.uint8], max_distance: float | int, connectivity: int=8) -> NDArray[np.uint8]:
+    """
+    Connect all connected components in a binary mask using 1-pixel-wide lines.
+
+    Parameters
+    ----------
+    mask : NDArray[np.uint8]
+        2-D binary image. Non-zero pixels are foreground.
+    max_distance : float | int
+        Maximum allowed Euclidean distance between two components that may
+        be connected. The distance is measured between the closest pair of
+        foreground pixels belonging to the two components.
+    connectivity : int
+        Connectivity used for initial component detection: 4 or 8.
+
+    Returns
+    -------
+    result : NDArray[np.uint8]
+        Binary mask with connecting lines added.
+
+    Examples
+    --------
+    >>> binary_image = np.zeros((4, 4), dtype=np.uint8)
+    >>> binary_image[0, 0] = 1
+    >>> binary_image[-1, -1] = 1
+    >>> print(connect_components(binary_image, 4))
+    [[1 0 0 0]
+     [0 0 0 0]
+     [0 0 0 0]
+     [0 0 0 1]]
+    >>> print(connect_components(binary_image, 5))
+    [[1 0 0 0]
+     [0 1 0 0]
+     [0 0 1 0]
+     [0 0 0 1]]
+    """
+    mask = np.asarray(mask)
+    # Make a binary uint8 image.
+    binary = (mask > 0).astype(np.uint8)
+
+    # Find the original connected components.
+    n_components, labels = cv2.connectedComponents(binary, connectivity=connectivity)
+    n_components -= 1
+
+    # Already one component (or none).
+    if n_components <= 1:
+        return binary.copy()
+
+    # Pixel coordinates belonging to each component.
+    points = [np.column_stack(np.nonzero(labels == i))for i in range(1, n_components + 1)]
+
+    # Build a graph whose edge weight is the minimum distance between two components.
+    # KDTree makes the nearest-neighbour search substantially cheaper than calculating a full cdist() for every component pair.
+    trees = [cKDTree(p) for p in points]
+
+    # Distance matrix between components.
+    distances = np.full(
+        (n_components, n_components),
+        np.inf,
+        dtype=np.float64,
+    )
+
+    # Store the actual closest pixel pair for each component pair.
+    closest_pairs = {}
+
+    for i in range(n_components):
+        for j in range(i + 1, n_components):
+            # Find the closest point in component j for every point in i.
+            d, idx = trees[j].query(points[i], k=1)
+
+            k = np.argmin(d)
+            min_dist = float(d[k])
+
+            if min_dist <= max_distance:
+                p1 = points[i][k]
+                p2 = points[j][idx[k]]
+
+                distances[i, j] = min_dist
+                distances[j, i] = min_dist
+
+                closest_pairs[(i, j)] = (p1, p2)
+
+    # Check whether the max_distance constraint allows all components to be connected.
+    if not np.isfinite(distances).any():
+        return binary.copy()
+
+    # Compute the connected components of the threshold graph.
+    threshold_graph = np.isfinite(distances).astype(np.uint8)
+    np.fill_diagonal(threshold_graph, 0)
+
+    n_groups, _ = cv2.connectedComponents(threshold_graph, connectivity=8)
+
+    # Minimum spanning tree.
+    # The MST guarantees that every original component becomes part of ONE connected component while using only valid edges.
+
+    graph = np.where(np.isfinite(distances), distances, 0)
+
+    mst = minimum_spanning_tree(graph).toarray()
+
+    # Draw the selected connections.
+    result = binary.copy()
+
+    for i, j in zip(*np.nonzero(mst > 0)):
+        p1, p2 = closest_pairs[(min(i, j), max(i, j))]
+
+        # np.nonzero gives (row, col), while cv2.line expects (x, y).
+        pt1 = (int(p1[1]), int(p1[0]))
+        pt2 = (int(p2[1]), int(p2[0]))
+
+        cv2.line(result, pt1, pt2, color=1, thickness=1, lineType=cv2.LINE_8)
+
+    return result
