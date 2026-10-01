@@ -203,10 +203,10 @@ class GraphTracking:
                 edge_id.run_edge_identification()
                 if self.origin is not None:
                     self.origin_contours = un_pad(pad_origin_contours)
-                growing_areas = None
+                pseudopod_areas = None
                 if self.coord_pseudopods is not None:
-                    growing_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
-                edge_id.make_vertex_table(self.origin_contours, growing_areas)
+                    pseudopod_areas = self.coord_pseudopods[1:, self.coord_pseudopods[0, :] == t]
+                edge_id.make_vertex_table(self.origin_contours, pseudopod_areas)
                 edge_id.make_edge_table(self.converted_video[t, ...])
                 pad_skeleton[edge_id.vertices_coord[:, 0], edge_id.vertices_coord[:, 1]] = 2
 
