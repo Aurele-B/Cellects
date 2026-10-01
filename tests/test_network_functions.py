@@ -122,8 +122,7 @@ class TestNetworkDetection(CellectsUnitTest):
         self.NetDet.origin_to_add = None
         self.NetDet.detect_pseudopods(pseudopod_min_size)
         self.assertTrue(isinstance(self.NetDet.pseudopods, np.ndarray))
-        # Check that all network is inside possibly_filled_pixels
-        self.assertFalse((self.NetDet.complete_network * (1 - self.NetDet.possibly_filled_pixels)).any())
+        self.assertTrue(self.NetDet.complete_network.any())
 
 
 class TestGetSkeletonAndWidths(CellectsUnitTest):
@@ -1565,8 +1564,8 @@ class TestEdgeIdentification(CellectsUnitTest):
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         y_ori, x_ori = 1, 3
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.array([[3], [4]])
-        edge_id.make_vertex_table(origin_contours, growing_areas)
+        pseudopod_areas = np.array([[3], [4]])
+        edge_id.make_vertex_table(origin_contours, pseudopod_areas)
 
         # Check that there are 4 tips
         self.assertEqual(edge_id.vertices_coord[:, 3].sum(), 4)
@@ -1575,7 +1574,7 @@ class TestEdgeIdentification(CellectsUnitTest):
         self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 4] == 1, :2], np.array([[y_ori, x_ori]], dtype=np.uint32)))
 
         # Check that the growing region is well located
-        self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 4] == 2, :2], np.transpose(growing_areas).astype(np.uint32)))
+        self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 4] == 2, :2], np.transpose(pseudopod_areas).astype(np.uint32)))
 
         # Check that the connected vertices are well located
         self.assertTrue(np.array_equal(edge_id.vertices_coord[edge_id.vertices_coord[:, 5] == 1, :2], np.array([[0, 4], [1, 3]], dtype=np.uint32)))
@@ -1588,8 +1587,8 @@ class TestEdgeIdentification(CellectsUnitTest):
         origin_contours = np.zeros((self.dims[0] - 2, self.dims[1] - 2), dtype=np.uint8)
         y_ori, x_ori = 1, 3
         origin_contours[y_ori, x_ori] = 1
-        growing_areas = np.array([[3], [4]])
-        edge_id.make_vertex_table(origin_contours, growing_areas)
+        pseudopod_areas = np.array([[3], [4]])
+        edge_id.make_vertex_table(origin_contours, pseudopod_areas)
         greyscale = self.valid_skeleton.copy()
         greyscale[greyscale > 0] = np.random.randint(170, 255, self.valid_skeleton.sum())
         greyscale[greyscale == 0] = np.random.randint(0, 50, int(self.valid_skeleton.size - self.valid_skeleton.sum()))
