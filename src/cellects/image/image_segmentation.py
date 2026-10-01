@@ -25,7 +25,8 @@ from numpy.typing import NDArray
 from typing import Tuple
 from cellects.utils.utilitarian import less_along_first_axis, greater_along_first_axis, translate_dict, split_dict
 from cellects.utils.formulas import bracket_to_uint8_image_contrast
-from cellects.image.morphological_operations import get_largest_connected_component, perimeter
+from cellects.image.morphological_operations import get_largest_connected_component, total_perimeter, rhombus_55
+from cellects.image.skeletonize import medial_axis
 from cellects.image.filters import *
 from scipy.optimize import minimize
 
@@ -693,7 +694,7 @@ def _network_perimeter(threshold, img: NDArray):
     -4
     """
     binary_img = img > threshold
-    return -perimeter(binary_img)
+    return -total_perimeter(binary_img)
 
 
 def rolling_window_segmentation(greyscale_image: NDArray, possibly_filled_pixels: NDArray, patch_size: tuple=(10, 10)) -> NDArray[np.uint8]:
@@ -791,11 +792,12 @@ def binary_quality_index(binary_img: NDArray[np.uint8]) -> float:
     out : float
         The binary quality index value.
     """
+    index: float = 0.
     if np.any(binary_img):
-        size, largest_cc = get_largest_connected_component(binary_img)
-        index = np.square(perimeter(largest_cc)) / binary_img.sum()
-    else:
-        index = 0.
+        surface_area = binary_img.sum()
+        if surface_area < binary_img.size * .33:
+            size, largest_cc = get_largest_connected_component(binary_img)
+            index = np.square(total_perimeter(largest_cc)) / surface_area
     return index
 
 
