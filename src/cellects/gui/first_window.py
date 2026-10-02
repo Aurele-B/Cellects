@@ -291,16 +291,10 @@ class FirstWindow(MainTabsType):
         self.po.all['im_or_vid'] = self.im_or_vid.currentIndex()
         if self.im_or_vid.currentIndex() == 0:
             what = 'Images'
-            self.po.all['radical'] = 'img'
-            self.po.all['extension'] = '.jpg'
         else:
-            self.po.all['radical'] = ''
-            self.po.all['extension'] = '.mp4'
             what = 'Videos'
         self.radical_label.setText(what + ' prefix:')
         self.extension_label.setText(what + ' extension:')
-        self.radical.setText(self.po.all['radical'])
-        self.extension.setText(self.po.all['extension'])
 
     def display_message_from_thread(self, text_from_thread: str):
         """
