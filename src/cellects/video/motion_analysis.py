@@ -260,7 +260,8 @@ class MotionAnalysis:
 
         self.origin = np.zeros((self.dims[1], self.dims[2]), dtype=np.uint8)
         self.origin_idx = read_h5(f"ind_{self.one_descriptor_per_arena['arena']}.h5", 'origin_coord')
-        self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
+        if self.origin_idx is not None:
+            self.origin[self.origin_idx[0], self.origin_idx[1]] = 1
         self.bit_usage['images'] += 8
 
     def assess_motion_detection(self):

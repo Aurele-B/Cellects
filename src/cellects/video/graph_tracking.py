@@ -114,7 +114,10 @@ class GraphTracking:
         self.coord_network = coord_network
         self.converted_video = converted_video
         self.coord_pseudopods = coord_pseudopods
-        self.origin = origin
+        self.origin = None
+        if origin is not None:
+            if origin.any():
+                self.origin = origin
         self.arena_label = arena_label
         self.dims = converted_video.shape[:3]
         if self.origin is not None:
