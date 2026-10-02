@@ -263,7 +263,7 @@ class GraphTracking:
         - ``edges_coord{arena_label}_t{t}_y{y}_x{x}.csv``
         """
         if self.vertices_coord is not None:
-            self.vertices_coord = pd.DataFrame(self.vertices_coord, columns=["t", "y", "x", "vertex_id", "is_tip", "is_origin",
+            self.vertices_coord = pd.DataFrame(self.vertices_coord, columns=["t", "y", "x", "vertex_id", "is_tip", "is_large_and_dense",
                                                                "is_vertex_connected"])
             self.vertices_coord.to_csv(
                 f"vertices_coord{self.arena_label}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv",
