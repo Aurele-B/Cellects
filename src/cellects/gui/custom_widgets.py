@@ -164,7 +164,7 @@ class InsertImage(QtWidgets.QLabel):
         if not isinstance(image, np.uint8):
             image = image.astype(np.uint8)
         img_max_int = image.max()
-        if img_max_int < 10:
+        if 0 < img_max_int < 10:
             image *= 255 // img_max_int
         if len(image.shape) == 3:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
