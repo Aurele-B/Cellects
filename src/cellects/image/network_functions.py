@@ -93,8 +93,13 @@ class  NetworkDetection:
             self.lighter_background = lighter_background
         else:
             if self.use_possibly_filled_pixels:
-                self.lighter_background = self.greyscale_image[self.possibly_filled_pixels > 0].mean() < self.greyscale_image[self.possibly_filled_pixels == 0].mean()
-            else:
+                specimen = self.greyscale_image[self.possibly_filled_pixels > 0]
+                background = self.greyscale_image[self.possibly_filled_pixels == 0]
+                if specimen.any() and background.any():
+                    self.lighter_background = specimen.mean() < background.mean()
+                else:
+                    self.use_possibly_filled_pixels = False
+            if not self.use_possibly_filled_pixels:
                 self.lighter_background = self.greyscale_image.mean() < np.median(self.greyscale_image)
 
 
