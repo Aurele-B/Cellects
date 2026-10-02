@@ -1959,7 +1959,7 @@ class VideoTrackingThread(QtCore.QThread):
         if self.po.vars['fractal_analysis']:
             logging.info(f"{self.status['message']}. Starting fractal analysis.")
 
-            if self.po.vars['save_coord_network']:
+            if self.po.motion.coord_network is not None:
                 box_counting_dimensions = np.zeros((self.po.motion.dims[0], 7), dtype=np.float64)
             else:
                 box_counting_dimensions = np.zeros((self.po.motion.dims[0], 3), dtype=np.float64)
@@ -1967,7 +1967,7 @@ class VideoTrackingThread(QtCore.QThread):
             for t in np.arange(self.po.motion.dims[0]):
                 if self.isInterruptionRequested():
                     return False
-                if self.po.vars['save_coord_network']:
+                if self.po.motion.coord_network is not None:
                     current_network = np.zeros(self.po.motion.dims[1:], dtype=np.uint8)
                     net_t = self.po.motion.coord_network[1:, self.po.motion.coord_network[0, :] == t]
                     current_network[net_t[0], net_t[1]] = 1
@@ -1991,7 +1991,7 @@ class VideoTrackingThread(QtCore.QThread):
 
                 self.message_from_thread.emit(f"{self.status['folder']}, {self.status['message']}: Computing box-counting dimension, {round(t / self.po.motion.dims[0] * 100, 2)}%")
 
-            if self.po.vars['save_coord_network']:
+            if self.po.motion.coord_network is not None:
                 self.po.motion.one_row_per_frame["inner_network_size"] = box_counting_dimensions[:, 0]
                 self.po.motion.one_row_per_frame["fractal_dimension"] = box_counting_dimensions[:, 1]
                 self.po.motion.one_row_per_frame["fractal_r_value"] = box_counting_dimensions[:, 2]

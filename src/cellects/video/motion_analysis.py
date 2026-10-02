@@ -1672,31 +1672,33 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             if self.vars['save_coord_network']:
                 network = read_h5(
                     f"coord_network{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
-                for t in range(self.dims[0]):
-                    network_t = network[1:, network[0, :] == t]
-                    binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
-                    binary[network_t[0, :], network_t[1, :]] = 1
-                    bin_coord = np.nonzero(get_contours(binary))
-                    self.converted_video[t, bin_coord[0], bin_coord[1], :] = firebrick_bgr
-                del network
-                if os.path.isfile(f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5"):
-                    pseudopods = read_h5(
-                        f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                if network is not None:
                     for t in range(self.dims[0]):
-                        pseudopods_t = pseudopods[1:, pseudopods[0, :] == t]
+                        network_t = network[1:, network[0, :] == t]
                         binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
-                        binary[pseudopods_t[0, :], pseudopods_t[1, :]] = 1
+                        binary[network_t[0, :], network_t[1, :]] = 1
                         bin_coord = np.nonzero(get_contours(binary))
-                        self.converted_video[t, bin_coord[0], bin_coord[1], :] = purple_bgr
-                    del pseudopods
+                        self.converted_video[t, bin_coord[0], bin_coord[1], :] = firebrick_bgr
+                    del network
+                    if os.path.isfile(f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5"):
+                        pseudopods = read_h5(
+                            f"coord_pseudopods{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5")
+                        for t in range(self.dims[0]):
+                            pseudopods_t = pseudopods[1:, pseudopods[0, :] == t]
+                            binary = np.zeros((self.dims[1], self.dims[2]), np.uint8)
+                            binary[pseudopods_t[0, :], pseudopods_t[1, :]] = 1
+                            bin_coord = np.nonzero(get_contours(binary))
+                            self.converted_video[t, bin_coord[0], bin_coord[1], :] = purple_bgr
+                        del pseudopods
 
             if self.vars['save_graph']:
-                edges_coord = pd.read_csv(f"edges_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
-                vertices_coord = pd.read_csv(f"vertices_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
-                self.converted_video[edges_coord['t'], edges_coord['y'], edges_coord['x'], :] = 0, 0, 0
-                self.converted_video[vertices_coord['t'], vertices_coord['y'], vertices_coord['x'], :] = 255, 255, 255
-                del edges_coord
-                del vertices_coord
+                if os.path.isfile(f"edges_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv"):
+                    edges_coord = pd.read_csv(f"edges_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+                    vertices_coord = pd.read_csv(f"vertices_coord{self.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.csv")
+                    self.converted_video[edges_coord['t'], edges_coord['y'], edges_coord['x'], :] = 0, 0, 0
+                    self.converted_video[vertices_coord['t'], vertices_coord['y'], vertices_coord['x'], :] = 255, 255, 255
+                    del edges_coord
+                    del vertices_coord
 
             if np.any(self.one_row_per_frame['time'] > 0):
                 position = (5, self.dims[1] - 5)
