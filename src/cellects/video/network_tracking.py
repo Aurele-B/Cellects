@@ -283,7 +283,9 @@ class NetworkTracking:
             mising_pieces = (1 - complete_network) * prev_network
             disappeared_pixel_nb = mising_pieces.sum()
             prev_area = prev_network.sum()
-            ori_area = self.origin.sum()
+            ori_area = 0
+            if self.origin is not None:
+                ori_area = self.origin.sum()
             if self.origin is not None and prev_area > ori_area:
                 max_disappearance = (prev_area - ori_area) * .1
             else:
