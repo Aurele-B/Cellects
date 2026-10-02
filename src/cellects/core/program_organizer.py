@@ -482,10 +482,13 @@ class ProgramOrganizer:
                                 if not 'lighter_background' in self.vars:
                                     self.find_if_lighter_background()
                                 background = read_h5(f'ind_{1}.h5', 'background')
-                                if os.path.isfile('ind_1.h5'):
-                                    ind1_keys = get_h5_keys('ind_1.h5')
-                                    if 'origin_coord' in ind1_keys and not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
+                                if not self.vars['subtract_background'] or (self.vars['subtract_background'] and background is not None):
+                                    if self.all['im_or_vid']:
                                         self.first_exp_ready_to_run = True
+                                    elif os.path.isfile('ind_1.h5'):
+                                        ind1_keys = get_h5_keys('ind_1.h5')
+                                        if 'origin_coord' in ind1_keys:
+                                            self.first_exp_ready_to_run = True
         if self.first_exp_ready_to_run:
             logging.info("The current folder is ready to run")
         else:
