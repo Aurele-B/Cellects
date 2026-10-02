@@ -79,7 +79,7 @@ class  NetworkDetection:
         else:
             self.possibly_filled_pixels = possibly_filled_pixels
         self.is_lighter_background(lighter_background)
-        self.kernel = np.array([[1]], dtype=np.uint8)
+        self.kernel = cross_33
         self.morphological_closing = morphological_closing
         self.best_result = best_result
         self.add_rolling_window = add_rolling_window
@@ -136,10 +136,7 @@ class  NetworkDetection:
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             binary_otsu = otsu_thresholding(frangi_result)
-            binary_to_assess = self.possibly_filled_pixels * binary_otsu
-            if self.origin_to_add is not None:
-                 binary_to_assess *= (1-self.origin_to_add)
-            quality_otsu = binary_quality_index(binary_to_assess)
+            quality_otsu = binary_quality_index(binary_otsu)
             # Method 2: Rolling window thresholding
 
             # Store results
@@ -156,10 +153,7 @@ class  NetworkDetection:
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(frangi_result, self.possibly_filled_pixels, patch_size=(10, 10))
-                binary_to_assess = self.possibly_filled_pixels * binary_rolling
-                if self.origin_to_add is not None:
-                     binary_to_assess *= (1-self.origin_to_add)
-                quality_rolling = binary_quality_index(binary_to_assess)
+                quality_rolling = binary_quality_index(binary_rolling)
                 results.append({
                     'quality': quality_rolling,
                     'surface_area': binary_rolling.sum(),
@@ -214,11 +208,7 @@ class  NetworkDetection:
             # Apply both thresholding methods
             # Method 1: Otsu thresholding
             binary_otsu = otsu_thresholding(sato_result)
-            binary_to_assess = self.possibly_filled_pixels * binary_otsu
-            if self.origin_to_add is not None:
-                 binary_to_assess *= (1-self.origin_to_add)
-            quality_otsu = binary_quality_index(binary_to_assess)
-
+            quality_otsu = binary_quality_index(binary_otsu)
             # Store results
             results.append({
                 'quality': quality_otsu,
@@ -234,10 +224,7 @@ class  NetworkDetection:
             # Method 2: Rolling window thresholding
             if self.add_rolling_window:
                 binary_rolling = rolling_window_segmentation(sato_result, self.possibly_filled_pixels, patch_size=(10, 10))
-                binary_to_assess = self.possibly_filled_pixels * binary_rolling
-                if self.origin_to_add is not None:
-                     binary_to_assess *= (1-self.origin_to_add)
-                quality_rolling = binary_quality_index(binary_to_assess)
+                quality_rolling = binary_quality_index(binary_rolling)
 
                 results.append({
                     'binary': binary_rolling,
@@ -323,17 +310,13 @@ class  NetworkDetection:
         """
         if self.best_result['filter'] == 'Frangi':
             filtered_result = frangi_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
-            # filtered_result = frangi(self.greyscale_image, sigmas=self.best_result['sigmas'])
         else:
             filtered_result = sato_filter(self.greyscale_image, sigmas=self.best_result['sigmas'])
-            # filtered_result = sato(self.greyscale_image, sigmas=self.best_result['sigmas'])
 
         if self.best_result['rolling_window']:
             binary_image = rolling_window_segmentation(filtered_result, self.possibly_filled_pixels, patch_size=(10, 10))
         else:
             binary_image = otsu_thresholding(filtered_result)
-            # thresh_otsu = get_otsu_threshold(filtered_result)
-            # binary_image = filtered_result > thresh_otsu
         self.incomplete_network = binary_image * self.possibly_filled_pixels
 
         # Replace original shape by its contour
@@ -426,10 +409,6 @@ class  NetworkDetection:
             if edge_max_width == 100:
                 edge_max_width = 10
 
-        k_size = edge_max_width // 2
-        k_size = k_size - k_size % 2 + 1
-        self.kernel = create_ellipse(k_size, k_size).astype(np.uint8)
-
         # large_width_mask = cv2.dilate((pseudopod_widths >= edge_max_width).astype(np.uint8), create_ellipse(edge_max_width * 2, edge_max_width * 2).astype(np.uint8))
         kernel = create_ellipse(edge_max_width, edge_max_width).astype(np.uint8)
         large_width_mask = cv2.dilate((pseudopod_widths >= edge_max_width).astype(np.uint8), kernel)
@@ -465,11 +444,14 @@ class  NetworkDetection:
             else:
                 large_width_mask[y_min:y_max, x_min:x_max][shape_i] = 1
 
-        # Close the extended network to foster connectivity between the new and the old parts
-        large_width_mask = cv2.morphologyEx(large_width_mask, cv2.MORPH_CLOSE, kernel=cross_33)
+        # # Close the extended network to foster connectivity between the new and the old parts
+        large_width_mask = cv2.dilate(large_width_mask, kernel=kernel)
 
-        self.complete_network *= (1 - large_width_mask)
         if only_one_connected_component:
+            self.complete_network *= (1 - large_width_mask)
+            shapes, stats, centro = cc(self.complete_network)
+            large_shapes = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
+            self.complete_network = connect_components(np.isin(shapes, large_shapes), max_distance=25)
             # Remove non-connected small parts from the complete network to add them to the pseudopods
             one_component = keep_one_connected_component(self.complete_network)
             large_width_mask[(self.complete_network - one_component) > 0] = 1
@@ -479,13 +461,11 @@ class  NetworkDetection:
 
         # Any net hole, near the periphery, containing pseudopod pixels become a bigger pseudopod
         periphery_dist = (distance_transform_edt(close_holes(self.complete_network.copy())))
-        num_holes, holes_stats, holes_centers = cc(1 - self.complete_network)
+        _, num_holes = cv2.connectedComponents(1 - self.complete_network)
         holes_near_periphery = np.unique(num_holes * (periphery_dist < edge_max_width))
         holes_near_periphery = holes_near_periphery[holes_near_periphery > 1]
         for i_ in holes_near_periphery:
             hole_bool = num_holes == i_
-            # print(i_, holes_stats[i_, 4])
-            # show(hole_bool)
             if np.any(hole_bool * self.pseudopods) and scored_im[hole_bool].mean() > score_thresh:
                 hole_bool = cv2.dilate(hole_bool.astype(np.uint8), kernel) > 0
                 self.pseudopods[hole_bool] = 1
@@ -516,7 +496,6 @@ class  NetworkDetection:
                 self.pseudopods[pseu_bool] = 0
         self.pseudopods *= self.possibly_filled_pixels
         self.complete_network[self.pseudopods > 0] = 1
-        self.complete_network *= self.possibly_filled_pixels
         if only_one_connected_component:
             self.complete_network = keep_one_connected_component(self.complete_network)
             self.pseudopods *= self.complete_network
@@ -1891,7 +1870,7 @@ class EdgeIdentification:
                 raise ValueError(f"edge_to_coord_map[{edge_id}] contains out-of-bounds coordinates: {bad[:5]}")
 
 
-    def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, growing_areas: NDArray=None):
+    def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, pseudopod_areas: NDArray=None):
         """
         Generate a table for the vertices.
 
@@ -1905,7 +1884,7 @@ class EdgeIdentification:
         ----------
         origin_contours : ndarray of uint8, optional
             Binary map to identify food vertices. Default is `None`.
-        growing_areas : ndarray, optional
+        pseudopod_areas : ndarray, optional
             Binary map to identify growing regions. Default is `None`.
 
         Notes
@@ -1932,8 +1911,8 @@ class EdgeIdentification:
             food_vertices = food_vertices[food_vertices > 0]
             self.vertices_coord[np.isin(self.vertices_coord[:, 2], food_vertices), 4] = 1
 
-        if growing_areas is not None and growing_areas.shape[1] > 0:
-            growing = np.unique(self.numbered_vertices[growing_areas[0], growing_areas[1]])
+        if pseudopod_areas is not None and pseudopod_areas.shape[1] > 0:
+            growing = np.unique(self.numbered_vertices[pseudopod_areas[0], pseudopod_areas[1]])
             growing = growing[growing > 0]
             if len(growing) > 0:
                 growing = np.isin(self.vertices_coord[:, 2], growing)

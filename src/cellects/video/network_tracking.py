@@ -12,7 +12,8 @@ import cv2
 import logging
 import numpy as np
 from numpy.typing import NDArray
-from cellects.image.morphological_operations import cross_33, get_contours, keep_one_connected_component
+from cellects.image.morphological_operations import cross_33, cc, keep_one_connected_component, connect_components
+from cellects.image.shape_descriptors import ShapeDescriptors
 from cellects.utils.utilitarian import smallest_memory_array
 from cellects.image.network_functions import NetworkDetection
 from cellects.io.save import write_h5
@@ -111,7 +112,7 @@ class NetworkTracking:
             valid_methods = np.all(area_variation <= max_surface_area_variation, axis=0)
             m_i = 0
             m_i_max = - np.log(max_surface_area_variation) / np.log(2)
-            while valid_methods.sum() < 3 and m_i < m_i_max:
+            while valid_methods.sum() < 5 and m_i < m_i_max:
                 max_surface_area_variation *= 2
                 valid_methods = np.all(area_variation <= max_surface_area_variation, axis=0)
                 m_i += 1
@@ -146,7 +147,7 @@ class NetworkTracking:
         for t in np.arange(self.starting_time, self.dims[0]):
             complete_network = self.segment_frame(t)
         return complete_network
-            
+
     def segment_frame(self, t: int) -> NDArray[np.uint8]:
         """
         Segment a single frame into a network mask.
@@ -180,13 +181,13 @@ class NetworkTracking:
         if self.detect_pseudopods:
             if self.do_convert:
                 NetDet_fast.change_greyscale(self.motion.converted_video[t, ...])
-            NetDet_fast.detect_pseudopods(pseudopod_min_size=self.pseudopod_min_size)
+            NetDet_fast.detect_pseudopods(pseudopod_min_size=self.pseudopod_min_size, only_one_connected_component=not self.motion.vars['several_blob_per_arena'])
             self.pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         else:
             NetDet_fast.complete_network = NetDet_fast.incomplete_network
         self.potential_network[t, ...] = NetDet_fast.complete_network
         return NetDet_fast.complete_network
-        
+
     def post_processing(self):
         """
         Apply post‑processing to all time steps from ``starting_time`` up to the
@@ -204,8 +205,8 @@ class NetworkTracking:
         """
         for t in np.arange(self.starting_time, self.dims[0]):
             imtoshow = self.post_process(t)
-            
-    def post_process(self, t: int, shape_disappearance_supremum: int=500) -> NDArray[np.uint8]:
+
+    def post_process(self, t: int, shape_disappearance_infimum: int=10, shape_disappearance_supremum: int=100) -> NDArray[np.uint8]:
         """
         Post‑process a single time‑frame of the network and return a visualisation image.
 
@@ -215,7 +216,9 @@ class NetworkTracking:
             Index of the time‑frame to be processed. Must be a non‑negative integer
             within the range of the video sequence.
         shape_disappearance_supremum: int
-            All connected components having an inferior surface area (in pixels), are allowed to disappear from one frame to the next.
+            The upper bound of the size (in pixels) of network parts allowed to disappear from one frame to the next.
+        shape_disappearance_infimum: int
+            The lower bound of the size (in pixels) of network parts allowed to disappear from one frame to the next.
 
         Returns
         -------
@@ -260,54 +263,72 @@ class NetworkTracking:
         """
         if self.motion.vars['sliding_window_segmentation']:
             if 2 <= t <= (self.dims[0] - 2):
-                computed_network = self.potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
-                computed_network[computed_network == 1] = 0
-                computed_network[computed_network > 1] = 1
+                complete_network = self.potential_network[(t - 2):(t + 3), :, :].sum(axis=0)
+                complete_network[complete_network == 1] = 0
+                complete_network[complete_network > 1] = 1
             else:
                 if t < 2:
-                    computed_network = self.potential_network[:2, :, :].sum(axis=0)
+                    complete_network = self.potential_network[:2, :, :].sum(axis=0)
                 else:
-                    computed_network = self.potential_network[-2:, :, :].sum(axis=0)
-                computed_network[computed_network > 0] = 1
+                    complete_network = self.potential_network[-2:, :, :].sum(axis=0)
+                complete_network[complete_network > 0] = 1
         else:
-            computed_network = self.potential_network[t, :, :].copy()
-
-        complete_network = keep_one_connected_component(computed_network)
-
-        # Impede large parts of the network to disappear from one frame to the next
-        current_network = complete_network.copy()
+            complete_network = self.potential_network[t, :, :].copy()
+        if self.origin is not None:
+            complete_network[self.motion.origin_idx[0], self.motion.origin_idx[1]] = 1
+        if self.detect_pseudopods:
+            complete_network = np.logical_or(complete_network, self.pseudopod_vid[t]).astype(np.uint8)
         if t > self.starting_time:
             prev_network = self.network_dynamics[t - 1]
+            mising_pieces = (1 - complete_network) * prev_network
+            disappeared_pixel_nb = mising_pieces.sum()
+            prev_area = prev_network.sum()
+            ori_area = self.origin.sum()
+            if self.origin is not None and prev_area > ori_area:
+                max_disappearance = (prev_area - ori_area) * .1
+            else:
+                max_disappearance = prev_area * .1
+            max_disappearance = max(max_disappearance, shape_disappearance_supremum)
+            if disappeared_pixel_nb > max_disappearance:
+                sh, stats, centroids = cc(mising_pieces.astype(np.uint8))
+                if len(stats) > 1:
+                    # Impede large parts of the network to disappear from one frame to the next
+                    large_shapes = stats[1:, 4] > shape_disappearance_supremum
+                    if large_shapes.any():
+                        large_shapes = np.nonzero(large_shapes)[0] + 1
+                        for large_shape in large_shapes:
+                            large_shape_bool = sh == large_shape
+                            SD = ShapeDescriptors(large_shape_bool, ['circularity'])
+                            if SD.circularity < .15:
+                                complete_network[large_shape_bool] = 1
+                                if self.detect_pseudopods:
+                                    self.pseudopod_vid[t][np.logical_and(self.pseudopod_vid[t - 1], large_shape_bool)] = 1
+                        if not self.motion.vars['several_blob_per_arena']:
+                            complete_network = connect_components(complete_network, max_distance=100)
+
+                # # Make smaller parts (until shape_disappearance_infimum) disappear in the previous frame
+                # small_shapes = np.logical_and(shape_disappearance_infimum < stats[1:, 4], stats[1:, 4] < shape_disappearance_supremum)
+                # if small_shapes.any():
+                #     self.network_dynamics[t - 1][np.isin(sh, np.nonzero(small_shapes))] = 0
+                #     if not self.motion.vars['several_blob_per_arena']:
+                #         self.network_dynamics[t - 1] = keep_one_connected_component(self.network_dynamics[t - 1])
+                #     if self.detect_pseudopods:
+                #         self.pseudopod_vid[t - 1][self.network_dynamics[t - 1] == 0] = 0
+            complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
+            if not self.motion.vars['several_blob_per_arena']:
+                complete_network = keep_one_connected_component(complete_network)
+                if self.detect_pseudopods:
+                    self.pseudopod_vid[t][np.logical_not(complete_network)] = 0
+            self.network_dynamics[t] = complete_network
+
+            imtoshow = self.motion.visu[t - 1, ...]
+            eroded_binary = cv2.erode(self.network_dynamics[t - 1, ...], cross_33)
+            net_coord = np.nonzero(self.network_dynamics[t - 1, ...] - eroded_binary)
+            imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
         else:
-            prev_network = np.zeros_like(self.network_dynamics[t], dtype=np.uint8)
-        # minimal_network_size = prev_network.sum() * allowed_shrinkage_rate
-        # if current_network.sum() < minimal_network_size:
-        mising_pieces = ((1 - current_network) * prev_network).astype(np.uint8)
-        nb, sh, stats, centroids = cv2.connectedComponentsWithStats(mising_pieces)
-        large_shapes = stats[1:, 4] > shape_disappearance_supremum
-        if large_shapes.any():
-            large_shapes = np.nonzero(large_shapes)[0] + 1
-            for large_shape in large_shapes:
-                complete_network[sh == large_shape] = 1
-
-        # Discriminate large growing regions from the rest of the network
-        if self.detect_pseudopods:
-            complete_network = np.logical_or(complete_network, self.pseudopod_vid[t])
-            complete_network = keep_one_connected_component(complete_network)
-            # Make sure that removing pseudopods do not cut the network:
-            without_pseudopods = complete_network * (1 - self.pseudopod_vid[t])
-            only_connected_network = keep_one_connected_component(without_pseudopods)
-            # # Option A: To add these cutting regions to the pseudopods do:
-            pseudopods = (1 - only_connected_network) * complete_network
-            self.pseudopod_vid[t] = pseudopods
-        self.network_dynamics[t] = complete_network
-
-        imtoshow = self.motion.visu[t, ...]
-        eroded_binary = cv2.erode(self.network_dynamics[t, ...], cross_33)
-        net_coord = np.nonzero(self.network_dynamics[t, ...] - eroded_binary)
-        imtoshow[net_coord[0], net_coord[1], :] = (34, 34, 158)
+            imtoshow = self.motion.visu[t, ...]
         return imtoshow
-    
+
     def save_network(self):
         """
         Save the coordinates of the network and, optionally, pseudopods to HDF5 files.
@@ -340,5 +361,5 @@ class NetworkTracking:
         if self.motion.vars['save_coord_network']:
             write_h5(f"coord_network{self.motion.one_descriptor_per_arena['arena']}_t{self.dims[0]}_y{self.dims[1]}_x{self.dims[2]}.h5", network_coord)
         return network_coord, pseudopod_coord
-    
+
 
