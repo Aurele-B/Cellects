@@ -1923,6 +1923,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../api/cellects/image/filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../api/cellects/image/image_segmentation/" class="md-nav__link">
         
   
@@ -2071,6 +2099,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/cellects/image/skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -3209,6 +3265,29 @@ based on luminosity variations.</p>
 slimming synchronously in the specimen(s). This parameter thresholds the minimal size of these
 groups of connected pixels. This threshold is useful to filter out small noisy oscillations.</p>
 <!-- END_Minimal_oscillating_cluster_size -->
+
+<hr />
+<!-- START_Pseudopod_min_size -->
+<h2 id="pseudopod-min-size">Pseudopod min size:</h2>
+<p>The minimal surface area (in pixels) of a network component or pseudopod. This is used when trying
+to detect large and dense areas (e.g. pseudopods).</p>
+<!-- END_Pseudopod_min_size -->
+
+<hr />
+<!-- START_Max_connection_distance -->
+<h2 id="max-connection-distance">Max connection distance:</h2>
+<p>The maximal distance (in pixels) below which connections are created between network components.
+This is used when trying to detect large and dense areas (e.g. pseudopods) in a network forming only
+one connected component. These one pixel wide connections help reducing noise while keeping all
+relevant parts of the network connected together.</p>
+<!-- END_Max_connection_distance -->
+
+<hr />
+<!-- START_Edge_max_width -->
+<h2 id="edge-max-width">Edge max width:</h2>
+<p>The maximal width (in pixels) of edges. Anything above this width threshold will be considered as a
+large and dense area (e.g. pseudopod).</p>
+<!-- END_Edge_max_width -->
 
 <hr />
 <!-- START_Night_mode -->

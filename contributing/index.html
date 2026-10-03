@@ -1078,6 +1078,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#build-desktop-installers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build desktop installers
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1989,6 +2000,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/cellects/image/filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/cellects/image/image_segmentation/" class="md-nav__link">
         
   
@@ -2137,6 +2176,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/cellects/image/skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -3002,6 +3069,12 @@ Install test dependencies:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>mkdocs<span class="w"> </span>serve
 </code></pre></div></p>
 <p>Open <a href="http://127.0.0.1:8000">http://127.0.0.1:8000</a> in your browser.</p>
+<h2 id="build-desktop-installers">Build desktop installers</h2>
+<p>In <code>Automatic triggers on develop branch</code> section in <code>.github/workflows/desktop-build.yml</code>:
+- Update <code>push:</code>/<code>branches:</code>/ from <code>develop</code> to your branch name
+- Uncomment the section
+- git push</p>
+<p>Note: don't forget to re-comment the section afterward</p>
 
 
 

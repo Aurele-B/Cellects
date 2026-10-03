@@ -1910,6 +1910,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../image_segmentation/" class="md-nav__link">
         
   
@@ -2068,6 +2096,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -4458,14 +4514,14 @@ Its methods allow image
 <a id="__codelineno-0-787" name="__codelineno-0-787"></a>            <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">c_spaces</span> <span class="o">=</span> <span class="n">split_dict</span><span class="p">(</span><span class="n">csc_dict</span><span class="p">)</span>
 <a id="__codelineno-0-788" name="__codelineno-0-788"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">generate_color_space_combination</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bgr</span><span class="p">,</span> <span class="n">c_spaces</span><span class="p">,</span> <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">all_c_spaces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">all_c_spaces</span><span class="p">)</span>
 <a id="__codelineno-0-789" name="__codelineno-0-789"></a>        <span class="n">greyscale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="n">NetDet</span> <span class="o">=</span> <span class="n">NetworkDetection</span><span class="p">(</span><span class="n">greyscale</span><span class="p">,</span> <span class="n">possibly_filled_pixels</span><span class="o">=</span><span class="n">arenas_mask</span><span class="p">)</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a>        <span class="n">NetDet</span><span class="o">.</span><span class="n">get_best_network_detection_method</span><span class="p">()</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a>        <span class="k">if</span> <span class="n">lighter_background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>            <span class="n">lighter_background</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a>            <span class="k">if</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a>                <span class="n">lighter_background</span> <span class="o">=</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">greyscale_image</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">greyscale_image</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a>        <span class="n">NetDet</span><span class="o">.</span><span class="n">detect_pseudopods</span><span class="p">(</span><span class="n">lighter_background</span><span class="p">,</span> <span class="n">pseudopod_min_size</span><span class="o">=</span><span class="n">pseudopod_min_size</span><span class="p">,</span> <span class="n">only_one_connected_component</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a>        <span class="n">cc_efficiency_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">NetDet</span><span class="o">.</span><span class="n">quality_metrics</span><span class="p">)</span>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a>        <span class="k">if</span> <span class="n">lighter_background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a>            <span class="n">lighter_background</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a>            <span class="k">if</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a>                <span class="n">lighter_background</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="n">NetDet</span> <span class="o">=</span> <span class="n">NetworkDetection</span><span class="p">(</span><span class="n">greyscale</span><span class="p">,</span> <span class="n">possibly_filled_pixels</span><span class="o">=</span><span class="n">arenas_mask</span><span class="p">,</span> <span class="n">lighter_background</span><span class="o">=</span><span class="n">lighter_background</span><span class="p">)</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a>        <span class="n">NetDet</span><span class="o">.</span><span class="n">get_best_network_detection_method</span><span class="p">()</span>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>        <span class="n">NetDet</span><span class="o">.</span><span class="n">detect_pseudopods</span><span class="p">(</span><span class="n">pseudopod_min_size</span><span class="o">=</span><span class="n">pseudopod_min_size</span><span class="p">,</span> <span class="n">only_one_connected_component</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-797" name="__codelineno-0-797"></a>        <span class="n">cc_efficiency_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">NetDet</span><span class="o">.</span><span class="n">quality_metrics</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 <a id="__codelineno-0-798" name="__codelineno-0-798"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">im_combinations</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-799" name="__codelineno-0-799"></a>        <span class="k">for</span> <span class="n">_i</span> <span class="ow">in</span> <span class="n">cc_efficiency_order</span><span class="p">:</span>
 <a id="__codelineno-0-800" name="__codelineno-0-800"></a>            <span class="n">res_i</span> <span class="o">=</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">all_results</span><span class="p">[</span><span class="n">_i</span><span class="p">]</span>
@@ -5590,14 +5646,14 @@ with the results of network detection and pseudopod analysis.</p>
 <a id="__codelineno-0-787" name="__codelineno-0-787"></a>        <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">c_spaces</span> <span class="o">=</span> <span class="n">split_dict</span><span class="p">(</span><span class="n">csc_dict</span><span class="p">)</span>
 <a id="__codelineno-0-788" name="__codelineno-0-788"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">image</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">first_pc_vector</span> <span class="o">=</span> <span class="n">generate_color_space_combination</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bgr</span><span class="p">,</span> <span class="n">c_spaces</span><span class="p">,</span> <span class="n">first_dict</span><span class="p">,</span> <span class="n">second_dict</span><span class="p">,</span> <span class="n">all_c_spaces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">all_c_spaces</span><span class="p">)</span>
 <a id="__codelineno-0-789" name="__codelineno-0-789"></a>    <span class="n">greyscale</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image</span>
-<a id="__codelineno-0-790" name="__codelineno-0-790"></a>    <span class="n">NetDet</span> <span class="o">=</span> <span class="n">NetworkDetection</span><span class="p">(</span><span class="n">greyscale</span><span class="p">,</span> <span class="n">possibly_filled_pixels</span><span class="o">=</span><span class="n">arenas_mask</span><span class="p">)</span>
-<a id="__codelineno-0-791" name="__codelineno-0-791"></a>    <span class="n">NetDet</span><span class="o">.</span><span class="n">get_best_network_detection_method</span><span class="p">()</span>
-<a id="__codelineno-0-792" name="__codelineno-0-792"></a>    <span class="k">if</span> <span class="n">lighter_background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-793" name="__codelineno-0-793"></a>        <span class="n">lighter_background</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-794" name="__codelineno-0-794"></a>        <span class="k">if</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-<a id="__codelineno-0-795" name="__codelineno-0-795"></a>            <span class="n">lighter_background</span> <span class="o">=</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">greyscale_image</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">greyscale_image</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
-<a id="__codelineno-0-796" name="__codelineno-0-796"></a>    <span class="n">NetDet</span><span class="o">.</span><span class="n">detect_pseudopods</span><span class="p">(</span><span class="n">lighter_background</span><span class="p">,</span> <span class="n">pseudopod_min_size</span><span class="o">=</span><span class="n">pseudopod_min_size</span><span class="p">,</span> <span class="n">only_one_connected_component</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<a id="__codelineno-0-797" name="__codelineno-0-797"></a>    <span class="n">cc_efficiency_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">NetDet</span><span class="o">.</span><span class="n">quality_metrics</span><span class="p">)</span>
+<a id="__codelineno-0-790" name="__codelineno-0-790"></a>    <span class="k">if</span> <span class="n">lighter_background</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-791" name="__codelineno-0-791"></a>        <span class="n">lighter_background</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-792" name="__codelineno-0-792"></a>        <span class="k">if</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">any</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">arenas_mask</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+<a id="__codelineno-0-793" name="__codelineno-0-793"></a>            <span class="n">lighter_background</span> <span class="o">=</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">greyscale</span><span class="p">[</span><span class="n">arenas_mask</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+<a id="__codelineno-0-794" name="__codelineno-0-794"></a>    <span class="n">NetDet</span> <span class="o">=</span> <span class="n">NetworkDetection</span><span class="p">(</span><span class="n">greyscale</span><span class="p">,</span> <span class="n">possibly_filled_pixels</span><span class="o">=</span><span class="n">arenas_mask</span><span class="p">,</span> <span class="n">lighter_background</span><span class="o">=</span><span class="n">lighter_background</span><span class="p">)</span>
+<a id="__codelineno-0-795" name="__codelineno-0-795"></a>    <span class="n">NetDet</span><span class="o">.</span><span class="n">get_best_network_detection_method</span><span class="p">()</span>
+<a id="__codelineno-0-796" name="__codelineno-0-796"></a>    <span class="n">NetDet</span><span class="o">.</span><span class="n">detect_pseudopods</span><span class="p">(</span><span class="n">pseudopod_min_size</span><span class="o">=</span><span class="n">pseudopod_min_size</span><span class="p">,</span> <span class="n">only_one_connected_component</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<a id="__codelineno-0-797" name="__codelineno-0-797"></a>    <span class="n">cc_efficiency_order</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">NetDet</span><span class="o">.</span><span class="n">quality_metrics</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 <a id="__codelineno-0-798" name="__codelineno-0-798"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">im_combinations</span> <span class="o">=</span> <span class="p">[]</span>
 <a id="__codelineno-0-799" name="__codelineno-0-799"></a>    <span class="k">for</span> <span class="n">_i</span> <span class="ow">in</span> <span class="n">cc_efficiency_order</span><span class="p">:</span>
 <a id="__codelineno-0-800" name="__codelineno-0-800"></a>        <span class="n">res_i</span> <span class="o">=</span> <span class="n">NetDet</span><span class="o">.</span><span class="n">all_results</span><span class="p">[</span><span class="n">_i</span><span class="p">]</span>

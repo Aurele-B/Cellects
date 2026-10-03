@@ -1920,6 +1920,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../image/filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../image/image_segmentation/" class="md-nav__link">
         
   
@@ -2068,6 +2096,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../image/skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -3372,7 +3428,7 @@ It is made to be easier to use and to be consistant in terms of colors and sizes
 <a id="__codelineno-0-164" name="__codelineno-0-164"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">):</span>
 <a id="__codelineno-0-165" name="__codelineno-0-165"></a>            <span class="n">image</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
 <a id="__codelineno-0-166" name="__codelineno-0-166"></a>        <span class="n">img_max_int</span> <span class="o">=</span> <span class="n">image</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
-<a id="__codelineno-0-167" name="__codelineno-0-167"></a>        <span class="k">if</span> <span class="n">img_max_int</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a>        <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;</span> <span class="n">img_max_int</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="p">:</span>
 <a id="__codelineno-0-168" name="__codelineno-0-168"></a>            <span class="n">image</span> <span class="o">*=</span> <span class="mi">255</span> <span class="o">//</span> <span class="n">img_max_int</span>
 <a id="__codelineno-0-169" name="__codelineno-0-169"></a>        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">image</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
 <a id="__codelineno-0-170" name="__codelineno-0-170"></a>            <span class="n">image</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">COLOR_BGR2RGB</span><span class="p">)</span>

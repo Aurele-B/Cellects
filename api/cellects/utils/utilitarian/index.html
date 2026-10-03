@@ -1908,6 +1908,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../image/filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../image/image_segmentation/" class="md-nav__link">
         
   
@@ -2056,6 +2084,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../image/skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -4220,7 +4276,7 @@ estimates total time, and computes the estimated time of arrival (ETA).</p>
 <a id="__codelineno-0-634" name="__codelineno-0-634"></a>        <span class="n">coord_table</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coord_table</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="p">:</span><span class="n">dim_nb</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
 <a id="__codelineno-0-635" name="__codelineno-0-635"></a>    <span class="n">unique_labels</span><span class="p">,</span> <span class="n">counts_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">coord_table</span><span class="p">[:,</span> <span class="n">dim_nb</span><span class="p">],</span> <span class="n">return_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <a id="__codelineno-0-636" name="__codelineno-0-636"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">counts_labels</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">):</span>
-<a id="__codelineno-0-637" name="__codelineno-0-637"></a>        <span class="k">return</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">coord_table</span><span class="p">[</span><span class="n">coord_table</span><span class="p">[:,</span> <span class="n">dim_nb</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="p">:</span><span class="n">dim_nb</span><span class="p">])</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">unique_labels</span><span class="p">}</span>
+<a id="__codelineno-0-637" name="__codelineno-0-637"></a>        <span class="k">return</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="n">coord_array_to_set</span><span class="p">(</span><span class="n">coord_table</span><span class="p">[</span><span class="n">coord_table</span><span class="p">[:,</span> <span class="n">dim_nb</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="p">:</span><span class="n">dim_nb</span><span class="p">])</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">unique_labels</span><span class="p">}</span>
 <a id="__codelineno-0-638" name="__codelineno-0-638"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-639" name="__codelineno-0-639"></a>        <span class="k">return</span> <span class="p">{</span><span class="n">label</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">coord_table</span><span class="p">[</span><span class="n">coord_table</span><span class="p">[:,</span> <span class="n">dim_nb</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="p">:</span><span class="n">dim_nb</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">unique_labels</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>

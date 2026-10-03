@@ -1920,6 +1920,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../image/filters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../image/image_segmentation/" class="md-nav__link">
         
   
@@ -2068,6 +2096,34 @@
     
   
     shape_descriptors
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../image/skeletonize/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    skeletonize
   
 
     
@@ -3148,7 +3204,8 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <span class="normal"><a href="#__codelineno-0-209">209</a></span>
 <span class="normal"><a href="#__codelineno-0-210">210</a></span>
 <span class="normal"><a href="#__codelineno-0-211">211</a></span>
-<span class="normal"><a href="#__codelineno-0-212">212</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="k">class</span><span class="w"> </span><span class="nc">CellectsMainWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-212">212</a></span>
+<span class="normal"><a href="#__codelineno-0-213">213</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-32" name="__codelineno-0-32"></a><span class="k">class</span><span class="w"> </span><span class="nc">CellectsMainWidget</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QStackedWidget</span><span class="p">):</span>
 <a id="__codelineno-0-33" name="__codelineno-0-33"></a><span class="w">    </span><span class="sd">""" Main widget: this is the main window of the Cellects application. """</span>
 <a id="__codelineno-0-34" name="__codelineno-0-34"></a>
 <a id="__codelineno-0-35" name="__codelineno-0-35"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -3318,17 +3375,18 @@ Uses QThread for background operations to maintain UI responsiveness.</p>
 <a id="__codelineno-0-199" name="__codelineno-0-199"></a>        <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
 <a id="__codelineno-0-200" name="__codelineno-0-200"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Interrupting all threads."</span><span class="p">)</span>
 <a id="__codelineno-0-201" name="__codelineno-0-201"></a>            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">6</span><span class="p">:</span>
-<a id="__codelineno-0-202" name="__codelineno-0-202"></a>                <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
-<a id="__codelineno-0-203" name="__codelineno-0-203"></a>                           <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
-<a id="__codelineno-0-204" name="__codelineno-0-204"></a>                           <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-<a id="__codelineno-0-205" name="__codelineno-0-205"></a>                <span class="k">for</span> <span class="n">window</span> <span class="ow">in</span> <span class="n">windows</span><span class="p">:</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a>                    <span class="k">for</span> <span class="n">thread_name</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="n">window</span><span class="p">:</span>
-<a id="__codelineno-0-207" name="__codelineno-0-207"></a>                        <span class="n">thread</span><span class="o">.</span><span class="n">requestInterruption</span><span class="p">()</span>
-<a id="__codelineno-0-208" name="__codelineno-0-208"></a>                        <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">20000</span><span class="p">)</span>
-<a id="__codelineno-0-209" name="__codelineno-0-209"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Closing main window."</span><span class="p">)</span>
-<a id="__codelineno-0-210" name="__codelineno-0-210"></a>            <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
-<a id="__codelineno-0-211" name="__codelineno-0-211"></a>        <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-212" name="__codelineno-0-212"></a>            <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>                <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="p">,</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>                           <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="p">]</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>                <span class="k">for</span> <span class="n">window</span> <span class="ow">in</span> <span class="n">windows</span><span class="p">:</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>                    <span class="k">for</span> <span class="n">thread_name</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>                        <span class="n">thread</span><span class="o">.</span><span class="n">requestInterruption</span><span class="p">()</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>                        <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">20000</span><span class="p">)</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="s1">'popup_img'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">window</span><span class="o">.</span><span class="n">popup_img</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>                        <span class="n">window</span><span class="o">.</span><span class="n">popup_img</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>            <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Closing main window."</span><span class="p">)</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a>            <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a>        <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>            <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -3765,7 +3823,8 @@ handling purposes only.</p>
 <span class="normal"><a href="#__codelineno-0-209">209</a></span>
 <span class="normal"><a href="#__codelineno-0-210">210</a></span>
 <span class="normal"><a href="#__codelineno-0-211">211</a></span>
-<span class="normal"><a href="#__codelineno-0-212">212</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="k">def</span><span class="w"> </span><span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+<span class="normal"><a href="#__codelineno-0-212">212</a></span>
+<span class="normal"><a href="#__codelineno-0-213">213</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="k">def</span><span class="w"> </span><span class="nf">closeEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
 <a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="w">    </span><span class="sd">"""</span>
 <a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">    Close the application window and handle cleanup.</span>
 <a id="__codelineno-0-181" name="__codelineno-0-181"></a>
@@ -3789,17 +3848,18 @@ handling purposes only.</p>
 <a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="k">if</span> <span class="n">reply</span> <span class="o">==</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QMessageBox</span><span class="o">.</span><span class="n">Yes</span><span class="p">:</span>
 <a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Interrupting all threads."</span><span class="p">)</span>
 <a id="__codelineno-0-201" name="__codelineno-0-201"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">&gt;=</span> <span class="mi">6</span><span class="p">:</span>
-<a id="__codelineno-0-202" name="__codelineno-0-202"></a>            <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
-<a id="__codelineno-0-203" name="__codelineno-0-203"></a>                       <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
-<a id="__codelineno-0-204" name="__codelineno-0-204"></a>                       <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()]</span>
-<a id="__codelineno-0-205" name="__codelineno-0-205"></a>            <span class="k">for</span> <span class="n">window</span> <span class="ow">in</span> <span class="n">windows</span><span class="p">:</span>
-<a id="__codelineno-0-206" name="__codelineno-0-206"></a>                <span class="k">for</span> <span class="n">thread_name</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="n">window</span><span class="p">:</span>
-<a id="__codelineno-0-207" name="__codelineno-0-207"></a>                    <span class="n">thread</span><span class="o">.</span><span class="n">requestInterruption</span><span class="p">()</span>
-<a id="__codelineno-0-208" name="__codelineno-0-208"></a>                    <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">20000</span><span class="p">)</span>
-<a id="__codelineno-0-209" name="__codelineno-0-209"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Closing main window."</span><span class="p">)</span>
-<a id="__codelineno-0-210" name="__codelineno-0-210"></a>        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
-<a id="__codelineno-0-211" name="__codelineno-0-211"></a>    <span class="k">else</span><span class="p">:</span>
-<a id="__codelineno-0-212" name="__codelineno-0-212"></a>        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>            <span class="n">windows</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">imageanalysiswindow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ifseveralfolderswindow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">videoanalysiswindow</span><span class="p">,</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>                       <span class="bp">self</span><span class="o">.</span><span class="n">firstwindow</span><span class="p">]</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>            <span class="k">for</span> <span class="n">window</span> <span class="ow">in</span> <span class="n">windows</span><span class="p">:</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>                <span class="k">for</span> <span class="n">thread_name</span><span class="p">,</span> <span class="n">thread</span> <span class="ow">in</span> <span class="n">window</span><span class="o">.</span><span class="n">thread_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>                    <span class="n">thread</span><span class="o">.</span><span class="n">requestInterruption</span><span class="p">()</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>                    <span class="n">thread</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span><span class="mi">20000</span><span class="p">)</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="s1">'popup_img'</span><span class="p">)</span> <span class="ow">and</span> <span class="n">window</span><span class="o">.</span><span class="n">popup_img</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>                    <span class="n">window</span><span class="o">.</span><span class="n">popup_img</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"Closing main window."</span><span class="p">)</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a>        <span class="n">event</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>        <span class="n">event</span><span class="o">.</span><span class="n">ignore</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4079,8 +4139,7 @@ output requirements, and advanced parameters.</p>
 
               <details class="mkdocstrings-source">
                 <summary>Source code in <code>src/cellects/gui/cellects.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-215">215</a></span>
-<span class="normal"><a href="#__codelineno-0-216">216</a></span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-216">216</a></span>
 <span class="normal"><a href="#__codelineno-0-217">217</a></span>
 <span class="normal"><a href="#__codelineno-0-218">218</a></span>
 <span class="normal"><a href="#__codelineno-0-219">219</a></span>
@@ -4150,78 +4209,79 @@ output requirements, and advanced parameters.</p>
 <span class="normal"><a href="#__codelineno-0-283">283</a></span>
 <span class="normal"><a href="#__codelineno-0-284">284</a></span>
 <span class="normal"><a href="#__codelineno-0-285">285</a></span>
-<span class="normal"><a href="#__codelineno-0-286">286</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-215" name="__codelineno-0-215"></a><span class="k">class</span><span class="w"> </span><span class="nc">LoadingPopup</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
-<a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="sd">    A progress bar displaying njit precompilation progress during Cellects launches.</span>
-<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">    """</span>
-<a id="__codelineno-0-219" name="__codelineno-0-219"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-220" name="__codelineno-0-220"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-<a id="__codelineno-0-221" name="__codelineno-0-221"></a>
-<a id="__codelineno-0-222" name="__codelineno-0-222"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
-<a id="__codelineno-0-223" name="__codelineno-0-223"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">18</span>
-<a id="__codelineno-0-224" name="__codelineno-0-224"></a>
-<a id="__codelineno-0-225" name="__codelineno-0-225"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowFlags</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">FramelessWindowHint</span> <span class="o">|</span>
-<a id="__codelineno-0-226" name="__codelineno-0-226"></a>                            <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">WindowStaysOnTopHint</span> <span class="o">|</span>
-<a id="__codelineno-0-227" name="__codelineno-0-227"></a>                            <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">NoDropShadowWindowHint</span><span class="p">)</span>
-<a id="__codelineno-0-228" name="__codelineno-0-228"></a>
-<a id="__codelineno-0-229" name="__codelineno-0-229"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WidgetAttribute</span><span class="o">.</span><span class="n">WA_TranslucentBackground</span><span class="p">)</span>
-<a id="__codelineno-0-230" name="__codelineno-0-230"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedSize</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>  <span class="c1"># Fixed dimensions for a clean bar look</span>
-<a id="__codelineno-0-231" name="__codelineno-0-231"></a>
-<a id="__codelineno-0-232" name="__codelineno-0-232"></a>        <span class="c1"># Zero margins so only the bar fills the widget</span>
-<a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-234" name="__codelineno-0-234"></a>        <span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-235" name="__codelineno-0-235"></a>
-<a id="__codelineno-0-236" name="__codelineno-0-236"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QProgressBar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-<a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setTextVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># No text allowed</span>
-<a id="__codelineno-0-238" name="__codelineno-0-238"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>  <span class="c1"># Infinite marquee loading animation</span>
-<a id="__codelineno-0-239" name="__codelineno-0-239"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-<a id="__codelineno-0-240" name="__codelineno-0-240"></a>
-<a id="__codelineno-0-241" name="__codelineno-0-241"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">"""</span>
-<a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="s2">            QProgressBar {</span>
-<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="s2">                border: none;</span>
-<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="s2">                background-color: rgba(0, 0, 0, 10);</span>
-<a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="s2">                border-radius: 15px;</span>
-<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="s2">            }</span>
-<a id="__codelineno-0-247" name="__codelineno-0-247"></a>
-<a id="__codelineno-0-248" name="__codelineno-0-248"></a><span class="s2">            QProgressBar::chunk {</span>
-<a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="s2">                /* Forces pill-shaped rounded ends on both sides */</span>
-<a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="s2">                border-radius: 15px; </span>
-<a id="__codelineno-0-251" name="__codelineno-0-251"></a>
-<a id="__codelineno-0-252" name="__codelineno-0-252"></a><span class="s2">                /* Radial gradient creates a spherical glass orb effect rather than a flat sheet */</span>
-<a id="__codelineno-0-253" name="__codelineno-0-253"></a><span class="s2">                background: qradialgradient(</span>
-<a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="s2">                    cx: 0.5, cy: 0.4, radius: 0.9,</span>
-<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="s2">                    fx: 0.5, fy: 0.2,</span>
-<a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="s2">                    stop: 0 #ffffff,       /* Ultra-bright white reflection spot at the top-center */</span>
-<a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="s2">                    stop: 0.2 #555555,     /* Soft silver reflection falloff */</span>
-<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="s2">                    stop: 0.5 #1a1a1a,     /* Deep obsidian core */</span>
-<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="s2">                    stop: 0.8 #000000,     /* Pitch black base */</span>
-<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="s2">                    stop: 1.0 #0d0d0d      /* Outer shadow definition */</span>
-<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="s2">                );</span>
-<a id="__codelineno-0-262" name="__codelineno-0-262"></a>
-<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="s2">                /* Clean, bright edge highlight to accentuate the curved glass profile */</span>
-<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="s2">                border: 1px solid rgba(255, 255, 255, 0.25);</span>
-<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="s2">            }</span>
-<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="s2">        """</span><span class="p">)</span>
-<a id="__codelineno-0-267" name="__codelineno-0-267"></a>
-<a id="__codelineno-0-268" name="__codelineno-0-268"></a>        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
-<a id="__codelineno-0-269" name="__codelineno-0-269"></a>
-<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">start_application</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">        Start Cellects application</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        """</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">CellectsMainWidget</span><span class="p">()</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">instantiate_cellects</span><span class="p">()</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">add_progress</span><span class="p">()</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-<a id="__codelineno-0-279" name="__codelineno-0-279"></a>
-<a id="__codelineno-0-280" name="__codelineno-0-280"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="w">        </span><span class="sd">"""</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">        Helper to increment the progress bar</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">        """</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a>        <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-286">286</a></span>
+<span class="normal"><a href="#__codelineno-0-287">287</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-216" name="__codelineno-0-216"></a><span class="k">class</span><span class="w"> </span><span class="nc">LoadingPopup</span><span class="p">(</span><span class="n">QtWidgets</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a><span class="sd">    A progress bar displaying njit precompilation progress during Cellects launches.</span>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="sd">    """</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a>        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">total</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">22</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowFlags</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">FramelessWindowHint</span> <span class="o">|</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a>                            <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">WindowStaysOnTopHint</span> <span class="o">|</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a>                            <span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WindowType</span><span class="o">.</span><span class="n">NoDropShadowWindowHint</span><span class="p">)</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">Qt</span><span class="o">.</span><span class="n">WidgetAttribute</span><span class="o">.</span><span class="n">WA_TranslucentBackground</span><span class="p">)</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">setFixedSize</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>  <span class="c1"># Fixed dimensions for a clean bar look</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>        <span class="c1"># Zero margins so only the bar fills the widget</span>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a>        <span class="n">layout</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>        <span class="n">layout</span><span class="o">.</span><span class="n">setContentsMargins</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span> <span class="o">=</span> <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QProgressBar</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setTextVisible</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># No text allowed</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setRange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>  <span class="c1"># Infinite marquee loading animation</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setStyleSheet</span><span class="p">(</span><span class="s2">"""</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="s2">            QProgressBar {</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="s2">                border: none;</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="s2">                background-color: rgba(0, 0, 0, 10);</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="s2">                border-radius: 15px;</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="s2">            }</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="s2">            QProgressBar::chunk {</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="s2">                /* Forces pill-shaped rounded ends on both sides */</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="s2">                border-radius: 15px; </span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a><span class="s2">                /* Radial gradient creates a spherical glass orb effect rather than a flat sheet */</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="s2">                background: qradialgradient(</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="s2">                    cx: 0.5, cy: 0.4, radius: 0.9,</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="s2">                    fx: 0.5, fy: 0.2,</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="s2">                    stop: 0 #ffffff,       /* Ultra-bright white reflection spot at the top-center */</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a><span class="s2">                    stop: 0.2 #555555,     /* Soft silver reflection falloff */</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="s2">                    stop: 0.5 #1a1a1a,     /* Deep obsidian core */</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="s2">                    stop: 0.8 #000000,     /* Pitch black base */</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="s2">                    stop: 1.0 #0d0d0d      /* Outer shadow definition */</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="s2">                );</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="s2">                /* Clean, bright edge highlight to accentuate the curved glass profile */</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a><span class="s2">                border: 1px solid rgba(255, 255, 255, 0.25);</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a><span class="s2">            }</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a><span class="s2">        """</span><span class="p">)</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="p">)</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">start_application</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">        Start Cellects application</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">        """</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">CellectsMainWidget</span><span class="p">()</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">instantiate_cellects</span><span class="p">()</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">add_progress</span><span class="p">()</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a>    <span class="k">def</span><span class="w"> </span><span class="nf">add_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="w">        </span><span class="sd">"""</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">        Helper to increment the progress bar</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">        """</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>        <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
               </details>
 
@@ -4254,19 +4314,19 @@ output requirements, and advanced parameters.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/cellects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-280">280</a></span>
-<span class="normal"><a href="#__codelineno-0-281">281</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-281">281</a></span>
 <span class="normal"><a href="#__codelineno-0-282">282</a></span>
 <span class="normal"><a href="#__codelineno-0-283">283</a></span>
 <span class="normal"><a href="#__codelineno-0-284">284</a></span>
 <span class="normal"><a href="#__codelineno-0-285">285</a></span>
-<span class="normal"><a href="#__codelineno-0-286">286</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-280" name="__codelineno-0-280"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="sd">    Helper to increment the progress bar</span>
-<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">    """</span>
-<a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
-<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-286">286</a></span>
+<span class="normal"><a href="#__codelineno-0-287">287</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-281" name="__codelineno-0-281"></a><span class="k">def</span><span class="w"> </span><span class="nf">add_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a><span class="sd">    Helper to increment the progress bar</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a><span class="sd">    """</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">progress</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">i</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">total</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="n">QtWidgets</span><span class="o">.</span><span class="n">QApplication</span><span class="o">.</span><span class="n">processEvents</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4289,23 +4349,23 @@ output requirements, and advanced parameters.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/cellects/gui/cellects.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-270">270</a></span>
-<span class="normal"><a href="#__codelineno-0-271">271</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-271">271</a></span>
 <span class="normal"><a href="#__codelineno-0-272">272</a></span>
 <span class="normal"><a href="#__codelineno-0-273">273</a></span>
 <span class="normal"><a href="#__codelineno-0-274">274</a></span>
 <span class="normal"><a href="#__codelineno-0-275">275</a></span>
 <span class="normal"><a href="#__codelineno-0-276">276</a></span>
 <span class="normal"><a href="#__codelineno-0-277">277</a></span>
-<span class="normal"><a href="#__codelineno-0-278">278</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-270" name="__codelineno-0-270"></a><span class="k">def</span><span class="w"> </span><span class="nf">start_application</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="w">    </span><span class="sd">"""</span>
-<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="sd">    Start Cellects application</span>
-<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">    """</span>
-<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">CellectsMainWidget</span><span class="p">()</span>
-<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">instantiate_cellects</span><span class="p">()</span>
-<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">add_progress</span><span class="p">()</span>
-<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-<a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="normal"><a href="#__codelineno-0-278">278</a></span>
+<span class="normal"><a href="#__codelineno-0-279">279</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-271" name="__codelineno-0-271"></a><span class="k">def</span><span class="w"> </span><span class="nf">start_application</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a><span class="w">    </span><span class="sd">"""</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a><span class="sd">    Start Cellects application</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a><span class="sd">    """</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">CellectsMainWidget</span><span class="p">()</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">instantiate_cellects</span><span class="p">()</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">add_progress</span><span class="p">()</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
