@@ -119,7 +119,7 @@ The Windows and macOS versions are accessible via the following link: https://gi
 
 The software documentation is available at https://aurele-b.github.io/Cellects and its source code can be found at https://github.com/Aurele-B/Cellects.
 
-To access the data and replication code, refer to:
-https://datadryad.org/stash/share/nCvWIZoZ8-Wnxm0CjnPbbznUPw90RYdo1YVJEQkfLIY
+To access the data, refer to:
+https://doi.org/10.5281/zenodo.23121341
 
 # References

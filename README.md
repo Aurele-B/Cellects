@@ -108,5 +108,8 @@ pytest
 
 ---
 
+## Data from the paper
+https://doi.org/10.5281/zenodo.23121341
+
 ## Resources
 - [Usage example (video)](https://www.youtube.com/watch?v=N-k4p_aSPC0)
