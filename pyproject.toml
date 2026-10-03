@@ -32,6 +32,7 @@ dependencies = [
   "matplotlib",
   "natsort",
   "tifffile",
+  "networkx",
 ]
 
 [project.scripts]
