@@ -339,7 +339,7 @@ class  NetworkDetection:
 
         Parameters
         ----------
-        img : ndarray of uint8
+        new_greyscale : ndarray of uint8
             The greyscale image.
         """
         self.greyscale_image  = new_greyscale
