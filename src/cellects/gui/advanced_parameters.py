@@ -354,7 +354,7 @@ class AdvancedParameters(WindowType):
         self.appearing_cell_box_widget.setLayout(self.appearing_cell_box_layout)
         self.left_col_layout.addWidget(self.appearing_cell_box_widget)
 
-        # V/ Fifth box: Network detection parameters:#
+        # V/ Fifth box: Rolling window parameters:
         # IV/A/ Title
         self.rolling_window_s_label = FixedText(IAW["Rolling_window_segmentation"]["label"] + ': (auto if checked)',
                                                 tip=IAW["Rolling_window_segmentation"]["tips"],
@@ -445,6 +445,51 @@ class AdvancedParameters(WindowType):
 
         self.oscillation_period_widget.setLayout(self.oscillation_period_layout)
         self.left_col_layout.addWidget(self.oscillation_period_widget)
+
+        # V/ X box: Network detection parameters:
+        # V/A/ Title
+        self.network_label = FixedText('Network detection parameters' + ': (auto if checked)', tip="",
+                                              night_mode=self.po.all['night_mode'])
+        self.left_col_layout.addWidget(self.network_label)
+
+        self.network_layout = QtWidgets.QGridLayout()
+        self.network_widget = QtWidgets.QWidget()
+        self.network_widget.setStyleSheet(boxstylesheet)
+
+        self.pseudopod_min_size = Spinbox(min=0, max=10000000, val=self.po.vars['pseudopod_min_size'], decimals=0,
+                                          night_mode=self.po.all['night_mode'])
+        self.pseudopod_min_size_label = FixedText(AP["Pseudopod_min_size"]["label"],
+                                                  tip=AP["Pseudopod_min_size"]["tips"],
+                                                  night_mode=self.po.all['night_mode'])
+        self.max_connection_distance = Spinbox(min=0, max=10000, val=self.po.vars['max_connection_distance'], decimals=0,
+                                          night_mode=self.po.all['night_mode'])
+        self.max_connection_distance_label = FixedText(AP["Max_connection_distance"]["label"],
+                                                  tip=AP["Max_connection_distance"]["tips"],
+                                                  night_mode=self.po.all['night_mode'])
+
+        self.edge_max_width_cb = Checkbox(self.po.all['auto_edge_max_width'],
+                                        night_mode=self.po.all['night_mode'])
+        self.edge_max_width_cb.stateChanged.connect(self.edge_max_width_cb_changed)
+        self.edge_max_width_label = FixedText(AP["Edge_max_width"]["label"], tip=AP["Edge_max_width"]["tips"],
+                                                night_mode=self.po.all['night_mode'])
+        if self.po.vars['edge_max_width'] is None:
+            self.edge_max_width = Spinbox(min=0, max=1000, val=20, decimals=0,
+                                            night_mode=self.po.all['night_mode'])
+            self.edge_max_width.setVisible(False)
+        else:
+            self.edge_max_width = Spinbox(min=0, max=1000, val=self.po.vars['edge_max_width'], decimals=0,
+                                            night_mode=self.po.all['night_mode'])
+
+        self.network_layout.addWidget(self.pseudopod_min_size, 0, 0)
+        self.network_layout.addWidget(self.pseudopod_min_size_label, 0, 1)
+        self.network_layout.addWidget(self.max_connection_distance, 1, 0)
+        self.network_layout.addWidget(self.max_connection_distance_label, 1, 1)
+        self.network_layout.addWidget(self.edge_max_width_cb, 2, 0)
+        self.network_layout.addWidget(self.edge_max_width_label, 2, 1)
+        self.network_layout.addWidget(self.edge_max_width, 2, 2)
+
+        self.network_widget.setLayout(self.network_layout)
+        self.left_col_layout.addWidget(self.network_widget)
 
         # I/ First box: Scales
         # I/A/ Title
@@ -731,6 +776,12 @@ class AdvancedParameters(WindowType):
         Set the mesh step length setting visible when the corresponding checkbox is checked.
         """
         self.mesh_step_length.setVisible(not self.mesh_step_length_cb.isChecked())
+
+    def edge_max_width_cb_changed(self):
+        """
+        Set the edge max width setting visible when the corresponding checkbox is checked.
+        """
+        self.edge_max_width.setVisible(not self.edge_max_width_cb.isChecked())
 
     def mesh_min_int_var_cb_changed(self):
         """
@@ -1260,6 +1311,15 @@ class AdvancedParameters(WindowType):
         self.oscillation_period.setValue(self.po.vars['expected_oscillation_period'])
         self.minimal_oscillating_cluster_size.setValue(self.po.vars['minimal_oscillating_cluster_size'])
 
+        # Network detection parameters:
+        self.pseudopod_min_size.setValue(self.po.vars['pseudopod_min_size'])
+        self.max_connection_distance.setValue(self.po.vars['max_connection_distance'])
+        self.edge_max_width_cb.setChecked(self.po.all['auto_edge_max_width'])
+        if self.po.vars['edge_max_width'] is not None:
+            self.edge_max_width.setValue(self.po.vars['edge_max_width'])
+
+        self.max_connection_distance.setValue(self.po.vars['max_connection_distance'])
+
         # Spatio-temporal scaling:
         self.extract_time.setChecked(self.po.all['extract_time_interval'])
         self.time_step.setValue(self.po.vars['time_step'])
@@ -1364,6 +1424,15 @@ class AdvancedParameters(WindowType):
         # Oscillatory parameters:
         self.po.vars['expected_oscillation_period'] = self.oscillation_period.value()
         self.po.vars['minimal_oscillating_cluster_size'] = int(self.minimal_oscillating_cluster_size.value())
+
+        # Network detection parameters:
+        self.po.vars['pseudopod_min_size'] = int(self.pseudopod_min_size.value())
+        self.po.vars['max_connection_distance'] = float(self.max_connection_distance.value())
+        self.po.all['auto_edge_max_width'] = self.edge_max_width_cb.isChecked()
+        if self.po.all['auto_edge_max_width']:
+            self.po.vars['edge_max_width'] = None
+        else:
+            self.po.vars['edge_max_width'] = int(self.edge_max_width.value())
 
         # Spatio-temporal scaling:
         self.po.all['extract_time_interval'] = self.extract_time.isChecked()

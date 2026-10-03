@@ -310,6 +310,35 @@ groups of connected pixels. This threshold is useful to filter out small noisy o
 
 ---
 
+<!-- START_Pseudopod_min_size -->
+## Pseudopod min size:
+The minimal surface area (in pixels) of a network component or pseudopod. This is used when trying
+to detect large and dense areas (e.g. pseudopods).
+
+<!-- END_Pseudopod_min_size -->
+
+---
+
+<!-- START_Max_connection_distance -->
+## Max connection distance:
+The maximal distance (in pixels) below which connections are created between network components.
+This is used when trying to detect large and dense areas (e.g. pseudopods) in a network forming only
+one connected component. These one pixel wide connections help reducing noise while keeping all
+relevant parts of the network connected together.
+
+<!-- END_Max_connection_distance -->
+
+---
+
+<!-- START_Edge_max_width -->
+## Edge max width:
+The maximal width (in pixels) of edges. Anything above this width threshold will be considered as a
+large and dense area (e.g. pseudopod).
+
+<!-- END_Edge_max_width -->
+
+---
+
 <!-- START_Night_mode -->
 ## Night mode:
 Switches the application background between light and dark themes.

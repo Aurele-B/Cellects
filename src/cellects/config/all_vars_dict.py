@@ -70,6 +70,7 @@ class DefaultDicts:
             'auto_mesh_side_length': True,
             'auto_mesh_step_length': True,
             'auto_mesh_min_int_var': True,
+            'auto_edge_max_width': True,
         }
 
         self.vars = {
@@ -124,6 +125,9 @@ class DefaultDicts:
             'save_graph': False,
             'save_coord_thickening_slimming': False,
             'save_coord_network': False,
+            'pseudopod_min_size': 50,
+            'max_connection_distance': 25,
+            'edge_max_width': None,
             'oscilacyto_analysis': False,
             'fractal_analysis': False,
             'fractal_box_side_threshold': 32,

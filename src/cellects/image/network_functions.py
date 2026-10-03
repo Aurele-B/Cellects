@@ -345,7 +345,7 @@ class  NetworkDetection:
         self.greyscale_image  = new_greyscale
         self.is_lighter_background()
 
-    def detect_pseudopods(self, pseudopod_min_size: int=50, only_one_connected_component: bool=True, edge_max_width: int=None):
+    def detect_pseudopods(self, pseudopod_min_size: int=50, only_one_connected_component: bool=True, max_connection_distance: float=25, edge_max_width: int=None):
         """
         Detect pseudopods in a binary image.
 
@@ -359,6 +359,9 @@ class  NetworkDetection:
             Minimum size for pseudopods to be considered valid. Default is 50.
         only_one_connected_component : bool, optional
             Flag to ensure only one connected component is kept. Default is True.
+        max_connection_distance : float, optional
+            When only_one_connected_component, the distance below which create one pixel wide connections between
+             shapes larger than pseudopod_min_size.
         edge_max_width : int, optional
             Anything above this width threshold will be considered as a pseudopod.
 
@@ -456,7 +459,7 @@ class  NetworkDetection:
             self.complete_network *= (1 - large_width_mask)
             shapes, stats, centro = cc(self.complete_network)
             large_shapes = np.nonzero(stats[:, 4] > pseudopod_min_size)[0][1:]
-            self.complete_network = connect_components(np.isin(shapes, large_shapes), max_distance=25)
+            self.complete_network = connect_components(np.isin(shapes, large_shapes), max_distance=max_connection_distance)
             # Remove non-connected small parts from the complete network to add them to the pseudopods
             one_component = keep_one_connected_component(self.complete_network)
             large_width_mask[(self.complete_network - one_component) > 0] = 1

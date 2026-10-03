@@ -871,6 +871,35 @@ groups of connected pixels. This threshold is useful to filter out small noisy o
 """
 # END_TIP
 
+AP["Pseudopod_min_size"] = {}
+AP["Pseudopod_min_size"]["label"] = "Pseudopod min size"
+# START_TIP
+AP["Pseudopod_min_size"]["tips"] = \
+f"""The minimal surface area (in pixels) of a network component or pseudopod. This is used when trying
+to detect large and dense areas (e.g. pseudopods).
+"""
+# END_TIP
+
+AP["Max_connection_distance"] = {}
+AP["Max_connection_distance"]["label"] = "Max connection distance"
+# START_TIP
+AP["Max_connection_distance"]["tips"] = \
+f"""The maximal distance (in pixels) below which connections are created between network components.
+This is used when trying to detect large and dense areas (e.g. pseudopods) in a network forming only
+one connected component. These one pixel wide connections help reducing noise while keeping all
+relevant parts of the network connected together.
+"""
+# END_TIP
+
+AP["Edge_max_width"] = {}
+AP["Edge_max_width"]["label"] = "Edge max width"
+# START_TIP
+AP["Edge_max_width"]["tips"] = \
+f"""The maximal width (in pixels) of edges. Anything above this width threshold will be considered as a
+large and dense area (e.g. pseudopod).
+"""
+# END_TIP
+
 AP["Night_mode"] = {}
 AP["Night_mode"]["label"] = 'Night mode'
 # START_TIP

@@ -54,7 +54,6 @@ class NetworkTracking:
         self.dims = self.motion.binary.shape
         self.starting_time = 0
         self.edge_max_width = 5
-        self.pseudopod_min_size = 50
         self.detect_pseudopods = True
         if self.detect_pseudopods:
             self.pseudopod_vid = np.zeros_like(self.motion.binary, dtype=bool)
@@ -181,7 +180,10 @@ class NetworkTracking:
         if self.detect_pseudopods:
             if self.do_convert:
                 NetDet_fast.change_greyscale(self.motion.converted_video[t, ...])
-            NetDet_fast.detect_pseudopods(pseudopod_min_size=self.pseudopod_min_size, only_one_connected_component=not self.motion.vars['several_blob_per_arena'])
+            NetDet_fast.detect_pseudopods(pseudopod_min_size=self.motion.vars['pseudopod_min_size'],
+                                          edge_max_width=self.motion.vars['edge_max_width'],
+                                          only_one_connected_component=not self.motion.vars['several_blob_per_arena'],
+                                          max_connection_distance=self.motion.vars['max_connection_distance'])
             self.pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         else:
             NetDet_fast.complete_network = NetDet_fast.incomplete_network
