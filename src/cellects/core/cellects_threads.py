@@ -1140,9 +1140,9 @@ class VideoTrackingThread(QtCore.QThread):
         """
         if len(self.po.data_list) == 0:
             self.po.look_for_data()
-        self.po.load_data_to_run_cellects_quickly()
         if not self.po.first_exp_ready_to_run:
             logging.info("Pre-processing has started")
+            self.po.load_data_to_run_cellects_quickly()
             if len(self.po.data_list) > 0:
                 self.po.get_first_image()
                 self.po.load_masks()
