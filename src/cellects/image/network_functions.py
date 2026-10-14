@@ -1072,9 +1072,10 @@ class EdgeIdentification:
             Y, X = branch
             edge_pixels = self.initial_edge_to_coord_map.get(edge_id, set())
             edge_length = self.edge_lengths_by_tip.get(tip, np.nan)
-            if np.isnan(edge_length):
+            edge_pixel_widths = self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]
+            if np.isnan(edge_length) or np.isnan(edge_pixel_widths).all():
                 continue
-            if np.nanmax(self.pad_distances[(Y - 1): (Y + 2), (X - 1): (X + 2)]) >= edge_length:
+            if np.nanmax(edge_pixel_widths) >= edge_length:
                 # Remove the edge
                 # Remove the coordinates corresponding to that edge
                 for eY, eX in edge_pixels:
