@@ -1313,7 +1313,6 @@ class MotionAnalysis:
             self.one_descriptor_per_arena['target_area_arrival'] = pd.NA
             if 'target_area_coverage' in self.one_row_per_frame and np.any(self.one_row_per_frame['target_area_coverage']):
                 self.one_descriptor_per_arena['target_area_arrival'] = np.min(self.one_row_per_frame.loc[self.one_row_per_frame['target_area_coverage'] > 0, 'time'])
-                # self.one_descriptor_per_arena['target_area_arrival'] = np.nonzero(self.one_row_per_frame['target_area_coverage'])[0][0]
         if self.vars['output_in_mm']:
             self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
 

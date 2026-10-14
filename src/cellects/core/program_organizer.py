@@ -1501,7 +1501,6 @@ class ProgramOrganizer:
         img_nb = len(img_list)
 
         # 2) Create a table of the dimensions of each video
-        # Add 10% to the necessary memory to avoid problems
         vertical_diffs = np.array(self.bot) - np.array(self.top)
         horizontal_diffs = np.array(self.right) - np.array(self.left)
         necessary_memory = img_nb * np.multiply((vertical_diffs).astype(np.uint64), (horizontal_diffs).astype(np.uint64)).sum() * 8 * 1.16415e-10
