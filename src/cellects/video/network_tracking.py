@@ -303,7 +303,7 @@ class NetworkTracking:
                         for large_shape in large_shapes:
                             large_shape_bool = sh == large_shape
                             SD = ShapeDescriptors(large_shape_bool, ['circularity'])
-                            if SD.circularity < .15:
+                            if SD.circularity < .1:
                                 complete_network[large_shape_bool] = 1
                                 if self.detect_pseudopods:
                                     self.pseudopod_vid[t][np.logical_and(self.pseudopod_vid[t - 1], large_shape_bool)] = 1
