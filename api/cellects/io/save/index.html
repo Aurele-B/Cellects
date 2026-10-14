@@ -4155,7 +4155,7 @@ file extensions.</p>
 <a id="__codelineno-0-53" name="__codelineno-0-53"></a><span class="sd">    """</span>
 <a id="__codelineno-0-54" name="__codelineno-0-54"></a>    <span class="c1">#h265 ou h265 (mp4)</span>
 <a id="__codelineno-0-55" name="__codelineno-0-55"></a>    <span class="c1"># linux: fourcc = 0x00000021 -&gt; don't forget to change it bellow as well</span>
-<a id="__codelineno-0-56" name="__codelineno-0-56"></a>    <span class="k">if</span> <span class="n">vid_name</span><span class="p">[</span><span class="o">-</span><span class="mi">4</span><span class="p">:]</span> <span class="o">==</span> <span class="s1">'.h5'</span><span class="p">:</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56"></a>    <span class="k">if</span> <span class="n">vid_name</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span> <span class="o">==</span> <span class="s1">'.h5'</span><span class="p">:</span>
 <a id="__codelineno-0-57" name="__codelineno-0-57"></a>        <span class="n">write_h5</span><span class="p">(</span><span class="n">vid_name</span><span class="p">,</span> <span class="n">np_array</span><span class="p">,</span> <span class="s1">'video'</span><span class="p">)</span>
 <a id="__codelineno-0-58" name="__codelineno-0-58"></a>    <span class="k">else</span><span class="p">:</span>
 <a id="__codelineno-0-59" name="__codelineno-0-59"></a>        <span class="n">valid_extensions</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'.mp4'</span><span class="p">,</span> <span class="s1">'.avi'</span><span class="p">,</span> <span class="s1">'.mkv'</span><span class="p">]</span>
