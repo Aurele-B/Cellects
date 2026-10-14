@@ -181,9 +181,9 @@ class NetworkTracking:
             if self.do_convert:
                 NetDet_fast.change_greyscale(self.motion.converted_video[t, ...])
             NetDet_fast.detect_pseudopods(pseudopod_min_size=self.motion.vars['pseudopod_min_size'],
-                                          edge_max_width=self.motion.vars['edge_max_width'],
                                           only_one_connected_component=not self.motion.vars['several_blob_per_arena'],
-                                          max_connection_distance=self.motion.vars['max_connection_distance'])
+                                          max_connection_distance=self.motion.vars['max_connection_distance'],
+                                          edge_max_width=self.motion.vars['edge_max_width'])
             self.pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         else:
             NetDet_fast.complete_network = NetDet_fast.incomplete_network
