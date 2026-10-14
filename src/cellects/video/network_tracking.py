@@ -308,7 +308,7 @@ class NetworkTracking:
                                 if self.detect_pseudopods:
                                     self.pseudopod_vid[t][np.logical_and(self.pseudopod_vid[t - 1], large_shape_bool)] = 1
                         if not self.motion.vars['several_blob_per_arena']:
-                            complete_network = connect_components(complete_network, max_distance=100)
+                            complete_network = connect_components(complete_network, max_distance=self.motion.vars['max_connection_distance'])
 
             complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
             if not self.motion.vars['several_blob_per_arena']:
