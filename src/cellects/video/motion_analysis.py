@@ -1450,7 +1450,10 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             for t in np.arange(graph_track.starting_time, graph_track.dims[0]):
                 computed_network = graph_track.extract_graph(t)
                 if show_seg:
-                    cv2.imshow("", cv2.resize(computed_network, (1000, 1000)))
+                    imtoshow = self.converted_video[t, ...].copy()
+                    net_coord = np.nonzero(computed_network)
+                    imtoshow[net_coord[0], net_coord[1]] = self.vars['contour_color']
+                    cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
                     cv2.waitKey(1)
             if show_seg:
                 cv2.destroyAllWindows()
