@@ -1059,14 +1059,14 @@ class MotionAnalysis:
         new_potentials *= self.borders
 
         if self.vars['specimen_activity'] in ['grow', 'move and grow']:
-            new_shape = self.binary[self.t - 1, :, :].copy()
-            new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
+            prev_shape = self.binary[self.t - 1, :, :].copy()
+            new_shape = np.logical_or(prev_shape, new_potentials).astype(np.uint8)
             # Add distant shapes within a radius, score every added pixels according to their distance
             if not self.vars['several_blob_per_arena']:
                 if new_shape.sum() == 0:
                     new_shape = new_potentials.copy()
                 else:
-                    pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
+                    pads = ProgressivelyAddDistantShapes(new_shape, prev_shape, self.max_distance)
                     # If max_distance is non nul look for distant shapes
                     pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
                                                          self.vars['max_size_for_connection'])
