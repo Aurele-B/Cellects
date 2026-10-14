@@ -53,7 +53,7 @@ def write_video(np_array: NDArray[np.uint8], vid_name: str, is_color: bool=True,
     """
     #h265 ou h265 (mp4)
     # linux: fourcc = 0x00000021 -> don't forget to change it bellow as well
-    if vid_name[-4:] == '.h5':
+    if vid_name[-3:] == '.h5':
         write_h5(vid_name, np_array, 'video')
     else:
         valid_extensions = ['.mp4', '.avi', '.mkv']

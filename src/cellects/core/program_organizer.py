@@ -29,7 +29,8 @@ from cellects.config.all_vars_dict import DefaultDicts
 from cellects.image.shape_descriptors import from_shape_descriptors_class, compute_one_descriptor_per_frame
 from cellects.video.connected_components_tracking import ConnectedComponentsTracking
 from cellects.image.morphological_operations import create_ellipse, rank_from_top_to_bottom_from_left_to_right, \
-    get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, box_counting_dimension, prepare_box_counting
+    get_quick_bounding_boxes, get_bb_with_moving_centers, get_contours, keep_one_connected_component, \
+    box_counting_dimension, prepare_box_counting, connect_components
 from cellects.video.progressively_add_distant_shapes import ProgressivelyAddDistantShapes
 from cellects.image.one_image_analysis import OneImageAnalysis, init_params
 from cellects.image.morphological_operations import shape_selection, draw_img_with_mask
@@ -1183,28 +1184,37 @@ class ProgramOrganizer:
                 self.top = np.zeros(self.first_image.shape_number, dtype=np.int64)
                 self.bot = np.repeat(self.modif_validated_shapes.shape[0], self.first_image.shape_number)
                 if are_gravity_centers_moving:
-                    self.top, self.bot, self.left, self.right, self.ordered_first_image = get_bb_with_moving_centers(motion_list, all_specimens_have_same_direction,
-                                                     original_shape_hsize, self.first_image.validated_shapes,
-                                                     self.first_image.y_boundaries)
+                    specimen_occupancy = motion_list[0].copy()
+                    for motion_i in motion_list[1:]:
+                        specimen_occupancy += motion_i
+                    occupencies = np.unique(specimen_occupancy)
                     new_ordered_first_image = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
+                    for arena_i in np.arange(1, self.first_image.shape_number + 1):
+                        all_other_original_masks = np.zeros(self.ordered_first_image.shape, dtype=np.bool_)
+                        all_other_original_masks[np.logical_and(self.ordered_first_image > 0, self.ordered_first_image != arena_i)] = True
+                        original_mask_i = self.ordered_first_image == arena_i
+                        for score in occupencies:
+                            _, sh = cv2.connectedComponents((specimen_occupancy > score).astype(np.uint8))
+                            new_shape_id = np.unique(sh * original_mask_i)
+                            new_shape_id = new_shape_id[new_shape_id > 0][0]
+                            new_shape_i = sh == new_shape_id
+                            if (new_shape_i * all_other_original_masks).any():
+                                continue
+                            else:
+                                new_ordered_first_image[new_shape_i] = arena_i
+                                break
 
-                    for i in np.arange(1, self.first_image.shape_number + 1):
-                        previous_shape = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                        previous_shape[np.nonzero(self.unchanged_ordered_fimg == i)] = 1
-                        new_potentials = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                        new_potentials[np.nonzero(self.ordered_first_image == i)] = 1
-                        new_potentials[np.nonzero(self.unchanged_ordered_fimg == i)] = 0
-
-                        pads = ProgressivelyAddDistantShapes(new_potentials, previous_shape, max_distance=2)
-                        pads.consider_shapes_sizes(min_shape_size=10)
-                        pads.connect_shapes(only_keep_connected_shapes=True, rank_connecting_pixels=False)
-                        new_ordered_first_image[np.nonzero(pads.expanded_shape)] = i
-                    self.ordered_first_image = new_ordered_first_image
                     self.modif_validated_shapes = np.zeros(self.ordered_first_image.shape, dtype=np.uint8)
-                    self.modif_validated_shapes[np.nonzero(self.ordered_first_image)] = 1
+                    self.modif_validated_shapes[new_ordered_first_image > 0] = 1
+                    nb, sh, st, ce = cv2.connectedComponentsWithStats(self.modif_validated_shapes)
                     self.ordered_stats, ordered_centroids, self.ordered_first_image = rank_from_top_to_bottom_from_left_to_right(
                         self.modif_validated_shapes, self.first_image.y_boundaries, get_ordered_image=True)
-                    self.top, self.bot, self.left, self.right = get_quick_bounding_boxes(self.modif_validated_shapes, self.ordered_first_image, self.ordered_stats)
+                    for arena_i in np.arange(1, self.first_image.shape_number + 1):
+                        y, x = np.nonzero(self.ordered_first_image == arena_i)
+                        self.left[arena_i - 1] = x.min()
+                        self.right[arena_i - 1] = x.max() + 1
+                        self.top[arena_i - 1] = y.min()
+                        self.bot[arena_i - 1] = y.max() + 1
                 else:
                     self.top, self.bot, self.left, self.right = get_quick_bounding_boxes(self.modif_validated_shapes, self.ordered_first_image, self.ordered_stats)
                 self._standardize_video_sizes()
@@ -1501,7 +1511,6 @@ class ProgramOrganizer:
         img_nb = len(img_list)
 
         # 2) Create a table of the dimensions of each video
-        # Add 10% to the necessary memory to avoid problems
         vertical_diffs = np.array(self.bot) - np.array(self.top)
         horizontal_diffs = np.array(self.right) - np.array(self.left)
         necessary_memory = img_nb * np.multiply((vertical_diffs).astype(np.uint64), (horizontal_diffs).astype(np.uint64)).sum() * 8 * 1.16415e-10

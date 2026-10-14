@@ -181,9 +181,9 @@ class NetworkTracking:
             if self.do_convert:
                 NetDet_fast.change_greyscale(self.motion.converted_video[t, ...])
             NetDet_fast.detect_pseudopods(pseudopod_min_size=self.motion.vars['pseudopod_min_size'],
-                                          edge_max_width=self.motion.vars['edge_max_width'],
                                           only_one_connected_component=not self.motion.vars['several_blob_per_arena'],
-                                          max_connection_distance=self.motion.vars['max_connection_distance'])
+                                          max_connection_distance=self.motion.vars['max_connection_distance'],
+                                          edge_max_width=self.motion.vars['edge_max_width'])
             self.pseudopod_vid[t, ...] = NetDet_fast.pseudopods
         else:
             NetDet_fast.complete_network = NetDet_fast.incomplete_network
@@ -303,21 +303,13 @@ class NetworkTracking:
                         for large_shape in large_shapes:
                             large_shape_bool = sh == large_shape
                             SD = ShapeDescriptors(large_shape_bool, ['circularity'])
-                            if SD.circularity < .15:
+                            if SD.circularity < .1:
                                 complete_network[large_shape_bool] = 1
                                 if self.detect_pseudopods:
                                     self.pseudopod_vid[t][np.logical_and(self.pseudopod_vid[t - 1], large_shape_bool)] = 1
                         if not self.motion.vars['several_blob_per_arena']:
-                            complete_network = connect_components(complete_network, max_distance=100)
+                            complete_network = connect_components(complete_network, max_distance=self.motion.vars['max_connection_distance'])
 
-                # # Make smaller parts (until shape_disappearance_infimum) disappear in the previous frame
-                # small_shapes = np.logical_and(shape_disappearance_infimum < stats[1:, 4], stats[1:, 4] < shape_disappearance_supremum)
-                # if small_shapes.any():
-                #     self.network_dynamics[t - 1][np.isin(sh, np.nonzero(small_shapes))] = 0
-                #     if not self.motion.vars['several_blob_per_arena']:
-                #         self.network_dynamics[t - 1] = keep_one_connected_component(self.network_dynamics[t - 1])
-                #     if self.detect_pseudopods:
-                #         self.pseudopod_vid[t - 1][self.network_dynamics[t - 1] == 0] = 0
             complete_network = cv2.morphologyEx(complete_network, cv2.MORPH_CLOSE, cross_33)
             if not self.motion.vars['several_blob_per_arena']:
                 complete_network = keep_one_connected_component(complete_network)

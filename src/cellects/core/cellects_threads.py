@@ -1015,11 +1015,13 @@ class VideoTrackingThread(QtCore.QThread):
             for exp_i in range(starting_folder_id, folder_number):
                 self.set_current_folder(exp_i)
                 logging.info(self.status['folder'])
-                self.po.first_im = None
-                self.po.first_image = None
-                self.po.last_im = None
-                self.po.last_image = None
-                self.po.top = None
+                if exp_i > 0:
+                    self.po.first_im = None
+                    self.po.first_image = None
+                    self.po.last_im = None
+                    self.po.last_image = None
+                    self.po.top = None
+                    self.po.load_data_to_run_cellects_quickly()
 
                 self.message_from_thread.emit(f"{self.status['folder']}, Pre-processing")
                 self.pre_processing()
@@ -1140,9 +1142,9 @@ class VideoTrackingThread(QtCore.QThread):
         """
         if len(self.po.data_list) == 0:
             self.po.look_for_data()
-        self.po.load_data_to_run_cellects_quickly()
         if not self.po.first_exp_ready_to_run:
             logging.info("Pre-processing has started")
+            self.po.load_data_to_run_cellects_quickly()
             if len(self.po.data_list) > 0:
                 self.po.get_first_image()
                 self.po.load_masks()

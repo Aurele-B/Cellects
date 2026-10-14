@@ -1059,14 +1059,14 @@ class MotionAnalysis:
         new_potentials *= self.borders
 
         if self.vars['specimen_activity'] in ['grow', 'move and grow']:
-            new_shape = self.binary[self.t - 1, :, :].copy()
-            new_shape = np.logical_or(new_shape, new_potentials).astype(np.uint8)
+            prev_shape = self.binary[self.t - 1, :, :].copy()
+            new_shape = np.logical_or(prev_shape, new_potentials).astype(np.uint8)
             # Add distant shapes within a radius, score every added pixels according to their distance
             if not self.vars['several_blob_per_arena']:
                 if new_shape.sum() == 0:
                     new_shape = new_potentials.copy()
                 else:
-                    pads = ProgressivelyAddDistantShapes(new_potentials, new_shape, self.max_distance)
+                    pads = ProgressivelyAddDistantShapes(new_shape, prev_shape, self.max_distance)
                     # If max_distance is non nul look for distant shapes
                     pads.consider_shapes_sizes(self.vars['min_size_for_connection'],
                                                          self.vars['max_size_for_connection'])
@@ -1313,7 +1313,6 @@ class MotionAnalysis:
             self.one_descriptor_per_arena['target_area_arrival'] = pd.NA
             if 'target_area_coverage' in self.one_row_per_frame and np.any(self.one_row_per_frame['target_area_coverage']):
                 self.one_descriptor_per_arena['target_area_arrival'] = np.min(self.one_row_per_frame.loc[self.one_row_per_frame['target_area_coverage'] > 0, 'time'])
-                # self.one_descriptor_per_arena['target_area_arrival'] = np.nonzero(self.one_row_per_frame['target_area_coverage'])[0][0]
         if self.vars['output_in_mm']:
             self.one_descriptor_per_arena = scale_descriptors(self.one_descriptor_per_arena, self.vars['average_pixel_size'])
 
@@ -1451,7 +1450,10 @@ Extract and analyze graphs from a binary representation of network dynamics, pro
             for t in np.arange(graph_track.starting_time, graph_track.dims[0]):
                 computed_network = graph_track.extract_graph(t)
                 if show_seg:
-                    cv2.imshow("", cv2.resize(computed_network, (1000, 1000)))
+                    imtoshow = self.converted_video[t, ...].copy()
+                    net_coord = np.nonzero(computed_network)
+                    imtoshow[net_coord[0], net_coord[1]] = self.vars['contour_color']
+                    cv2.imshow("", cv2.resize(imtoshow, (1000, 1000)))
                     cv2.waitKey(1)
             if show_seg:
                 cv2.destroyAllWindows()
