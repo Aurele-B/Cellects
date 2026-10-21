@@ -2,11 +2,10 @@
 """
 This script contains functions to display images.
 """
-import cv2
 import numpy as np
 from numpy.typing import NDArray
 from matplotlib import pyplot as plt
-from cellects.image.morphological_operations import get_line_points, cross_33
+from cellects.image.morphological_operations import get_line_points, cross_33, dilate_coord
 from cellects.display.param import blue_rgb, crimson_rgb, lightgreen_rgb, yellow_rgb
 
 
@@ -217,25 +216,28 @@ def draw_graph(img: NDArray[np.uint8], vertices_coord, edges_coord=None, edges_t
                                                                                       min_width)[::-1]
 
     # Draw a green cross on branching vertices
-    vertex_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    branching_vertices = vertices_coord.loc[vertices_coord['is_tip'] == 0, :]
-    vertex_img[branching_vertices['y'], branching_vertices['x']] = 1
-    dil_v_coord = np.nonzero(cv2.dilate(vertex_img, cross_33))
-    graph[dil_v_coord[0], dil_v_coord[1], :] = lightgreen_rgb  # 255, 165, 0
+    branching_vertices = vertices_coord['is_tip'] == 0
+    if branching_vertices.any():
+        dil_coord = dilate_coord(vertices_coord.iloc[branching_vertices, :2], 4)
+        graph[dil_coord[:, 0], dil_coord[:, 1], :] = lightgreen_rgb  # 255, 165, 0
 
     # Draw a red cross on food vertices
-    origin_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    origin_vertices = vertices_coord.loc[vertices_coord['origin'] == 1, :]
-    origin_img[origin_vertices['y'], origin_vertices['x']] = 1
-    dil_o_coord = np.nonzero(cv2.dilate(origin_img, cross_33))
-    graph[dil_o_coord[0], dil_o_coord[1], :] = yellow_rgb
+    origin_vertices = vertices_coord['is_large_area'] == 1
+    if origin_vertices.any():
+        dil_coord = dilate_coord(vertices_coord.iloc[origin_vertices, :2], 4)
+        graph[dil_coord[:, 0], dil_coord[:, 1], :] = yellow_rgb
+
+    # Draw a white cross on pseudopod vertices
+    pseudopod_vertices = vertices_coord['is_large_area'] == 2
+    if pseudopod_vertices.any():
+        dil_coord = dilate_coord(vertices_coord.iloc[pseudopod_vertices, :2], 4)
+        graph[dil_coord[:, 0], dil_coord[:, 1], :] = 255
 
     # Draw a blue cross on tips
-    tips_img = np.zeros((img.shape[0], img.shape[1]), dtype=np.uint8)
-    tips = vertices_coord.loc[vertices_coord['is_tip'] == 1, :]
-    tips_img[tips['y'], tips['x']] = 1
-    dil_tips_coord = np.nonzero(cv2.dilate(tips_img, cross_33))
-    graph[dil_tips_coord[0], dil_tips_coord[1], :] = blue_rgb
+    tips = vertices_coord['is_tip'] == 1
+    if tips.any():
+        dil_coord = dilate_coord(vertices_coord.iloc[tips, :2], 4)
+        graph[dil_coord[:, 0], dil_coord[:, 1], :] = blue_rgb
 
     # Draw a black dot on all vertices
     graph[vertices_coord['y'], vertices_coord['x'], :] = 20, 20, 20
