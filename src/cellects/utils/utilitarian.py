@@ -624,7 +624,7 @@ def labeled_image_to_dict(labelled_image: NDArray):
     return id_to_coord_map
 
 def coord_table_to_dict(coord_table):
-    """Convert an ndarray (or a dataframe) of shape (n, 3) or more to a dict mapping the third column to (y, x) coordinates."""
+    """Convert a ndarray (or a dataframe) of shape (n, 3) or more to a dict mapping the third column to (y, x) coordinates."""
     if coord_table is None or coord_table.size == 0:
         return dict()
     dim_nb = 2
