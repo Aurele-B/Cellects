@@ -1879,7 +1879,7 @@ class EdgeIdentification:
                 raise ValueError(f"edge_to_coord_map[{edge_id}] contains out-of-bounds coordinates: {bad[:5]}")
 
 
-    def make_vertex_table(self, origin_contours: NDArray[np.uint8]=None, pseudopod_areas: NDArray=None):
+    def make_vertex_table(self, origin: NDArray[np.uint8]=None, pseudopod_areas: NDArray=None):
         """
         Generate a table for the vertices.
 
@@ -1891,10 +1891,10 @@ class EdgeIdentification:
 
         Parameters
         ----------
-        origin_contours : ndarray of uint8, optional
-            Binary map to identify food vertices. Default is `None`.
-        pseudopod_areas : ndarray, optional
-            Binary map to identify growing regions. Default is `None`.
+        origin : tuple or ndarray, optional
+            Coordinates or binary map to identify food vertices. Default is `None`.
+        pseudopod_areas : tuple or ndarray, optional
+            Coordinates or binary map to identify growing regions. Default is `None`.
 
         Notes
         -----
@@ -1915,17 +1915,26 @@ class EdgeIdentification:
             self.vertices_coord[tips_arr.shape[0]:, :2] = non_tip_arr
             self.vertices_coord[tips_arr.shape[0]:, 2] = self.numbered_vertices[non_tip_arr[:, 0], non_tip_arr[:, 1]]
 
-        if origin_contours is not None:
-            food_vertices = self.numbered_vertices[origin_contours > 0]
+        if origin is not None:
+            if isinstance(origin, tuple):
+                food_vertices = self.numbered_vertices[origin[0], origin[1]]
+            elif origin.shape[1] == 2:
+                food_vertices = self.numbered_vertices[origin[:, 0], origin[:, 1]]
+            else:
+                food_vertices = self.numbered_vertices[origin > 0]
             food_vertices = food_vertices[food_vertices > 0]
             self.vertices_coord[np.isin(self.vertices_coord[:, 2], food_vertices), 4] = 1
 
-        if pseudopod_areas is not None and pseudopod_areas.shape[1] > 0:
-            growing = np.unique(self.numbered_vertices[pseudopod_areas[0], pseudopod_areas[1]])
+        if pseudopod_areas is not None:
+            if isinstance(pseudopod_areas, tuple):
+                growing = self.numbered_vertices[pseudopod_areas[0], pseudopod_areas[1]]
+            elif pseudopod_areas.shape[1] == 2:
+                growing = self.numbered_vertices[pseudopod_areas[:, 0], pseudopod_areas[:, 1]]
+            else:
+                growing = self.numbered_vertices[pseudopod_areas > 0]
             growing = growing[growing > 0]
             if len(growing) > 0:
-                growing = np.isin(self.vertices_coord[:, 2], growing)
-                self.vertices_coord[growing, 4] = 2
+                self.vertices_coord[np.isin(self.vertices_coord[:, 2], growing), 4] = 2
 
         nb, sh, stats, cent = cv2.connectedComponentsWithStats((self.numbered_vertices > 0).astype(np.uint8))
         for i, v_i in enumerate(np.nonzero(stats[:, 4] > 1)[0][1:]):
