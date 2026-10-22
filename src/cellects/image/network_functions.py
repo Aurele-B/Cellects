@@ -1514,13 +1514,13 @@ class EdgeIdentification:
                 connected_vertices = []
                 if new_edge_length == 1:
                     # With one pixel length, look for vertices in its direct neighborhood
-                    dilated_coord = dilate_coord(new_edge_pix_coord)
+                    dilated_coord = dilate_coord(new_edge_pix_coord, max_y=self.pad_skeleton.shape[0], max_x=self.pad_skeleton.shape[1])
                     connected_vertices = self.numbered_vertices[dilated_coord[:, 0], dilated_coord[:, 1]]
                     connected_vertices = connected_vertices[connected_vertices > 0]
                 else:
                     # With two pixel length, find a different vertex connected to ech of them
-                    dilated_coord1 = dilate_coord(new_edge_pix_coord[0, :])
-                    dilated_coord2 = dilate_coord(new_edge_pix_coord[1, :])
+                    dilated_coord1 = dilate_coord(new_edge_pix_coord[0, :], max_y=self.pad_skeleton.shape[0], max_x=self.pad_skeleton.shape[1])
+                    dilated_coord2 = dilate_coord(new_edge_pix_coord[1, :], max_y=self.pad_skeleton.shape[0], max_x=self.pad_skeleton.shape[1])
                     dilated_coord = np.vstack((dilated_coord1, dilated_coord2))
                     connected_vertices1 = self.numbered_vertices[dilated_coord1[:, 0], dilated_coord1[:, 1]]
                     connected_vertices2 = self.numbered_vertices[dilated_coord2[:, 0], dilated_coord2[:, 1]]

@@ -218,25 +218,25 @@ def draw_graph(img: NDArray[np.uint8], vertices_coord, edges_coord=None, edges_t
     # Draw a green cross on branching vertices
     branching_vertices = vertices_coord['is_tip'] == 0
     if branching_vertices.any():
-        dil_coord = dilate_coord(vertices_coord.iloc[branching_vertices, :2], 4)
+        dil_coord = dilate_coord(vertices_coord.iloc[branching_vertices, :2], connectivity=4, max_y=img.shape[0], max_x=img.shape[1])
         graph[dil_coord[:, 0], dil_coord[:, 1], :] = lightgreen_rgb  # 255, 165, 0
 
     # Draw a red cross on food vertices
     origin_vertices = vertices_coord['is_large_area'] == 1
     if origin_vertices.any():
-        dil_coord = dilate_coord(vertices_coord.iloc[origin_vertices, :2], 4)
+        dil_coord = dilate_coord(vertices_coord.iloc[origin_vertices, :2], connectivity=4, max_y=img.shape[0], max_x=img.shape[1])
         graph[dil_coord[:, 0], dil_coord[:, 1], :] = yellow_rgb
 
     # Draw a white cross on pseudopod vertices
     pseudopod_vertices = vertices_coord['is_large_area'] == 2
     if pseudopod_vertices.any():
-        dil_coord = dilate_coord(vertices_coord.iloc[pseudopod_vertices, :2], 4)
+        dil_coord = dilate_coord(vertices_coord.iloc[pseudopod_vertices, :2], connectivity=4, max_y=img.shape[0], max_x=img.shape[1])
         graph[dil_coord[:, 0], dil_coord[:, 1], :] = 255
 
     # Draw a blue cross on tips
     tips = vertices_coord['is_tip'] == 1
     if tips.any():
-        dil_coord = dilate_coord(vertices_coord.iloc[tips, :2], 4)
+        dil_coord = dilate_coord(vertices_coord.iloc[tips, :2], connectivity=4, max_y=img.shape[0], max_x=img.shape[1])
         graph[dil_coord[:, 0], dil_coord[:, 1], :] = blue_rgb
 
     # Draw a black dot on all vertices

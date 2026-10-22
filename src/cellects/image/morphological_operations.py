@@ -76,7 +76,7 @@ def is_8_connected(point: tuple | NDArray, points: CoordSet) -> bool:
     else:
         return any((y + dy, x + dx) in points for dy in (-1, 0, 1) for dx in (-1, 0, 1))
 
-def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
+def dilate_coord(coord: NDArray, connectivity: int=8, max_y: int=None, max_x: int=None) -> NDArray:
     """
     Find the coordinates of all the neighboring points connected to a point
 
@@ -88,6 +88,12 @@ def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
 
     connectivity : int
         Can be 4 or 8.
+
+    max_y : int
+        The maximal value y can take
+
+    max_x : int
+        The maximal value x can take
 
     Returns
     -------
@@ -106,11 +112,16 @@ def dilate_coord(coord: NDArray, connectivity: int=8) -> NDArray:
         neighbors = neighbors_8
     else:
         neighbors = neighbors_4
-    dilated = np.zeros((coord.shape[0] * (len(neighbors) + 1), coord.shape[1]), dtype=np.uint32)
+    dilated = np.zeros((coord.shape[0] * (len(neighbors) + 1), coord.shape[1]), dtype=np.int32)
     dilated[:coord.shape[0], :] = coord
     for n_i, neighbor in enumerate(neighbors):
         dilated[(n_i + 1) * coord.shape[0]:(n_i + 2) * coord.shape[0], :] = coord + neighbor
-    return dilated
+    kept_coord = np.all(dilated >= 0, axis=1)
+    if max_y is not None:
+        kept_coord *= dilated[:, 0] < max_y
+    if max_x is not None:
+        kept_coord *= dilated[:, 1] < max_x
+    return dilated[kept_coord, :]
 
 def ad_pad(arr: NDArray) -> NDArray:
     """
